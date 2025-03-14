@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "235721584474",
+    "project_id": "smartrunningcoach-eaea1",
+    "storage_bucket": "smartrunningcoach-eaea1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:235721584474:android:cb67e2a61d161795db4d63",
+        "android_client_info": {
+          "package_name": "com.smartrunningcoach"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "235721584474-089qatfb67vdl4s3mhbeg4160u3fus42.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.smartrunningcoach",
+            "certificate_hash": "663730bd63d1bd08fef76913c84cf2f6a6fce661"
+          }
+        },
+        {
+          "client_id": "235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXo1whfVyaUgiP1CLOsQZKb-YrzTKL5pE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
