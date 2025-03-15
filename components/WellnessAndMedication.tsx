@@ -1,6 +1,8 @@
 import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
+import imageexpert from '../components/assets/2runner.png';
+import { useNavigation } from '@react-navigation/native';
 
 const WellnessAndMedication = () => {
   // Generate calendar data
@@ -13,13 +15,14 @@ const WellnessAndMedication = () => {
         return 'skipped';
       });
   };
+  const navigation = useNavigation();
 
   return (
     <View style={styles.container}>
       {/* Wellness AI Chatbot */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Wellness AI Chatbot</Text>
+          <Text style={styles.sectionTitle}>Wellness Expert Contact</Text>
           <TouchableOpacity>
             <Icon name="help-circle" size={20} color="#64748B" />
           </TouchableOpacity>
@@ -31,24 +34,21 @@ const WellnessAndMedication = () => {
           </View>
 
           <View style={styles.chatbotContent}>
-            <View>
-              <Text style={styles.totalNumber}>1,922</Text>
-              <Text style={styles.totalLabel}>Total</Text>
+            <View style={{width: '48%'}}>
+              <Text style={styles.totalNumber}>
+                1,922 <Text style={styles.totalLabel}> Total</Text>
+              </Text>
+
               <Text style={styles.chatbotDescription}>
-                AI Health Chatbot{'\n'}Conversations
+                Good Schedule{'\n'}Good heart rate{'\n'}Search Expert to contact
               </Text>
             </View>
 
-            <Image
-              source={{
-                uri: 'https://static.vecteezy.com/system/resources/thumbnails/051/069/030/small/cute-ai-robot-chatbot-assistant-isolated-on-transparent-background-png.png',
-              }}
-              style={styles.robotImage}
-            />
+            <Image source={imageexpert} style={styles.robotImage} />
           </View>
 
           <TouchableOpacity style={styles.addButton}>
-            <Icon name="add-circle-outline" size={24} color="#fff" />
+            <Icon name="chatbubbles-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -68,7 +68,7 @@ const WellnessAndMedication = () => {
               <Text style={styles.medicationNumber}>205</Text>
               <Text style={styles.medicationLabel}>Medications</Text>
             </View>
-            <TouchableOpacity style={styles.addButton}>
+            <TouchableOpacity style={styles.addButton} onPress={() => {navigation.navigate('SetGoalsScreen' as never);}}>
               <Icon name="add-circle-outline" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -110,7 +110,7 @@ const WellnessAndMedication = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    paddingTop:0,
+    paddingTop: 0,
   },
   section: {
     marginBottom: 24,
@@ -134,6 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E293B',
     borderRadius: 16,
     padding: 20,
+    paddingBottom: 0,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -143,7 +144,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
-    marginBottom: 16,
   },
   basicText: {
     color: '#3B82F6',
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   chatbotContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
   },
   totalNumber: {
@@ -171,11 +171,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   robotImage: {
-    width: 120,
-    height: 120,
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
+    width: 150,
+    height: 180,
+    resizeMode: 'cover',
+    marginRight: 50,
   },
   addButton: {
     position: 'absolute',

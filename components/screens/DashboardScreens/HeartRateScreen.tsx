@@ -87,12 +87,10 @@ const HeartRateScreen = () => {
           color="#3A86FF"
           thickness={2}
           curved
-          showDataPoints
           dataPointsColor="#3A86FF"
           dataPointsRadius={4}
           startFillColor="rgba(58, 134, 255, 0.1)"
           endFillColor="rgba(58, 134, 255, 0.0)"
-          minValue={50}
           maxValue={120}
           noOfSections={5}
           rulesType="dashed"
@@ -100,9 +98,6 @@ const HeartRateScreen = () => {
           dashWidth={4}
           dashGap={4}
           verticalLinesColor="#E2E8F0"
-          verticalLinesType="dashed"
-          verticalDashWidth={4}
-          verticalDashGap={4}
           xAxisColor="#E2E8F0"
           yAxisColor="transparent"  
           xAxisLabelTextStyle={styles.chartLabel}

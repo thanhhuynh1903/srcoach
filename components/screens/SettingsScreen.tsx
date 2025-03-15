@@ -79,9 +79,15 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
 
 const menuItems = [
   {
+    title: 'View Profile',
+    subtitle: 'View your profile information',
+    icon: 'person-circle-outline',
+    screen: '',
+  },
+  {
     title: 'Edit Profile',
     subtitle: 'Change your profile information',
-    icon: 'person-outline',
+    icon: 'create-outline',
     screen: 'EditProfileScreen',
   },
   {
@@ -89,6 +95,12 @@ const menuItems = [
     subtitle: 'Manage your connected devices',
     icon: 'wifi-outline',
     screen: 'SettingsDevices',
+  },
+  {
+    title: 'Goals',
+    subtitle: 'Manage your Goals',
+    icon: 'golf-outline',
+    screen: 'GoalListScreen',
   },
   {
     title: 'Notifications',

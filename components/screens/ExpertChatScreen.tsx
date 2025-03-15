@@ -11,6 +11,9 @@ import {
   StatusBar,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
+import {useNavigation} from '@react-navigation/native';
+
+
 const tabs = ['All', 'Available Now', 'Upcoming', 'Previous'];
 
 // Doctor profile images
@@ -74,11 +77,10 @@ const doctors = [
 
 const ExpertChatScreen = () => {
   const [activeTab, setActiveTab] = React.useState('All');
-
+  const navigation = useNavigation();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Expert Chat</Text>
@@ -123,7 +125,7 @@ const ExpertChatScreen = () => {
       {/* Chat List */}
       <ScrollView style={styles.chatList}>
         {doctors.map(doctor => (
-          <View style={{borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}}>
+          <TouchableOpacity style={{borderBottomWidth: 1, borderBottomColor: '#F1F5F9'}} onPress={() => {navigation.navigate('ChatboxScreen' as never)}}>
             <View key={doctor.id} style={styles.chatItem}>
               <View style={styles.chatLeft}>
                 <View style={styles.avatarContainer}>
@@ -157,7 +159,7 @@ const ExpertChatScreen = () => {
               <TouchableOpacity style={styles.actionButton}>
                 <Icon name="share-social-outline" size={20} color="#3B82F6" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('ScheduleScreen' as never)}}>
                 <Icon name="calendar-outline" size={20} color="#22C55E" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton}>
@@ -165,7 +167,7 @@ const ExpertChatScreen = () => {
               </TouchableOpacity>
             </View>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </SafeAreaView>

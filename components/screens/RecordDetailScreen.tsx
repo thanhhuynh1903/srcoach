@@ -14,7 +14,7 @@ import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import {hp, wp} from '../helpers/common';
 import MapView, {Marker} from 'react-native-maps';
-
+import { useNavigation } from '@react-navigation/native';
 const RecordDetailScreen = () => {
   // Heart rate data for the chart
   const heartRateData = [
@@ -25,7 +25,7 @@ const RecordDetailScreen = () => {
     {value: 168},
     {value: 155},
   ];
-
+  const navigate = useNavigation();
   return (
     <ScreenWrapper bg={'#f9fafb'}>
       {/* Header */}
@@ -33,8 +33,8 @@ const RecordDetailScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Record Running Session</Text>
       </View>
-
       <ScrollView style={styles.content}>
         <Text style={styles.title}>Evening Run</Text>
         <Text style={styles.dateTime}>October 15, 2023 • 6:30 AM</Text>
@@ -101,23 +101,23 @@ const RecordDetailScreen = () => {
             <Text style={styles.sectionTitle}>Route Map</Text>
           </View>
           <View style={{borderRadius: 16, overflow: 'hidden'}}>
-          <MapView
-            style={styles.map}
-            initialRegion={{
-              latitude: 37.78825,
-              longitude: -122.4324,
-              latitudeDelta: 0.0922,
-              longitudeDelta: 0.0421,
-            }}>
-            <Marker
-              coordinate={{
+            <MapView
+              style={styles.map}
+              initialRegion={{
                 latitude: 37.78825,
                 longitude: -122.4324,
-              }}
-              title="My Location"
-              description="This is a marker"
-            />
-          </MapView>
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }}>
+              <Marker
+                coordinate={{
+                  latitude: 37.78825,
+                  longitude: -122.4324,
+                }}
+                title="My Location"
+                description="This is a marker"
+              />
+            </MapView>
           </View>
           <View style={styles.mapStats}>
             <View style={styles.mapStat}>
@@ -167,15 +167,15 @@ const RecordDetailScreen = () => {
             </View>
           </View>
         </View>
-      </ScrollView>
-
-      {/* Share Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.shareButton}>
-          <Icon name="share-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.shareButtonText}>Share your data</Text>
+        <TouchableOpacity style={styles.shareButton} onPress={() => navigate.navigate('RiskWarningScreen' as never)}>
+          <Icon name="document-text-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.shareButtonText}>Risk analysis</Text>
         </TouchableOpacity>
-      </View>
+        <TouchableOpacity style={styles.ButtonFooter}>
+          <Icon name="share-outline" size={20} color="#000000" />
+          <Text style={styles.ButtonFooterText}>Share your data</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </ScreenWrapper>
   );
 };
@@ -186,8 +186,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    gap: 8,
+    backgroundColor: '#FFFFF',
   },
   backButton: {
     width: 40,
@@ -196,6 +200,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
   },
   content: {
     flex: 1,
@@ -220,7 +229,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     padding: 16,
     width: wp(44),
@@ -241,7 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#E2E8F0',
     borderRadius: 16,
   },
   sectionHeader: {
@@ -332,10 +341,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 12,
+    marginBottom: 8,
     gap: 8,
   },
   shareButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  ButtonFooter: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#000000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  ButtonFooterText: {
+    color: '#4A4A4A',
     fontSize: 16,
     fontWeight: '600',
   },

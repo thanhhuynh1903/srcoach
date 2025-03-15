@@ -90,7 +90,7 @@ const HealthMetricsSlider = () => {
         </TouchableOpacity>
 
         {/* Blood Pressure Card */}
-        <View style={[styles.card, styles.bloodPressureCard]}>
+        {/* <View style={[styles.card, styles.bloodPressureCard]}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Blood Pressure</Text>
             <Icon name="water-outline" size={20} color="#fff" />
@@ -102,7 +102,7 @@ const HealthMetricsSlider = () => {
             <Text style={styles.measurementLarge}>120</Text>
             <Text style={styles.measurementUnit}>mmHg</Text>
           </View>
-        </View>
+        </View> */}
 
         {/* Sleep Card */}
         <View style={[styles.card, styles.sleepCard]}>
