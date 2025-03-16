@@ -83,7 +83,7 @@ const HomeScreen = (props: any) => {
               color="#64748B"
             />
           </View>
-          <TouchableOpacity style={styles.scoreCard} onPress={() => navigation.navigate('ChartDetailScreen')}>
+          <TouchableOpacity style={styles.scoreCard} onPress={() => navigation.navigate('ChartDetailScreen' as never)}>
             <View style={styles.scoreBox}>
               <Text style={styles.scoreNumber}>88</Text>
             </View>

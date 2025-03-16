@@ -78,54 +78,51 @@ const HeartRateScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>24-Hour Heart Rate</Text>
           <View style={styles.chartContainer}>
-          <LineChart
-          data={heartRateData}
-          width={290}
-          height={200}
-          spacing={40}
-          initialSpacing={10}
-          color="#3A86FF"
-          thickness={2}
-          curved
-          dataPointsColor="#3A86FF"
-          dataPointsRadius={4}
-          startFillColor="rgba(58, 134, 255, 0.1)"
-          endFillColor="rgba(58, 134, 255, 0.0)"
-          maxValue={120}
-          noOfSections={5}
-          rulesType="dashed"
-          rulesColor="#E2E8F0"
-          dashWidth={4}
-          dashGap={4}
-          verticalLinesColor="#E2E8F0"
-          xAxisColor="#E2E8F0"
-          yAxisColor="transparent"  
-          xAxisLabelTextStyle={styles.chartLabel}
-          yAxisTextStyle={styles.chartLabel}
-          yAxisLabelSuffix=" BPM"
-          backgroundColor="#FFFFFF"
-        />
+            <LineChart
+              data={heartRateData}
+              width={290}
+              height={200}
+              spacing={40}
+              initialSpacing={10}
+              color="#3A86FF"
+              thickness={2}
+              curved
+              dataPointsColor="#3A86FF"
+              dataPointsRadius={4}
+              startFillColor="rgba(58, 134, 255, 0.1)"
+              endFillColor="rgba(58, 134, 255, 0.0)"
+              maxValue={120}
+              noOfSections={5}
+              rulesType="dashed"
+              rulesColor="#E2E8F0"
+              dashWidth={4}
+              dashGap={4}
+              verticalLinesColor="#E2E8F0"
+              xAxisColor="#E2E8F0"
+              yAxisColor="transparent"
+              xAxisLabelTextStyle={styles.chartLabel}
+              yAxisTextStyle={styles.chartLabel}
+              yAxisLabelSuffix=" BPM"
+              backgroundColor="#FFFFFF"
+            />
           </View>
         </View>
 
         {/* Heart Rate Zones */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Heart Rate Zones</Text>
+          <Text style={styles.sectionTitle}>Activity Impact</Text>
           <View style={styles.zonesContainer}>
             <View style={[styles.zoneCard, styles.restZone]}>
-              <Text style={styles.zoneTitle}>Rest</Text>
-              <Text style={styles.zoneRange}>50-70 BPM</Text>
-              <Text style={styles.zoneDuration}>8h 24m</Text>
+              <Icon name="walk-sharp" size={28} color="#FF4B4B" />
+              <Text style={styles.zoneTitle}>Running</Text>
+              <Text style={styles.zoneRange}>+12 BPM</Text>
+              <Text style={styles.zoneDuration}>30 min</Text>
             </View>
             <View style={[styles.zoneCard, styles.activeZone]}>
+              <Icon name="bed-outline" size={28} color="#FF4B4B" />
               <Text style={styles.zoneTitle}>Active</Text>
               <Text style={styles.zoneRange}>71-90 BPM</Text>
               <Text style={styles.zoneDuration}>4h 12m</Text>
-            </View>
-            <View style={[styles.zoneCard, styles.exerciseZone]}>
-              <Text style={styles.zoneTitle}>Exercise</Text>
-              <Text style={styles.zoneRange}>91+ BPM</Text>
-              <Text style={styles.zoneDuration}>1h 48m</Text>
             </View>
           </View>
         </View>
@@ -231,9 +228,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
   },
   sectionFooter: {
     marginBottom: 55,
@@ -257,37 +252,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   zonesContainer: {
+    justifyContent: 'space-between',
+    alignContent: 'space-between',
     flexDirection: 'row',
     gap: 12,
   },
   zoneCard: {
+    gap: 8,
     flex: 1,
     borderRadius: 16,
     padding: 16,
-    alignItems: 'center',
   },
   restZone: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFFFFF',
   },
   activeZone: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#FFFFFF',
   },
   exerciseZone: {
     backgroundColor: '#F0FDFF',
   },
   zoneTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#000',
     marginBottom: 4,
   },
   zoneRange: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000',
     marginBottom: 8,
   },
   zoneDuration: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#3B82F6',
   },

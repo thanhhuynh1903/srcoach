@@ -105,7 +105,7 @@ const HealthMetricsSlider = () => {
         </View> */}
 
         {/* Sleep Card */}
-        <View style={[styles.card, styles.sleepCard]}>
+        <TouchableOpacity style={[styles.card, styles.sleepCard]} onPress={() => {navigate.navigate('HeartRateScreen')}}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Sleep</Text>
             <Icon name="moon" size={20} color="#fff" />
@@ -133,7 +133,7 @@ const HealthMetricsSlider = () => {
             <Text style={styles.measurementLarge}>87</Text>
             <Text style={styles.measurementUnit}>hrs</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Pagination Dots */}
