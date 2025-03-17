@@ -78,7 +78,7 @@ const ManageNotification = () => {
           }}>
           <BackButton size={26} />
           <Text style={{fontSize: 18, fontWeight: '600', marginLeft: 8}}>
-            View Devices
+            Notifications
           </Text>
         </View>
       </View>

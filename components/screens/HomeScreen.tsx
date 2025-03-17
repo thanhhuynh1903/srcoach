@@ -31,7 +31,7 @@ import Animated, {
   FadeOutDown,
   Layout,
 } from 'react-native-reanimated';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 const AnimatedView = Animated.createAnimatedComponent(View);
 
 const HomeScreen = (props: any) => {
@@ -83,7 +83,9 @@ const HomeScreen = (props: any) => {
               color="#64748B"
             />
           </View>
-          <TouchableOpacity style={styles.scoreCard} onPress={() => navigation.navigate('ChartDetailScreen' as never)}>
+          <TouchableOpacity
+            style={styles.scoreCard}
+            onPress={() => navigation.navigate('ChartDetailScreen' as never)}>
             <View style={styles.scoreBox}>
               <Text style={styles.scoreNumber}>88</Text>
             </View>

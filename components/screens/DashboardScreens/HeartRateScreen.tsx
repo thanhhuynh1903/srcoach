@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -6,25 +6,72 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
 import BackButton from '../../BackButton';
-import LinearGradient from 'react-native-linear-gradient';
+const {width} = Dimensions.get('window');
+
+const timePeriods = ['Today', 'Week', 'Month', 'Year'];
+
+const heartRateData = [
+  {value: 65, label: '6AM'},
+  {value: 68},
+  {value: 72},
+  {value: 78},
+  {value: 85, label: '9AM'},
+  {value: 82},
+  {value: 80},
+  {value: 78},
+  {value: 82, label: '12PM'},
+  {value: 85},
+  {value: 82},
+  {value: 78},
+  {value: 75, label: '3PM'},
+  {value: 72},
+  {value: 78},
+  {value: 80},
+  {value: 75, label: '6PM'},
+  {value: 72},
+  {value: 70},
+  {value: 68},
+  {value: 65, label: '9PM'},
+];
+
+const heartRateZones = [
+  {
+    name: 'Peak',
+    range: '170-190 BPM',
+    duration: '5 min',
+    color: '#FF4D4F',
+    progress: 0.05,
+  },
+  {
+    name: 'Cardio',
+    range: '140-170 BPM',
+    duration: '15 min',
+    color: '#FF7A45',
+    progress: 0.15,
+  },
+  {
+    name: 'Fat Burn',
+    range: '110-140 BPM',
+    duration: '45 min',
+    color: '#52C41A',
+    progress: 0.45,
+  },
+  {
+    name: 'Rest',
+    range: '60-110 BPM',
+    duration: '23h 55min',
+    color: '#1890FF',
+    progress: 0.99,
+  },
+];
 
 const HeartRateScreen = () => {
-  // 24-hour heart rate data
-  const heartRateData = [
-    {value: 65, dataPointText: '00:00'},
-    {value: 60, dataPointText: '03:00'},
-    {value: 65, dataPointText: '06:00'},
-    {value: 75, dataPointText: '09:00'},
-    {value: 80, dataPointText: '12:00'},
-    {value: 78, dataPointText: '15:00'},
-    {value: 85, dataPointText: '18:00'},
-    {value: 75, dataPointText: '21:00'},
-    {value: 70, dataPointText: '23:59'},
-  ];
+  const [activePeriod, setActivePeriod] = useState('Today');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -33,120 +80,131 @@ const HeartRateScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Heart Rate Analysis</Text>
-        <TouchableOpacity>
-          <Icon name="calendar" size={24} color="#000" />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Heart rate</Text>
       </View>
 
       <ScrollView style={styles.content}>
         {/* Current Heart Rate */}
-        <LinearGradient
-          // Bạn có thể tuỳ chỉnh cặp màu hoặc hướng gradient để phù hợp với thiết kế
-          colors={[
-            '#e0eafa', // 0%
-            '#cee0fa', // ~14%
-            '#ccdefa', // ~20%
-            '#e0ebf9', // ~27%
-            '#e0ebf9', // ~40%
-            '#c1d8fb', // ~55%
-            '#c2d9fb', // ~68%
-            '#d7e6fd', // ~83%
-            '#FFFFFF', // 100%
-          ]}
-          locations={[0, 0.14, 0.2, 0.27, 0.4, 0.55, 0.68, 0.83, 1]}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 1}}
-          style={styles.currentHeartRate}>
-          <View style={styles.currentHeader}>
-            <View style={styles.currentTitle}>
-              <Icon name="heart-outline" size={20} color="#3B82F6" />
-              <Text style={styles.currentTitleText}>Current Heart Rate</Text>
-            </View>
-            <View style={styles.percentageChange}>
-              <Icon name="trending-up" size={16} color="#22C55E" />
-              <Text style={styles.percentageText}>+2%</Text>
+        <View style={styles.currentRateContainer}>
+          <View style={styles.heartIconContainer}>
+            <Icon name="heart" size={28} color="#FF4D4F" />
+          </View>
+          <View style={styles.rateTextContainer}>
+            <Text style={styles.currentRate}>
+              72 <Text style={styles.bpmLabel}>BPM</Text>
+            </Text>
+            <View style={styles.restingRateContainer}>
+              <Text style={styles.restingRateText}>Resting Rate: 62 BPM</Text>
+              <TouchableOpacity>
+                <Icon name="information-circle-outline" size={16} color="#64748B" />
+              </TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.bpmLarge}>
-            72<Text style={styles.bpmUnit}> BPM</Text>
-          </Text>
-          <Text style={styles.rangeText}>Range today: 65-82 BPM</Text>
-        </LinearGradient>
+        </View>
 
-        {/* 24-Hour Heart Rate */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>24-Hour Heart Rate</Text>
-          <View style={styles.chartContainer}>
-            <LineChart
-              data={heartRateData}
-              width={290}
-              height={200}
-              spacing={40}
-              initialSpacing={10}
-              color="#3A86FF"
-              thickness={2}
-              curved
-              dataPointsColor="#3A86FF"
-              dataPointsRadius={4}
-              startFillColor="rgba(58, 134, 255, 0.1)"
-              endFillColor="rgba(58, 134, 255, 0.0)"
-              maxValue={120}
-              noOfSections={5}
-              rulesType="dashed"
-              rulesColor="#E2E8F0"
-              dashWidth={4}
-              dashGap={4}
-              verticalLinesColor="#E2E8F0"
-              xAxisColor="#E2E8F0"
-              yAxisColor="transparent"
-              xAxisLabelTextStyle={styles.chartLabel}
-              yAxisTextStyle={styles.chartLabel}
-              yAxisLabelSuffix=" BPM"
-              backgroundColor="#FFFFFF"
-            />
-          </View>
+        {/* Time Period Tabs */}
+        <View style={styles.tabsContainer}>
+          {timePeriods.map(period => (
+            <TouchableOpacity
+              key={period}
+              style={[
+                styles.tabButton,
+                activePeriod === period && styles.activeTabButton,
+              ]}
+              onPress={() => setActivePeriod(period)}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activePeriod === period && styles.activeTabText,
+                ]}>
+                {period}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Heart Rate Chart */}
+        <View style={styles.chartContainer}>
+          <LineChart
+            data={heartRateData}
+            height={180}
+            width={width - 32}
+            spacing={10}
+            initialSpacing={0}
+            color="#FF4D4F"
+            thickness={2}
+            hideDataPoints
+            hideRules
+            hideYAxisText={false}
+            yAxisColor="transparent"
+            xAxisColor="transparent"
+            yAxisTextStyle={styles.chartAxisText}
+            xAxisLabelTextStyle={styles.chartAxisText}
+            areaChart
+            startFillColor="#FF4D4F"
+            endFillColor="rgba(255, 77, 79, 0.1)"
+            startOpacity={0.8}
+            endOpacity={0.2}
+            rulesType="solid"
+            rulesColor="#E5E7EB"
+            yAxisTextNumberOfLines={1}
+            yAxisLabelWidth={30}
+            noOfSections={4}
+            maxValue={100}
+            yAxisLabelTexts={['0', '25', '50', '75', '100']}
+          />
         </View>
 
         {/* Heart Rate Zones */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity Impact</Text>
-          <View style={styles.zonesContainer}>
-            <View style={[styles.zoneCard, styles.restZone]}>
-              <Icon name="walk-sharp" size={28} color="#FF4B4B" />
-              <Text style={styles.zoneTitle}>Running</Text>
-              <Text style={styles.zoneRange}>+12 BPM</Text>
-              <Text style={styles.zoneDuration}>30 min</Text>
+        <View style={styles.zonesContainer}>
+          <Text style={styles.zonesTitle}>Heart Rate Zones</Text>
+
+          {heartRateZones.map((zone, index) => (
+            <View
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                backgroundColor: '#F9FAFB',
+                marginBottom: 8,
+              }}>
+              <View key={index} style={styles.zoneItem}>
+                <View style={styles.zoneInfo}>
+                  <Text style={styles.zoneName}>{zone.name}</Text>
+                  <Text style={styles.zoneRange}>{zone.range}</Text>
+                </View>
+                <View style={styles.zoneDurationContainer}>
+                  <Text style={styles.zoneDuration}>{zone.duration}</Text>
+                </View>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      {
+                        width: `${zone.progress * 100}%`,
+                        backgroundColor: zone.color,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
             </View>
-            <View style={[styles.zoneCard, styles.activeZone]}>
-              <Icon name="bed-outline" size={28} color="#FF4B4B" />
-              <Text style={styles.zoneTitle}>Active</Text>
-              <Text style={styles.zoneRange}>71-90 BPM</Text>
-              <Text style={styles.zoneDuration}>4h 12m</Text>
-            </View>
-          </View>
+          ))}
         </View>
 
-        {/* Today's Overview */}
-        <View style={styles.sectionFooter}>
-          <Text style={styles.sectionTitle}>Today's Overview</Text>
-          <View style={styles.overviewGrid}>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Average BPM</Text>
-              <Text style={styles.overviewValue}>73</Text>
-            </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Max BPM</Text>
-              <Text style={styles.overviewValue}>112</Text>
-            </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Min BPM</Text>
-              <Text style={styles.overviewValue}>62</Text>
-            </View>
-            <View style={styles.overviewItem}>
-              <Text style={styles.overviewLabel}>Resting BPM</Text>
-              <Text style={styles.overviewValue}>65</Text>
-            </View>
+        {/* Summary Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>74 BPM</Text>
+            <Text style={styles.statLabel}>Average</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>120 BPM</Text>
+            <Text style={styles.statLabel}>Maximum</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>58 BPM</Text>
+            <Text style={styles.statLabel}>Minimum</Text>
           </View>
         </View>
       </ScrollView>
@@ -157,159 +215,157 @@ const HeartRateScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    backgroundColor: '#FFFFFF',
   },
   backButton: {
-    padding: 8,
+    marginRight: 16,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
   },
   content: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#F8FAFC',
   },
-  currentHeartRate: {
-    borderRadius: 16,
-    padding: 20,
+  currentRateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 24,
   },
-  currentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+  heartIconContainer: {
+    marginRight: 12,
   },
-  currentTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  rateTextContainer: {
+    flex: 1,
   },
-  currentTitleText: {
+  currentRate: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  bpmLabel: {
     fontSize: 16,
+    fontWeight: '500',
     color: '#64748B',
   },
-  percentageChange: {
+  restingRateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
   },
-  percentageText: {
-    color: '#22C55E',
+  restingRateText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginRight: 4,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  activeTabButton: {
+    backgroundColor: '#FF4D4F',
+  },
+  tabText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  bpmLarge: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 8,
-  },
-  bpmUnit: {
-    fontSize: 20,
-    fontWeight: 'normal',
     color: '#64748B',
   },
-  rangeText: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  section: {
-    marginBottom: 24,
-    borderRadius: 16,
-  },
-  sectionFooter: {
-    marginBottom: 55,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 16,
+  activeTabText: {
+    color: '#FFFFFF',
   },
   chartContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    marginBottom: 24,
+    paddingVertical: 8,
   },
-  chartLabel: {
-    color: '#64748B',
+  chartAxisText: {
     fontSize: 12,
+    color: '#94A3B8',
   },
   zonesContainer: {
-    justifyContent: 'space-between',
-    alignContent: 'space-between',
-    flexDirection: 'row',
-    gap: 12,
+    marginBottom: 24,
   },
-  zoneCard: {
-    gap: 8,
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-  },
-  restZone: {
-    backgroundColor: '#FFFFFF',
-  },
-  activeZone: {
-    backgroundColor: '#FFFFFF',
-  },
-  exerciseZone: {
-    backgroundColor: '#F0FDFF',
-  },
-  zoneTitle: {
-    fontSize: 14,
+  zonesTitle: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#000',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  zoneItem: {
+    marginBottom: 16,
+  },
+  zoneInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 4,
   },
+  zoneName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
   zoneRange: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 14,
+    color: '#64748B',
+  },
+  zoneDurationContainer: {
+    alignItems: 'flex-end',
     marginBottom: 8,
   },
   zoneDuration: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#3B82F6',
+    color: '#64748B',
   },
-  overviewGrid: {
+  progressBarBackground: {
+    height: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  statsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 16,
     gap: 12,
   },
-  overviewItem: {
+  statItem: {
+    backgroundColor:"#F9FAFB",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 16,
+    alignItems: 'center',
   },
-  overviewLabel: {
+  statValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  statLabel: {
     fontSize: 14,
     color: '#64748B',
-    marginBottom: 8,
-  },
-  overviewValue: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
   },
 });
 

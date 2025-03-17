@@ -1,8 +1,9 @@
 import {StyleSheet, Text, View, Image} from 'react-native';
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
-
+import {useNavigation} from '@react-navigation/native';
 const HeaderBar = () => {
+  const navigate = useNavigation();
   return (
     <View style={styles.container}>
       {/* Logo and App Name */}
@@ -18,9 +19,13 @@ const HeaderBar = () => {
       <View style={styles.iconContainer}>
         <Icon name="search-outline" size={24} color="#4B5563" />
 
-        <Icon name="notifications-outline" size={24} color="#4B5563" />
-
-        <Icon name={'chatbubbles' as any} size={25} color="#4B5563" />
+        <Icon
+          name="notifications-outline"
+          size={24}
+          color="#4B5563"
+          style={{cursor: 'pointer'}}
+          onPress={() => navigate.navigate('ManageNotification' as never)}
+        />
       </View>
     </View>
   );
@@ -54,7 +59,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     flexDirection: 'row',
-    gap:25,
+    gap: 25,
     alignItems: 'center', // Center icon
     justifyContent: 'center',
   },

@@ -106,7 +106,7 @@ const menuItems = [
     title: 'Notifications',
     subtitle: 'Manage your notifications',
     icon: 'notifications-outline',
-    screen: 'ManageNotification',
+    screen: 'DeviceNotificationScreen',
   },
   {
     title: 'About',

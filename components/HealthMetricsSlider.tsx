@@ -90,7 +90,7 @@ const HealthMetricsSlider = () => {
         </TouchableOpacity>
 
         {/* Blood Pressure Card */}
-        {/* <View style={[styles.card, styles.bloodPressureCard]}>
+        <View style={[styles.card, styles.bloodPressureCard]}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Blood Pressure</Text>
             <Icon name="water-outline" size={20} color="#fff" />
@@ -102,10 +102,10 @@ const HealthMetricsSlider = () => {
             <Text style={styles.measurementLarge}>120</Text>
             <Text style={styles.measurementUnit}>mmHg</Text>
           </View>
-        </View> */}
+        </View>
 
         {/* Sleep Card */}
-        <TouchableOpacity style={[styles.card, styles.sleepCard]} onPress={() => {navigate.navigate('HeartRateScreen')}}>
+        <TouchableOpacity style={[styles.card, styles.sleepCard]} onPress={() => {navigate.navigate('SleepScreen' as never)}}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Sleep</Text>
             <Icon name="moon" size={20} color="#fff" />
@@ -118,6 +118,37 @@ const HealthMetricsSlider = () => {
               chartConfig={{
                 backgroundGradientFrom: '#06B6D4',
                 backgroundGradientTo: '#06B6D4',
+                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                barPercentage: 0.5,
+                propsForBackgroundLines: {
+                  stroke: 'transparent',
+                },
+              }}
+              yAxisLabel="Hours"
+              yAxisSuffix="h"
+              style={styles.chart}
+            />
+          </View>
+          <View style={styles.cardFooter}>
+            <Text style={styles.measurementLarge}>87</Text>
+            <Text style={styles.measurementUnit}>hrs</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Calories burned */}
+        <TouchableOpacity style={[styles.card, styles.caloriesCard]} onPress={() => {navigate.navigate('CaloriesScreen' as never)}}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Calories Burned</Text>
+            <Icon name="flame-outline" size={20} color="#fff" />
+          </View>
+          <View style={styles.chartContainer}>
+            <BarChart
+              data={sleepData}
+              width={CARD_WIDTH - 32} // Adjust for padding
+              height={100}
+              chartConfig={{
+                backgroundGradientFrom: '#FF6B2D',
+                backgroundGradientTo: '#FF6B2D',
                 color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                 barPercentage: 0.5,
                 propsForBackgroundLines: {
@@ -184,6 +215,9 @@ const styles = StyleSheet.create({
   },
   sleepCard: {
     backgroundColor: '#06B6D4',
+  },
+  caloriesCard: {
+    backgroundColor: '#FF6B2D',
   },
   cardHeader: {
     flexDirection: 'row',

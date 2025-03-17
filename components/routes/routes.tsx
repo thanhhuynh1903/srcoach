@@ -24,6 +24,8 @@ import ScheduleScreen from '../screens/ScheduleScreen';
 import RateScheduleScreen from '../screens/RateScheduleScreen';
 import RiskWarningListScreen from '../screens/RiskWarningListScreen';
 import RiskWarningScreen from '../screens/RiskWarningScreen';
+import DeviceNotificationScreen from '../screens/DeviceNotificationScreen';
+import CaloriesScreen from '../screens/DashboardScreens/CaloriesScreen';
 // Cấu hình cho Stack Navigator
 export const stackScreens = [
   { name: 'Welcome', component: WelcomeScreen },
@@ -45,6 +47,9 @@ export const stackScreens = [
   { name: 'ScheduleScreen', component: ScheduleScreen },
   { name: 'RateScheduleScreen', component: RateScheduleScreen },
   { name: 'RiskWarningScreen', component: RiskWarningScreen },
+  { name: 'SearchScreen', component: SearchScreen },
+  { name: 'DeviceNotificationScreen', component: DeviceNotificationScreen },
+  { name: 'CaloriesScreen', component: CaloriesScreen },
 ];
 
 // Cấu hình cho Tab Navigator
@@ -60,5 +65,4 @@ export const tabScreens = [
 // Cấu hình cho Home Stack ( bao gồm tab navigator )
 export const homeStackScreens = [
   { name: 'HomeMain', component: HomeScreen },
-  { name: 'SearchScreen', component: SearchScreen },
 ];

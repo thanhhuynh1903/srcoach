@@ -26,7 +26,7 @@ const HomeHeader = () => {
       {/* Date and Notification */}
       <View style={styles.topBar}>
         <Text style={styles.dateText}>{currentDate}</Text>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('ManageNotification' as never)}>
           <Icon name="notifications-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
