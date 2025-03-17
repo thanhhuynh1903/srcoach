@@ -58,7 +58,7 @@ const HomeHeader = () => {
           navigation.navigate('SearchScreen' as never);
         }}>
         <Icon name="search" size={20} color="#9CA3AF" />
-        <Text style={styles.searchInput}>Search asklepios</Text>
+        <Text style={styles.searchInput}>Search Experts</Text>
       </TouchableOpacity>
     </View>
   );

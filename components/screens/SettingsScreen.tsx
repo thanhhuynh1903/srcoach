@@ -91,9 +91,9 @@ const menuItems = [
     screen: 'EditProfileScreen',
   },
   {
-    title: 'Connected Devices',
-    subtitle: 'Manage your connected devices',
-    icon: 'wifi-outline',
+    title: 'Connect Accounts',
+    subtitle: 'Manage your connect account',
+    icon: 'construct-outline',
     screen: 'SettingsDevices',
   },
   {

@@ -85,7 +85,9 @@ const LoginScreen: React.FC<{
   return (
     <ScreenWrapper bg={'white'}>
       <View style={styles.container}>
+        <View style={{marginTop: 20}}>
         <BackButton size={26} />
+        </View>
         <View>
           <Text style={styles.welcomeText}>Hello 😉,</Text>
           <Text style={styles.welcomesubText}>

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart, BarChart} from 'react-native-chart-kit';
-import { useNavigation , NavigationProp} from '@react-navigation/native';
+import {useNavigation, NavigationProp} from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = width - 48; // Full width minus padding
@@ -20,7 +20,7 @@ type RootStackParamList = {
 };
 const HealthMetricsSlider = () => {
   // Dummy data for charts
-  const navigate = useNavigation<NavigationProp<RootStackParamList>>();;
+  const navigate = useNavigation<NavigationProp<RootStackParamList>>();
   const heartRateData = {
     labels: ['', '', '', '', ''],
     datasets: [
@@ -55,7 +55,11 @@ const HealthMetricsSlider = () => {
         snapToInterval={CARD_WIDTH + CARD_MARGIN * 2}
         decelerationRate="fast">
         {/* Heart Rate Card */}
-        <TouchableOpacity style={[styles.card, styles.heartRateCard]} onPress={() => {navigate.navigate('HeartRateScreen')}}>
+        <TouchableOpacity
+          style={[styles.card, styles.heartRateCard]}
+          onPress={() => {
+            navigate.navigate('HeartRateScreen');
+          }}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Heart Rate</Text>
             <Icon name="heart" size={20} color="#fff" />
@@ -90,7 +94,11 @@ const HealthMetricsSlider = () => {
         </TouchableOpacity>
 
         {/* Blood Pressure Card */}
-        <View style={[styles.card, styles.bloodPressureCard]}>
+        <TouchableOpacity
+          style={[styles.card, styles.bloodPressureCard]}
+          onPress={() => {
+            navigate.navigate('BloodPressureScreen' as never);
+          }}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Blood Pressure</Text>
             <Icon name="water-outline" size={20} color="#fff" />
@@ -102,10 +110,14 @@ const HealthMetricsSlider = () => {
             <Text style={styles.measurementLarge}>120</Text>
             <Text style={styles.measurementUnit}>mmHg</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Sleep Card */}
-        <TouchableOpacity style={[styles.card, styles.sleepCard]} onPress={() => {navigate.navigate('SleepScreen' as never)}}>
+        <TouchableOpacity
+          style={[styles.card, styles.sleepCard]}
+          onPress={() => {
+            navigate.navigate('SleepScreen' as never);
+          }}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Sleep</Text>
             <Icon name="moon" size={20} color="#fff" />
@@ -136,7 +148,11 @@ const HealthMetricsSlider = () => {
         </TouchableOpacity>
 
         {/* Calories burned */}
-        <TouchableOpacity style={[styles.card, styles.caloriesCard]} onPress={() => {navigate.navigate('CaloriesScreen' as never)}}>
+        <TouchableOpacity
+          style={[styles.card, styles.caloriesCard]}
+          onPress={() => {
+            navigate.navigate('CaloriesScreen' as never);
+          }}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Calories Burned</Text>
             <Icon name="flame-outline" size={20} color="#fff" />
@@ -168,11 +184,11 @@ const HealthMetricsSlider = () => {
       </ScrollView>
 
       {/* Pagination Dots */}
-      <View style={styles.pagination}>
+      {/* <View style={styles.pagination}>
         <View style={[styles.dot, styles.dotActive]} />
         <View style={styles.dot} />
         <View style={styles.dot} />
-      </View>
+      </View> */}
     </View>
   );
 };

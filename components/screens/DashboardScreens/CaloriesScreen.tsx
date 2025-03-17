@@ -8,7 +8,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+
 import {LineChart, BarChart} from 'react-native-chart-kit';
 import BackButton from '../../BackButton';
 const {width} = Dimensions.get('window');
@@ -62,7 +62,7 @@ const CaloriesScreen = () => {
         <View style={styles.chartContainer}>
           <View style={styles.chartHeader}>
             <Text style={styles.chartTitle}>Today's Calories</Text>
-            <Text style={styles.chartDate}>March 15, 2024</Text>
+            <Text style={styles.chartDate}>March 18, 2025</Text>
           </View>
 
           <LineChart
@@ -80,6 +80,7 @@ const CaloriesScreen = () => {
                   strokeWidth: 2,
                 },
               ],
+              legend: ['Active Calories', 'Total Calories'],
             }}
             width={CHART_WIDTH}
             height={220}
@@ -113,6 +114,23 @@ const CaloriesScreen = () => {
             yAxisInterval={100}
             yAxisSuffix=""
           />
+        </View>
+
+     {/* Last Month Summary */}
+     <View style={styles.monthContainer}>
+          <Text style={styles.sectionTitle}>Last Month</Text>
+          <View style={styles.monthSummary}>
+            <View style={styles.monthItem}>
+              <Text style={styles.monthLabel}>Total Active</Text>
+              <Text style={styles.monthValue}>25,463 kcal</Text>
+              <Text style={styles.monthTrend}>+12% from previous</Text>
+            </View>
+            <View style={styles.monthItem}>
+              <Text style={styles.monthLabel}>Daily Average</Text>
+              <Text style={styles.monthValue}>821 kcal</Text>
+              <Text style={styles.monthTrend}>+3% from previous</Text>
+            </View>
+          </View>
         </View>
 
         {/* Statistics */}
@@ -159,6 +177,7 @@ const CaloriesScreen = () => {
                   color: () => '#F97316', // orange
                 },
               ],
+              legend: ['Active Calories', 'Total Calories'],
             }}
             width={CHART_WIDTH}
             height={220}
@@ -188,6 +207,7 @@ const CaloriesScreen = () => {
             showBarTops={false}
             showValuesOnTopOfBars={false}
             segments={4}
+            yAxisSuffix=""
           />
         </View>
       </ScrollView>
@@ -251,11 +271,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
   },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 16,
-  },
   chartContainer: {
     marginBottom: 24,
   },
@@ -317,6 +332,44 @@ const styles = StyleSheet.create({
   },
   weeklyContainer: {
     marginBottom: 24,
+  },
+  monthContainer: {
+    marginBottom: 24,
+  },
+  monthSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  monthItem: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  monthLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  monthValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  monthTrend: {
+    fontSize: 12,
+    color: '#10B981',
+    fontWeight: '500',
   },
 });
 
