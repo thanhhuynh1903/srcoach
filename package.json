@@ -1,5 +1,5 @@
 {
-  "name": "SmartRunningCoach",
+  "name": "smart-running-coach-mobile",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -11,7 +11,6 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.1",
-    "@react-native-community/checkbox": "^0.5.17",
     "@react-native-community/geolocation": "^3.4.0",
     "@react-native-firebase/app": "^21.11.0",
     "@react-native-firebase/auth": "^21.11.0",
@@ -35,11 +34,12 @@
     "react-native-maps": "^1.20.1",
     "react-native-paper": "^5.13.1",
     "react-native-progress": "^5.0.1",
-    "react-native-reanimated": "^3.16.7",
+    "react-native-reanimated": "^3.17.1",
     "react-native-safe-area-context": "^5.2.0",
     "react-native-screens": "^4.6.0",
     "react-native-svg": "^15.11.1",
     "react-native-toast-message": "^2.2.1",
+    "smart-running-coach-mobile": "file:",
     "SmartRunningCoach": "file:",
     "zustand": "^5.0.3"
   },
