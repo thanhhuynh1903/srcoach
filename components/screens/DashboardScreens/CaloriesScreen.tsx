@@ -9,32 +9,139 @@ import {
   Dimensions,
 } from 'react-native';
 
-import {LineChart, BarChart} from 'react-native-chart-kit';
+import {BarChart, LineChart} from 'react-native-gifted-charts';
+
 import BackButton from '../../BackButton';
 const {width} = Dimensions.get('window');
 const CHART_WIDTH = width - 32;
 
-// Sample data for today's calories chart
-const todayData = {
-  activeCalories: [
-    180, 220, 170, 80, 240, 100, 70, 250, 120, 100, 220, 110, 180, 250, 300,
-    180, 100, 240, 120, 230,
-  ],
-  totalCalories: [
-    350, 380, 320, 150, 370, 180, 120, 380, 200, 180, 350, 180, 280, 380, 400,
-    300, 180, 380, 220, 300,
-  ],
-  labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
-};
-
-// Sample data for weekly calories chart
-const weeklyData = {
-  activeCalories: [1800, 1650, 2100, 1900, 1750, 1600, 2200],
-  totalCalories: [2800, 2650, 3000, 2900, 2750, 2600, 3100],
-  labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-};
-
 const CaloriesScreen = () => {
+  const lineData = [
+    {value: 350, dataPointText: '350', label: '00:00', secondaryValue: 180},
+    {value: 340, dataPointText: '340', secondaryValue: 170},
+    {value: 370, dataPointText: '370', secondaryValue: 180},
+    {value: 350, dataPointText: '350', label: '04:00', secondaryValue: 120},
+    {value: 220, dataPointText: '220', secondaryValue: 80},
+    {value: 380, dataPointText: '380', secondaryValue: 240},
+    {value: 320, dataPointText: '320', secondaryValue: 140},
+    {value: 150, dataPointText: '150', label: '08:00', secondaryValue: 60},
+    {value: 280, dataPointText: '280', secondaryValue: 100},
+    {value: 260, dataPointText: '260', secondaryValue: 140},
+    {value: 170, dataPointText: '170', secondaryValue: 120},
+    {value: 330, dataPointText: '330', label: '12:00', secondaryValue: 250},
+    {value: 180, dataPointText: '180', secondaryValue: 240},
+    {value: 100, dataPointText: '100', secondaryValue: 130},
+    {value: 330, dataPointText: '330', secondaryValue: 180},
+    {value: 380, dataPointText: '380', label: '16:00', secondaryValue: 190},
+    {value: 280, dataPointText: '280', secondaryValue: 180},
+    {value: 190, dataPointText: '190', secondaryValue: 120},
+    {value: 280, dataPointText: '280', secondaryValue: 160},
+    {value: 350, dataPointText: '350', label: '20:00', secondaryValue: 240},
+    {value: 290, dataPointText: '290', secondaryValue: 120},
+  ];
+
+  // Revised bar chart data for weekly calories - using grouped bars approach
+  const barData = [
+    // Monday
+    {
+      value: 2200,
+      label: 'Mon',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2800,
+      frontColor: '#F97316',
+      spacing: 18,
+    },
+    // Tuesday
+    {
+      value: 1900,
+      label: 'Tue',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2700,
+      frontColor: '#F97316',
+      spacing: 18,
+    },
+    // Wednesday
+    {
+      value: 2300,
+      label: 'Wed',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2900,
+      frontColor: '#F97316',
+      spacing: 18,
+    },
+    // Thursday
+    {
+      value: 2000,
+      label: 'Thu',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2750,
+      frontColor: '#F97316',
+      spacing: 18,
+    },
+    // Friday
+    {
+      value: 2250,
+      label: 'Fri',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2850,
+      frontColor: '#F97316',
+      spacing: 18,
+    },
+    // Saturday
+    {
+      value: 1800,
+      label: 'Sat',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2600,
+      frontColor: '#F97316',
+      spacing: 18,
+    },
+    // Sunday
+    {
+      value: 2400,
+      label: 'Sun',
+      frontColor: '#3B82F6',
+      spacing: 2,
+      labelWidth: 30,
+      labelTextStyle: {color: '#94A3B8', fontSize: 12},
+    },
+    {
+      value: 2850,
+      frontColor: '#F97316',
+      spacing: 0,
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -66,58 +173,67 @@ const CaloriesScreen = () => {
           </View>
 
           <LineChart
-            data={{
-              labels: todayData.labels,
-              datasets: [
-                {
-                  data: todayData.activeCalories,
-                  color: () => '#3B82F6', // blue
-                  strokeWidth: 2,
-                },
-                {
-                  data: todayData.totalCalories,
-                  color: () => '#F97316', // orange
-                  strokeWidth: 2,
-                },
-              ],
-              legend: ['Active Calories', 'Total Calories'],
-            }}
+            data={lineData}
+            height={250}
             width={CHART_WIDTH}
-            height={220}
-            chartConfig={{
-              backgroundColor: '#FFFFFF',
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-              style: {
-                borderRadius: 16,
-              },
-              propsForDots: {
-                r: '4',
-                strokeWidth: '2',
-              },
-              propsForBackgroundLines: {
-                strokeDasharray: '',
-                stroke: '#E2E8F0',
-                strokeWidth: 1,
-              },
+            noOfSections={4}
+            spacing={15} // Adjusted spacing to match image
+            yAxisLabelWidth={40}
+            yAxisTextStyle={styles.yAxisText}
+            xAxisLabelTextStyle={styles.xAxisText}
+            hideDataPoints={false}
+            dataPointsColor="#F97316"
+            dataPointsRadius={4} // Smaller dots to match image
+            startFillColor="rgba(249, 115, 22, 0)"
+            endFillColor="rgba(249, 115, 22, 0)"
+            color="#F97316"
+            thickness={2}
+            yAxisThickness={1}
+            xAxisThickness={1}
+            yAxisColor="#E2E8F0"
+            xAxisColor="#E2E8F0"
+            backgroundColor="#FFFFFF"
+            rulesType="solid"
+            rulesColor="#E2E8F0"
+            showVerticalLines={false}
+            initialSpacing={10} // Added small initial spacing
+            endSpacing={10} // Added small end spacing
+            maxValue={400}
+            yAxisLabelPrefix=""
+            yAxisLabelSuffix=""
+            yAxisTextNumberOfLines={1}
+            xAxisLabelsVerticalShift={10}
+            curved // Ensure curved lines
+            secondaryData={lineData.map(item => ({
+              value: item.secondaryValue,
+              dataPointText: item.secondaryValue?.toString(),
+              label: item.label,
+            }))}
+            secondaryDataPointsColor="#3B82F6"
+            secondaryDataPointsRadius={4} // Smaller dots to match image
+            secondaryStartFillColor="rgba(59, 130, 246, 0)"
+            secondaryEndFillColor="rgba(59, 130, 246, 0)"
+            secondaryColor="#2196F3"
+            secondaryThickness={2}
+            hideDataPoints1={false}
+            hideSecondaryDataPoints={false}
+            pointerConfig={{
+              pointerStripHeight: 160,
+              pointerStripColor: 'lightgray',
+              pointerStripWidth: 2,
+              pointerColor: 'lightgray',
+              radius: 6,
+              pointerLabelWidth: 100,
+              pointerLabelHeight: 90,
+              activatePointersOnLongPress: false,
+              autoAdjustPointerLabelPosition: false,
+              pointerLabelComponent: () => null,
             }}
-            bezier
-            style={styles.chart}
-            withDots={true}
-            withShadow={false}
-            withInnerLines={true}
-            withOuterLines={false}
-            fromZero={true}
-            yAxisInterval={100}
-            yAxisSuffix=""
           />
         </View>
 
-     {/* Last Month Summary */}
-     <View style={styles.monthContainer}>
+        {/* Last Month Summary */}
+        <View style={styles.monthContainer}>
           <Text style={styles.sectionTitle}>Last Month</Text>
           <View style={styles.monthSummary}>
             <View style={styles.monthItem}>
@@ -165,49 +281,26 @@ const CaloriesScreen = () => {
           <Text style={styles.sectionTitle}>This Week</Text>
 
           <BarChart
-            data={{
-              labels: weeklyData.labels,
-              datasets: [
-                {
-                  data: weeklyData.activeCalories,
-                  color: () => '#3B82F6', // blue
-                },
-                {
-                  data: weeklyData.totalCalories,
-                  color: () => '#F97316', // orange
-                },
-              ],
-              legend: ['Active Calories', 'Total Calories'],
-            }}
-            width={CHART_WIDTH}
+            data={barData}
+            barWidth={24} // Width of each individual bar
+            noOfSections={4}
+            maxValue={3000}
+            yAxisThickness={1}
+            xAxisThickness={1}
+            yAxisColor="#E2E8F0"
+            xAxisColor="#E2E8F0"
+            yAxisTextStyle={styles.yAxisText}
+            hideRules
+            showYAxisIndices={false}
+            showVerticalLines={false}
+            barBorderRadius={1} // Very minimal rounding
+            initialSpacing={10}
+            endSpacing={10}
             height={220}
-            chartConfig={{
-              backgroundColor: '#FFFFFF',
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
-              decimalPlaces: 0,
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-              style: {
-                borderRadius: 16,
-              },
-              barPercentage: 0.6,
-              propsForBackgroundLines: {
-                strokeDasharray: '',
-                stroke: '#E2E8F0',
-                strokeWidth: 1,
-              },
-            }}
-            style={styles.chart}
-            withHorizontalLabels={true}
-            withVerticalLabels={true}
-            withInnerLines={true}
-            withOuterLines={false}
-            fromZero={true}
-            showBarTops={false}
-            showValuesOnTopOfBars={false}
-            segments={4}
-            yAxisSuffix=""
+            width={CHART_WIDTH}
+            rulesColor="#E2E8F0"
+            rulesThickness={1}
+            disablePress
           />
         </View>
       </ScrollView>
@@ -245,6 +338,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 24,
     gap: 8,
+  },
+  yAxisText: {
+    fontSize: 12,
+    color: '#94A3B8',
+  },
+  xAxisText: {
+    fontSize: 12,
+    color: '#94A3B8',
+
   },
   summaryItem: {
     flex: 1,

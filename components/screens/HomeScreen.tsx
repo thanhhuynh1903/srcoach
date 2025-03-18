@@ -90,7 +90,7 @@ const HomeScreen = (props: any) => {
               <Text style={styles.scoreNumber}>88</Text>
             </View>
             <View style={styles.scoreInfo}>
-              <Text style={styles.scoreTitle}>Asklepios Score</Text>
+              <Text style={styles.scoreTitle}>SRCoach Score</Text>
               <Text style={styles.scoreDescription}>
                 Based on your data, how well are you?
               </Text>

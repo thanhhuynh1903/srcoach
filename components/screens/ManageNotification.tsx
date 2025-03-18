@@ -75,7 +75,9 @@ const ManageNotification = () => {
             flexDirection: 'row',
             alignItems: 'center',
             backgroundColor: '#FFF',
+            marginTop: 16,
           }}>
+            
           <BackButton size={26} />
           <Text style={{fontSize: 18, fontWeight: '600', marginLeft: 8}}>
             Notifications

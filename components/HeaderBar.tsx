@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View, Image} from 'react-native';
+import {StyleSheet, Text, View, Image, TouchableOpacity,StatusBar} from 'react-native';
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
@@ -6,6 +6,7 @@ const HeaderBar = () => {
   const navigate = useNavigation();
   return (
     <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
       {/* Logo and App Name */}
       <View style={styles.logoContainer}>
         <Image
@@ -18,14 +19,14 @@ const HeaderBar = () => {
       {/* Inbox Icon */}
       <View style={styles.iconContainer}>
         <Icon name="search-outline" size={24} color="#4B5563" />
-
-        <Icon
-          name="notifications-outline"
-          size={24}
-          color="#4B5563"
-          style={{cursor: 'pointer'}}
-          onPress={() => navigate.navigate('ManageNotification' as never)}
-        />
+        <TouchableOpacity>
+          <Icon
+            name="notifications-outline"
+            size={24}
+            color="#4B5563"
+            onPress={() => navigate.navigate('ManageNotification' as never)}
+          />
+        </TouchableOpacity>
       </View>
     </View>
   );

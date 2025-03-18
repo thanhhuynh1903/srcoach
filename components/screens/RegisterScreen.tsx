@@ -33,7 +33,9 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   return (
     <ScreenWrapper bg={'white'}>
       <View style={styles.container}>
+        <View style={{marginTop: 16}}>
         <BackButton size={26} />
+        </View>
         <View>
           <Text style={styles.welcomeText}>Create Account,</Text>
           <Text style={styles.welcomesubText}>Join us to start your journey</Text>
