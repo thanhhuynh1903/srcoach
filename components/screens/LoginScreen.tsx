@@ -20,7 +20,8 @@ import {TouchableOpacity} from 'react-native';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import Toast from 'react-native-toast-message';
-
+import {useLoginStore} from '../utils/useLoginStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type RootStackParamList = {
   HomeTabs: undefined;
   Register: undefined;
@@ -32,15 +33,23 @@ const LoginScreen: React.FC<{
 }> = ({navigation}) => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-
+  const {login, status, message, accessToken,clear} = useLoginStore();
   // Configure Google Sign-In on component mount
   useEffect(() => {
+    clear();
+    AsyncStorage.clear();
+    console.log('Token mounted',AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
       webClientId:
         '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
     });
   }, []);
-
+  const handleLogin = () => {
+    login(email, password);
+    if (status === 'success' && accessToken !== null) {
+      return navigation.navigate('HomeTabs');
+    }
+  };
   // Google Sign-In handler
   async function onGoogleButtonPress() {
     try {
@@ -56,7 +65,9 @@ const LoginScreen: React.FC<{
       if (!signInResult.data?.idToken) {
         Toast.show({
           type: 'error',
-          text1:'Login Failed', text2:'No ID token found'});
+          text1: 'Login Failed',
+          text2: 'No ID token found',
+        });
         return;
       }
 
@@ -86,7 +97,7 @@ const LoginScreen: React.FC<{
     <ScreenWrapper bg={'white'}>
       <View style={styles.container}>
         <View style={{marginTop: 20}}>
-        <BackButton size={26} />
+          <BackButton size={26} />
         </View>
         <View>
           <Text style={styles.welcomeText}>Hello 😉,</Text>
@@ -114,10 +125,11 @@ const LoginScreen: React.FC<{
           />
           <Text style={styles.forgotPassword}>Forgot password?</Text>
         </View>
-        <ButtonModify
-          title="Login"
-          onPress={() => navigation.navigate('HomeTabs')}
-        />
+        {status !== 'loading' ? (
+          <ButtonModify title="Login" onPress={handleLogin} />
+        ) : (
+          <ButtonModify title="Login" loading={true} />
+        )}
         <View style={{gap: 20}}>
           <Text style={styles.orText}>or continue with</Text>
           <View style={styles.socialButtons}>

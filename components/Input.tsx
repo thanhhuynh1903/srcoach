@@ -13,6 +13,7 @@ interface InputProps {
     value?: string
     keyboardType?: "default" | "email-address" | "numeric" | "phone-pad" ;
     secureTextEntry?: boolean
+    maxLength?: number
   }
 const Input = (props: InputProps) => {
   return (

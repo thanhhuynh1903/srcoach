@@ -14,6 +14,8 @@ const useAuthStore = create<AuthState>((set) => ({
 
   setToken: async (token) => {
     try {
+      console.log("Token:", token);
+      
       await AsyncStorage.setItem('authToken', token);
       set({ token });
       console.log('Token saved successfully');
@@ -22,15 +24,18 @@ const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+
   clearToken: async () => {
     try {
-      await AsyncStorage.clear();
+      await AsyncStorage.removeItem('authToken');
       set({ token: null });
+      const tokenAfter = await AsyncStorage.getItem('authToken');
+      console.log("Token after logout:", tokenAfter);
       console.log('Token cleared successfully');
     } catch (error) {
       console.error('Failed to clear token:', error);
     }
-  },
+  },  
 
   loadToken: async () => {
     try {

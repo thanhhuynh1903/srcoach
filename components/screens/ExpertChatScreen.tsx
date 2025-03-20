@@ -156,7 +156,7 @@ const ExpertChatScreen = () => {
             </View>
             <View style={{flex:1,alignItems:'flex-end',marginRight:32,marginBottom:10}}>
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.actionButton}>
+              <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('GenerateScheduleScreen' as never)}}>
                 <Icon name="share-social-outline" size={20} color="#3B82F6" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('ScheduleScreen' as never)}}>

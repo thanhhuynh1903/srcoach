@@ -35,7 +35,7 @@ const MapViewScreen = () => {
       const exercise = await readRecord("ExerciseSession", recordId);
       console.log("Reading...");
 
-      if (exercise?.exerciseRoute?.type === "CONSENT_REQUIRED") {
+      if (typeof exercise?.exerciseRoute?.type === 'string' && exercise?.exerciseRoute?.type === "CONSENT_REQUIRED") {
         const { route } = await requestExerciseRoute(recordId);
         if (!route) {
           console.log("User denied access");
@@ -43,15 +43,15 @@ const MapViewScreen = () => {
         }
         processRoute(route);
       } else {
-        processRoute(exercise.exerciseRoute.route);
+        processRoute(exercise?.exerciseRoute?.route);
       }
     } catch (error) {
       console.error('Error fetching exercise route:', error);
     }
   };
 
-  const processRoute = (route) => {
-    const extractedPath = route.map(point => ({
+  const processRoute = (route : any) => {
+    const extractedPath = route.map((point: { latitude: number; longitude: number }) => ({
       latitude: point.latitude,
       longitude: point.longitude
     }));

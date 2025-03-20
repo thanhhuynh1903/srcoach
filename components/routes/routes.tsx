@@ -26,6 +26,10 @@ import RiskWarningListScreen from '../screens/RiskWarningListScreen';
 import RiskWarningScreen from '../screens/RiskWarningScreen';
 import DeviceNotificationScreen from '../screens/DeviceNotificationScreen';
 import CaloriesScreen from '../screens/DashboardScreens/CaloriesScreen';
+import VerifyScreen from '../screens/VerifyScreen';
+import GenerateScheduleScreen from '../screens/GenerateScheduleScreen';
+import CalendarScreen from '../screens/CalendarScreen';
+import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
 // Cấu hình cho Stack Navigator
 export const stackScreens = [
   { name: 'Welcome', component: WelcomeScreen },
@@ -33,6 +37,7 @@ export const stackScreens = [
   { name: 'Login', component: LoginScreen },
   { name: 'Register', component: RegisterScreen },
   { name: 'ErrorScreen', component: ErrorScreen },
+  { name: 'VerifyScreen', component: VerifyScreen },
   { name: 'ManageNotification', component: ManageNotification },
   { name: 'SettingsDevices', component: DevicesScreen },
   { name: 'EditProfileScreen', component: EditProfileScreen },
@@ -50,6 +55,9 @@ export const stackScreens = [
   { name: 'SearchScreen', component: SearchScreen },
   { name: 'DeviceNotificationScreen', component: DeviceNotificationScreen },
   { name: 'CaloriesScreen', component: CaloriesScreen },
+  { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
+  { name: 'CalendarScreen', component: CalendarScreen },
+  { name: 'HistoryCalendarScreen', component: HistoryScheduleScreen },
 ];
 
 // Cấu hình cho Tab Navigator

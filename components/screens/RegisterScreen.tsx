@@ -2,73 +2,134 @@ import {
   Image,
   View,
   Text,
-  TextInput,
   StyleSheet,
   Pressable,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
-import React from 'react';
-import {useState} from 'react';
-import {wp, hp} from '../helpers/common';
+import React, { useState, useEffect } from 'react';
+import { wp, hp } from '../helpers/common';
 import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
-import {useNavigation} from '@react-navigation/native';
-import {theme} from '../contants/theme';
+import { theme } from '../contants/theme';
 import Input from '../Input';
 import Icon from '@react-native-vector-icons/ionicons';
 import ButtonModify from '../Button';
-import {Alert} from 'react-native';
-const SignUpScreen = ({navigation}: {navigation: any}) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+import { Alert } from 'react-native';
+import { useRegisterStore } from '../utils/useRegisterStore';
+const SignUpScreen = ({ navigation } : {navigation: any}) => {
+  // Access state and actions from the store
+  const {
+    email,
+    password,
+    username,
+    age,
+    message,
+    status,
+    setEmail,
+    setPassword,
+    setUsername,
+    setAge,
+    register,
+    clear,
+  } = useRegisterStore();
+
+  // Local state for password confirmation (not in store)
   const [passwordCf, setPasswordCf] = useState('');
-  const handleLogin = () => {
-    if (email === 'admin' && password === '123456') {
-      navigation.replace('Main');
-    } else {
-      Alert.alert('Invalid credentials');
+
+  // Handle registration
+  const handleRegister = () => {
+    if (password !== passwordCf) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
     }
+    if (!email || !password || !username || !age) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    register(email, password, username, age);
   };
 
+  // Navigate to VerifyScreen on successful registration
+  useEffect(() => {
+    clear();
+    if (status === 'success') {
+      navigation.navigate('VerifyScreen');
+      clear(); // Optional: Clear the form after success
+    }
+  }, [status, navigation, clear]);
+
   return (
-    <ScreenWrapper bg={'white'}>
+    <ScrollView style={{ flex: 1,backgroundColor:"white" }}>
       <View style={styles.container}>
-        <View style={{marginTop: 16}}>
-        <BackButton size={26} />
+        <View style={{ marginTop: 16 }}>
+          <BackButton size={26} />
         </View>
         <View>
           <Text style={styles.welcomeText}>Create Account,</Text>
-          <Text style={styles.welcomesubText}>Join us to start your journey</Text>
+          <Text style={styles.welcomesubText}>
+            Join us to start your journey
+          </Text>
         </View>
         <View style={styles.form}>
-          <Text style={{fontSize: hp(1.5), color: theme.colors.textLight}}>
+          <Text style={{ fontSize: hp(1.5), color: theme.colors.textLight }}>
             Try to register a new account here
           </Text>
+          <View style={{ flexDirection: 'row' }}>
+            <Input
+              containerStyle={{ width: '67%' }}
+              icon={<Icon name="person-outline" size={24} color="black" />}
+              placeholder="Enter your username"
+              onChangeText={setUsername}
+              value={username}
+              keyboardType="default"
+            />
+            <Input
+              containerStyle={{ width: '30%', marginLeft: 10 }}
+              icon={<Icon name="ribbon-outline" size={24} color="black" />}
+              placeholder="Age"
+              onChangeText={setAge}
+              value={age}
+              keyboardType="numeric"
+              maxLength={2}
+            />
+          </View>
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
-            placeholder="Enter your email"
-            onChangeText={value => setEmail(value)}
+            placeholder="Enter your Email"
+            onChangeText={setEmail}
             value={email}
             keyboardType="email-address"
           />
           <Input
             icon={<Icon name="lock-closed-outline" size={24} color="black" />}
             placeholder="Enter your password"
-            onChangeText={value => setPassword(value)}
+            onChangeText={setPassword}
             value={password}
             secureTextEntry={true}
           />
           <Input
             icon={<Icon name="lock-closed-outline" size={24} color="black" />}
             placeholder="Enter your confirm password"
-            onChangeText={value => setPasswordCf(value)}
+            onChangeText={setPasswordCf}
             value={passwordCf}
             secureTextEntry={true}
           />
+          {/* Display message from the store */}
+          {message && (
+            <Text
+              style={{
+                color: status === 'error' ? 'red' : 'green',
+                textAlign: 'center',
+              }}>
+              {message}
+            </Text>
+          )}
         </View>
         <ButtonModify
-          title="Create Account"
-          onPress={() => navigation.navigate('Login')}
+          title={status === 'loading' ? 'Creating...' : 'Create Account'}
+          onPress={handleRegister}
+          loading={status === 'loading'} // Disable button during loading
         />
         <View>
           <Text style={styles.termsText}>
@@ -76,9 +137,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             <Text style={styles.link}>Terms of Service</Text> and{' '}
             <Text style={styles.link}>Privacy Policy</Text>
           </Text>
-
           <Text style={styles.orText}>or continue with</Text>
-
           <View style={styles.socialContainer}>
             <TouchableOpacity style={styles.socialButton}>
               <Image
@@ -89,7 +148,6 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
               />
               <Text style={styles.socialText}>Google</Text>
             </TouchableOpacity>
-
             <TouchableOpacity style={styles.socialButton}>
               <Icon name="call-outline" size={20} color="black" />
               <Text style={styles.socialText}>Phone</Text>
@@ -102,26 +160,22 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             <Text
               style={[
                 styles.footerText,
-                {color: theme.fontColor.SemiboldBlue, fontWeight: 'bold'},
+                { color: theme.fontColor.SemiboldBlue, fontWeight: 'bold' },
               ]}>
               Login
             </Text>
           </Pressable>
         </View>
       </View>
-    </ScreenWrapper>
+    </ScrollView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 30,
     paddingHorizontal: wp(5),
-  },
-  welcomeImage: {
-    height: hp(18),
-    width: wp(100),
-    alignSelf: 'center',
   },
   welcomeText: {
     fontSize: hp(4),
@@ -134,12 +188,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   form: {
-    gap: 20,
-  },
-  forgotPassword: {
-    textAlign: 'right',
-    fontWeight: '600',
-    color: theme.colors.text,
+    gap: 15,
   },
   footer: {
     flexDirection: 'row',
@@ -191,4 +240,5 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+
 export default SignUpScreen;

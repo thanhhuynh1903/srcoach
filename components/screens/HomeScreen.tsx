@@ -32,6 +32,7 @@ import Animated, {
   Layout,
 } from 'react-native-reanimated';
 import {useNavigation} from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const AnimatedView = Animated.createAnimatedComponent(View);
 
 const HomeScreen = (props: any) => {
@@ -39,7 +40,7 @@ const HomeScreen = (props: any) => {
   const opacity = useSharedValue(0);
   const navigation = useNavigation();
   useEffect(() => {
-    opacity.value = withTiming(1, {duration: 1000});
+        opacity.value = withTiming(1, {duration: 1000});
     return () => {
       opacity.value = withTiming(0, {duration: 500});
     };

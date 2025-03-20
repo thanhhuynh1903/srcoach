@@ -1,19 +1,47 @@
 import React from 'react';
-import {View, Text, Image, TouchableOpacity, StyleSheet} from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
-import {Alert} from 'react-native';
+import useAuthStore from '../utils/useAuthStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
+  const {clearToken} = useAuthStore();
+
   async function logout() {
     try {
-      await GoogleSignin.revokeAccess();
-      await GoogleSignin.signOut();
-      await auth().signOut();
+      const currentUser = auth().currentUser;
 
-      Alert.alert('Logged Out', 'You have been successfully logged out.');
-      navigation.navigate('Login');
+      if (currentUser) {
+        // Kiểm tra provider của tài khoản hiện tại
+        const isGoogleUser = currentUser.providerData.some(
+          provider => provider.providerId === 'google.com',
+        );
+
+        if (isGoogleUser) {
+          // Đăng xuất Google nếu tài khoản là Google
+          await GoogleSignin.revokeAccess();
+          await GoogleSignin.signOut();
+        }
+
+        // Đăng xuất Firebase cho cả email/mật khẩu và Google
+        await auth().signOut();
+        // Xoá token khỏi AsyncStorage và cập nhật state
+        navigation.navigate('Login');
+
+        Alert.alert('Logged Out', 'You have been successfully logged out.');
+      } else {
+        navigation.navigate('Login');
+        Alert.alert('Logged Out');
+      }
     } catch (error: any) {
       console.error('Logout Error:', error);
       Alert.alert(
@@ -64,7 +92,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
           </TouchableOpacity>
         ))}
 
-        <TouchableOpacity style={styles.logoutItem} onPress={() => logout()}>
+        <TouchableOpacity style={styles.logoutItem} onPress={logout}>
           <Icon name="log-out-outline" size={24} color="red" />
           <View style={styles.menuTextContainer}>
             <Text style={styles.logoutText}>Logout</Text>
