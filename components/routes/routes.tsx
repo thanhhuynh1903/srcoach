@@ -30,6 +30,7 @@ import VerifyScreen from '../screens/VerifyScreen';
 import GenerateScheduleScreen from '../screens/GenerateScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
+import VerifyLoginScreen from '../screens/VerifyLoginScreen';
 // Cấu hình cho Stack Navigator
 export const stackScreens = [
   { name: 'Welcome', component: WelcomeScreen },
@@ -38,6 +39,7 @@ export const stackScreens = [
   { name: 'Register', component: RegisterScreen },
   { name: 'ErrorScreen', component: ErrorScreen },
   { name: 'VerifyScreen', component: VerifyScreen },
+  { name: 'VerifyLoginScreen', component: VerifyLoginScreen },
   { name: 'ManageNotification', component: ManageNotification },
   { name: 'SettingsDevices', component: DevicesScreen },
   { name: 'EditProfileScreen', component: EditProfileScreen },

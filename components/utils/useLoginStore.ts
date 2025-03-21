@@ -1,52 +1,79 @@
-import { create } from 'zustand';
+import {create} from 'zustand';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 interface LoginState {
-  accessToken: string | null;
-  status: 'idle' | 'loading' | 'success' | 'error';
+  userdata: any | null;
+  apiStatus: any;
+  status: any;
   message: string;
   login: (email: string, password: string) => Promise<void>;
-  setAccessToken: (token: string | null) => void;
   clear: () => void;
+  verifyCode: (code: string) => Promise<void>;
 }
 
-export const useLoginStore = create<LoginState>((set) => ({
-  accessToken: null,
-  status: 'idle',
+export const useLoginStore = create<LoginState>((set, get) => ({
+  userdata: null,
+  status:"",
+  apiStatus: false,
   message: '',
   login: async (email: string, password: string) => {
-    console.log("email", email);
-    console.log("password", password);
-    
-    set({ status: 'loading', message: '' });
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users/login',
-        { identifier :email, password },
+        {identifier: email, password},
         {
           headers: {
-            "Content-Type": "application/json"
+            'Content-Type': 'application/json',
           },
-        }
+        },
       );
-      console.log("response", response.data);
-      
-      // Kiểm tra xem API trả về key nào chứa token (ví dụ accessToken hoặc token)
-      const { accessToken } = response.data;
-      AsyncStorage.setItem('authToken', response?.data?.accessToken);
-      console.log("accessToken", accessToken);
-      console.log('Token mounted',AsyncStorage.getItem('authToken'));
 
-      set({ accessToken, status: 'success', message: 'Login Successfully' });
+      console.log('response', response.data);
+      const apiStatus = response?.data?.status;
+      const message = response?.data?.message;
+      const userdata = response?.data?.user;
+
+
+      AsyncStorage.setItem('authToken', response?.data?.data?.accessToken);
+      set({userdata, status: apiStatus, message});
     } catch (error: any) {
       set({
-        status: 'error',
         message: error.response?.data?.message || 'Đăng nhập thất bại',
       });
     }
   },
+  verifyCode: async (code: string) => {
+    // Lấy email từ dataUser trong state
+    const {userdata} = get();
+    console.log('dataUser', userdata);
 
-  setAccessToken: (token: string | null) => set({ accessToken: token }),
+    if (!userdata || !userdata?.email) {
+      console.log('No email available from dataUser');
+      return;
+    }
 
-  clear: () => set({ accessToken: null, status: 'idle', message: '' }),
+    try {
+      const response = await axios.post(
+        'https://xavia.pro/api/users/activate',
+        {
+          email: userdata?.email, // Lấy email từ dataUser
+          verificationCode: code,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      console.log('Response:', response.data);
+      console.log('Verify Success', response.data.status);
+
+      set({status: response.data.status, message: response.data.message});
+    } catch (error: any) {
+      console.log('Error:', error);
+      // Xử lý lỗi nếu cần
+    }
+  },
+  clear: () => set({userdata: null, status: null, message: ''}),
 }));

@@ -1,3 +1,4 @@
+import React, {useState, useEffect} from 'react';
 import {
   Image,
   View,
@@ -6,63 +7,99 @@ import {
   Pressable,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import { wp, hp } from '../helpers/common';
+import {wp, hp} from '../helpers/common';
 import BackButton from '../BackButton';
-import ScreenWrapper from '../ScreenWrapper';
-import { theme } from '../contants/theme';
+import {theme} from '../contants/theme';
 import Input from '../Input';
 import Icon from '@react-native-vector-icons/ionicons';
 import ButtonModify from '../Button';
-import { Alert } from 'react-native';
-import { useRegisterStore } from '../utils/useRegisterStore';
-const SignUpScreen = ({ navigation } : {navigation: any}) => {
-  // Access state and actions from the store
-  const {
-    email,
-    password,
-    username,
-    age,
-    message,
-    status,
-    setEmail,
-    setPassword,
-    setUsername,
-    setAge,
-    register,
-    clear,
-  } = useRegisterStore();
+import {useRegisterStore} from '../utils/useRegisterStore';
 
-  // Local state for password confirmation (not in store)
+const SignUpScreen = ({navigation}: {navigation: any}) => {
+  // Local state
+  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [passwordCf, setPasswordCf] = useState('');
 
-  // Handle registration
-  const handleRegister = () => {
+  // Access state and actions from the store
+  const {dataUser, status, message, register, clear} = useRegisterStore();
+  const [loading, setLoading] = useState(false);
+
+  // Hàm kiểm tra định dạng email
+  // const isValidEmail = (email: string) => {
+  //   const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
+  //   return re.test(String(email).toLowerCase());
+  // };
+
+  // Hàm validate đầu vào
+  const validateInputs = (): boolean => {
+    if (!username.trim() || !name.trim()) {
+      Alert.alert('Error', 'Username and Name are required.');
+      return false;
+    }
+    if (!age.trim() || isNaN(Number(age)) || Number(age) <= 0) {
+      Alert.alert('Error', 'Please enter a valid age.');
+      return false;
+    }
+    // if (!email.trim() || !isValidEmail(email)) {
+    //   Alert.alert('Error', 'Please enter a valid email address.');
+    //   return false;
+    // }
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return false;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters.');
+      return false;
+    }
     if (password !== passwordCf) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
+      Alert.alert('Error', 'Passwords do not match.');
+      return false;
     }
-    if (!email || !password || !username || !age) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    register(email, password, username, age);
+    return true;
   };
 
-  // Navigate to VerifyScreen on successful registration
-  useEffect(() => {
-    clear();
-    if (status === 'success') {
-      navigation.navigate('VerifyScreen');
-      clear(); // Optional: Clear the form after success
+  // Handle registration
+  const handleRegister = async () => {
+    if (!validateInputs()) return;
+    setLoading(true); // Start loading
+
+    try {
+      await register(
+        name.trim(),
+        username.trim(),
+        parseInt(age, 10),
+        email.trim().toLowerCase(),
+        password,
+      );
+      // Optionally, navigate or show success
+    } catch (error) {
+      console.error(error);
+      // Optionally, show error message
+    } finally {
+      setLoading(false); // End loading
     }
-  }, [status, navigation, clear]);
+  };
+
+  // Khi đăng ký thành công, chuyển đến VerifyScreen
+  useEffect(() => {
+    if (status === 'success') {
+      console.log('dataUser', dataUser);
+      navigation.navigate('VerifyScreen');
+      clear(); // Reset store sau khi thành công
+    }
+  }, [status, dataUser, navigation, clear]);
 
   return (
-    <ScrollView style={{ flex: 1,backgroundColor:"white" }}>
+    <ScrollView style={{flex: 1, backgroundColor: 'white'}}>
       <View style={styles.container}>
-        <View style={{ marginTop: 16 }}>
+        <View style={{marginTop: 16}}>
           <BackButton size={26} />
         </View>
         <View>
@@ -72,26 +109,33 @@ const SignUpScreen = ({ navigation } : {navigation: any}) => {
           </Text>
         </View>
         <View style={styles.form}>
-          <Text style={{ fontSize: hp(1.5), color: theme.colors.textLight }}>
+          <Text style={{fontSize: hp(1.5), color: theme.colors.textLight}}>
             Try to register a new account here
           </Text>
-          <View style={{ flexDirection: 'row' }}>
+          <Input
+            icon={<Icon name="glasses-outline" size={24} color="black" />}
+            placeholder="Enter your Username"
+            onChangeText={setUsername}
+            value={username}
+            keyboardType="default"
+          />
+          <View style={{flexDirection: 'row'}}>
             <Input
-              containerStyle={{ width: '67%' }}
+              containerStyle={{width: '67%'}}
               icon={<Icon name="person-outline" size={24} color="black" />}
-              placeholder="Enter your username"
-              onChangeText={setUsername}
-              value={username}
+              placeholder="Enter your Name"
+              onChangeText={setName}
+              value={name}
               keyboardType="default"
             />
             <Input
-              containerStyle={{ width: '30%', marginLeft: 10 }}
+              containerStyle={{width: '30%', marginLeft: 10}}
               icon={<Icon name="ribbon-outline" size={24} color="black" />}
               placeholder="Age"
               onChangeText={setAge}
               value={age}
               keyboardType="numeric"
-              maxLength={2}
+              maxLength={3}
             />
           </View>
           <Input
@@ -106,17 +150,17 @@ const SignUpScreen = ({ navigation } : {navigation: any}) => {
             placeholder="Enter your password"
             onChangeText={setPassword}
             value={password}
-            secureTextEntry={true}
+            secureTextEntry
           />
           <Input
             icon={<Icon name="lock-closed-outline" size={24} color="black" />}
-            placeholder="Enter your confirm password"
+            placeholder="Confirm your password"
             onChangeText={setPasswordCf}
             value={passwordCf}
-            secureTextEntry={true}
+            secureTextEntry
           />
-          {/* Display message from the store */}
-          {message && (
+          {/* Hiển thị message từ store nếu có */}
+          {message ? (
             <Text
               style={{
                 color: status === 'error' ? 'red' : 'green',
@@ -124,12 +168,12 @@ const SignUpScreen = ({ navigation } : {navigation: any}) => {
               }}>
               {message}
             </Text>
-          )}
+          ) : null}
         </View>
         <ButtonModify
-          title={status === 'loading' ? 'Creating...' : 'Create Account'}
+          title="Create Account"
           onPress={handleRegister}
-          loading={status === 'loading'} // Disable button during loading
+          loading={loading} // Pass the loading state to the ButtonModify component
         />
         <View>
           <Text style={styles.termsText}>
@@ -148,10 +192,6 @@ const SignUpScreen = ({ navigation } : {navigation: any}) => {
               />
               <Text style={styles.socialText}>Google</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Icon name="call-outline" size={20} color="black" />
-              <Text style={styles.socialText}>Phone</Text>
-            </TouchableOpacity>
           </View>
         </View>
         <View style={styles.footer}>
@@ -160,7 +200,7 @@ const SignUpScreen = ({ navigation } : {navigation: any}) => {
             <Text
               style={[
                 styles.footerText,
-                { color: theme.fontColor.SemiboldBlue, fontWeight: 'bold' },
+                {color: theme.fontColor.SemiboldBlue, fontWeight: 'bold'},
               ]}>
               Login
             </Text>
@@ -172,28 +212,19 @@ const SignUpScreen = ({ navigation } : {navigation: any}) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    gap: 30,
-    paddingHorizontal: wp(5),
-  },
-  welcomeText: {
-    fontSize: hp(4),
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
+  container: {flex: 1, gap: 30, paddingHorizontal: wp(5)},
+  welcomeText: {fontSize: hp(4), fontWeight: 'bold', color: theme.colors.text},
   welcomesubText: {
     fontSize: hp(2.4),
-    fontWeight: 500,
+    fontWeight: '500',
     color: theme.colors.text,
   },
-  form: {
-    gap: 15,
-  },
+  form: {gap: 15},
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 20,
   },
   footerText: {
     textAlign: 'center',
@@ -206,19 +237,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
-  link: {
-    color: '#0B2341',
-    fontWeight: 'bold',
-  },
-  iconImage: {
-    width: 20,
-    height: 20,
-  },
-  orText: {
-    color: '#666',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
+  link: {color: '#0B2341', fontWeight: 'bold'},
+  iconImage: {width: 20, height: 20},
+  orText: {color: '#666', marginBottom: 10, textAlign: 'center'},
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -234,11 +255,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 5,
   },
-  socialText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  socialText: {marginLeft: 8, fontSize: 14, fontWeight: '500'},
 });
 
 export default SignUpScreen;

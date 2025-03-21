@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,13 @@ import {
   Alert,
 } from 'react-native';
 import BackButton from '../BackButton';
-import { useRegisterStore } from '../utils/useRegisterStore';
-import { useNavigation } from '@react-navigation/native';
+import {useLoginStore} from '../utils/useLoginStore';
+import {useNavigation} from '@react-navigation/native';
 
-const VerifyScreen = ({ navigation }: { navigation: any }) => {
+const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyStatus, message, verifyCode } = useRegisterStore();
+  const {verifyCode, status,message} = useLoginStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
 
@@ -61,14 +61,13 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
 
   // Monitor verifyStatus changes to handle success or error
   useEffect(() => {
-    if (verifyStatus === 'success') {
+    if (status === 'success') {
       Alert.alert('Success', 'Verification successful!');
-      navigate.navigate('Login' as never);
-    } else if (verifyStatus === 'error') {
+      navigate.navigate('HomeTabs' as never);
+    } else if (status === 'error') {
       Alert.alert('Error', message);
     }
-  }, [verifyStatus]);
-
+  }, [status]);
   // Handle resend code
   const handleResendCode = () => {
     Alert.alert('New code sent to your email');
@@ -89,7 +88,8 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
       <View style={styles.content}>
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
-          Please enter code associated to your email
+          This account have been signed up but not verified Please enter the
+          code sent to your email
         </Text>
 
         {/* Verification code inputs */}
@@ -198,4 +198,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VerifyScreen;
+export default VerifyLoginScreen;

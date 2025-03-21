@@ -40,7 +40,9 @@ const HomeScreen = (props: any) => {
   const opacity = useSharedValue(0);
   const navigation = useNavigation();
   useEffect(() => {
-        opacity.value = withTiming(1, {duration: 1000});
+    console.log(AsyncStorage.getItem('authToken'));
+    
+    opacity.value = withTiming(1, {duration: 1000});
     return () => {
       opacity.value = withTiming(0, {duration: 500});
     };

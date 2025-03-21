@@ -12,36 +12,45 @@ import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useLoginStore} from '../utils/useLoginStore';
+import { CommonActions } from '@react-navigation/native';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
-
+  const {clear} = useLoginStore();
   async function logout() {
     try {
       const currentUser = auth().currentUser;
 
       if (currentUser) {
-        // Kiểm tra provider của tài khoản hiện tại
+        // Check if the current user is a Google user
         const isGoogleUser = currentUser.providerData.some(
           provider => provider.providerId === 'google.com',
         );
 
         if (isGoogleUser) {
-          // Đăng xuất Google nếu tài khoản là Google
+          // Sign out from Google if needed
           await GoogleSignin.revokeAccess();
           await GoogleSignin.signOut();
         }
 
-        // Đăng xuất Firebase cho cả email/mật khẩu và Google
+        // Sign out from Firebase for both email/password and Google
         await auth().signOut();
-        // Xoá token khỏi AsyncStorage và cập nhật state
-        navigation.navigate('Login');
-
-        Alert.alert('Logged Out', 'You have been successfully logged out.');
-      } else {
-        navigation.navigate('Login');
-        Alert.alert('Logged Out');
       }
+
+      // Clear token from AsyncStorage
+      await AsyncStorage.removeItem('authToken');
+      // If you have a clearToken function from your store, call it here.
+      clearToken && clearToken();
+      clear();
+      // Navigate to Login after all operations have finished
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      );
+      Alert.alert('Logged Out', 'You have been successfully logged out.');
     } catch (error: any) {
       console.error('Logout Error:', error);
       Alert.alert(

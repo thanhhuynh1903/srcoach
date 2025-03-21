@@ -1,55 +1,91 @@
+import React, { useState, useEffect } from 'react';
 import {
   Image,
   View,
   Text,
-  TextInput,
   StyleSheet,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
-import React, {useEffect} from 'react';
-import {useState} from 'react';
-import {wp, hp} from '../helpers/common';
+import { wp, hp } from '../helpers/common';
 import ScreenWrapper from '../ScreenWrapper';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import {NavigationProp, useNavigation} from '@react-navigation/native';
-import {theme} from '../contants/theme';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { theme } from '../contants/theme';
 import Input from '../Input';
 import ButtonModify from '../Button';
-import {TouchableOpacity} from 'react-native';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import Toast from 'react-native-toast-message';
-import {useLoginStore} from '../utils/useLoginStore';
+import { useLoginStore } from '../utils/useLoginStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 type RootStackParamList = {
   HomeTabs: undefined;
   Register: undefined;
-  // Add other routes as needed
+  VerifyLoginScreen: undefined;
 };
 
 const LoginScreen: React.FC<{
   navigation: NavigationProp<RootStackParamList>;
-}> = ({navigation}) => {
+}> = ({ navigation }) => {
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const {login, status, message, accessToken,clear} = useLoginStore();
+
+  // Lấy các state và hàm từ store (store đã cập nhật status và accessToken)
+  const { login, message, status, clear } = useLoginStore();
+
   // Configure Google Sign-In on component mount
   useEffect(() => {
-    clear();
+    clear(); // reset store
     AsyncStorage.clear();
-    console.log('Token mounted',AsyncStorage.getItem('authToken'));
+    console.log('Token mounted', AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
       webClientId:
         '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
     });
-  }, []);
-  const handleLogin = () => {
-    login(email, password);
-    if (status === 'success' && accessToken !== null) {
-      return navigation.navigate('HomeTabs');
+  }, [clear]);
+
+  // useEffect để theo dõi thay đổi trạng thái login và điều hướng khi cần
+  useEffect(() => {
+    if (status === 'success') {
+      Toast.show({
+        type: 'success',
+        text1: message || 'Login Successful',
+        text2: 'Welcome to the homepage!',
+      });
+      navigation.navigate('HomeTabs');
+    } else if (status === 'wait') {
+      navigation.navigate('VerifyLoginScreen');
+    } else if (status === 'error' && message) {
+      Toast.show({
+        type: 'error',
+        text1: message,
+      });
+    }
+  }, [status, message, navigation]);
+
+  const handleLogin = async () => {
+    // Validate input fields
+    if (!email || !password) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill in both email and password',
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      await login(email, password);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
+
   // Google Sign-In handler
   async function onGoogleButtonPress() {
     try {
@@ -72,7 +108,7 @@ const LoginScreen: React.FC<{
       }
 
       const googleCredential = auth.GoogleAuthProvider.credential(
-        signInResult.data?.idToken,
+        signInResult.data.idToken,
       );
       await auth().signInWithCredential(googleCredential);
       console.log('googleCredential', signInResult.data);
@@ -96,7 +132,7 @@ const LoginScreen: React.FC<{
   return (
     <ScreenWrapper bg={'white'}>
       <View style={styles.container}>
-        <View style={{marginTop: 20}}>
+        <View style={{ marginTop: 20 }}>
           <BackButton size={26} />
         </View>
         <View>
@@ -106,31 +142,29 @@ const LoginScreen: React.FC<{
           </Text>
         </View>
         <View style={styles.form}>
-          <Text style={{fontSize: hp(1.5), color: theme.colors.textLight}}>
+          <Text style={{ fontSize: hp(1.5), color: theme.colors.textLight }}>
             Please login to continue
           </Text>
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
             placeholder="Enter your email"
-            onChangeText={value => setEmail(value)}
+            onChangeText={setEmail}
             value={email}
             keyboardType="email-address"
           />
           <Input
             icon={<Icon name="lock-closed-outline" size={24} color="black" />}
             placeholder="Enter your password"
-            onChangeText={value => setPassword(value)}
+            onChangeText={setPassword}
             value={password}
             secureTextEntry={true}
           />
           <Text style={styles.forgotPassword}>Forgot password?</Text>
         </View>
-        {status !== 'loading' ? (
-          <ButtonModify title="Login" onPress={handleLogin} />
-        ) : (
-          <ButtonModify title="Login" loading={true} />
-        )}
-        <View style={{gap: 20}}>
+
+        <ButtonModify title="Login" onPress={handleLogin} loading={loading} />
+
+        <View style={{ gap: 20 }}>
           <Text style={styles.orText}>or continue with</Text>
           <View style={styles.socialButtons}>
             <TouchableOpacity
@@ -144,11 +178,6 @@ const LoginScreen: React.FC<{
               />
               <Text style={styles.socialText}>Google</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.socialButton}>
-              <Icon name="call-outline" size={20} color="black" />
-              <Text style={styles.socialText}>Phone</Text>
-            </TouchableOpacity>
           </View>
         </View>
         <View style={styles.footer}>
@@ -157,7 +186,7 @@ const LoginScreen: React.FC<{
             <Text
               style={[
                 styles.footerText,
-                {color: theme.fontColor.SemiboldBlue, fontWeight: 'bold'},
+                { color: theme.fontColor.SemiboldBlue, fontWeight: 'bold' },
               ]}>
               Sign Up
             </Text>
@@ -167,16 +196,12 @@ const LoginScreen: React.FC<{
     </ScreenWrapper>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     gap: 30,
     paddingHorizontal: wp(5),
-  },
-  welcomeImage: {
-    height: hp(18),
-    width: wp(100),
-    alignSelf: 'center',
   },
   welcomeText: {
     fontSize: hp(4),
@@ -236,4 +261,5 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
+
 export default LoginScreen;

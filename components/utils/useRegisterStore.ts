@@ -1,71 +1,89 @@
-import axios from "axios";
-import { create } from "zustand";
+import {create} from 'zustand';
+import axios from 'axios';
 
 interface RegisterState {
-  email: string;
-  password: string;
-  verificationCode: string;
-  username: string;
-  age: string;
+  dataUser: any | null;
+  status: any;
+  verifyStatus: any;
   message: string;
-  status: "idle" | "loading" | "success" | "error";
-  // Action: Gửi yêu cầu đăng ký (gửi mã xác minh)
-  register: (email: string, password: string, username: string, age: string) => Promise<void>;
-  // Action: Xác minh tài khoản với mã code
-  verifyAccount: (email: string, verificationCode: string) => Promise<void>;
-  // Các action để cập nhật giá trị của form
-  setEmail: (email: string) => void;
-  setPassword: (password: string) => void;
-  setUsername: (username: string) => void;
-  setAge: (age: string) => void;
-  setVerificationCode: (code: string) => void;
-  // Reset toàn bộ trạng thái
+  register: (
+    name: string,
+    usname: string,
+    age: number,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   clear: () => void;
+  verifyCode: (code: string) => Promise<void>;
 }
 
-export const useRegisterStore = create<RegisterState>((set : any) => ({
-  email: "",
-  password: "",
-  verificationCode: "",
-  username: "",
-  age: "",
-  message: "",
-  status: "idle",
+export const useRegisterStore = create<RegisterState>((set, get) => ({
+  dataUser: null,
+  status: '',
+  verifyStatus: '',
+  message: '',
+  register: async (name, username, age, email, password) => {
 
-  register: async (email : any, password : any, username : string, age : string) => {
-    set({ status: "loading", message: "" });
     try {
-        const payload = { email, password, username, age };
-        const headers = { "Content-Type": "application/json" };
-      // Gọi API gửi mã xác minh (backend gửi email mã xác minh)
-      const response = await axios.post("https://xavia.pro/api/users", payload, { headers });
-      set({ email, password, username, age, status: "success", message: response.data.message });
+      const response = await axios.post(
+        'https://xavia.pro/api/users',
+        {
+          username: username,
+          email: email,
+          password: password,
+          name: name,
+          age: age,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      console.log('response', response.data);
+      console.log('response?.data?.data', response?.data?.data);
+      const dataUser = response?.data?.data;
+      set({dataUser, status: response?.data?.status , message: response?.data?.message});
     } catch (error: any) {
+      console.log('Error:', error);
       set({
-        status: "error",
-        message: error.response?.data?.message || "Có lỗi khi gửi email xác minh",
+        status: 'error',
+        message: error.response?.data?.message || 'Registration Failed',
       });
     }
   },
+  clear: () => set({status: 'idle', message: ''}),
+  verifyCode: async (code: string) => {
+    // Lấy email từ dataUser trong state
+    const {dataUser} = get();
+    console.log('dataUser', dataUser);
 
-  verifyAccount: async (email : any, verificationCode : string) => {
-    set({ status: "loading", message: "" });
+    set({verifyStatus: 'loading', message: ''});
+    if (!dataUser || !dataUser.email) {
+      console.log('No email available from dataUser');
+      return;
+    }
+
     try {
-      // Gọi API kích hoạt tài khoản với mã xác minh
-      const response = await axios.post("http://localhost:5000/api/users/activate", { email, verificationCode });
-      set({ status: "success", message: response.data.message });
+      const response = await axios.post(
+        'https://xavia.pro/api/users/activate',
+        {
+          email: dataUser?.email, // Lấy email từ dataUser
+          verificationCode: code,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      console.log('Response:', response.data);
+      console.log('Verify Success', response.data.status);
+
+      set({verifyStatus: response.data.status, message: response.data.message});
     } catch (error: any) {
-      set({
-        status: "error",
-        message: error.response?.data?.message || "Có lỗi khi kích hoạt tài khoản",
-      });
+      console.log('Error:', error);
+      // Xử lý lỗi nếu cần
     }
   },
-
-  setEmail: (email: string) => set({ email }),
-  setPassword: (password: string) => set({ password }),
-  setUsername: (username: string) => set({ username }),
-  setAge: (age: string) => set({ age }),
-  setVerificationCode: (code: string) => set({ verificationCode: code }),
-  clear: () => set({ email: "", password: "", verificationCode: "", username: "", age: "", message: "", status: "idle" }),
 }));
