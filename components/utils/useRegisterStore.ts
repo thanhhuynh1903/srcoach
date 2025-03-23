@@ -5,6 +5,7 @@ interface RegisterState {
   dataUser: any | null;
   status: any;
   verifyStatus: any;
+  resendStatus: any;
   message: string;
   register: (
     name: string,
@@ -15,12 +16,14 @@ interface RegisterState {
   ) => Promise<void>;
   clear: () => void;
   verifyCode: (code: string) => Promise<void>;
+  ResendCode: () => Promise<void>;
 }
 
 export const useRegisterStore = create<RegisterState>((set, get) => ({
   dataUser: null,
   status: '',
   verifyStatus: '',
+  resendStatus: '',
   message: '',
   register: async (name, username, age, email, password) => {
 
@@ -81,6 +84,38 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
       console.log('Verify Success', response.data.status);
 
       set({verifyStatus: response.data.status, message: response.data.message});
+    } catch (error: any) {
+      console.log('Error:', error);
+      // Xử lý lỗi nếu cần
+    }
+  },
+  ResendCode: async () => {
+    // Lấy email từ dataUser trong state
+    const {dataUser} = get();
+    console.log('Resend code user data', dataUser);
+
+    set({resendStatus: 'loading', message: ''});
+    if (!dataUser || !dataUser.email) {
+      console.log('No email available from dataUser');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        'https://xavia.pro/api/users/resend-code',
+        {
+          email: dataUser?.email, // Lấy email từ dataUser
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+      console.log('Response:', response.data);
+      console.log('Verify Success', response.data.status);
+
+      set({resendStatus: response.data.status, message: response.data.message});
     } catch (error: any) {
       console.log('Error:', error);
       // Xử lý lỗi nếu cần

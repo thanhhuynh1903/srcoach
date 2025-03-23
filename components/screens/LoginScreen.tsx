@@ -39,8 +39,7 @@ const LoginScreen: React.FC<{
 
   // Configure Google Sign-In on component mount
   useEffect(() => {
-    clear(); // reset store
-    AsyncStorage.clear();
+    clear();
     console.log('Token mounted', AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
       webClientId:

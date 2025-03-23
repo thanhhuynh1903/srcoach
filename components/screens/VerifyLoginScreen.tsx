@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import BackButton from '../BackButton';
 import {useLoginStore} from '../utils/useLoginStore';
@@ -19,7 +20,7 @@ import {useNavigation} from '@react-navigation/native';
 const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const {verifyCode, status,message} = useLoginStore();
+  const {verifyCode, status, message,ResendCode,resendStatus} = useLoginStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
 
@@ -69,8 +70,15 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
     }
   }, [status]);
   // Handle resend code
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     Alert.alert('New code sent to your email');
+    setIsLoading(true);
+    try {
+      await ResendCode();
+    } catch (error) {
+      console.log('Error verifying code:', error);
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -120,8 +128,20 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
         </TouchableOpacity>
 
         {/* Resend code link */}
-        <Pressable onPress={handleResendCode}>
-          <Text style={styles.resendText}>Send code again</Text>
+        <Pressable
+          onPress={handleResendCode}
+          style={{
+            borderWidth: 1,
+            borderColor: '#0a2463',
+            borderRadius: 5,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+          }}>
+          {isLoading ? (
+            <ActivityIndicator color="#ccc" size="small" />
+          ) : (
+            <Text style={styles.resendText}>Send code again</Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

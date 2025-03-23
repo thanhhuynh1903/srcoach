@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import {useState, useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,17 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import BackButton from '../BackButton';
-import { useRegisterStore } from '../utils/useRegisterStore';
-import { useNavigation } from '@react-navigation/native';
+import {useRegisterStore} from '../utils/useRegisterStore';
+import {useNavigation} from '@react-navigation/native';
 
-const VerifyScreen = ({ navigation }: { navigation: any }) => {
+const VerifyScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const { verifyStatus, message, verifyCode } = useRegisterStore();
+  const {verifyStatus, message, verifyCode, ResendCode, resendStatus} =
+    useRegisterStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
 
@@ -70,8 +72,15 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
   }, [verifyStatus]);
 
   // Handle resend code
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     Alert.alert('New code sent to your email');
+    setIsLoading(true);
+    try {
+      await ResendCode();
+    } catch (error) {
+      console.log('Error verifying code:', error);
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -120,8 +129,12 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
         </TouchableOpacity>
 
         {/* Resend code link */}
-        <Pressable onPress={handleResendCode}>
-          <Text style={styles.resendText}>Send code again</Text>
+        <Pressable onPress={handleResendCode} style={{borderWidth:1, borderColor:'#0a2463', borderRadius:5,paddingVertical:12,paddingHorizontal:16}}>
+          {isLoading ? (
+            <ActivityIndicator color="#ccc" size="small" />
+          ) : (
+            <Text style={styles.resendText}>Send code again</Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>
