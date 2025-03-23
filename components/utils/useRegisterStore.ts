@@ -10,7 +10,8 @@ interface RegisterState {
   register: (
     name: string,
     usname: string,
-    age: number,
+    gender: string,
+    dob: string,
     email: string,
     password: string,
   ) => Promise<void>;
@@ -26,7 +27,14 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
   resendStatus: '',
   message: '',
 
-  register: async (name, username, age, email, password) => {
+  register: async (name, username, gender, dob,email, password) => {
+    console.log('name', name);
+    console.log('username', username);
+    console.log('gender', gender);
+    console.log('dob', dob);
+    console.log('email', email);
+    console.log('password', password);
+    
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users',
@@ -35,7 +43,8 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
           email: email,
           password: password,
           name: name,
-          age: age,
+          birthDate: dob,
+          gender: gender
         },
         {
           headers: {
@@ -65,12 +74,11 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
     // Lấy email từ dataUser trong state
     // const {dataUser} = get();
     // console.log('dataUser', dataUser);
-
-    set({verifyStatus: 'loading', message: ''});
     // if (!dataUser || !dataUser.email) {
     //   console.log('No email available from dataUser');
     //   return;
     // }
+    set({status: 'loading', message: ''});
 
     try {
       const response = await axios.post(
@@ -95,11 +103,13 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
     }
   },
   ResendCode: async (email: string) => {
+
     // Lấy email từ dataUser trong state
     // const {dataUser} = get();
     // console.log('Resend code user data', dataUser);
+console.log('email', email);
 
-    // set({resendStatus: 'loading', message: ''});
+    set({resendStatus: 'loading', message: ''});
     // if (!dataUser || !dataUser.email) {
     //   console.log('No email available from dataUser');
     //   return;

@@ -13,6 +13,7 @@ import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useLoginStore} from '../utils/useLoginStore';
+import { useRegisterStore } from '../utils/useRegisterStore';
 import { CommonActions } from '@react-navigation/native';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {

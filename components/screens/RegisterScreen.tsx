@@ -21,21 +21,15 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   // Local state
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [gender, setGender] = useState(''); // Changed from age to gender
+  const [dob, setDob] = useState(''); // Added date of birth
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordCf, setPasswordCf] = useState('');
 
   // Access state and actions from the store
-  const {dataUser, status, message, register, clear} =
-    useRegisterStore();
+  const {dataUser, status, message, register, clear} = useRegisterStore();
   const [loading, setLoading] = useState(false);
-
-  // Hàm kiểm tra định dạng email
-  // const isValidEmail = (email: string) => {
-  //   const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\\.,;:\s@"]+\.)+[^<>()[\]\\.,;:\s@"]{2,})$/i;
-  //   return re.test(String(email).toLowerCase());
-  // };
 
   // Hàm validate đầu vào
   const validateInputs = (): boolean => {
@@ -43,14 +37,21 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
       Alert.alert('Error', 'Username and Name are required.');
       return false;
     }
-    if (!age.trim() || isNaN(Number(age)) || Number(age) <= 0) {
-      Alert.alert('Error', 'Please enter a valid age.');
+    if (!gender.trim()) {
+      Alert.alert('Error', 'Please enter your gender.');
       return false;
     }
-    // if (!email.trim() || !isValidEmail(email)) {
-    //   Alert.alert('Error', 'Please enter a valid email address.');
-    //   return false;
-    // }
+
+    // Date of birth validation (yyyy-mm-dd format)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dob.trim() || !dateRegex.test(dob)) {
+      Alert.alert(
+        'Error',
+        'Please enter a valid date of birth in yyyy-mm-dd format.',
+      );
+      return false;
+    }
+
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter a valid email address.');
       return false;
@@ -66,16 +67,21 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     return true;
   };
 
+  useEffect(() => {
+    clear();
+  }, [navigation]);
   // Handle registration
   const handleRegister = async () => {
     if (!validateInputs()) return;
     setLoading(true); // Start loading
+console.log('status register',status);
 
     try {
       await register(
         name.trim(),
         username.trim(),
-        parseInt(age, 10),
+        gender.trim(), // Changed from age to gender
+        dob.trim(), // Added date of birth
         email.trim().toLowerCase(),
         password,
       );
@@ -133,14 +139,20 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             />
             <Input
               containerStyle={{width: '30%', marginLeft: 10}}
-              icon={<Icon name="ribbon-outline" size={24} color="black" />}
-              placeholder="Age"
-              onChangeText={setAge}
-              value={age}
-              keyboardType="numeric"
-              maxLength={3}
+              icon={<Icon name="male-female-outline" size={24} color="black" />}
+              placeholder="Gender"
+              onChangeText={setGender}
+              value={gender}
+              keyboardType="default"
             />
           </View>
+          <Input
+            icon={<Icon name="calendar-outline" size={24} color="black" />}
+            placeholder="Date of birth (yyyy-mm-dd)"
+            onChangeText={setDob}
+            value={dob}
+            keyboardType="default"
+          />
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
             placeholder="Enter your Email"

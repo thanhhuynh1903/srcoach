@@ -22,18 +22,19 @@ interface VerifyParam {
 const VerifyScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const {verifyStatus, message, verifyCode, ResendCode, resendStatus} =
+  const {verifyStatus, message, verifyCode, ResendCode, clear} =
     useRegisterStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
   const route = useRoute();
-  const {emailLabel} = route.params as VerifyParam
+  const {emailLabel} = route.params as VerifyParam;
 
   // Initialize refs array
   useEffect(() => {
     if (Array.isArray(inputRefs.current)) {
       inputRefs.current = inputRefs.current.slice(0, 6);
     }
+    
   }, []);
 
   // Handle input change: update code and auto-focus next input
@@ -58,7 +59,7 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
   const handleVerify = async () => {
     setIsLoading(true);
     try {
-      await verifyCode(emailLabel,code.join(''));
+      await verifyCode(emailLabel, code.join(''));
     } catch (error) {
       console.log('Error verifying code:', error);
     }
@@ -69,15 +70,17 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
   useEffect(() => {
     if (verifyStatus === 'success') {
       Alert.alert('Success', 'Verification successful!');
+      
       navigate.navigate('Login' as never);
     } else if (verifyStatus === 'error') {
       Alert.alert(message);
+   
     }
-  }, [verifyStatus,message]);
+    clear();
+  }, [verifyStatus]);
 
   // Handle resend code
   const handleResendCode = async () => {
-    Alert.alert('New code sent to your email');
     setIsLoading(true);
     try {
       await ResendCode(emailLabel);
@@ -103,13 +106,11 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
           Please enter code associated to your email :{' '}
-          <Text style={{color: '#666', fontWeight: 'bold'}}>
-            {emailLabel}
-          </Text>
+          <Text style={{color: '#666', fontWeight: 'bold'}}>{emailLabel}</Text>
         </Text>
 
         {/* Verification code inputs */}
-        <View style={styles.codeContainer}>
+        <View style={[styles.codeContainer,{    marginBottom: message ? 25 :  25,}]}>
           {[0, 1, 2, 3, 4, 5].map(index => (
             <TextInput
               key={index}
@@ -125,6 +126,11 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
           ))}
         </View>
 
+        {message && (
+          <View style={{alignItems: 'center',marginBottom: 5}}>
+            <Text style={{color: 'red'}}>{message}</Text>
+          </View>
+        )}
         {/* Verify button */}
         <TouchableOpacity
           style={styles.verifyButton}
@@ -192,7 +198,6 @@ const styles = StyleSheet.create({
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
   },
   codeInput: {
     width: 56,

@@ -75,8 +75,8 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   },
   ResendCode: async (email:string) => {
     // Lấy email từ dataUser trong state
-    const {userdata} = get();
-    console.log('Resend code user data', userdata);
+    // const {userdata} = get();
+    // console.log('Resend code user data', userdata);
 
     set({resendStatus: 'loading', message: ''});
    
@@ -85,7 +85,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       const response = await axios.post(
         'https://xavia.pro/api/users/resend-code',
         {
-          email: email, // Lấy email từ dataUser
+          email: email,
         },
         {
           headers: {

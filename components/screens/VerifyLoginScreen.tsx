@@ -73,9 +73,10 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
       navigate.navigate('HomeTabs' as never);
     } else if (status === 'error') {
       Alert.alert(message);
+    
     }
-    clear();
-  }, [status,message]);
+      clear();
+  }, [status]);
   // Handle resend code
   const handleResendCode = async () => {
     Alert.alert('New code sent to your email');
