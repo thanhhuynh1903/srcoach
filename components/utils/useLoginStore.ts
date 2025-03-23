@@ -10,8 +10,8 @@ interface LoginState {
   message: string;
   login: (email: string, password: string) => Promise<void>;
   clear: () => void;
-  verifyCode: (code: string) => Promise<void>;
-  ResendCode: () => Promise<void>;
+  verifyCode: (email: string,code: string) => Promise<void>;
+  ResendCode: (email:string) => Promise<void>;
 }
 
 export const useLoginStore = create<LoginState>((set, get) => ({
@@ -46,21 +46,16 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       });
     }
   },
-  verifyCode: async (code: string) => {
+  verifyCode: async (email: string,code: string) => {
     // Lấy email từ dataUser trong state
-    const {userdata} = get();
-    console.log('dataUser', userdata);
-
-    if (!userdata || !userdata?.email) {
-      console.log('No email available from dataUser');
-      return;
-    }
+    console.log('email', email);
+    set({status: 'loading', message: ''});
 
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users/activate',
         {
-          email: userdata?.email, // Lấy email từ dataUser
+          email: email, // Lấy email từ dataUser
           verificationCode: code,
         },
         {
@@ -70,7 +65,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
         },
       );
       console.log('Response:', response.data);
-      console.log('Verify Success', response.data.status);
+      console.log('Verify status', response.data.status);
 
       set({status: response.data.status, message: response.data.message});
     } catch (error: any) {
@@ -78,22 +73,19 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       // Xử lý lỗi nếu cần
     }
   },
-  ResendCode: async () => {
+  ResendCode: async (email:string) => {
     // Lấy email từ dataUser trong state
     const {userdata} = get();
     console.log('Resend code user data', userdata);
 
     set({resendStatus: 'loading', message: ''});
-    if (!userdata || !userdata.email) {
-      console.log('No email available from dataUser');
-      return;
-    }
+   
 
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users/resend-code',
         {
-          email: userdata?.email, // Lấy email từ dataUser
+          email: email, // Lấy email từ dataUser
         },
         {
           headers: {
@@ -110,5 +102,5 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       // Xử lý lỗi nếu cần
     }
   },
-  clear: () => set({userdata: null, status: null, message: ''}),
+  clear: () => set({userdata: null, status: '', message: ''}),
 }));

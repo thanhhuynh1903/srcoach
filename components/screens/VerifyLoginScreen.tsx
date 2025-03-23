@@ -15,15 +15,19 @@ import {
 } from 'react-native';
 import BackButton from '../BackButton';
 import {useLoginStore} from '../utils/useLoginStore';
-import {useNavigation} from '@react-navigation/native';
-
+import {useNavigation, useRoute} from '@react-navigation/native';
+interface VerifyParam {
+  emailLabel: string;
+}
 const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const {verifyCode, status, message,ResendCode,resendStatus} = useLoginStore();
+  const {verifyCode, status, message, ResendCode, resendStatus,clear} =
+    useLoginStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
-
+  const route = useRoute();
+  const {emailLabel} = route.params as VerifyParam;
   // Initialize refs array
   useEffect(() => {
     if (Array.isArray(inputRefs.current)) {
@@ -53,7 +57,9 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
   const handleVerify = async () => {
     setIsLoading(true);
     try {
-      await verifyCode(code.join(''));
+      console.log('emailLabel', emailLabel);
+      
+      await verifyCode(emailLabel,code.join(''));
     } catch (error) {
       console.log('Error verifying code:', error);
     }
@@ -66,15 +72,16 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
       Alert.alert('Success', 'Verification successful!');
       navigate.navigate('HomeTabs' as never);
     } else if (status === 'error') {
-      Alert.alert('Error', message);
+      Alert.alert(message);
     }
-  }, [status]);
+    clear();
+  }, [status,message]);
   // Handle resend code
   const handleResendCode = async () => {
     Alert.alert('New code sent to your email');
     setIsLoading(true);
     try {
-      await ResendCode();
+      await ResendCode(emailLabel);
     } catch (error) {
       console.log('Error verifying code:', error);
     }
@@ -97,7 +104,10 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
           This account have been signed up but not verified Please enter the
-          code sent to your email
+          code sent to your email{' '}
+          <Text style={{color: '#666', fontWeight: 'bold'}}>
+            {emailLabel}
+          </Text>
         </Text>
 
         {/* Verification code inputs */}

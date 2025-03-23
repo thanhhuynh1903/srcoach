@@ -15,8 +15,10 @@ import {
 } from 'react-native';
 import BackButton from '../BackButton';
 import {useRegisterStore} from '../utils/useRegisterStore';
-import {useNavigation} from '@react-navigation/native';
-
+import {useNavigation, useRoute} from '@react-navigation/native';
+interface VerifyParam {
+  emailLabel: string;
+}
 const VerifyScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +26,8 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
     useRegisterStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
+  const route = useRoute();
+  const {emailLabel} = route.params as VerifyParam
 
   // Initialize refs array
   useEffect(() => {
@@ -54,7 +58,7 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
   const handleVerify = async () => {
     setIsLoading(true);
     try {
-      await verifyCode(code.join(''));
+      await verifyCode(emailLabel,code.join(''));
     } catch (error) {
       console.log('Error verifying code:', error);
     }
@@ -67,16 +71,16 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
       Alert.alert('Success', 'Verification successful!');
       navigate.navigate('Login' as never);
     } else if (verifyStatus === 'error') {
-      Alert.alert('Error', message);
+      Alert.alert(message);
     }
-  }, [verifyStatus]);
+  }, [verifyStatus,message]);
 
   // Handle resend code
   const handleResendCode = async () => {
     Alert.alert('New code sent to your email');
     setIsLoading(true);
     try {
-      await ResendCode();
+      await ResendCode(emailLabel);
     } catch (error) {
       console.log('Error verifying code:', error);
     }
@@ -98,7 +102,10 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
       <View style={styles.content}>
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
-          Please enter code associated to your email
+          Please enter code associated to your email :{' '}
+          <Text style={{color: '#666', fontWeight: 'bold'}}>
+            {emailLabel}
+          </Text>
         </Text>
 
         {/* Verification code inputs */}
@@ -129,7 +136,15 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
         </TouchableOpacity>
 
         {/* Resend code link */}
-        <Pressable onPress={handleResendCode} style={{borderWidth:1, borderColor:'#0a2463', borderRadius:5,paddingVertical:12,paddingHorizontal:16}}>
+        <Pressable
+          onPress={handleResendCode}
+          style={{
+            borderWidth: 1,
+            borderColor: '#0a2463',
+            borderRadius: 5,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+          }}>
           {isLoading ? (
             <ActivityIndicator color="#ccc" size="small" />
           ) : (

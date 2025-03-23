@@ -24,8 +24,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type RootStackParamList = {
   HomeTabs: undefined;
   Register: undefined;
-  VerifyLoginScreen: undefined;
-};
+  VerifyLoginScreen: {
+    emailLabel: string;
+  };};
 
 const LoginScreen: React.FC<{
   navigation: NavigationProp<RootStackParamList>;
@@ -39,7 +40,7 @@ const LoginScreen: React.FC<{
 
   // Configure Google Sign-In on component mount
   useEffect(() => {
-    clear();
+    clear(); // reset store
     console.log('Token mounted', AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
       webClientId:
@@ -57,7 +58,10 @@ const LoginScreen: React.FC<{
       });
       navigation.navigate('HomeTabs');
     } else if (status === 'wait') {
-      navigation.navigate('VerifyLoginScreen');
+      navigation.navigate('VerifyLoginScreen',{
+        emailLabel: email, // pass the email to the next screen
+      });
+      clear();
     } else if (status === 'error' && message) {
       Toast.show({
         type: 'error',
@@ -128,11 +132,13 @@ const LoginScreen: React.FC<{
     }
   }
 
+  const canGoBack = navigation.canGoBack();
+
   return (
     <ScreenWrapper bg={'white'}>
       <View style={styles.container}>
         <View style={{ marginTop: 20 }}>
-          <BackButton size={26} />
+          {canGoBack && <BackButton size={26} />}
         </View>
         <View>
           <Text style={styles.welcomeText}>Hello 😉,</Text>

@@ -27,7 +27,8 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   const [passwordCf, setPasswordCf] = useState('');
 
   // Access state and actions from the store
-  const {dataUser, status, message, register, clear} = useRegisterStore();
+  const {dataUser, status, message, register, clear} =
+    useRegisterStore();
   const [loading, setLoading] = useState(false);
 
   // Hàm kiểm tra định dạng email
@@ -91,7 +92,9 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   useEffect(() => {
     if (status === 'success') {
       console.log('dataUser', dataUser);
-      navigation.navigate('VerifyScreen');
+      navigation.navigate('VerifyScreen', {
+        emailLabel: email, // pass the email to the next screen
+      });
       clear(); // Reset store sau khi thành công
     }
   }, [status, dataUser, navigation, clear]);
