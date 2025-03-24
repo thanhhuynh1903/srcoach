@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Image,
   View,
@@ -9,26 +9,27 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import {wp, hp} from '../helpers/common';
+import { wp, hp } from '../helpers/common';
 import BackButton from '../BackButton';
-import {theme} from '../contants/theme';
+import { theme } from '../contants/theme';
 import Input from '../Input';
 import Icon from '@react-native-vector-icons/ionicons';
 import ButtonModify from '../Button';
-import {useRegisterStore} from '../utils/useRegisterStore';
+import { useRegisterStore } from '../utils/useRegisterStore';
+import { Picker } from '@react-native-picker/picker';
+import { Calendar } from 'react-native-calendars';
 
-const SignUpScreen = ({navigation}: {navigation: any}) => {
-  // Local state
+const SignUpScreen = ({ navigation }: { navigation: any }) => {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
-  const [gender, setGender] = useState(''); // Changed from age to gender
-  const [dob, setDob] = useState(''); // Added date of birth
+  const [gender, setGender] = useState('');
+  const [dob, setDob] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordCf, setPasswordCf] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  // Access state and actions from the store
-  const {dataUser, status, message, register, clear} = useRegisterStore();
+  const { dataUser, status, message, register, clear } = useRegisterStore();
   const [loading, setLoading] = useState(false);
 
   // Hàm validate đầu vào
@@ -38,7 +39,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
       return false;
     }
     if (!gender.trim()) {
-      Alert.alert('Error', 'Please enter your gender.');
+      Alert.alert('Error', 'Please select your gender.');
       return false;
     }
 
@@ -70,45 +71,43 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   useEffect(() => {
     clear();
   }, [navigation]);
+
   // Handle registration
   const handleRegister = async () => {
     if (!validateInputs()) return;
     setLoading(true); // Start loading
-console.log('status register',status);
+    console.log('status register', status);
 
     try {
       await register(
         name.trim(),
         username.trim(),
-        gender.trim(), // Changed from age to gender
-        dob.trim(), // Added date of birth
+        gender.trim(),
+        dob.trim(),
         email.trim().toLowerCase(),
         password,
       );
-      // Optionally, navigate or show success
     } catch (error) {
       console.error(error);
-      // Optionally, show error message
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
   };
 
-  // Khi đăng ký thành công, chuyển đến VerifyScreen
   useEffect(() => {
     if (status === 'success') {
       console.log('dataUser', dataUser);
       navigation.navigate('VerifyScreen', {
-        emailLabel: email, // pass the email to the next screen
+        emailLabel: email,
       });
-      clear(); // Reset store sau khi thành công
+      clear();
     }
   }, [status, dataUser, navigation, clear]);
 
   return (
-    <ScrollView style={{flex: 1, backgroundColor: 'white'}}>
+    <ScrollView style={{ flex: 1, backgroundColor: 'white' }}>
       <View style={styles.container}>
-        <View style={{marginTop: 16}}>
+        <View style={{ marginTop: 16 }}>
           <BackButton size={26} />
         </View>
         <View>
@@ -118,7 +117,7 @@ console.log('status register',status);
           </Text>
         </View>
         <View style={styles.form}>
-          <Text style={{fontSize: hp(1.5), color: theme.colors.textLight}}>
+          <Text style={styles.formHeaderText}>
             Try to register a new account here
           </Text>
           <Input
@@ -128,31 +127,46 @@ console.log('status register',status);
             value={username}
             keyboardType="default"
           />
-          <View style={{flexDirection: 'row'}}>
+          <View style={styles.rowContainer}>
             <Input
-              containerStyle={{width: '67%'}}
+              containerStyle={styles.nameInput}
               icon={<Icon name="person-outline" size={24} color="black" />}
               placeholder="Enter your Name"
               onChangeText={setName}
               value={name}
               keyboardType="default"
             />
-            <Input
-              containerStyle={{width: '30%', marginLeft: 10}}
-              icon={<Icon name="male-female-outline" size={24} color="black" />}
-              placeholder="Gender"
-              onChangeText={setGender}
-              value={gender}
-              keyboardType="default"
-            />
+            <View style={styles.genderPickerContainer}>
+              <Picker
+                selectedValue={gender}
+                onValueChange={itemValue => setGender(itemValue)}
+                style={styles.genderPicker}>
+                <Picker.Item label="Select Gender" value="" />
+                <Picker.Item label="Male" value="Male" />
+                <Picker.Item label="Female" value="Female" />
+                <Picker.Item label="Other" value="Other" />
+              </Picker>
+            </View>
           </View>
-          <Input
-            icon={<Icon name="calendar-outline" size={24} color="black" />}
-            placeholder="Date of birth (yyyy-mm-dd)"
-            onChangeText={setDob}
-            value={dob}
-            keyboardType="default"
-          />
+          <TouchableOpacity onPress={() => setShowCalendar(!showCalendar)}>
+            <Input
+              icon={<Icon name="calendar-outline" size={24} color="black" />}
+              placeholder="Date of birth (yyyy-mm-dd)"
+              value={dob}
+              editable={false}
+            />
+          </TouchableOpacity>
+          {showCalendar && (
+            <Calendar
+              onDayPress={day => {
+                setDob(day.dateString);
+                setShowCalendar(false);
+              }}
+              markedDates={{
+                [dob]: { selected: true, selectedColor: theme.colors.primary },
+              }}
+            />
+          )}
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
             placeholder="Enter your Email"
@@ -177,10 +191,10 @@ console.log('status register',status);
           {/* Hiển thị message từ store nếu có */}
           {message ? (
             <Text
-              style={{
-                color: status === 'error' ? 'red' : 'green',
-                textAlign: 'center',
-              }}>
+              style={[
+                styles.messageText,
+                { color: status === 'error' ? 'red' : 'green' },
+              ]}>
               {message}
             </Text>
           ) : null}
@@ -193,8 +207,15 @@ console.log('status register',status);
         <View>
           <Text style={styles.termsText}>
             By signing up, you agree to read{' '}
-            <Text style={styles.link}>Terms of Service</Text> and{' '}
-            <Text style={styles.link}>Privacy Policy</Text>
+          </Text>
+          <Text style={styles.termsTextSub}>
+            <TouchableOpacity onPress={() => navigation.navigate('TermsOfServiceScreen')}>
+              <Text style={styles.link}>Terms of Service{' '}</Text>
+            </TouchableOpacity>
+            and{' '}
+            <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicyScreen')}>
+              <Text style={styles.link}>Privacy Policy</Text>
+            </TouchableOpacity>
           </Text>
           <Text style={styles.orText}>or continue with</Text>
           <View style={styles.socialContainer}>
@@ -210,15 +231,9 @@ console.log('status register',status);
           </View>
         </View>
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
+          <Text style={styles.footerText}>Already have an account? </Text>
           <Pressable onPress={() => navigation.push('Login')}>
-            <Text
-              style={[
-                styles.footerText,
-                {color: theme.fontColor.SemiboldBlue, fontWeight: 'bold'},
-              ]}>
-              Login
-            </Text>
+            <Text style={styles.footerLinkText}>Login</Text>
           </Pressable>
         </View>
       </View>
@@ -227,14 +242,39 @@ console.log('status register',status);
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, gap: 30, paddingHorizontal: wp(5)},
-  welcomeText: {fontSize: hp(4), fontWeight: 'bold', color: theme.colors.text},
+  container: { flex: 1, gap: 30, paddingHorizontal: wp(5) },
+  welcomeText: { fontSize: hp(4), fontWeight: 'bold', color: theme.colors.text },
   welcomesubText: {
     fontSize: hp(2.4),
     fontWeight: '500',
     color: theme.colors.text,
   },
-  form: {gap: 15},
+  form: { gap: 15 },
+  formHeaderText: {
+    fontSize: hp(1.5),
+    color: theme.colors.textLight,
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  nameInput: {
+    width: '67%',
+  },
+  genderPickerContainer: {
+    width: '30%',
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    justifyContent: 'center',
+  },
+  genderPicker: {
+    height: 50,
+    width: '100%',
+  },
+  messageText: {
+    textAlign: 'center',
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -246,15 +286,29 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: hp(1.6),
   },
+  footerLinkText: {
+    color: theme.fontColor.SemiboldBlue,
+    fontWeight: 'bold',
+    fontSize: hp(1.6),
+  },
   termsText: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 10,
   },
-  link: {color: '#0B2341', fontWeight: 'bold'},
-  iconImage: {width: 20, height: 20},
-  orText: {color: '#666', marginBottom: 10, textAlign: 'center'},
+  termsTextSub: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  link: {
+    color: '#0B2341',
+    fontWeight: 'bold',
+    transform: [{ translateY: 5 }],
+  },
+  iconImage: { width: 20, height: 20 },
+  orText: { color: '#666', marginBottom: 10, textAlign: 'center' },
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -270,7 +324,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 5,
   },
-  socialText: {marginLeft: 8, fontSize: 14, fontWeight: '500'},
+  socialText: { marginLeft: 8, fontSize: 14, fontWeight: '500' },
 });
 
 export default SignUpScreen;

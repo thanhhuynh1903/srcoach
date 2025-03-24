@@ -31,6 +31,9 @@ import GenerateScheduleScreen from '../screens/GenerateScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginScreen';
+import PrivacyPolicyScreen from '../screens/SettingsAboutScreens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from '../screens/SettingsAboutScreens/TermsOfServiceScreen';
+
 // Cấu hình cho Stack Navigator
 export const stackScreens = [
   { name: 'Welcome', component: WelcomeScreen },
@@ -60,6 +63,10 @@ export const stackScreens = [
   { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
   { name: 'CalendarScreen', component: CalendarScreen },
   { name: 'HistoryCalendarScreen', component: HistoryScheduleScreen },
+
+  //About
+  { name: "PrivacyPolicyScreen", component: PrivacyPolicyScreen },
+  { name: "TermsOfServiceScreen", component: TermsOfServiceScreen },
 ];
 
 // Cấu hình cho Tab Navigator
