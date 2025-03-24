@@ -33,7 +33,7 @@ import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginScreen';
 import PrivacyPolicyScreen from '../screens/SettingsAboutScreens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/SettingsAboutScreens/TermsOfServiceScreen';
-
+import AddScheduleScreen from '../screens/AddScheduleScreen';
 // Cấu hình cho Stack Navigator
 export const stackScreens = [
   { name: 'Welcome', component: WelcomeScreen },
@@ -63,6 +63,7 @@ export const stackScreens = [
   { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
   { name: 'CalendarScreen', component: CalendarScreen },
   { name: 'HistoryCalendarScreen', component: HistoryScheduleScreen },
+  { name: 'AddScheduleScreen', component: AddScheduleScreen },
 
   //About
   { name: "PrivacyPolicyScreen", component: PrivacyPolicyScreen },

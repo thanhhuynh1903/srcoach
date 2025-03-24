@@ -9,6 +9,8 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
+import { useNavigation } from '@react-navigation/native';
+
 const filters = ['All', 'High Risk', 'Medium Risk', 'Low'];
 
 const riskItems = [
@@ -59,7 +61,7 @@ const riskItems = [
 const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-
+  const navigation = useNavigation();
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -110,7 +112,7 @@ const RiskWarningListScreen = () => {
       <ScrollView style={styles.riskList}>
         <View>
           {riskItems.map(item => (
-            <TouchableOpacity key={item.id} style={styles.riskItem}>
+            <TouchableOpacity key={item.id} style={styles.riskItem} onPress={() => {navigation.navigate('RiskWarningScreen' as never)}}>
               <View style={styles.riskHeader}>
                 <Text style={styles.riskTitle}>{item.title}</Text>
                 <View

@@ -64,7 +64,7 @@ const GenerateScheduleScreen = () => {
           <Text style={styles.actionButtonText}>Full{'\n'}Calendar</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('AddScheduleScreen' as never)}}>
           <Icon name="add-circle-outline" size={24} color="#555" />
           <Text style={styles.actionButtonText}>Add{'\n'}Schedule</Text>
         </TouchableOpacity>

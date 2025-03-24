@@ -259,10 +259,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   nameInput: {
-    width: '67%',
+    width: '65%',
   },
   genderPickerContainer: {
-    width: '30%',
+    width: '32%',
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
