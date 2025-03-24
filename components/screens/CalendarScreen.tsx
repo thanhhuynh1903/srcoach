@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from "react-native"
-import Icon from "@react-native-vector-icons/ionicons"
 import { Calendar } from "react-native-calendars"
 import BackButton from "../BackButton"
 const CalendarScreen = () => {
