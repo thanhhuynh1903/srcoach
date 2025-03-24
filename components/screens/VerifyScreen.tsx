@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useRef, useEffect} from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,27 +14,29 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import BackButton from '../BackButton';
-import {useRegisterStore} from '../utils/useRegisterStore';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import { useRegisterStore } from '../utils/useRegisterStore';
+import { useNavigation, useRoute } from '@react-navigation/native';
+
 interface VerifyParam {
   emailLabel: string;
 }
-const VerifyScreen = ({navigation}: {navigation: any}) => {
+
+const VerifyScreen = ({ navigation }: { navigation: any }) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const {verifyStatus, message, verifyCode, ResendCode, clear} =
-    useRegisterStore();
+  const { verifyStatus, message, verifyCode, ResendCode, clear } = useRegisterStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
   const route = useRoute();
-  const {emailLabel} = route.params as VerifyParam;
+  const { emailLabel } = route.params as VerifyParam;
 
   // Initialize refs array
   useEffect(() => {
     if (Array.isArray(inputRefs.current)) {
       inputRefs.current = inputRefs.current.slice(0, 6);
     }
-    
+    // Reset verification status on mount
+    clear();
   }, []);
 
   // Handle input change: update code and auto-focus next input
@@ -68,15 +70,15 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
 
   // Monitor verifyStatus changes to handle success or error
   useEffect(() => {
+    console.log('Register verify status:', verifyStatus);
     if (verifyStatus === 'success') {
       Alert.alert('Success', 'Verification successful!');
-      
       navigate.navigate('Login' as never);
+      // Optionally, clear after navigating if needed:
+      // clear();
     } else if (verifyStatus === 'error') {
       Alert.alert(message);
-   
     }
-    clear();
   }, [verifyStatus]);
 
   // Handle resend code
@@ -85,7 +87,7 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
     try {
       await ResendCode(emailLabel);
     } catch (error) {
-      console.log('Error verifying code:', error);
+      console.log('Error resending code:', error);
     }
     setIsLoading(false);
   };
@@ -105,20 +107,20 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
       <View style={styles.content}>
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
-          Please enter code associated to your email :{' '}
-          <Text style={{color: '#666', fontWeight: 'bold'}}>{emailLabel}</Text>
+          Please enter code associated to your email:{' '}
+          <Text style={{ color: '#666', fontWeight: 'bold' }}>{emailLabel}</Text>
         </Text>
 
         {/* Verification code inputs */}
-        <View style={[styles.codeContainer,{    marginBottom: message ? 25 :  25,}]}>
-          {[0, 1, 2, 3, 4, 5].map(index => (
+        <View style={[styles.codeContainer, { marginBottom: message ? 25 : 25 }]}>
+          {[0, 1, 2, 3, 4, 5].map((index) => (
             <TextInput
               key={index}
-              ref={ref => (inputRefs.current[index] = ref)}
+              ref={(ref) => (inputRefs.current[index] = ref)}
               style={styles.codeInput}
               value={code[index]}
-              onChangeText={text => handleCodeChange(text, index)}
-              onKeyPress={e => handleKeyPress(e, index)}
+              onChangeText={(text) => handleCodeChange(text, index)}
+              onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="number-pad"
               maxLength={1}
               selectTextOnFocus
@@ -127,8 +129,8 @@ const VerifyScreen = ({navigation}: {navigation: any}) => {
         </View>
 
         {message && (
-          <View style={{alignItems: 'center',marginBottom: 5}}>
-            <Text style={{color: 'red'}}>{message}</Text>
+          <View style={{ alignItems: 'center', marginBottom: 5 }}>
+            <Text style={{ color: 'red' }}>{message}</Text>
           </View>
         )}
         {/* Verify button */}

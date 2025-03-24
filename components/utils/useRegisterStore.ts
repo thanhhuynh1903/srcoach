@@ -1,4 +1,4 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import axios from 'axios';
 
 interface RegisterState {
@@ -16,7 +16,7 @@ interface RegisterState {
     password: string,
   ) => Promise<void>;
   clear: () => void;
-  verifyCode: (email: string,code: string) => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<void>;
   ResendCode: (email: string) => Promise<void>;
 }
 
@@ -27,14 +27,14 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
   resendStatus: '',
   message: '',
 
-  register: async (name, username, gender, dob,email, password) => {
+  register: async (name, username, gender, dob, email, password) => {
     console.log('name', name);
     console.log('username', username);
     console.log('gender', gender);
     console.log('dob', dob);
     console.log('email', email);
     console.log('password', password);
-    
+
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users',
@@ -44,7 +44,7 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
           password: password,
           name: name,
           birthDate: dob,
-          gender: gender
+          gender: gender,
         },
         {
           headers: {
@@ -53,7 +53,6 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
         },
       );
       console.log('response', response.data);
-      console.log('response?.data?.data', response?.data?.data);
       const dataUser = response?.data?.data;
       set({
         dataUser,
@@ -68,23 +67,25 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
       });
     }
   },
-  clear: () => set({status: 'idle', message: ''}),
-  verifyCode: async (email: string,code: string) => {
+
+  // Updated clear function to reset all statuses including verifyStatus and resendStatus
+  clear: () =>
+    set({
+      status: 'idle',
+      verifyStatus: 'idle',
+      resendStatus: 'idle',
+      message: '',
+    }),
+
+  verifyCode: async (email: string, code: string) => {
     console.log('email', email);
-    // Lấy email từ dataUser trong state
-    // const {dataUser} = get();
-    // console.log('dataUser', dataUser);
-    // if (!dataUser || !dataUser.email) {
-    //   console.log('No email available from dataUser');
-    //   return;
-    // }
-    set({status: 'loading', message: ''});
+    set({ status: 'loading', message: '' });
 
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users/activate',
         {
-          email: email, 
+          email: email,
           verificationCode: code,
         },
         {
@@ -94,32 +95,25 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
         },
       );
       console.log('Response:', response.data);
-      console.log('Verify Success', response.data.status);
-
-      set({verifyStatus: response.data.status, message: response.data.message});
+      set({ verifyStatus: response.data.status, message: response.data.message });
     } catch (error: any) {
       console.log('Error:', error);
-      // Xử lý lỗi nếu cần
+      set({
+        verifyStatus: 'error',
+        message: error.response?.data?.message || 'Verification Failed',
+      });
     }
   },
+
   ResendCode: async (email: string) => {
-
-    // Lấy email từ dataUser trong state
-    // const {dataUser} = get();
-    // console.log('Resend code user data', dataUser);
-console.log('email', email);
-
-    set({resendStatus: 'loading', message: ''});
-    // if (!dataUser || !dataUser.email) {
-    //   console.log('No email available from dataUser');
-    //   return;
-    // }
+    console.log('email', email);
+    set({ resendStatus: 'loading', message: '' });
 
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users/resend-code',
         {
-          email: email, // Lấy email từ dataUser
+          email: email,
         },
         {
           headers: {
@@ -128,12 +122,13 @@ console.log('email', email);
         },
       );
       console.log('Response:', response.data);
-      console.log('Verify Success', response.data.status);
-
-      set({resendStatus: response.data.status, message: response.data.message});
+      set({ resendStatus: response.data.status, message: response.data.message });
     } catch (error: any) {
       console.log('Error:', error);
-      // Xử lý lỗi nếu cần
+      set({
+        resendStatus: 'error',
+        message: error.response?.data?.message || 'Resend Failed',
+      });
     }
   },
 }));

@@ -79,8 +79,6 @@ export const useLoginStore = create<LoginState>((set, get) => ({
     // console.log('Resend code user data', userdata);
 
     set({resendStatus: 'loading', message: ''});
-   
-
     try {
       const response = await axios.post(
         'https://xavia.pro/api/users/resend-code',
