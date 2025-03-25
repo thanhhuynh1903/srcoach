@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Image,
   View,
@@ -8,18 +8,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Platform,
 } from 'react-native';
-import {wp, hp} from '../helpers/common';
+import { wp, hp } from '../helpers/common';
 import BackButton from '../BackButton';
-import {theme} from '../contants/theme';
+import { theme } from '../contants/theme';
 import Input from '../Input';
 import Icon from '@react-native-vector-icons/ionicons';
 import ButtonModify from '../Button';
-import {useRegisterStore} from '../utils/useRegisterStore';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRegisterStore } from '../utils/useRegisterStore';
+import { Picker } from '@react-native-picker/picker';
+import { Calendar } from 'react-native-calendars';
 
-const SignUpScreen = ({navigation}: {navigation: any}) => {
+const SignUpScreen = ({ navigation }: { navigation: any }) => {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
@@ -27,12 +27,12 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordCf, setPasswordCf] = useState('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [date, setDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  const {dataUser, status, message, register, clear} = useRegisterStore();
+  const { dataUser, status, message, register, clear } = useRegisterStore();
   const [loading, setLoading] = useState(false);
 
+  // Hàm validate đầu vào
   const validateInputs = (): boolean => {
     if (!username.trim() || !name.trim()) {
       Alert.alert('Error', 'Username and Name are required.');
@@ -43,8 +43,13 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
       return false;
     }
 
-    if (!dob.trim()) {
-      Alert.alert('Error', 'Please select your date of birth.');
+    // Date of birth validation (yyyy-mm-dd format)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dob.trim() || !dateRegex.test(dob)) {
+      Alert.alert(
+        'Error',
+        'Please enter a valid date of birth in yyyy-mm-dd format.',
+      );
       return false;
     }
 
@@ -67,9 +72,11 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     clear();
   }, [navigation]);
 
+  // Handle registration
   const handleRegister = async () => {
     if (!validateInputs()) return;
-    setLoading(true);
+    setLoading(true); // Start loading
+    console.log('status register', status);
 
     try {
       await register(
@@ -89,6 +96,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 
   useEffect(() => {
     if (status === 'success') {
+      console.log('dataUser', dataUser);
       navigation.navigate('VerifyScreen', {
         emailLabel: email,
       });
@@ -96,21 +104,10 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     }
   }, [status, dataUser, navigation, clear]);
 
-  const onChangeDate = (event: any, selectedDate?: Date) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(Platform.OS === 'ios');
-    setDate(currentDate);
-
-    if (event.type === 'set') {
-      const formattedDate = currentDate.toISOString().split('T')[0];
-      setDob(formattedDate);
-    }
-  };
-
   return (
-    <ScrollView style={styles.scrollView}>
+    <ScrollView style={{ flex: 1, backgroundColor: 'white' }}>
       <View style={styles.container}>
-        <View style={styles.backButtonContainer}>
+        <View style={{ marginTop: 16 }}>
           <BackButton size={26} />
         </View>
         <View>
@@ -130,74 +127,28 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             value={username}
             keyboardType="default"
           />
-          <Input
-            containerStyle={styles.nameInput}
-            icon={<Icon name="person-outline" size={24} color="black" />}
-            placeholder="Enter your Name"
-            onChangeText={setName}
-            value={name}
-            keyboardType="default"
-          />
-          <View style={styles.genderContainer}>
-            <TouchableOpacity
-              style={[
-                styles.genderButton,
-                gender === 'male' && styles.maleSelected,
-              ]}
-              onPress={() => setGender('male')}>
-              <Icon
-                name="male-outline"
-                size={24}
-                color={gender === 'male' ? 'white' : 'black'}
-              />
-              <Text
-                style={[
-                  styles.genderButtonText,
-                  gender === 'male' && styles.genderButtonTextSelected,
-                ]}>
-                Male
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.genderButton,
-                gender === 'female' && styles.femaleSelected,
-              ]}
-              onPress={() => setGender('female')}>
-              <Icon
-                name="female-outline"
-                size={24}
-                color={gender === 'female' ? 'white' : 'black'}
-              />
-              <Text
-                style={[
-                  styles.genderButtonText,
-                  gender === 'female' && styles.genderButtonTextSelected,
-                ]}>
-                Female
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.genderButton,
-                gender === 'other' && styles.otherSelected,
-              ]}
-              onPress={() => setGender('other')}>
-              <Icon
-                name="person-outline"
-                size={24}
-                color={gender === 'other' ? 'white' : 'black'}
-              />
-              <Text
-                style={[
-                  styles.genderButtonText,
-                  gender === 'other' && styles.genderButtonTextSelected,
-                ]}>
-                Other
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.rowContainer}>
+            <Input
+              containerStyle={styles.nameInput}
+              icon={<Icon name="person-outline" size={24} color="black" />}
+              placeholder="Enter your Name"
+              onChangeText={setName}
+              value={name}
+              keyboardType="default"
+            />
+            <View style={styles.genderPickerContainer}>
+              <Picker
+                selectedValue={gender}
+                onValueChange={itemValue => setGender(itemValue)}
+                style={styles.genderPicker}>
+                <Picker.Item label="Select Gender" value="" />
+                <Picker.Item label="Male" value="Male" />
+                <Picker.Item label="Female" value="Female" />
+                <Picker.Item label="Other" value="Other" />
+              </Picker>
+            </View>
           </View>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity onPress={() => setShowCalendar(!showCalendar)}>
             <Input
               icon={<Icon name="calendar-outline" size={24} color="black" />}
               placeholder="Date of birth (yyyy-mm-dd)"
@@ -205,13 +156,15 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
               editable={false}
             />
           </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onChangeDate}
-              maximumDate={new Date()}
+          {showCalendar && (
+            <Calendar
+              onDayPress={day => {
+                setDob(day.dateString);
+                setShowCalendar(false);
+              }}
+              markedDates={{
+                [dob]: { selected: true, selectedColor: theme.colors.primary },
+              }}
             />
           )}
           <Input
@@ -226,20 +179,21 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             placeholder="Enter your password"
             onChangeText={setPassword}
             value={password}
-            isPassword
+            secureTextEntry
           />
           <Input
             icon={<Icon name="lock-closed-outline" size={24} color="black" />}
             placeholder="Confirm your password"
             onChangeText={setPasswordCf}
             value={passwordCf}
-            isPassword
+            secureTextEntry
           />
+          {/* Hiển thị message từ store nếu có */}
           {message ? (
             <Text
               style={[
                 styles.messageText,
-                {color: status === 'error' ? 'red' : 'green'},
+                { color: status === 'error' ? 'red' : 'green' },
               ]}>
               {message}
             </Text>
@@ -248,20 +202,18 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
         <ButtonModify
           title="Create Account"
           onPress={handleRegister}
-          loading={loading}
+          loading={loading} // Pass the loading state to the ButtonModify component
         />
         <View>
           <Text style={styles.termsText}>
             By signing up, you agree to read{' '}
           </Text>
           <Text style={styles.termsTextSub}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('TermsOfService')}>
-              <Text style={styles.link}>Terms of Service </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('TermsOfServiceScreen')}>
+              <Text style={styles.link}>Terms of Service{' '}</Text>
             </TouchableOpacity>
             and{' '}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('PrivacyPolicy')}>
+            <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicyScreen')}>
               <Text style={styles.link}>Privacy Policy</Text>
             </TouchableOpacity>
           </Text>
@@ -290,31 +242,14 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 };
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  container: {
-    flex: 1,
-    gap: 30,
-    paddingHorizontal: wp(5),
-  },
-  backButtonContainer: {
-    marginTop: 16,
-  },
-  welcomeText: {
-    fontSize: hp(4),
-    fontWeight: 'bold',
-    color: theme.colors.text,
-  },
+  container: { flex: 1, gap: 30, paddingHorizontal: wp(5) },
+  welcomeText: { fontSize: hp(4), fontWeight: 'bold', color: theme.colors.text },
   welcomesubText: {
     fontSize: hp(2.4),
     fontWeight: '500',
     color: theme.colors.text,
   },
-  form: {
-    gap: 15,
-  },
+  form: { gap: 15 },
   formHeaderText: {
     fontSize: hp(1.5),
     color: theme.colors.textLight,
@@ -324,44 +259,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   nameInput: {
-    width: '100%',
+    width: '65%',
   },
-  genderContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  genderButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 4,
-    gap: 5,
-    borderRadius: theme.radius.xs,
+  genderPickerContainer: {
+    width: '32%',
     borderWidth: 1,
     borderColor: '#ccc',
-    marginHorizontal: 2,
+    borderRadius: 8,
+    justifyContent: 'center',
   },
-  maleSelected: {
-    backgroundColor: '#0016a8',
-    borderColor: '#0016a8',
-  },
-  femaleSelected: {
-    backgroundColor: '#E91E63',
-    borderColor: '#E91E63',
-  },
-  otherSelected: {
-    backgroundColor: '#7d7d7d',
-    borderColor: '#7d7d7d',
-  },
-  genderButtonText: {
-    fontSize: 12,
-    marginTop: 4,
-    color: 'black',
-  },
-  genderButtonTextSelected: {
-    color: 'white',
+  genderPicker: {
+    height: 50,
+    width: '100%',
   },
   messageText: {
     textAlign: 'center',
@@ -396,17 +305,10 @@ const styles = StyleSheet.create({
   link: {
     color: '#0B2341',
     fontWeight: 'bold',
-    transform: [{translateY: 5}],
+    transform: [{ translateY: 5 }],
   },
-  iconImage: {
-    width: 20,
-    height: 20,
-  },
-  orText: {
-    color: '#666',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
+  iconImage: { width: 20, height: 20 },
+  orText: { color: '#666', marginBottom: 10, textAlign: 'center' },
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -422,11 +324,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 5,
   },
-  socialText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  socialText: { marginLeft: 8, fontSize: 14, fontWeight: '500' },
 });
 
 export default SignUpScreen;
