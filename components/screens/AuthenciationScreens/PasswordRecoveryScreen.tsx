@@ -31,7 +31,7 @@ const PasswordRecoveryScreen = () => {
 
   const handleSubmit = () => {
     if (isValidEmail) {
-      navigation.navigate("PasswordRecoveryCode", { email });
+      navigation.navigate("PasswordRecoveryCodeScreen", { email });
     }
   };
 

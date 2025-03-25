@@ -45,7 +45,7 @@ const WelcomeInfoScreen = ({ navigation }: { navigation: any }) => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      navigation.navigate('Login');
+      navigation.navigate('LoginScreen');
     }
   };
 
@@ -66,7 +66,7 @@ const WelcomeInfoScreen = ({ navigation }: { navigation: any }) => {
           height={10}
           width={wp(60)}
         />
-        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.skipButton}>
+        <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')} style={styles.skipButton}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
       </View>

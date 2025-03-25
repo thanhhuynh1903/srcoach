@@ -73,7 +73,7 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
     console.log('Register verify status:', verifyStatus);
     if (verifyStatus === 'success') {
       Alert.alert('Success', 'Verification successful!');
-      navigate.navigate('Login' as never);
+      navigate.navigate('LoginScreen' as never);
       // Optionally, clear after navigating if needed:
       // clear();
     } else if (verifyStatus === 'error') {

@@ -39,7 +39,7 @@ const PasswordRecoveryNewScreen = () => {
 
   const handleSubmit = () => {
     if (isValidPassword && doPasswordsMatch) {
-      navigation.navigate('PasswordRecoverySuccess');
+      navigation.navigate('PasswordRecoverySuccessScreen');
     }
   };
 
