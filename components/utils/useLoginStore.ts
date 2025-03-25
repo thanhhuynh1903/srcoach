@@ -13,6 +13,7 @@ interface LoginState {
   verifyCode: (email: string,code: string) => Promise<void>;
   ResendCode: (email:string) => Promise<void>;
 }
+const MASTER_URL = "https://xavia.pro/api";
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
@@ -23,7 +24,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   login: async (email: string, password: string) => {
     try {
       const response = await axios.post(
-        'https://xavia.pro/api/users/login',
+        `${MASTER_URL}/users/login`,
         {identifier: email, password},
         {
           headers: {
@@ -53,7 +54,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
 
     try {
       const response = await axios.post(
-        'https://xavia.pro/api/users/activate',
+        `${MASTER_URL}/users/activate`,
         {
           email: email, // Lấy email từ dataUser
           verificationCode: code,
@@ -81,7 +82,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
     set({resendStatus: 'loading', message: ''});
     try {
       const response = await axios.post(
-        'https://xavia.pro/api/users/resend-code',
+        `${MASTER_URL}/users/resend-code`,
         {
           email: email,
         },

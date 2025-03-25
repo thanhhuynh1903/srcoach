@@ -142,7 +142,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
             value={password}
             isPassword
           />
-          <Pressable onPress={() => navigation.navigate('PasswordRecovery')}>
+          <Pressable onPress={() => navigation.navigate('PasswordRecovery' as never)}>
             <Text style={styles.forgotPassword}>Forgot password?</Text>
           </Pressable>
         </View>
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.lightGray,
+    backgroundColor: theme?.colors?.lightGray,
     padding: 12,
     borderRadius: 8,
   },

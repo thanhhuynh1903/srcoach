@@ -19,6 +19,7 @@ interface RegisterState {
   verifyCode: (email: string, code: string) => Promise<void>;
   ResendCode: (email: string) => Promise<void>;
 }
+const MASTER_URL = "https://xavia.pro/api";
 
 export const useRegisterStore = create<RegisterState>((set, get) => ({
   dataUser: null,
@@ -37,7 +38,7 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
 
     try {
       const response = await axios.post(
-        'https://xavia.pro/api/users',
+        `${MASTER_URL}/users`,
         {
           username: username,
           email: email,
@@ -83,7 +84,7 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
 
     try {
       const response = await axios.post(
-        'https://xavia.pro/api/users/activate',
+        `${MASTER_URL}/users/activate`,
         {
           email: email,
           verificationCode: code,
@@ -111,7 +112,7 @@ export const useRegisterStore = create<RegisterState>((set, get) => ({
 
     try {
       const response = await axios.post(
-        'https://xavia.pro/api/users/resend-code',
+        `${MASTER_URL}/users/resend-code`,
         {
           email: email,
         },
