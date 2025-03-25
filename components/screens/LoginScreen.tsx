@@ -67,6 +67,9 @@ const LoginScreen: React.FC<{
         type: 'error',
         text1: message,
       });
+
+      //If error, clear the clear() function
+      clear();
     }
   }, [status, message, navigation]);
 
