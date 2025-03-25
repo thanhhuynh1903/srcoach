@@ -48,7 +48,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'Login' }],
+          routes: [{ name: 'LoginScreen' }],
         })
       );
       Alert.alert('Logged Out', 'You have been successfully logged out.');

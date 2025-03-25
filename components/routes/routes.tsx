@@ -4,7 +4,7 @@ import WelcomeInfoScreen from '../screens/WelcomeInfoScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import RecordScreen from '../screens/RecordScreen';
-import ExercisesScreen from '../screens/ExercisesScreen';
+// import ExercisesScreen from '../screens/ExercisesScreen';
 import ExpertChatScreen from '../screens/ExpertChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import SearchScreen from '../screens/SearchScreen';

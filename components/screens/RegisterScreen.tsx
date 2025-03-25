@@ -153,7 +153,7 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
               icon={<Icon name="calendar-outline" size={24} color="black" />}
               placeholder="Date of birth (yyyy-mm-dd)"
               value={dob}
-              editable={false}
+             
             />
           </TouchableOpacity>
           {showCalendar && (
@@ -232,7 +232,7 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
         </View>
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <Pressable onPress={() => navigation.push('Login')}>
+          <Pressable onPress={() => navigation.push('LoginScreen')}>
             <Text style={styles.footerLinkText}>Login</Text>
           </Pressable>
         </View>

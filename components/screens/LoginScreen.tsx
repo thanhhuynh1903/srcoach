@@ -54,6 +54,8 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
       clear();
     } else if (status === 'error' && message) {
       showToast('error', message);
+      //If error, clear the clear() function
+      clear();
     }
   }, [status, message, navigation]);
 
@@ -170,7 +172,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
         
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
-          <Pressable onPress={() => navigation.navigate('RegisterScreen')}>
+          <Pressable onPress={() => navigation.navigate('RegisterScreen' as never)}>
             <Text style={styles.footerLinkText}>Sign Up</Text>
           </Pressable>
         </View>
