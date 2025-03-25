@@ -66,19 +66,20 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
   };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      showToast('error', 'Please fill in both email and password');
-      return;
-    }
+    navigation.navigate('HomeTabs');
+    // if (!email || !password) {
+    //   showToast('error', 'Please fill in both email and password');
+    //   return;
+    // }
     
-    setLoading(true);
-    try {
-      await login(email, password);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
+    // setLoading(true);
+    // try {
+    //   await login(email, password);
+    // } catch (error) {
+    //   console.error(error);
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const handleGoogleSignIn = async () => {
@@ -142,7 +143,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
             value={password}
             isPassword
           />
-          <Pressable onPress={() => navigation.navigate('PasswordRecovery' as never)}>
+          <Pressable onPress={() => navigation.navigate('PasswordRecoveryScreen' as never)}>
             <Text style={styles.forgotPassword}>Forgot password?</Text>
           </Pressable>
         </View>
@@ -170,7 +171,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
         
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
-          <Pressable onPress={() => navigation.navigate('Register')}>
+          <Pressable onPress={() => navigation.navigate('RegisterScreen')}>
             <Text style={styles.footerLinkText}>Sign Up</Text>
           </Pressable>
         </View>

@@ -45,62 +45,62 @@ import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/Passw
 
 // Configuration for Stack Navigator
 export const stackScreens = [
-  { name: 'Welcome', component: WelcomeScreen },
-  { name: 'WelcomeInfo', component: WelcomeInfoScreen },
-  { name: 'Login', component: LoginScreen },
-  { name: 'Register', component: RegisterScreen },
-  { name: 'Error', component: ErrorScreen },
-  { name: 'Verify', component: VerifyScreen },
-  { name: 'VerifyLogin', component: VerifyLoginScreen },
-  { name: 'ManageNotifications', component: ManageNotification },
-  { name: 'Devices', component: DevicesScreen },
-  { name: 'EditProfile', component: EditProfileScreen },
-  { name: 'BloodPressure', component: BloodPressureScreen },
-  { name: 'Sleep', component: SleepScreen },
-  { name: 'HeartRate', component: HeartRateScreen },
-  { name: 'RecordDetail', component: RecordDetailScreen },
-  { name: 'ChartDetail', component: ChartDetailScreen },
-  { name: 'Chatbox', component: ChatboxScreen },
-  { name: 'SetGoals', component: SetGoalsScreen },
-  { name: 'GoalList', component: GoalListScreen },
-  { name: 'Schedule', component: ScheduleScreen },
-  { name: 'RateSchedule', component: RateScheduleScreen },
-  { name: 'RiskWarning', component: RiskWarningScreen },
-  { name: 'Search', component: SearchScreen },
-  { name: 'DeviceNotifications', component: DeviceNotificationScreen },
-  { name: 'Calories', component: CaloriesScreen },
-  { name: 'GenerateSchedule', component: GenerateScheduleScreen },
-  { name: 'Calendar', component: CalendarScreen },
-  { name: 'ScheduleHistory', component: HistoryScheduleScreen },
-  { name: 'AddSchedule', component: AddScheduleScreen },
+  { name: 'WelcomeScreen', component: WelcomeScreen },
+  { name: 'WelcomeInfoScreen', component: WelcomeInfoScreen },
+  { name: 'LoginScreen', component: LoginScreen },
+  { name: 'RegisterScreen', component: RegisterScreen },
+  { name: 'ErrorScreen', component: ErrorScreen },
+  { name: 'VerifyScreen', component: VerifyScreen },
+  { name: 'VerifyLoginScreen', component: VerifyLoginScreen },
+  { name: 'ManageNotificationsScreen', component: ManageNotification },
+  { name: 'DevicesScreen', component: DevicesScreen },
+  { name: 'EditProfileScreen', component: EditProfileScreen },
+  { name: 'BloodPressureScreen', component: BloodPressureScreen },
+  { name: 'SleepScreen', component: SleepScreen },
+  { name: 'HeartRateScreen', component: HeartRateScreen },
+  { name: 'RecordDetailScreen', component: RecordDetailScreen },
+  { name: 'ChartDetailScreen', component: ChartDetailScreen },
+  { name: 'ChatboxScreen', component: ChatboxScreen },
+  { name: 'SetGoalsScreen', component: SetGoalsScreen },
+  { name: 'GoalListScreen', component: GoalListScreen },
+  { name: 'ScheduleScreen', component: ScheduleScreen },
+  { name: 'RateScheduleScreen', component: RateScheduleScreen },
+  { name: 'RiskWarningScreen', component: RiskWarningScreen },
+  { name: 'SearchScreen', component: SearchScreen },
+  { name: 'DeviceNotificationsScreen', component: DeviceNotificationScreen },
+  { name: 'CaloriesScreen', component: CaloriesScreen },
+  { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
+  { name: 'CalendarScreen', component: CalendarScreen },
+  { name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen },
+  { name: 'AddScheduleScreen', component: AddScheduleScreen },
 
   //Authenciation Screens
-  { name: "PasswordRecovery", component: PasswordRecoveryScreen },
-  { name: "PasswordRecoveryCode", component: PasswordRecoveryCodeScreen},
-  { name: "PasswordRecoveryNew", component: PasswordRecoveryNewScreen},
-  { name: "PasswordRecoverySuccess", component: PasswordRecoverySuccessScreen},
+  { name: "PasswordRecoveryScreen", component: PasswordRecoveryScreen },
+  { name: "PasswordRecoveryCodeScreen", component: PasswordRecoveryCodeScreen},
+  { name: "PasswordRecoveryNewScreen", component: PasswordRecoveryNewScreen},
+  { name: "PasswordRecoverySuccessScreen", component: PasswordRecoverySuccessScreen},
 
   // Community Screens
-  { name: 'CommunityNewsDetail', component: CommunityNewsDetailScreen },
-  { name: 'CommunityPostDetail', component: CommunityPostDetailScreen },
-  { name: 'CommunityCreatePost', component: CommunityPostCreateScreen },
+  { name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen },
+  { name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen },
+  { name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen },
 
   // About Screens
-  { name: 'PrivacyPolicy', component: PrivacyPolicyScreen },
-  { name: 'TermsOfService', component: TermsOfServiceScreen },
+  { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },
+  { name: 'TermsOfServiceScreen', component: TermsOfServiceScreen },
 ];
 
-// Configuration for Tab Navigator
+// Cấu hình cho Tab Navigator
 export const tabScreens = [
   { name: 'Home', component: HomeScreen },
   { name: 'Records', component: RecordScreen },
-  { name: 'RiskWarnings', component: RiskWarningListScreen },
+  { name: 'Risk', component: RiskWarningListScreen },
   { name: 'Community', component: CommunityScreen },
-  { name: 'ExpertChat', component: ExpertChatScreen },
+  { name: 'Chat', component: ExpertChatScreen },
   { name: 'Settings', component: SettingsScreen },
 ];
 
-// Configuration for Home Stack (includes tab navigator)
+// Cấu hình cho Home Stack ( bao gồm tab navigator )
 export const homeStackScreens = [
   { name: 'HomeMain', component: HomeScreen },
 ];

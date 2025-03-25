@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { theme } from '../../contants/theme';
 import { useNavigation } from '@react-navigation/native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
-import useNewsApi from '../../utils/useNewsStore';
 
 interface NewsItem {
   id: string;
@@ -16,18 +15,36 @@ interface NewsItem {
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const { news, isLoading, error, getAll, getDetail } = useNewsApi();
 
-  useEffect(() => {
-    console.log("Fetching news...");
-    getAll();
-  }, []);
+  // Static news data
+  const news = [
+    {
+      id: '1',
+      title: 'New Gym Equipment Arrived',
+      content: 'We have added new state-of-the-art equipment to our fitness center. Come check it out!',
+      news_type_id: '1',
+      created_at: '2023-06-15T10:00:00Z'
+    },
+    {
+      id: '2',
+      title: 'Summer Fitness Challenge',
+      content: 'Join our 30-day summer fitness challenge starting next week. Prizes for top performers!',
+      news_type_id: '2',
+      created_at: '2023-06-10T09:30:00Z'
+    },
+    {
+      id: '3',
+      title: 'Nutrition Workshop',
+      content: 'Free nutrition workshop this Saturday. Learn about meal planning and healthy eating habits.',
+      news_type_id: '1',
+      created_at: '2023-06-05T14:15:00Z'
+    },
+  ];
 
   const renderNewsItem = ({ item }: { item: NewsItem }) => (
     <TouchableOpacity
       style={styles.newsItem}
       onPress={() => {
-        getDetail(item.id);
         navigation.navigate('CommunityNewsDetailScreen', { 
           id: item.id,
           newsItem: item 
@@ -49,7 +66,6 @@ const CommunityScreen = () => {
           <TouchableOpacity
             style={styles.readMoreButton}
             onPress={() => {
-              getDetail(item.id);
               navigation.navigate('CommunityNewsDetailScreen', { 
                 id: item.id, 
                 newsItem: item 
@@ -101,46 +117,6 @@ const CommunityScreen = () => {
     </TouchableOpacity>
   );
 
-  const renderNewsSkeleton = () => (
-    <SkeletonPlaceholder>
-      <View style={{ flexDirection: 'row', marginBottom: 20 }}>
-        {[1, 2, 3].map((item) => (
-          <View key={item} style={{ width: 200, marginRight: 16 }}>
-            <View style={{ width: '100%', height: 80, borderRadius: 10 }} />
-            <View style={{ marginTop: 8, width: '80%', height: 20 }} />
-            <View style={{ marginTop: 8, width: '100%', height: 40 }} />
-            <View style={{ marginTop: 8, width: '40%', height: 15 }} />
-          </View>
-        ))}
-      </View>
-    </SkeletonPlaceholder>
-  );
-
-  const renderPostsSkeleton = () => (
-    <SkeletonPlaceholder>
-      <View style={{ marginBottom: 20 }}>
-        {[1, 2, 3].map((item) => (
-          <View key={item} style={{ marginBottom: 20, padding: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20 }} />
-              <View style={{ marginLeft: 10 }}>
-                <View style={{ width: 120, height: 15 }} />
-                <View style={{ marginTop: 5, width: 80, height: 12 }} />
-              </View>
-            </View>
-            <View style={{ marginTop: 10, width: '100%', height: 60 }} />
-            <View style={{ marginTop: 10, width: '100%', height: 200 }} />
-            <View style={{ marginTop: 10, flexDirection: 'row' }}>
-              <View style={{ width: 60, height: 20, marginRight: 16 }} />
-              <View style={{ width: 60, height: 20, marginRight: 16 }} />
-              <View style={{ width: 60, height: 20 }} />
-            </View>
-          </View>
-        ))}
-      </View>
-    </SkeletonPlaceholder>
-  );
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -173,35 +149,25 @@ const CommunityScreen = () => {
         </View>
 
         <Text style={styles.sectionTitle}>Official News</Text>
-        {isLoading ? (
-          renderNewsSkeleton()
-        ) : error ? (
-          <Text style={{ color: 'red', padding: 16 }}>Error loading news: {error}</Text>
-        ) : (
-          <FlatList
-            data={news}
-            renderItem={renderNewsItem}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.newsListContainer}
-          />
-        )}
+        <FlatList
+          data={news}
+          renderItem={renderNewsItem}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.newsListContainer}
+        />
 
         <Text style={styles.sectionTitle}>Community Posts</Text>
-        {false ? ( // Replace with your posts loading state
-          renderPostsSkeleton()
-        ) : (
-          <FlatList
-            style={styles.postList}
-            data={communityPosts}
-            renderItem={renderPostItem}
-            showsVerticalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.postListContainer}
-          />
-        )}
+        <FlatList
+          style={styles.postList}
+          data={communityPosts}
+          renderItem={renderPostItem}
+          showsVerticalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          scrollEnabled={false}
+          contentContainerStyle={styles.postListContainer}
+        />
       </ScrollView>
     </View>
   );

@@ -72,7 +72,7 @@ const PasswordRecoveryCodeScreen: React.FC = () => {
     try {
       const isSuccess = true;
       setStatus(isSuccess ? 'success' : 'failure');
-      if (isSuccess) navigation.navigate('PasswordRecoveryNew');
+      if (isSuccess) navigation.navigate('PasswordRecoveryNewScreen');
       else setTimeout(resetCode, 2000);
     } catch {
       setStatus('failure');

@@ -7,7 +7,7 @@ const WelcomeScreen = () => {
 
   useEffect(() => {
     setTimeout(() => {
-      navigation.navigate('WelcomeInfo' as never);
+      navigation.navigate('WelcomeInfoScreen' as never);
     }, 2000);
   }, [navigation]);
 

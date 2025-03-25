@@ -75,7 +75,7 @@ const App = () => {
   return (
     <>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Welcome">
+        <Stack.Navigator initialRouteName="WelcomeScreen">
           {stackScreens.map((screen : any) => (
             <Stack.Screen
               key={screen.name}
