@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme?.colors?.lightGray,
+    backgroundColor: '#F5F5F5',
     padding: 12,
     borderRadius: 8,
   },
