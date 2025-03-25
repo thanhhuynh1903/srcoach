@@ -66,20 +66,19 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
   };
 
   const handleLogin = async () => {
-    navigation.navigate('HomeTabs');
-    // if (!email || !password) {
-    //   showToast('error', 'Please fill in both email and password');
-    //   return;
-    // }
+    if (!email || !password) {
+      showToast('error', 'Please fill in both email and password');
+      return;
+    }
     
-    // setLoading(true);
-    // try {
-    //   await login(email, password);
-    // } catch (error) {
-    //   console.error(error);
-    // } finally {
-    //   setLoading(false);
-    // }
+    setLoading(true);
+    try {
+      await login(email, password);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
