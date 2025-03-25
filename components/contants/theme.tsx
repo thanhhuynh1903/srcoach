@@ -2,8 +2,8 @@ export const theme = {
   colors: {
     weightBrown:"#021024",
     redrose: "#E82561",
-    primary: "#00C26F",
-    primaryDark: "#00AC62",
+    primary: '#0066c6',
+    primaryDark: '#003363',
     dark: "#3E3ЕЗЕ",
     darkLight: "#E1E1E1",
     gray: "#e3e3e3",

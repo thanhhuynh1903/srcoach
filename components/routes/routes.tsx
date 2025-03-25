@@ -33,54 +33,74 @@ import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginScreen';
 import PrivacyPolicyScreen from '../screens/SettingsAboutScreens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/SettingsAboutScreens/TermsOfServiceScreen';
+import CommunityScreen from '../screens/CommunityScreens/CommunityScreen';
+import CommunityNewsDetailScreen from '../screens/CommunityScreens/CommunityNewsDetailScreen';
+import CommunityPostDetailScreen from '../screens/CommunityScreens/CommunityPostDetailScreen';
+import CommunityPostCreateScreen from '../screens/CommunityScreens/CommunityPostCreateScreen';
 import AddScheduleScreen from '../screens/AddScheduleScreen';
-// Cấu hình cho Stack Navigator
+import PasswordRecoveryScreen from '../screens/AuthenciationScreens/PasswordRecoveryScreen';
+import PasswordRecoveryCodeScreen from '../screens/AuthenciationScreens/PasswordRecoveryCodeScreen';
+import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordRecoveryNewScreen';
+import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
+
+// Configuration for Stack Navigator
 export const stackScreens = [
   { name: 'Welcome', component: WelcomeScreen },
   { name: 'WelcomeInfo', component: WelcomeInfoScreen },
   { name: 'Login', component: LoginScreen },
   { name: 'Register', component: RegisterScreen },
-  { name: 'ErrorScreen', component: ErrorScreen },
-  { name: 'VerifyScreen', component: VerifyScreen },
-  { name: 'VerifyLoginScreen', component: VerifyLoginScreen },
-  { name: 'ManageNotification', component: ManageNotification },
-  { name: 'SettingsDevices', component: DevicesScreen },
-  { name: 'EditProfileScreen', component: EditProfileScreen },
-  { name: 'BloodPressureScreen', component: BloodPressureScreen },
-  { name: 'SleepScreen', component: SleepScreen },
-  { name: 'HeartRateScreen', component: HeartRateScreen },
-  { name: 'RecordDetailScreen', component: RecordDetailScreen },
-  { name: 'ChartDetailScreen', component: ChartDetailScreen },
-  { name: 'ChatboxScreen', component: ChatboxScreen },
-  { name: 'SetGoalsScreen', component: SetGoalsScreen },
-  { name: 'GoalListScreen', component: GoalListScreen },
-  { name: 'ScheduleScreen', component: ScheduleScreen },
-  { name: 'RateScheduleScreen', component: RateScheduleScreen },
-  { name: 'RiskWarningScreen', component: RiskWarningScreen },
-  { name: 'SearchScreen', component: SearchScreen },
-  { name: 'DeviceNotificationScreen', component: DeviceNotificationScreen },
-  { name: 'CaloriesScreen', component: CaloriesScreen },
-  { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
-  { name: 'CalendarScreen', component: CalendarScreen },
-  { name: 'HistoryCalendarScreen', component: HistoryScheduleScreen },
-  { name: 'AddScheduleScreen', component: AddScheduleScreen },
+  { name: 'Error', component: ErrorScreen },
+  { name: 'Verify', component: VerifyScreen },
+  { name: 'VerifyLogin', component: VerifyLoginScreen },
+  { name: 'ManageNotifications', component: ManageNotification },
+  { name: 'Devices', component: DevicesScreen },
+  { name: 'EditProfile', component: EditProfileScreen },
+  { name: 'BloodPressure', component: BloodPressureScreen },
+  { name: 'Sleep', component: SleepScreen },
+  { name: 'HeartRate', component: HeartRateScreen },
+  { name: 'RecordDetail', component: RecordDetailScreen },
+  { name: 'ChartDetail', component: ChartDetailScreen },
+  { name: 'Chatbox', component: ChatboxScreen },
+  { name: 'SetGoals', component: SetGoalsScreen },
+  { name: 'GoalList', component: GoalListScreen },
+  { name: 'Schedule', component: ScheduleScreen },
+  { name: 'RateSchedule', component: RateScheduleScreen },
+  { name: 'RiskWarning', component: RiskWarningScreen },
+  { name: 'Search', component: SearchScreen },
+  { name: 'DeviceNotifications', component: DeviceNotificationScreen },
+  { name: 'Calories', component: CaloriesScreen },
+  { name: 'GenerateSchedule', component: GenerateScheduleScreen },
+  { name: 'Calendar', component: CalendarScreen },
+  { name: 'ScheduleHistory', component: HistoryScheduleScreen },
+  { name: 'AddSchedule', component: AddScheduleScreen },
 
-  //About
-  { name: "PrivacyPolicyScreen", component: PrivacyPolicyScreen },
-  { name: "TermsOfServiceScreen", component: TermsOfServiceScreen },
+  //Authenciation Screens
+  { name: "PasswordRecovery", component: PasswordRecoveryScreen },
+  { name: "PasswordRecoveryCode", component: PasswordRecoveryCodeScreen},
+  { name: "PasswordRecoveryNew", component: PasswordRecoveryNewScreen},
+  { name: "PasswordRecoverySuccess", component: PasswordRecoverySuccessScreen},
+
+  // Community Screens
+  { name: 'CommunityNewsDetail', component: CommunityNewsDetailScreen },
+  { name: 'CommunityPostDetail', component: CommunityPostDetailScreen },
+  { name: 'CommunityCreatePost', component: CommunityPostCreateScreen },
+
+  // About Screens
+  { name: 'PrivacyPolicy', component: PrivacyPolicyScreen },
+  { name: 'TermsOfService', component: TermsOfServiceScreen },
 ];
 
-// Cấu hình cho Tab Navigator
+// Configuration for Tab Navigator
 export const tabScreens = [
   { name: 'Home', component: HomeScreen },
   { name: 'Records', component: RecordScreen },
-  { name: 'Risk', component: RiskWarningListScreen },
-  { name: 'Community', component: ExercisesScreen },
-  { name: 'Chat', component: ExpertChatScreen },
+  { name: 'RiskWarnings', component: RiskWarningListScreen },
+  { name: 'Community', component: CommunityScreen },
+  { name: 'ExpertChat', component: ExpertChatScreen },
   { name: 'Settings', component: SettingsScreen },
 ];
 
-// Cấu hình cho Home Stack ( bao gồm tab navigator )
+// Configuration for Home Stack (includes tab navigator)
 export const homeStackScreens = [
   { name: 'HomeMain', component: HomeScreen },
 ];

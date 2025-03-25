@@ -26,62 +26,51 @@ type RootStackParamList = {
   Register: undefined;
   VerifyLoginScreen: {
     emailLabel: string;
-  };};
+  };
+};
 
-const LoginScreen: React.FC<{
-  navigation: NavigationProp<RootStackParamList>;
-}> = ({ navigation }) => {
+const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-
-  // Lấy các state và hàm từ store (store đã cập nhật status và accessToken)
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login, message, status, clear } = useLoginStore();
+  const canGoBack = navigation.canGoBack();
 
-  // Configure Google Sign-In on component mount
   useEffect(() => {
-    clear(); // reset store
+    clear();
     console.log('Token mounted', AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
-      webClientId:
-        '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
+      webClientId: '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
     });
   }, [clear]);
 
-  // useEffect để theo dõi thay đổi trạng thái login và điều hướng khi cần
   useEffect(() => {
     if (status === 'success') {
-      Toast.show({
-        type: 'success',
-        text1: message || 'Login Successful',
-        text2: 'Welcome to the homepage!',
-      });
+      showToast('success', message || 'Login Successful', 'Welcome to the homepage!');
       navigation.navigate('HomeTabs');
     } else if (status === 'wait') {
-      navigation.navigate('VerifyLoginScreen',{
-        emailLabel: email, // pass the email to the next screen
-      });
+      navigation.navigate('VerifyLoginScreen', { emailLabel: email });
       clear();
     } else if (status === 'error' && message) {
-      Toast.show({
-        type: 'error',
-        text1: message,
-      });
-
-      //If error, clear the clear() function
-      clear();
+      showToast('error', message);
     }
   }, [status, message, navigation]);
 
+  const showToast = (type: string, text1: string, text2?: string) => {
+    Toast.show({
+      type,
+      text1,
+      text2,
+    });
+  };
+
   const handleLogin = async () => {
-    // Validate input fields
     if (!email || !password) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please fill in both email and password',
-      });
+      showToast('error', 'Please fill in both email and password');
       return;
     }
+    
     setLoading(true);
     try {
       await login(email, password);
@@ -92,67 +81,53 @@ const LoginScreen: React.FC<{
     }
   };
 
-  // Google Sign-In handler
-  async function onGoogleButtonPress() {
+  const handleGoogleSignIn = async () => {
     try {
-      console.log('Starting Google login');
       const hasPlayServices = await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
+      
       if (!hasPlayServices) {
         throw new Error('Google Play Services not available');
       }
-      const signInResult = await GoogleSignin.signIn();
 
+      const signInResult = await GoogleSignin.signIn();
       if (!signInResult.data?.idToken) {
-        Toast.show({
-          type: 'error',
-          text1: 'Login Failed',
-          text2: 'No ID token found',
-        });
+        showToast('error', 'Login Failed', 'No ID token found');
         return;
       }
 
-      const googleCredential = auth.GoogleAuthProvider.credential(
-        signInResult.data.idToken,
-      );
+      const googleCredential = auth.GoogleAuthProvider.credential(signInResult.data.idToken);
       await auth().signInWithCredential(googleCredential);
-      console.log('googleCredential', signInResult.data);
-
-      Toast.show({
-        type: 'success',
-        text1: 'Login Successful',
-        text2: 'Welcome to the homepage!',
-      });
+      
+      showToast('success', 'Login Successful', 'Welcome to the homepage!');
       navigation.navigate('HomeTabs');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Google Sign-In Error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Login Failed',
-        text2: 'Invalid username or password. Please try again.',
-      });
+      showToast('error', 'Login Failed', 'Invalid username or password. Please try again.');
     }
-  }
+  };
 
-  const canGoBack = navigation.canGoBack();
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   return (
     <ScreenWrapper bg={'white'}>
       <View style={styles.container}>
-        <View style={{ marginTop: 20 }}>
+        <View style={styles.backButtonContainer}>
           {canGoBack && <BackButton size={26} />}
         </View>
-        <View>
+        
+        <View style={styles.header}>
           <Text style={styles.welcomeText}>Hello 😉,</Text>
-          <Text style={styles.welcomesubText}>
+          <Text style={styles.welcomeSubText}>
             Health is the most important in everyone's life
           </Text>
         </View>
+        
         <View style={styles.form}>
-          <Text style={{ fontSize: hp(1.5), color: theme.colors.textLight }}>
-            Please login to continue
-          </Text>
+          <Text style={styles.formHeaderText}>Please login to continue</Text>
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
             placeholder="Enter your email"
@@ -165,39 +140,38 @@ const LoginScreen: React.FC<{
             placeholder="Enter your password"
             onChangeText={setPassword}
             value={password}
-            secureTextEntry={true}
+            isPassword
           />
-          <Text style={styles.forgotPassword}>Forgot password?</Text>
+          <Pressable onPress={() => navigation.navigate('PasswordRecovery')}>
+            <Text style={styles.forgotPassword}>Forgot password?</Text>
+          </Pressable>
         </View>
 
-        <ButtonModify title="Login" onPress={handleLogin} loading={loading} />
+        <ButtonModify 
+          title="Login" 
+          onPress={handleLogin} 
+          loading={loading} 
+        />
 
-        <View style={{ gap: 20 }}>
+        <View style={styles.socialContainer}>
           <Text style={styles.orText}>or continue with</Text>
-          <View style={styles.socialButtons}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={onGoogleButtonPress}>
-              <Image
-                source={{
-                  uri: 'https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png',
-                }}
-                style={styles.iconImage}
-              />
-              <Text style={styles.socialText}>Google</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={handleGoogleSignIn}>
+            <Image
+              source={{
+                uri: 'https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png',
+              }}
+              style={styles.socialIcon}
+            />
+            <Text style={styles.socialText}>Google</Text>
+          </TouchableOpacity>
         </View>
+        
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
           <Pressable onPress={() => navigation.navigate('Register')}>
-            <Text
-              style={[
-                styles.footerText,
-                { color: theme.fontColor.SemiboldBlue, fontWeight: 'bold' },
-              ]}>
-              Sign Up
-            </Text>
+            <Text style={styles.footerLinkText}>Sign Up</Text>
           </Pressable>
         </View>
       </View>
@@ -211,23 +185,57 @@ const styles = StyleSheet.create({
     gap: 30,
     paddingHorizontal: wp(5),
   },
+  backButtonContainer: {
+    marginTop: 20,
+  },
+  header: {
+    gap: 8,
+  },
   welcomeText: {
     fontSize: hp(4),
     fontWeight: 'bold',
     color: theme.colors.text,
   },
-  welcomesubText: {
-    fontSize: hp(3),
-    fontWeight: 'bold',
+  welcomeSubText: {
+    fontSize: hp(2.4),
+    fontWeight: '500',
     color: theme.colors.text,
   },
   form: {
     gap: 25,
   },
+  formHeaderText: {
+    fontSize: hp(1.5),
+    color: theme.colors.textLight,
+  },
   forgotPassword: {
     textAlign: 'right',
     fontWeight: '600',
     color: theme.colors.text,
+  },
+  socialContainer: {
+    gap: 20,
+  },
+  orText: {
+    color: theme.colors.textLight,
+    textAlign: 'center',
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.lightGray,
+    padding: 12,
+    borderRadius: 8,
+  },
+  socialIcon: {
+    width: 20,
+    height: 20,
+  },
+  socialText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
@@ -240,33 +248,10 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontSize: hp(1.6),
   },
-  orText: {
-    color: '#666',
-    textAlign: 'center',
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 8,
-    flex: 1,
-    justifyContent: 'center',
-    marginHorizontal: 5,
-  },
-  socialText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  iconImage: {
-    width: 20,
-    height: 20,
+  footerLinkText: {
+    color: theme.fontColor.SemiboldBlue,
+    fontWeight: 'bold',
+    fontSize: hp(1.6),
   },
 });
 
