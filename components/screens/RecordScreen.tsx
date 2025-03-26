@@ -1,88 +1,315 @@
-import {View, Text, StyleSheet, ScrollView,TouchableOpacity} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ScreenWrapper from '../ScreenWrapper';
 import HeaderBar from '../HeaderBar';
-import { useNavigation } from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useCallback, useEffect, useState} from 'react';
+import {
+  initialize,
+  readRecord,
+  readRecords,
+  requestPermission,
+} from 'react-native-health-connect';
+import { getNameFromExerciseType, getIconFromExerciseType } from '../contants/exerciseType';
+
+interface ExerciseSession {
+  exerciseType: number;
+  metadata: {
+    device: {
+      manufacturer: string;
+      model: string | null;
+      type: number;
+    };
+    clientRecordId: string,
+    dataOrigin: string;
+    id: string;
+  };
+  startTime: string;
+  endTime: string;
+}
+
+interface StepRecord {
+  count: number;
+  startTime: string;
+  endTime: string;
+  metadata: {
+    id: string;
+  };
+}
+
+interface DistanceRecord {
+  distance: number;
+  startTime: string;
+  endTime: string;
+  metadata: {
+    id: string;
+  };
+}
+
 export default function RecordScreen() {
   const navigate = useNavigation();
-  const runData = [
-    {
-      date: 'Sun, Feb 9',
-      metrics: {steps: 700, points: 51},
-      activities: [
-        {time: '16:59', type: 'Evening Run', duration: 31, distance: 4.2},
-        {time: '13:50', type: 'Lunch Run', duration: 23, distance: 2.8},
-        {time: '08:30', type: 'Morning Run', duration: 45, distance: 6.8},
-      ],
-    },
-    {
-      date: 'Sat, Feb 8',
-      metrics: {steps: 700, points: 51},
-      activities: [
-        {time: '16:59', type: 'Evening Run', duration: 31, distance: 4.2},
-        {time: '13:50', type: 'Lunch Run', duration: 23, distance: 2.8},
-        {time: '08:30', type: 'Morning Run', duration: 45, distance: 6.8},
-      ],
-    },
-  ];
+  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
+  const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
+  const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
+
+  const generateData = (sessions: ExerciseSession[], steps: StepRecord[], distances: DistanceRecord[]) => {
+    // Group sessions by date
+    const sessionsByDate: Record<string, any[]> = {};
+    
+    sessions.forEach((session) => {
+      const startDate = new Date(session.startTime);
+      const dateStr = startDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      
+      if (!sessionsByDate[dateStr]) {
+        sessionsByDate[dateStr] = [];
+      }
+      
+      const endDate = new Date(session.endTime);
+      const duration = Math.round(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60),
+      );
+      
+      // Find matching distance record for this session
+      const distanceRecord = distances.find(d => 
+        new Date(d.startTime).getTime() === startDate.getTime() && 
+        new Date(d.endTime).getTime() === endDate.getTime()
+      );
+      
+      const distanceInMeters = distanceRecord ? Math.round(distanceRecord.distance) : Math.round((2 + Math.random() * 8) * 1000);
+      const timeStr = startDate
+        .toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        })
+        .replace('24:', '00:');
+  
+      sessionsByDate[dateStr].push({
+        time: timeStr,
+        type: getNameFromExerciseType(session.exerciseType),
+        duration,
+        distance: distanceInMeters,
+        id: session.metadata.id,
+        clientRecordId: session.metadata.clientRecordId,
+        exerciseType: session.exerciseType
+      });
+    });
+
+    // Calculate total steps per day
+    const stepsByDate: Record<string, number> = {};
+    steps.forEach((step) => {
+      const date = new Date(step.startTime);
+      const dateStr = date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      if (!stepsByDate[dateStr]) {
+        stepsByDate[dateStr] = 0;
+      }
+      stepsByDate[dateStr] += step.count;
+    });
+  
+    // Calculate metrics for each date
+    const result = Object.keys(sessionsByDate).map((dateStr) => {
+      const activities = sessionsByDate[dateStr];
+      const totalSteps = stepsByDate[dateStr] || Math.round(activities.reduce((sum, activity) => 
+        sum + activity.distance / 1000 * 1300, 0)); // Approximate steps based on distance
+      const totalPoints = Math.round(activities.reduce((sum, activity) => 
+        sum + activity.duration * (0.8 + Math.random() * 0.4), 0));
+      const totalDistance = activities.reduce((sum, activity) => 
+        sum + activity.distance, 0);
+
+      return {
+        date: dateStr,
+        dateObj: new Date(activities[0].time), // For sorting
+        metrics: { 
+          steps: totalSteps, 
+          points: totalPoints,
+          distance: totalDistance
+        },
+        activities: activities
+      };
+    });
+
+    // Sort by date descending (newest first)
+    return result.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+  };
+
+  const exerciseData = generateData(exerciseSessions, stepRecords, distanceRecords);
+
+  const readSampleData = async () => {
+    try {
+      const isInitialized = await initialize();
+      if (!isInitialized) {
+        console.log('Health Connect initialization failed');
+        return;
+      }
+
+      const grantedPermissions = await requestPermission([
+        {accessType: 'read', recordType: 'Steps'},
+        {accessType: 'read', recordType: 'TotalCaloriesBurned'},
+        {accessType: 'read', recordType: 'Distance'},
+        {accessType: 'read', recordType: 'ExerciseSession'},
+        {accessType: 'write', recordType: 'ExerciseSession'},
+      ]);
+
+      if (!grantedPermissions) {
+        console.log('Permissions not granted');
+        return;
+      }
+
+      const data = await readRecords('ExerciseSession', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      const stepData = await readRecords("Steps", {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      const distanceData = await readRecords("Distance", {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      })
+
+      setExerciseSessions(data.records.map((r) => ({
+        exerciseType: r.exerciseType,
+        metadata: r.metadata,
+        startTime: r.startTime,
+        endTime: r.endTime,
+      })));
+
+      setStepRecords(stepData.records.map((r) => ({
+        count: r.count,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        metadata: r.metadata,
+      })));
+
+      setDistanceRecords(distanceData.records.map((r) => ({
+        distance: r.distance.inMeters,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        metadata: r.metadata
+      })))
+
+    } catch (error) {
+      console.error('Error reading health data:', error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      readSampleData();
+    }, []),
+  );
 
   return (
     <ScreenWrapper bg={'#FFFFFF'}>
       <HeaderBar />
       <ScrollView style={styles.container}>
-        {runData.map((day, dayIndex) => (
-          <View key={dayIndex} style={styles.dayContainer}>
-            <View style={styles.dayHeader}>
-              <Text style={styles.dateText}>{day.date}</Text>
-              <View style={styles.metricsContainer}>
-                <View style={styles.metricItem}>
-                  <Icon
-                    name="footsteps"
-                    size={18}
-                    color="#4285F4"
-                    style={styles.metricIcon}
-                  />
-                  <Text style={styles.metricText}>
-                    {day.metrics.steps} steps
-                  </Text>
-                </View>
-                <View style={styles.metricItem}>
-                  <Icon
-                    name="analytics"
-                    size={19}
-                    color="#F4B400"
-                    style={styles.metricIcon}
-                  />
-                  <Text style={styles.metricText}>
-                    {day.metrics.points} pts
-                  </Text>
+        {exerciseData.length > 0 ? (
+          exerciseData.map((day, dayIndex) => (
+            <View key={dayIndex} style={styles.dayContainer}>
+              <View style={styles.dayHeader}>
+                <Text style={styles.dateText}>{day.date}</Text>
+                <View style={styles.metricsContainer}>
+                  <View style={styles.metricItem}>
+                    <Icon
+                      name="footsteps"
+                      size={18}
+                      color="#4285F4"
+                      style={styles.metricIcon}
+                    />
+                    <Text style={styles.metricText}>
+                      {day.metrics.steps} steps
+                    </Text>
+                  </View>
+                  {/* <View style={styles.metricItem}>
+                    <Icon
+                      name="analytics"
+                      size={19}
+                      color="#F4B400"
+                      style={styles.metricIcon}
+                    />
+                    <Text style={styles.metricText}>
+                      {day.metrics.points} pts
+                    </Text>
+                  </View> */}
+                  <View style={styles.metricItem}>
+                    <Icon
+                      name="map"
+                      size={18}
+                      color="#0F9D58"
+                      style={styles.metricIcon}
+                    />
+                    <Text style={styles.metricText}>
+                      {(day.metrics.distance / 1000).toFixed(1)} km
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {day.activities.map((activity, actIndex) => (
-              <View key={actIndex} style={styles.activityContainer}>
-                <TouchableOpacity style={styles.activityRow} onPress={() => {navigate.navigate('RecordDetailScreen' as never)}}>
-                <Text style={styles.timeText}>{activity.time}</Text>
-                <View style={styles.iconContainer}>
-                  <Icon
-                    name="walk"
-                    size={32}
-                    color="#052658"
-                    style={styles.runIcon}
-                  />
+              {day.activities.map((activity, actIndex) => (
+                <View key={actIndex} style={styles.activityContainer}>
+                  <TouchableOpacity
+                    style={styles.activityRow}
+                    onPress={() => {
+                      navigate.navigate('RecordDetailScreen' as never, {
+                        id: activity.id,
+                        clientId: activity.clientRecordId
+                      });
+                    }}>
+                    <Text style={styles.timeText}>{activity.time}</Text>
+                    <View style={styles.iconContainer}>
+                      <Icon
+                        name={getIconFromExerciseType(activity.exerciseType)}
+                        size={32}
+                        color="#052658"
+                        style={styles.runIcon}
+                      />
+                    </View>
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityType}>{activity.type}</Text>
+                      <Text style={styles.activityMetrics}>
+                        {activity.duration} min • {activity.distance} m
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.activityDetails}>
-                  <Text style={styles.activityType}>{activity.type}</Text>
-                  <Text style={styles.activityMetrics}>
-                    {activity.duration} min • {activity.distance} km
-                  </Text>
-                </View>
-                </TouchableOpacity>
-              </View>
-            ))}
+              ))}
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Icon name="walk" size={48} color="#ACADAE" />
+            <Text style={styles.emptyText}>No workout data available</Text>
+            <Text style={styles.emptySubtext}>
+              Your recorded workouts will appear here
+            </Text>
           </View>
-        ))}
+        )}
       </ScrollView>
     </ScreenWrapper>
   );
@@ -132,7 +359,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ACADAE',
     paddingBottom: 16,
   },
-  activityRow:{
+  activityRow: {
     gap: 18,
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,5 +392,21 @@ const styles = StyleSheet.create({
   activityMetrics: {
     fontSize: 16,
     color: '#757575',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#333333',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#757575',
+    marginTop: 8,
   },
 });

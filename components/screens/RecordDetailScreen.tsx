@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   Text,
@@ -7,24 +7,335 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
 import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import {hp, wp} from '../helpers/common';
-import MapView, {Marker} from 'react-native-maps';
-import { useNavigation } from '@react-navigation/native';
+import MapView, {Marker, Polyline} from 'react-native-maps';
+import Geolocation from 'react-native-geolocation-service';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import {
+  initialize,
+  readRecord,
+  readRecords,
+  requestExerciseRoute,
+  requestPermission,
+} from 'react-native-health-connect';
+import {getNameFromExerciseType} from '../contants/exerciseType';
+
+interface ExerciseSession {
+  exerciseRoute: [];
+  exerciseType: number;
+  metadata: {
+    device: {
+      manufacturer: string;
+      model: string | null;
+      type: number;
+    };
+    clientRecordId: string;
+    dataOrigin: string;
+    id: string;
+  };
+  startTime: string;
+  endTime: string;
+}
+
+interface StepRecord {
+  count: number;
+  startTime: string;
+  endTime: string;
+  metadata: {
+    id: string;
+  };
+}
+
+interface DistanceRecord {
+  distance: number;
+  startTime: string;
+  endTime: string;
+  metadata: {
+    id: string;
+  };
+}
+
+interface HeartRateRecord {
+  beatsPerMinute: number;
+  startTime: string;
+  endTime: string;
+  metadata: {
+    id: string;
+  };
+}
+
+interface CaloriesRecord {
+  calories: number;
+  startTime: string;
+  endTime: string;
+  metadata: {
+    id: string;
+  };
+}
+
+interface ExerciseRoute {
+  time: string;
+  latitude: number;
+  longitude: number;
+}
+
 const RecordDetailScreen = () => {
-  // Heart rate data for the chart
-  const heartRateData = [
-    {value: 140},
-    {value: 150},
-    {value: 165},
-    {value: 172},
-    {value: 168},
-    {value: 155},
-  ];
+  const route = useRoute();
+  const {id, clientRecordId} = route.params;
+
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [exerciseSessionRecord, setExerciseSessionRecord] =
+    useState<ExerciseSession>();
+  const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
+  const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
+  const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>(
+    [],
+  );
+  const [caloriesRecords, setCaloriesRecords] = useState<CaloriesRecord[]>([]);
+  const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRoute[]>([]);
+
+  const readSampleData = async () => {
+    try {
+      const isInitialized = await initialize();
+      if (!isInitialized) {
+        console.log('Health Connect initialization failed');
+        return;
+      }
+
+      const grantedPermissions = await requestPermission([
+        {accessType: 'read', recordType: 'Steps'},
+        {accessType: 'read', recordType: 'ActiveCaloriesBurned'},
+        {accessType: 'read', recordType: 'TotalCaloriesBurned'},
+        {accessType: 'read', recordType: 'HeartRate'},
+        {accessType: 'read', recordType: 'Distance'},
+        {accessType: 'read', recordType: 'ExerciseSession'},
+        {accessType: 'write', recordType: 'ExerciseSession'},
+      ]);
+
+      if (!grantedPermissions) {
+        console.log('Permissions not granted');
+        return;
+      }
+
+      const stepData = await readRecords('Steps', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      const distanceData = await readRecords('Distance', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      const heartRateData = await readRecords('HeartRate', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      const caloriesData = await readRecords('ActiveCaloriesBurned', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      setCaloriesRecords(
+        caloriesData.records.map(r => ({
+          calories: r.energy.inCalories,
+          startTime: r.startTime,
+          endTime: r.endTime,
+          metadata: r.metadata,
+        })),
+      );
+
+      setStepRecords(
+        stepData.records.map(r => ({
+          count: r.count,
+          startTime: r.startTime,
+          endTime: r.endTime,
+          metadata: r.metadata,
+        })),
+      );
+
+      setDistanceRecords(
+        distanceData.records.map(r => ({
+          distance: r.distance.inMeters,
+          startTime: r.startTime,
+          endTime: r.endTime,
+          metadata: r.metadata,
+        })),
+      );
+
+      setHeartRateRecords(
+        heartRateData.records.flatMap(r => {
+          return r.samples.map(s => ({
+            beatsPerMinute: s.beatsPerMinute,
+            startTime: s.time,
+            endTime: s.time,
+            metadata: r.metadata,
+          }));
+        }),
+      );
+
+      readRecord('ExerciseSession', id)
+        .then(async exercise => {
+          setExerciseSessionRecord(exercise);
+          const handleExerciseRoute = async () => {
+            if (exercise.exerciseRoute?.type === 'CONSENT_REQUIRED') {
+              try {
+                const {route} = await requestExerciseRoute(clientRecordId);
+                if (route) {
+                  console.log(JSON.stringify(route, null, 2));
+                } else {
+                  console.log('User denied access');
+                }
+              } catch (err) {
+                console.error('Error requesting exercise route', {err});
+              }
+            } else {
+              let route = exercise.exerciseRoute.route;
+              if (route) {
+                setExerciseRoutes(
+                  route.map((point: any) => {
+                    return {
+                      time: point.time,
+                      latitude: point.latitude,
+                      longitude: point.longitude,
+                    };
+                  }),
+                );
+              }
+            }
+          };
+
+          handleExerciseRoute();
+        })
+        .catch(err => {
+          console.error('Error reading exercise record', {err});
+        });
+    } catch (error) {
+      console.error('Error reading health data:', error);
+    }
+  };
+
+  const getMapRegion = () => {
+    if (exerciseRoutes.length === 0) {
+      return {
+        latitude: currentLocation?.latitude || 37.78825,
+        longitude: currentLocation?.longitude || -122.4324,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      };
+    }
+
+    let minLat = Math.min(...exerciseRoutes.map(p => p.latitude));
+    let maxLat = Math.max(...exerciseRoutes.map(p => p.latitude));
+    let minLng = Math.min(...exerciseRoutes.map(p => p.longitude));
+    let maxLng = Math.max(...exerciseRoutes.map(p => p.longitude));
+
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: maxLat - minLat + 0.01,
+      longitudeDelta: maxLng - minLng + 0.01,
+    };
+  };
+
+  const calculateDuration = (startTime: string, endTime: string) => {
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const duration = end.getTime() - start.getTime();
+    const minutes = Math.floor(duration / (1000 * 60));
+    const seconds = Math.floor((duration % (1000 * 60)) / 1000);
+
+    return `${minutes} min ${seconds} sec`;
+  };
+
+  const calculateAveragePaceInKm = (distance: number, duration: number) => {
+    const km = distance / 1000;
+    const minutes = duration / 60;
+    const averagePace = km / minutes;
+    return averagePace.toFixed(2);
+  };
+
+  const prepareHeartRateData = () => {
+    if (heartRateRecords.length === 0) return [];
+
+    const recordsByDay = heartRateRecords.reduce((acc, record) => {
+      const dateStr = new Date(record.startTime).toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      if (!acc[dateStr]) acc[dateStr] = [];
+      acc[dateStr].push(record.beatsPerMinute);
+      return acc;
+    }, {} as Record<string, number[]>);
+
+    return Object.entries(recordsByDay).map(([date, values]) => {
+      const average = values.reduce((sum, bpm) => sum + bpm, 0) / values.length;
+      return {
+        value: average,
+        label: date,
+        labelTextStyle: { color: 'gray' },
+      };
+    });
+  };
+
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      );
+    } else {
+      await Geolocation.requestAuthorization('whenInUse');
+    }
+    getCurrentLocation();
+  };
+
+  const getCurrentLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        setCurrentLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      error => console.log(error),
+      {enableHighAccuracy: true},
+    );
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      readSampleData();
+
+      // SO MUCH ERROR
+      // requestLocationPermission();
+    }, []),
+  );
+
   const navigate = useNavigation();
   return (
     <ScreenWrapper bg={'#f9fafb'}>
@@ -36,30 +347,61 @@ const RecordDetailScreen = () => {
         <Text style={styles.headerTitle}>Record Running Session</Text>
       </View>
       <ScrollView style={styles.content}>
-        <Text style={styles.title}>Evening Run</Text>
-        <Text style={styles.dateTime}>October 15, 2023 • 6:30 AM</Text>
+        <Text style={styles.title}>
+          {getNameFromExerciseType(exerciseSessionRecord?.exerciseType)}
+        </Text>
+        <Text style={styles.dateTime}>
+          {exerciseSessionRecord?.startTime &&
+            new Date(exerciseSessionRecord.startTime).toLocaleDateString(
+              'en-US',
+              {year: 'numeric', month: 'long', day: 'numeric'},
+            )}
+        </Text>
 
         {/* Key Metrics Grid */}
         <View style={styles.metricsGrid}>
           <View style={styles.metricCard}>
             <Icon name="walk-sharp" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Distance</Text>
-            <Text style={styles.metricValue}>5.2 km</Text>
+            <Text style={styles.metricValue}>
+              {(
+                distanceRecords.reduce(
+                  (total, record) => total + record.distance,
+                  0,
+                ) / 1000
+              ).toFixed(2)}{' '}
+              km
+            </Text>
           </View>
           <View style={styles.metricCard}>
             <Icon name="time-outline" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Duration</Text>
-            <Text style={styles.metricValue}>32:45</Text>
+            {exerciseSessionRecord && (
+              <Text style={styles.metricValue}>
+                {calculateDuration(
+                  exerciseSessionRecord.startTime,
+                  exerciseSessionRecord.endTime,
+                )}
+              </Text>
+            )}
           </View>
           <View style={styles.metricCard}>
             <Icon name="flame-outline" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Calories</Text>
-            <Text style={styles.metricValue}>324 kcal</Text>
+            <Text style={styles.metricValue}>
+              {(
+                caloriesRecords.reduce(
+                  (total, record) => total + record.calories,
+                  0,
+                ) / 1000
+              ).toFixed(2)}{' '}
+              kcal
+            </Text>
           </View>
           <View style={styles.metricCard}>
             <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Avg. Pace</Text>
-            <Text style={styles.metricValue}>6'17"/km</Text>
+            <Text style={styles.metricValue}>Unknown</Text>
           </View>
         </View>
 
@@ -71,25 +413,60 @@ const RecordDetailScreen = () => {
           </View>
           <View style={styles.heartRateStats}>
             <View>
-              <Text style={styles.heartRateLabel}>Average</Text>
-              <Text style={styles.heartRateValue}>145 BPM</Text>
+              <Text style={styles.heartRateLabel}>Min</Text>
+              <Text style={styles.heartRateValue}>
+                {Number(
+                  heartRateRecords
+                    .reduce(
+                      (min, record) => Math.min(min, record.beatsPerMinute),
+                      Infinity,
+                    )
+                    .toFixed(2),
+                )}{' '}
+                BPM
+              </Text>
             </View>
             <View>
-              <Text style={styles.heartRateLabel}>Max</Text>
-              <Text style={styles.heartRateValue}>172 BPM</Text>
+              <Text style={styles.heartRateLabel}>Average</Text>
+              <Text style={styles.heartRateValue}>
+                {Number(
+                  heartRateRecords.reduce(
+                    (total, record) => total + record.beatsPerMinute,
+                    0,
+                  ) / heartRateRecords.length,
+                ).toFixed(2)}{' '}
+                BPM
+              </Text>
             </View>
+          </View>
+          <View>
+            <Text style={styles.heartRateLabel}>Max</Text>
+            <Text style={styles.heartRateValue}>
+              {Number(
+                heartRateRecords
+                  .reduce(
+                    (max, record) => Math.max(max, record.beatsPerMinute),
+                    0,
+                  )
+                  .toFixed(2),
+              )}{' '}
+              BPM
+            </Text>
           </View>
           <View style={styles.chartContainer}>
             <LineChart
-              data={heartRateData}
+              data={prepareHeartRateData()}
               height={150}
-              width={330}
+              width={wp(65)}
               spacing={60}
               color="#1E3A8A"
-              thickness={2}
-              hideDataPoints
+              thickness={3}
               curved
-              hideAxesAndRules
+              yAxisOffset={20}
+              noOfSections={4}
+              maxValue={
+                Math.max(...heartRateRecords.map(r => r.beatsPerMinute)) + 20
+              }
             />
           </View>
         </View>
@@ -103,71 +480,54 @@ const RecordDetailScreen = () => {
           <View style={{borderRadius: 16, overflow: 'hidden'}}>
             <MapView
               style={styles.map}
-              initialRegion={{
-                latitude: 37.78825,
-                longitude: -122.4324,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              }}>
-              <Marker
-                coordinate={{
-                  latitude: 37.78825,
-                  longitude: -122.4324,
-                }}
-                title="My Location"
-                description="This is a marker"
-              />
+              initialRegion={getMapRegion()}
+              region={getMapRegion()}>
+              <Polyline coordinates={exerciseRoutes} />
+              {currentLocation && (
+                <Marker
+                  coordinate={currentLocation}
+                  title="Your Location"
+                  pinColor="#22C55E" // Green marker
+                />
+              )}
             </MapView>
           </View>
           <View style={styles.mapStats}>
             <View style={styles.mapStat}>
-              <Icon name="arrow-up" size={20} color="#22C55E" />
+              <Icon name="walk-outline" size={20} color="#22C55E" />
               <View>
-                <Text style={styles.mapStatLabel}>Elevation Gain</Text>
-                <Text style={styles.mapStatValue}>124 m</Text>
+                <Text style={styles.mapStatLabel}>Distance</Text>
+                <Text style={styles.mapStatValue}>
+                  {new Intl.NumberFormat('en-US').format(
+                    distanceRecords.reduce(
+                      (total, record) => total + record.distance / 1000,
+                      0,
+                    ),
+                  )}{' '}
+                  km
+                </Text>
               </View>
             </View>
             <View style={styles.mapStat}>
               <Icon name="footsteps-outline" size={20} color="#22C55E" />
               <View>
                 <Text style={styles.mapStatLabel}>Steps</Text>
-                <Text style={styles.mapStatValue}>6,247</Text>
+                <Text style={styles.mapStatValue}>
+                  {new Intl.NumberFormat('en-US').format(
+                    stepRecords.reduce(
+                      (total, record) => total + record.count,
+                      0,
+                    ),
+                  )}
+                </Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Additional Stats */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Icon name="stats-chart-outline" size={20} color="#1E3A8A" />
-            <Text style={styles.sectionTitle}>Additional Stats</Text>
-          </View>
-          <View style={styles.additionalStats}>
-            <View style={styles.statRow}>
-              <View style={styles.statLabel}>
-                <Icon name="repeat" size={16} color="#64748B" />
-                <Text style={styles.statText}>Average Cadence</Text>
-              </View>
-              <Text style={styles.statValue}>165 spm</Text>
-            </View>
-            <View style={styles.statRow}>
-              <View style={styles.statLabel}>
-                <Icon name="thermometer-outline" size={16} color="#64748B" />
-                <Text style={styles.statText}>Weather</Text>
-              </View>
-              <Text style={styles.statValue}>22°C, Sunny</Text>
-            </View>
-            <View style={styles.statRow}>
-              <View style={styles.statLabel}>
-                <Icon name="trophy-outline" size={16} color="#64748B" />
-                <Text style={styles.statText}>Achievements</Text>
-              </View>
-              <Text style={styles.statValue}>2 New</Text>
-            </View>
-          </View>
-        </View>
-        <TouchableOpacity style={styles.shareButton} onPress={() => navigate.navigate('RiskWarningScreen' as never)}>
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={() => navigate.navigate('RiskWarningScreen' as never)}>
           <Icon name="document-text-outline" size={20} color="#FFFFFF" />
           <Text style={styles.shareButtonText}>Risk analysis</Text>
         </TouchableOpacity>
@@ -224,6 +584,7 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
     gap: 16,
     marginBottom: 24,
   },
@@ -232,7 +593,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
     padding: 16,
-    width: wp(44),
+    width: wp(43),
     borderRadius: 16,
     gap: 8,
   },
@@ -280,7 +641,8 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   chartContainer: {
-    height: 100,
+    height: 200,
+    marginTop: 16,
   },
   mapImage: {
     width: '100%',
