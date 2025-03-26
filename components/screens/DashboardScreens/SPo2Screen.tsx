@@ -39,7 +39,7 @@ const BloodPressureScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blood Pressure</Text>
+        <Text style={styles.headerTitle}>SPo2</Text>
       </View>
 
       <ScrollView style={styles.content}>
@@ -51,7 +51,6 @@ const BloodPressureScreen = () => {
             <View style={styles.rangeDot} />
             <Text style={styles.rangeText}>Normal Range</Text>
           </View>
-          <Text style={styles.updatedText}>Updated 2 mins ago</Text>
         </View>
 
         {/* Time Period Tabs */}

@@ -12,7 +12,7 @@ import ErrorScreen from '../screens/ErrorScreen';
 import ManageNotification from '../screens/ManageNotification';
 import DevicesScreen from '../screens/DevicesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import BloodPressureScreen from '../screens/DashboardScreens/BloodPressureScreen';
+import SPo2Screen from '../screens/DashboardScreens/SPo2Screen';
 import SleepScreen from '../screens/DashboardScreens/SleepScreen';
 import HeartRateScreen from '../screens/DashboardScreens/HeartRateScreen';
 import RecordDetailScreen from '../screens/RecordDetailScreen';
@@ -55,7 +55,7 @@ export const stackScreens = [
   { name: 'ManageNotificationsScreen', component: ManageNotification },
   { name: 'DevicesScreen', component: DevicesScreen },
   { name: 'EditProfileScreen', component: EditProfileScreen },
-  { name: 'BloodPressureScreen', component: BloodPressureScreen },
+  { name: 'SPo2Screen', component: SPo2Screen },
   { name: 'SleepScreen', component: SleepScreen },
   { name: 'HeartRateScreen', component: HeartRateScreen },
   { name: 'RecordDetailScreen', component: RecordDetailScreen },

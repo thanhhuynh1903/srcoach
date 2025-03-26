@@ -13,7 +13,11 @@ import SlideCard from '../SlideCard';
 import BackButton from '../BackButton';
 import GridCard from '../GridCard';
 import ScreenWrapper from '../ScreenWrapper';
+import { useNavigation } from '@react-navigation/native';
+import { wp } from '../helpers/common';
+
 const ChartDetailScreen = () => {
+  const navigation = useNavigation();
   const metricsData = [
     {
       id: '1',
@@ -45,6 +49,7 @@ const ChartDetailScreen = () => {
   const sleepData = [7, 5, 4, 6, 7.5, 7];
   const caloriesData = [250, 200, 150, 200, 280, 286];
   const spo2Data = [97, 98, 98, 97.5, 98, 98];
+
   return (
     <SafeAreaView style={{backgroundColor: '#F9FAFB', flex: 1}}>
       {/* Header */}
@@ -52,7 +57,11 @@ const ChartDetailScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Calories</Text>
+        <View style={{flex: 1}} />
+        <TouchableOpacity style={styles.syncButton}>
+          <Icon name="sync-outline" size={20} color="#3B82F6" />
+          <Text style={styles.syncText}>Sync</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -81,6 +90,7 @@ const ChartDetailScreen = () => {
             <Text style={styles.greetingText}>Good morning, Alex</Text>
           </View>
         </View>
+        
         {/* Running Schedule */}
         <View style={styles.scheduleCard}>
           <View style={styles.scheduleHeader}>
@@ -99,57 +109,80 @@ const ChartDetailScreen = () => {
           </View>
         </View>
 
-        {/* Health Metrics - Top Row */}
-        <View style={styles.metricsRow}>
-          <SlideCard metrics={metricsData} />
+        {/* Health Metrics Grid */}
+        <View style={styles.metricsGrid}>
+          <TouchableOpacity 
+            style={styles.metricItem}
+            onPress={() => navigation.navigate('StepsScreen')}
+          >
+            <View style={[styles.metricCircle, {backgroundColor: '#EFF6FF'}]}>
+              <Icon name="footsteps-outline" size={24} color="#2563EB" />
+            </View>
+            <Text style={styles.metricValue}>8,547</Text>
+            <Text style={styles.metricLabel}>Steps</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.metricItem}
+            onPress={() => navigation.navigate('CaloriesScreen')}
+          >
+            <View style={[styles.metricCircle, {backgroundColor: '#FEE2E2'}]}>
+              <Icon name="flame" size={24} color="#EF4444" />
+            </View>
+            <Text style={styles.metricValue}>432</Text>
+            <Text style={styles.metricLabel}>Calories</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.metricItem}
+            onPress={() => navigation.navigate('SleepScreen')}
+          >
+            <View style={[styles.metricCircle, {backgroundColor: '#EEF2FF'}]}>
+              <Icon name="moon" size={24} color="#6366F1" />
+            </View>
+            <Text style={styles.metricValue}>7h 23m</Text>
+            <Text style={styles.metricLabel}>Sleep</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.metricItem}
+            onPress={() => navigation.navigate('SPo2Screen')}
+          >
+            <View style={[styles.metricCircle, {backgroundColor: '#ECFDF5'}]}>
+              <Icon name="water-outline" size={24} color="#10B981" />
+            </View>
+            <Text style={styles.metricValue}>98%</Text>
+            <Text style={styles.metricLabel}>SpO2</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Health Metrics - Heart Rate and Sleep */}
+        {/* Heart Rate and Distance */}
         <View style={styles.row}>
-          <GridCard
-            icon="heart"
-            iconColor="#FF4D4F"
-            value="72"
-            unit="bpm"
-            label="Heart Rate"
-            chartColor="#FF4D4F"
-            chartData={heartRateData}
-            chartStyle="flat"
-          />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('HeartRateScreen')}
+            style={styles.touchable}
+          >
+            <GridCard
+              icon="heart"
+              iconColor="#FF4D4F"
+              value="72"
+              unit="bpm"
+              label="Heart Rate"
+              chartColor="#FF4D4F"
+              chartData={heartRateData}
+              chartStyle="flat"
+            />
+          </TouchableOpacity>
 
           <GridCard
-            icon="moon"
+            icon="walk-outline"
             iconColor="#6366F1"
-            value="7h 23m"
-            unit=""
-            label="Sleep"
+            value="15"
+            unit="km"
+            label="Distance"
             chartColor="#6366F1"
             chartData={sleepData}
             chartStyle="wave"
-          />
-        </View>
-
-        <View style={styles.row}>
-          <GridCard
-            icon="flame"
-            iconColor="#FF4D4F"
-            value="286"
-            unit="kcal"
-            label="Calories burned"
-            chartColor="#FF4D4F"
-            chartData={caloriesData}
-            chartStyle="wave"
-          />
-
-          <GridCard
-            icon="water-outline"
-            iconColor="#0EA5E9"
-            value="98"
-            unit="%"
-            label="SpO2"
-            chartColor="#0EA5E9"
-            chartData={spo2Data}
-            chartStyle="flat"
           />
         </View>
 
@@ -186,6 +219,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
   },
   header: {
     flexDirection: 'row',
@@ -195,13 +229,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  touchable: {
+    flex: 1,
+    width: wp(45),
+  },
   backButton: {
     marginRight: 16,
   },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  syncText: {
+    color: '#3B82F6',
+    fontSize: 14,
+    marginLeft: 4,
   },
   header_content: {
     width: '100%',
@@ -266,44 +313,45 @@ const styles = StyleSheet.create({
     color: '#334155',
     marginLeft: 8,
   },
-  metricsRow: {
+  metricsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  metricCard: {
-    width: '31%',
-    backgroundColor: '#F8FAFC',
+  metricItem: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 12,
+    padding: 16,
+    marginBottom: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   metricCircle: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 8,
+    marginBottom: 8,
   },
   metricValue: {
     fontSize: 18,
     fontWeight: '700',
     color: '#000000',
-    marginTop: 4,
+    marginBottom: 4,
   },
   metricLabel: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 4,
-  },
-  metricWideCard: {
-    width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 12,
-    borderBottomWidth: 2,
   },
   metricHeader: {
     flexDirection: 'row',
@@ -320,15 +368,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     color: '#64748B',
-  },
-  chartContainer: {
-    height: 30,
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  lineChart: {
-    height: 20,
-    borderRadius: 10,
   },
   cadenceCard: {
     backgroundColor: '#FFFFFF',
