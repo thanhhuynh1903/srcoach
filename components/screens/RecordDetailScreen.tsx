@@ -128,79 +128,80 @@ const RecordDetailScreen = () => {
         return;
       }
 
-      const stepData = await readRecords('Steps', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
-
-      const distanceData = await readRecords('Distance', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
-
-      const heartRateData = await readRecords('HeartRate', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
-
-      const caloriesData = await readRecords('ActiveCaloriesBurned', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
-
-      setCaloriesRecords(
-        caloriesData.records.map(r => ({
-          calories: r.energy.inCalories,
-          startTime: r.startTime,
-          endTime: r.endTime,
-          metadata: r.metadata,
-        })),
-      );
-
-      setStepRecords(
-        stepData.records.map(r => ({
-          count: r.count,
-          startTime: r.startTime,
-          endTime: r.endTime,
-          metadata: r.metadata,
-        })),
-      );
-
-      setDistanceRecords(
-        distanceData.records.map(r => ({
-          distance: r.distance.inMeters,
-          startTime: r.startTime,
-          endTime: r.endTime,
-          metadata: r.metadata,
-        })),
-      );
-
-      setHeartRateRecords(
-        heartRateData.records.flatMap(r => {
-          return r.samples.map(s => ({
-            beatsPerMinute: s.beatsPerMinute,
-            startTime: s.time,
-            endTime: s.time,
-            metadata: r.metadata,
-          }));
-        }),
-      );
-
       readRecord('ExerciseSession', id)
         .then(async exercise => {
           setExerciseSessionRecord(exercise);
+
+          const stepData = await readRecords('Steps', {
+            timeRangeFilter: {
+              operator: 'between',
+              startTime: exercise.startTime,
+              endTime: exercise.endTime,
+            },
+          });
+
+          const distanceData = await readRecords('Distance', {
+            timeRangeFilter: {
+              operator: 'between',
+              startTime: exercise.startTime,
+              endTime: exercise.endTime,
+            },
+          });
+
+          const heartRateData = await readRecords('HeartRate', {
+            timeRangeFilter: {
+              operator: 'between',
+              startTime: exercise.startTime,
+              endTime: exercise.endTime,
+            },
+          });
+
+          const caloriesData = await readRecords('ActiveCaloriesBurned', {
+            timeRangeFilter: {
+              operator: 'between',
+              startTime: exercise.startTime,
+              endTime: exercise.endTime,
+            },
+          });
+
+          setCaloriesRecords(
+            caloriesData.records.map(r => ({
+              calories: r.energy.inCalories,
+              startTime: r.startTime,
+              endTime: r.endTime,
+              metadata: r.metadata,
+            })),
+          );
+
+          setStepRecords(
+            stepData.records.map(r => ({
+              count: r.count,
+              startTime: r.startTime,
+              endTime: r.endTime,
+              metadata: r.metadata,
+            })),
+          );
+
+          setDistanceRecords(
+            distanceData.records.map(r => ({
+              distance: r.distance.inMeters,
+              startTime: r.startTime,
+              endTime: r.endTime,
+              metadata: r.metadata,
+            })),
+          );
+
+          setHeartRateRecords(
+            heartRateData.records.flatMap(r => {
+              return r.samples.map(s => ({
+                beatsPerMinute: s.beatsPerMinute,
+                startTime: s.time,
+                endTime: s.time,
+                metadata: r.metadata,
+              }));
+            }),
+          );
+
           const handleExerciseRoute = async () => {
             if (exercise.exerciseRoute?.type === 'CONSENT_REQUIRED') {
               try {
@@ -282,25 +283,18 @@ const RecordDetailScreen = () => {
   const prepareHeartRateData = () => {
     if (heartRateRecords.length === 0) return [];
 
-    const recordsByDay = heartRateRecords.reduce((acc, record) => {
-      const dateStr = new Date(record.startTime).toLocaleDateString('en-GB', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
-      if (!acc[dateStr]) acc[dateStr] = [];
-      acc[dateStr].push(record.beatsPerMinute);
-      return acc;
-    }, {} as Record<string, number[]>);
+    const sortedRecords = [...heartRateRecords].sort(
+      (a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+    );
 
-    return Object.entries(recordsByDay).map(([date, values]) => {
-      const average = values.reduce((sum, bpm) => sum + bpm, 0) / values.length;
-      return {
-        value: average,
-        label: date,
-        labelTextStyle: { color: 'gray' },
-      };
-    });
+    return sortedRecords
+      .filter((_, index) => index % Math.floor(sortedRecords.length / 10) === 0)
+      .map(record => ({
+        value: record.beatsPerMinute,
+        label: new Date(record.startTime).toLocaleTimeString(),
+        labelTextStyle: {color: 'gray'},
+      }));
   };
 
   const requestLocationPermission = async () => {

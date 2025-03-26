@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
 import BackButton from '../../BackButton';
+import { useFocusEffect } from '@react-navigation/native';
+import { initialize, readRecords, requestPermission } from 'react-native-health-connect';
 const {width} = Dimensions.get('window');
 
 const timePeriods = ['Today', 'Week', 'Month', 'Year'];
@@ -72,6 +74,54 @@ const heartRateZones = [
 
 const HeartRateScreen = () => {
   const [activePeriod, setActivePeriod] = useState('Today');
+
+const readSampleData = async () => {
+    try {
+      const isInitialized = await initialize();
+      if (!isInitialized) {
+        console.log('Health Connect initialization failed');
+        return;
+      }
+
+      const grantedPermissions = await requestPermission([
+        {accessType: 'read', recordType: 'HeartRate'},
+        {accessType: 'read', recordType: "RestingHeartRate"},
+      ]);
+
+      if (!grantedPermissions) {
+        console.log('Permissions not granted');
+        return;
+      }
+
+      const heartRateData = await readRecords("HeartRate", {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      const restingHeartRateData = await readRecords("RestingHeartRate", {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: '2025-03-02T00:00:00.000Z',
+          endTime: new Date().toISOString(),
+        },
+      });
+
+      console.log(heartRateData)
+      console.log(restingHeartRateData)
+
+    } catch (error) {
+      console.error('Error reading health data:', error);
+    }
+  };
+
+  useFocusEffect(() => {
+    return () => {
+      readSampleData();
+    };  
+  });
 
   return (
     <SafeAreaView style={styles.container}>
