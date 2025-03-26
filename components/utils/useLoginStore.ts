@@ -11,15 +11,16 @@ interface LoginState {
   login: (email: string, password: string) => Promise<void>;
   clear: () => void;
   clearAll: () => Promise<void>;
-  verifyCode: (email: string, code: string) => Promise<void>;
-  ResendCode: (email: string) => Promise<void>;
+
+  verifyCode: (email: string,code: string) => Promise<void>;
+  ResendCode: (email:string) => Promise<void>;
 }
-const MASTER_URL = 'https://xavia.pro/api';
+const MASTER_URL = "https://xavia.pro/api";
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
-  status: '',
-  resendStatus: '',
+  status:"",
+  resendStatus: "",
   apiStatus: false,
   message: '',
   login: async (email: string, password: string) => {
@@ -36,26 +37,21 @@ export const useLoginStore = create<LoginState>((set, get) => ({
 
       console.log('response', response.data);
       const apiStatus = response?.data?.status;
-      const messagesender = response?.data?.message;
+      const message = response?.data?.message;
       const userdata = response?.data?.user;
-      const expiresAt = response.data.data.accessTokenExpiresAt;
-      const accessToken = response.data.data.accessToken;
-      console.log('expiresAt', expiresAt);
-      console.log('accessToken', accessToken);
 
-      await AsyncStorage.multiSet([
-        ['authToken', accessToken],
-        ['accessTokenExpiresAt', expiresAt.toString()],
-      ]);
 
-      set({userdata, status: apiStatus, message : messagesender});
+      AsyncStorage.setItem('authToken', response?.data?.data?.accessToken);
+      AsyncStorage.setItem('accessTokenExpiresAt', response?.data?.data?.accessTokenExpiresAt);
+
+      set({userdata, status: apiStatus, message});
     } catch (error: any) {
       set({
-        message: error || 'Đăng nhập thất bại',
+        message: error.response?.data?.message || 'Đăng nhập thất bại',
       });
     }
   },
-  verifyCode: async (email: string, code: string) => {
+  verifyCode: async (email: string,code: string) => {
     // Lấy email từ dataUser trong state
     console.log('email', email);
     set({status: 'loading', message: ''});
@@ -76,13 +72,13 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       console.log('Response:', response.data);
       console.log('Verify status', response.data.status);
 
-      set({status: response?.data?.status, message: response?.data?.message});
+      set({status: response.data.status, message: response.data.message});
     } catch (error: any) {
       console.log('Error:', error);
       // Xử lý lỗi nếu cần
     }
   },
-  ResendCode: async (email: string) => {
+  ResendCode: async (email:string) => {
     // Lấy email từ dataUser trong state
     // const {userdata} = get();
     // console.log('Resend code user data', userdata);
