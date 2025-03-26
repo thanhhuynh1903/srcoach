@@ -42,7 +42,7 @@ import PasswordRecoveryScreen from '../screens/AuthenciationScreens/PasswordReco
 import PasswordRecoveryCodeScreen from '../screens/AuthenciationScreens/PasswordRecoveryCodeScreen';
 import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordRecoveryNewScreen';
 import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
-
+// import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
   { name: 'WelcomeScreen', component: WelcomeScreen },

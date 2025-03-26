@@ -37,9 +37,8 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
   const { login, message, status, clear } = useLoginStore();
   const canGoBack = navigation.canGoBack();
 
-  useEffect(() => {
+  useEffect(() => {    
     clear();
-    console.log('Token mounted', AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
       webClientId: '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
     });

@@ -10,15 +10,16 @@ interface LoginState {
   message: string;
   login: (email: string, password: string) => Promise<void>;
   clear: () => void;
-  verifyCode: (email: string,code: string) => Promise<void>;
-  ResendCode: (email:string) => Promise<void>;
+  clearAll: () => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<void>;
+  ResendCode: (email: string) => Promise<void>;
 }
-const MASTER_URL = "https://xavia.pro/api";
+const MASTER_URL = 'https://xavia.pro/api';
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
-  status:"",
-  resendStatus: "",
+  status: '',
+  resendStatus: '',
   apiStatus: false,
   message: '',
   login: async (email: string, password: string) => {
@@ -37,9 +38,16 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       const apiStatus = response?.data?.status;
       const message = response?.data?.message;
       const userdata = response?.data?.user;
+      const expiresAt = response.data.data.accessTokenExpiresAt;
+      const accessToken = response.data.data.accessToken;
+      console.log('expiresAt', expiresAt);
+      console.log('accessToken', accessToken);
 
+      await AsyncStorage.multiSet([
+        ['authToken', accessToken],
+        ['accessTokenExpiresAt', expiresAt.toString()],
+      ]);
 
-      AsyncStorage.setItem('authToken', response?.data?.data?.accessToken);
       set({userdata, status: apiStatus, message});
     } catch (error: any) {
       set({
@@ -47,7 +55,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       });
     }
   },
-  verifyCode: async (email: string,code: string) => {
+  verifyCode: async (email: string, code: string) => {
     // Lấy email từ dataUser trong state
     console.log('email', email);
     set({status: 'loading', message: ''});
@@ -74,7 +82,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       // Xử lý lỗi nếu cần
     }
   },
-  ResendCode: async (email:string) => {
+  ResendCode: async (email: string) => {
     // Lấy email từ dataUser trong state
     // const {userdata} = get();
     // console.log('Resend code user data', userdata);
@@ -102,4 +110,8 @@ export const useLoginStore = create<LoginState>((set, get) => ({
     }
   },
   clear: () => set({userdata: null, status: '', message: ''}),
+  clearAll: async () => {
+    await AsyncStorage.multiRemove(['authToken', 'accessTokenExpiresAt']);
+    set({userdata: null, status: '', message: ''});
+  },
 }));

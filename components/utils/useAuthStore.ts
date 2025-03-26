@@ -28,6 +28,7 @@ const useAuthStore = create<AuthState>((set) => ({
   clearToken: async () => {
     try {
       await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('accessTokenExpiresAt');
       set({ token: null });
       const tokenAfter = await AsyncStorage.getItem('authToken');
       console.log("Token after logout:", tokenAfter);

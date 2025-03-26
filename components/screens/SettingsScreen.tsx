@@ -13,8 +13,8 @@ import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useLoginStore} from '../utils/useLoginStore';
-import { useRegisterStore } from '../utils/useRegisterStore';
-import { CommonActions } from '@react-navigation/native';
+import {useRegisterStore} from '../utils/useRegisterStore';
+import {CommonActions} from '@react-navigation/native';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
@@ -48,8 +48,8 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'LoginScreen' }],
-        })
+          routes: [{name: 'LoginScreen'}],
+        }),
       );
       Alert.alert('Logged Out', 'You have been successfully logged out.');
     } catch (error: any) {
