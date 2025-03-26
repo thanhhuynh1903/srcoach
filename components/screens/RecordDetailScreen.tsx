@@ -23,218 +23,69 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import {
-  initialize,
-  readRecord,
-  readRecords,
-  requestExerciseRoute,
-  requestPermission,
-} from 'react-native-health-connect';
+  initializeHealthConnect,
+  fetchExerciseSession,
+  fetchStepRecords,
+  fetchDistanceRecords,
+  fetchHeartRateRecords,
+  fetchActiveCaloriesRecords,
+  fetchExerciseRoute,
+  ExerciseSession,
+  StepRecord,
+  DistanceRecord,
+  HeartRateRecord,
+  CaloriesRecord,
+  ExerciseRoutePoint,
+  calculateTotalSteps,
+  calculateTotalDistance,
+  calculateTotalCalories,
+} from '../utils/utils_healthconnect';
 import {getNameFromExerciseType} from '../contants/exerciseType';
-
-interface ExerciseSession {
-  exerciseRoute: [];
-  exerciseType: number;
-  metadata: {
-    device: {
-      manufacturer: string;
-      model: string | null;
-      type: number;
-    };
-    clientRecordId: string;
-    dataOrigin: string;
-    id: string;
-  };
-  startTime: string;
-  endTime: string;
-}
-
-interface StepRecord {
-  count: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-}
-
-interface DistanceRecord {
-  distance: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-}
-
-interface HeartRateRecord {
-  beatsPerMinute: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-}
-
-interface CaloriesRecord {
-  calories: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-}
-
-interface ExerciseRoute {
-  time: string;
-  latitude: number;
-  longitude: number;
-}
 
 const RecordDetailScreen = () => {
   const route = useRoute();
   const {id, clientRecordId} = route.params;
 
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [exerciseSessionRecord, setExerciseSessionRecord] =
-    useState<ExerciseSession>();
+  const [exerciseSessionRecord, setExerciseSessionRecord] = useState<ExerciseSession | null>(null);
   const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
   const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
-  const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>(
-    [],
-  );
+  const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>([]);
   const [caloriesRecords, setCaloriesRecords] = useState<CaloriesRecord[]>([]);
-  const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRoute[]>([]);
+  const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRoutePoint[]>([]);
 
   const readSampleData = async () => {
     try {
-      const isInitialized = await initialize();
+      const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
         return;
       }
 
-      const grantedPermissions = await requestPermission([
-        {accessType: 'read', recordType: 'Steps'},
-        {accessType: 'read', recordType: 'ActiveCaloriesBurned'},
-        {accessType: 'read', recordType: 'TotalCaloriesBurned'},
-        {accessType: 'read', recordType: 'HeartRate'},
-        {accessType: 'read', recordType: 'Distance'},
-        {accessType: 'read', recordType: 'ExerciseSession'},
-        {accessType: 'write', recordType: 'ExerciseSession'},
+      const session = await fetchExerciseSession(id);
+      if (!session) return;
+
+      setExerciseSessionRecord(session);
+
+      const [
+        steps,
+        distance,
+        heartRate,
+        calories,
+      ] = await Promise.all([
+        fetchStepRecords(session.startTime, session.endTime),
+        fetchDistanceRecords(session.startTime, session.endTime),
+        fetchHeartRateRecords(session.startTime, session.endTime),
+        fetchActiveCaloriesRecords(session.startTime, session.endTime),
       ]);
 
-      if (!grantedPermissions) {
-        console.log('Permissions not granted');
-        return;
-      }
+      setStepRecords(steps);
+      setDistanceRecords(distance);
+      setHeartRateRecords(heartRate);
+      setCaloriesRecords(calories);
 
-      readRecord('ExerciseSession', id)
-        .then(async exercise => {
-          setExerciseSessionRecord(exercise);
-
-          const stepData = await readRecords('Steps', {
-            timeRangeFilter: {
-              operator: 'between',
-              startTime: exercise.startTime,
-              endTime: exercise.endTime,
-            },
-          });
-
-          const distanceData = await readRecords('Distance', {
-            timeRangeFilter: {
-              operator: 'between',
-              startTime: exercise.startTime,
-              endTime: exercise.endTime,
-            },
-          });
-
-          const heartRateData = await readRecords('HeartRate', {
-            timeRangeFilter: {
-              operator: 'between',
-              startTime: exercise.startTime,
-              endTime: exercise.endTime,
-            },
-          });
-
-          const caloriesData = await readRecords('ActiveCaloriesBurned', {
-            timeRangeFilter: {
-              operator: 'between',
-              startTime: exercise.startTime,
-              endTime: exercise.endTime,
-            },
-          });
-
-          setCaloriesRecords(
-            caloriesData.records.map(r => ({
-              calories: r.energy.inCalories,
-              startTime: r.startTime,
-              endTime: r.endTime,
-              metadata: r.metadata,
-            })),
-          );
-
-          setStepRecords(
-            stepData.records.map(r => ({
-              count: r.count,
-              startTime: r.startTime,
-              endTime: r.endTime,
-              metadata: r.metadata,
-            })),
-          );
-
-          setDistanceRecords(
-            distanceData.records.map(r => ({
-              distance: r.distance.inMeters,
-              startTime: r.startTime,
-              endTime: r.endTime,
-              metadata: r.metadata,
-            })),
-          );
-
-          setHeartRateRecords(
-            heartRateData.records.flatMap(r => {
-              return r.samples.map(s => ({
-                beatsPerMinute: s.beatsPerMinute,
-                startTime: s.time,
-                endTime: s.time,
-                metadata: r.metadata,
-              }));
-            }),
-          );
-
-          const handleExerciseRoute = async () => {
-            if (exercise.exerciseRoute?.type === 'CONSENT_REQUIRED') {
-              try {
-                const {route} = await requestExerciseRoute(clientRecordId);
-                if (route) {
-                  console.log(JSON.stringify(route, null, 2));
-                } else {
-                  console.log('User denied access');
-                }
-              } catch (err) {
-                console.error('Error requesting exercise route', {err});
-              }
-            } else {
-              let route = exercise.exerciseRoute.route;
-              if (route) {
-                setExerciseRoutes(
-                  route.map((point: any) => {
-                    return {
-                      time: point.time,
-                      latitude: point.latitude,
-                      longitude: point.longitude,
-                    };
-                  }),
-                );
-              }
-            }
-          };
-
-          handleExerciseRoute();
-        })
-        .catch(err => {
-          console.error('Error reading exercise record', {err});
-        });
+      const routes = await fetchExerciseRoute(clientRecordId, session.exerciseRoute);
+      setExerciseRoutes(routes);
     } catch (error) {
       console.error('Error reading health data:', error);
     }
@@ -324,8 +175,6 @@ const RecordDetailScreen = () => {
   useFocusEffect(
     useCallback(() => {
       readSampleData();
-
-      // SO MUCH ERROR
       // requestLocationPermission();
     }, []),
   );
@@ -358,13 +207,7 @@ const RecordDetailScreen = () => {
             <Icon name="walk-sharp" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Distance</Text>
             <Text style={styles.metricValue}>
-              {(
-                distanceRecords.reduce(
-                  (total, record) => total + record.distance,
-                  0,
-                ) / 1000
-              ).toFixed(2)}{' '}
-              km
+              {calculateTotalDistance(distanceRecords).toFixed(2)} km
             </Text>
           </View>
           <View style={styles.metricCard}>
@@ -383,13 +226,7 @@ const RecordDetailScreen = () => {
             <Icon name="flame-outline" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Calories</Text>
             <Text style={styles.metricValue}>
-              {(
-                caloriesRecords.reduce(
-                  (total, record) => total + record.calories,
-                  0,
-                ) / 1000
-              ).toFixed(2)}{' '}
-              kcal
+              {(calculateTotalCalories(caloriesRecords) / 1000).toFixed(2)} kcal
             </Text>
           </View>
           <View style={styles.metricCard}>
@@ -493,10 +330,7 @@ const RecordDetailScreen = () => {
                 <Text style={styles.mapStatLabel}>Distance</Text>
                 <Text style={styles.mapStatValue}>
                   {new Intl.NumberFormat('en-US').format(
-                    distanceRecords.reduce(
-                      (total, record) => total + record.distance / 1000,
-                      0,
-                    ),
+                    calculateTotalDistance(distanceRecords),
                   )}{' '}
                   km
                 </Text>
@@ -508,10 +342,7 @@ const RecordDetailScreen = () => {
                 <Text style={styles.mapStatLabel}>Steps</Text>
                 <Text style={styles.mapStatValue}>
                   {new Intl.NumberFormat('en-US').format(
-                    stepRecords.reduce(
-                      (total, record) => total + record.count,
-                      0,
-                    ),
+                    calculateTotalSteps(stepRecords),
                   )}
                 </Text>
               </View>

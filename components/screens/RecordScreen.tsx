@@ -16,7 +16,11 @@ import {
   readRecords,
   requestPermission,
 } from 'react-native-health-connect';
-import { getNameFromExerciseType, getIconFromExerciseType } from '../contants/exerciseType';
+import {
+  getNameFromExerciseType,
+  getIconFromExerciseType,
+} from '../contants/exerciseType';
+import { initializeHealthConnect } from '../utils/utils_healthconnect';
 
 interface ExerciseSession {
   exerciseType: number;
@@ -26,7 +30,7 @@ interface ExerciseSession {
       model: string | null;
       type: number;
     };
-    clientRecordId: string,
+    clientRecordId: string;
     dataOrigin: string;
     id: string;
   };
@@ -54,38 +58,47 @@ interface DistanceRecord {
 
 export default function RecordScreen() {
   const navigate = useNavigation();
-  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
+  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>(
+    [],
+  );
   const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
   const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
 
-  const generateData = (sessions: ExerciseSession[], steps: StepRecord[], distances: DistanceRecord[]) => {
+  const generateData = (
+    sessions: ExerciseSession[],
+    steps: StepRecord[],
+    distances: DistanceRecord[],
+  ) => {
     // Group sessions by date
     const sessionsByDate: Record<string, any[]> = {};
-    
-    sessions.forEach((session) => {
+
+    sessions.forEach(session => {
       const startDate = new Date(session.startTime);
       const dateStr = startDate.toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
       });
-      
+
       if (!sessionsByDate[dateStr]) {
         sessionsByDate[dateStr] = [];
       }
-      
+
       const endDate = new Date(session.endTime);
       const duration = Math.round(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60),
       );
-      
+
       // Find matching distance record for this session
-      const distanceRecord = distances.find(d => 
-        new Date(d.startTime).getTime() === startDate.getTime() && 
-        new Date(d.endTime).getTime() === endDate.getTime()
+      const distanceRecord = distances.find(
+        d =>
+          new Date(d.startTime).getTime() === startDate.getTime() &&
+          new Date(d.endTime).getTime() === endDate.getTime(),
       );
-      
-      const distanceInMeters = distanceRecord ? Math.round(distanceRecord.distance) : Math.round((2 + Math.random() * 8) * 1000);
+
+      const distanceInMeters = distanceRecord
+        ? Math.round(distanceRecord.distance)
+        : Math.round((2 + Math.random() * 8) * 1000);
       const timeStr = startDate
         .toLocaleTimeString('en-US', {
           hour: '2-digit',
@@ -93,7 +106,7 @@ export default function RecordScreen() {
           hour12: false,
         })
         .replace('24:', '00:');
-  
+
       sessionsByDate[dateStr].push({
         time: timeStr,
         type: getNameFromExerciseType(session.exerciseType),
@@ -101,13 +114,13 @@ export default function RecordScreen() {
         distance: distanceInMeters,
         id: session.metadata.id,
         clientRecordId: session.metadata.clientRecordId,
-        exerciseType: session.exerciseType
+        exerciseType: session.exerciseType,
       });
     });
 
     // Calculate total steps per day
     const stepsByDate: Record<string, number> = {};
-    steps.forEach((step) => {
+    steps.forEach(step => {
       const date = new Date(step.startTime);
       const dateStr = date.toLocaleDateString('en-US', {
         weekday: 'short',
@@ -119,26 +132,39 @@ export default function RecordScreen() {
       }
       stepsByDate[dateStr] += step.count;
     });
-  
+
     // Calculate metrics for each date
-    const result = Object.keys(sessionsByDate).map((dateStr) => {
+    const result = Object.keys(sessionsByDate).map(dateStr => {
       const activities = sessionsByDate[dateStr];
-      const totalSteps = stepsByDate[dateStr] || Math.round(activities.reduce((sum, activity) => 
-        sum + activity.distance / 1000 * 1300, 0)); // Approximate steps based on distance
-      const totalPoints = Math.round(activities.reduce((sum, activity) => 
-        sum + activity.duration * (0.8 + Math.random() * 0.4), 0));
-      const totalDistance = activities.reduce((sum, activity) => 
-        sum + activity.distance, 0);
+      const totalSteps =
+        stepsByDate[dateStr] ||
+        Math.round(
+          activities.reduce(
+            (sum, activity) => sum + (activity.distance / 1000) * 1300,
+            0,
+          ),
+        ); // Approximate steps based on distance
+      const totalPoints = Math.round(
+        activities.reduce(
+          (sum, activity) =>
+            sum + activity.duration * (0.8 + Math.random() * 0.4),
+          0,
+        ),
+      );
+      const totalDistance = activities.reduce(
+        (sum, activity) => sum + activity.distance,
+        0,
+      );
 
       return {
         date: dateStr,
         dateObj: new Date(activities[0].time), // For sorting
-        metrics: { 
-          steps: totalSteps, 
+        metrics: {
+          steps: totalSteps,
           points: totalPoints,
-          distance: totalDistance
+          distance: totalDistance,
         },
-        activities: activities
+        activities: activities,
       };
     });
 
@@ -146,26 +172,17 @@ export default function RecordScreen() {
     return result.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
   };
 
-  const exerciseData = generateData(exerciseSessions, stepRecords, distanceRecords);
+  const exerciseData = generateData(
+    exerciseSessions,
+    stepRecords,
+    distanceRecords,
+  );
 
   const readSampleData = async () => {
     try {
-      const isInitialized = await initialize();
+      const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
-        return;
-      }
-
-      const grantedPermissions = await requestPermission([
-        {accessType: 'read', recordType: 'Steps'},
-        {accessType: 'read', recordType: 'TotalCaloriesBurned'},
-        {accessType: 'read', recordType: 'Distance'},
-        {accessType: 'read', recordType: 'ExerciseSession'},
-        {accessType: 'write', recordType: 'ExerciseSession'},
-      ]);
-
-      if (!grantedPermissions) {
-        console.log('Permissions not granted');
         return;
       }
 
@@ -177,7 +194,7 @@ export default function RecordScreen() {
         },
       });
 
-      const stepData = await readRecords("Steps", {
+      const stepData = await readRecords('Steps', {
         timeRangeFilter: {
           operator: 'between',
           startTime: '2025-03-02T00:00:00.000Z',
@@ -185,35 +202,40 @@ export default function RecordScreen() {
         },
       });
 
-      const distanceData = await readRecords("Distance", {
+      const distanceData = await readRecords('Distance', {
         timeRangeFilter: {
           operator: 'between',
           startTime: '2025-03-02T00:00:00.000Z',
           endTime: new Date().toISOString(),
         },
-      })
+      });
 
-      setExerciseSessions(data.records.map((r) => ({
-        exerciseType: r.exerciseType,
-        metadata: r.metadata,
-        startTime: r.startTime,
-        endTime: r.endTime,
-      })));
+      setExerciseSessions(
+        data.records.map(r => ({
+          exerciseType: r.exerciseType,
+          metadata: r.metadata,
+          startTime: r.startTime,
+          endTime: r.endTime,
+        })),
+      );
 
-      setStepRecords(stepData.records.map((r) => ({
-        count: r.count,
-        startTime: r.startTime,
-        endTime: r.endTime,
-        metadata: r.metadata,
-      })));
+      setStepRecords(
+        stepData.records.map(r => ({
+          count: r.count,
+          startTime: r.startTime,
+          endTime: r.endTime,
+          metadata: r.metadata,
+        })),
+      );
 
-      setDistanceRecords(distanceData.records.map((r) => ({
-        distance: r.distance.inMeters,
-        startTime: r.startTime,
-        endTime: r.endTime,
-        metadata: r.metadata
-      })))
-
+      setDistanceRecords(
+        distanceData.records.map(r => ({
+          distance: r.distance.inMeters,
+          startTime: r.startTime,
+          endTime: r.endTime,
+          metadata: r.metadata,
+        })),
+      );
     } catch (error) {
       console.error('Error reading health data:', error);
     }
@@ -278,7 +300,7 @@ export default function RecordScreen() {
                     onPress={() => {
                       navigate.navigate('RecordDetailScreen' as never, {
                         id: activity.id,
-                        clientId: activity.clientRecordId
+                        clientId: activity.clientRecordId,
                       });
                     }}>
                     <Text style={styles.timeText}>{activity.time}</Text>
