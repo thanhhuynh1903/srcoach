@@ -20,41 +20,7 @@ import {
   getNameFromExerciseType,
   getIconFromExerciseType,
 } from '../contants/exerciseType';
-import { initializeHealthConnect } from '../utils/utils_healthconnect';
-
-interface ExerciseSession {
-  exerciseType: number;
-  metadata: {
-    device: {
-      manufacturer: string;
-      model: string | null;
-      type: number;
-    };
-    clientRecordId: string;
-    dataOrigin: string;
-    id: string;
-  };
-  startTime: string;
-  endTime: string;
-}
-
-interface StepRecord {
-  count: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-}
-
-interface DistanceRecord {
-  distance: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-}
+import { DistanceRecord, ExerciseSession, fetchDistanceRecords, fetchExerciseSessionRecords, fetchStepRecords, initializeHealthConnect, StepRecord } from '../utils/utils_healthconnect';
 
 export default function RecordScreen() {
   const navigate = useNavigation();
@@ -112,8 +78,8 @@ export default function RecordScreen() {
         type: getNameFromExerciseType(session.exerciseType),
         duration,
         distance: distanceInMeters,
-        id: session.metadata.id,
-        clientRecordId: session.metadata.clientRecordId,
+        id: session.id,
+        clientRecordId: session.clientRecordId,
         exerciseType: session.exerciseType,
       });
     });
@@ -186,56 +152,13 @@ export default function RecordScreen() {
         return;
       }
 
-      const data = await readRecords('ExerciseSession', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
+      const data = await fetchExerciseSessionRecords('2025-03-02T00:00:00.000Z', new Date().toISOString());
+      const stepData = await fetchStepRecords('2025-03-02T00:00:00.000Z', new Date().toISOString());
+      const distanceData = await fetchDistanceRecords('2025-03-02T00:00:00.000Z', new Date().toISOString());
 
-      const stepData = await readRecords('Steps', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
-
-      const distanceData = await readRecords('Distance', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: '2025-03-02T00:00:00.000Z',
-          endTime: new Date().toISOString(),
-        },
-      });
-
-      setExerciseSessions(
-        data.records.map(r => ({
-          exerciseType: r.exerciseType,
-          metadata: r.metadata,
-          startTime: r.startTime,
-          endTime: r.endTime,
-        })),
-      );
-
-      setStepRecords(
-        stepData.records.map(r => ({
-          count: r.count,
-          startTime: r.startTime,
-          endTime: r.endTime,
-          metadata: r.metadata,
-        })),
-      );
-
-      setDistanceRecords(
-        distanceData.records.map(r => ({
-          distance: r.distance.inMeters,
-          startTime: r.startTime,
-          endTime: r.endTime,
-          metadata: r.metadata,
-        })),
-      );
+      setExerciseSessions(data);
+      setStepRecords(stepData);
+      setDistanceRecords(distanceData);
     } catch (error) {
       console.error('Error reading health data:', error);
     }
@@ -300,7 +223,7 @@ export default function RecordScreen() {
                     onPress={() => {
                       navigate.navigate('RecordDetailScreen' as never, {
                         id: activity.id,
-                        clientId: activity.clientRecordId,
+                        clientRecordId: activity.clientRecordId,
                       });
                     }}>
                     <Text style={styles.timeText}>{activity.time}</Text>

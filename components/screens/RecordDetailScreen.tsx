@@ -34,8 +34,8 @@ import {
   StepRecord,
   DistanceRecord,
   HeartRateRecord,
-  CaloriesRecord,
-  ExerciseRoutePoint,
+  ActiveCaloriesRecord,
+  ExerciseRouteRecord,
   calculateTotalSteps,
   calculateTotalDistance,
   calculateTotalCalories,
@@ -44,15 +44,15 @@ import {getNameFromExerciseType} from '../contants/exerciseType';
 
 const RecordDetailScreen = () => {
   const route = useRoute();
-  const {id, clientRecordId} = route.params;
+  const {id, clientRecordId } = route.params;
 
   const [currentLocation, setCurrentLocation] = useState(null);
   const [exerciseSessionRecord, setExerciseSessionRecord] = useState<ExerciseSession | null>(null);
   const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
   const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
   const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>([]);
-  const [caloriesRecords, setCaloriesRecords] = useState<CaloriesRecord[]>([]);
-  const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRoutePoint[]>([]);
+  const [caloriesRecords, setCaloriesRecords] = useState<ActiveCaloriesRecord[]>([]);
+  const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRouteRecord[]>([]);
 
   const readSampleData = async () => {
     try {
@@ -84,8 +84,8 @@ const RecordDetailScreen = () => {
       setHeartRateRecords(heartRate);
       setCaloriesRecords(calories);
 
-      const routes = await fetchExerciseRoute(clientRecordId, session.exerciseRoute);
-      setExerciseRoutes(routes);
+      const routes = await fetchExerciseRoute(id, clientRecordId);
+      setExerciseRoutes(routes || []);
     } catch (error) {
       console.error('Error reading health data:', error);
     }
@@ -94,8 +94,8 @@ const RecordDetailScreen = () => {
   const getMapRegion = () => {
     if (exerciseRoutes.length === 0) {
       return {
-        latitude: currentLocation?.latitude || 37.78825,
-        longitude: currentLocation?.longitude || -122.4324,
+        latitude: currentLocation?.latitude || 0,
+        longitude: currentLocation?.longitude || 0,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       };

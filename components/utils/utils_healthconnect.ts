@@ -9,7 +9,7 @@ import {
 
 export interface ExerciseSession {
   exerciseType: number;
-  clientRecordId: string
+  clientRecordId: string;
   dataOrigin: string;
   startTime: string;
   endTime: string;
@@ -21,6 +21,7 @@ export interface StepRecord {
   startTime: string;
   endTime: string;
   id: string;
+  dataOrigin: string;
 }
 
 export interface DistanceRecord {
@@ -28,6 +29,7 @@ export interface DistanceRecord {
   startTime: string;
   endTime: string;
   id: string;
+  dataOrigin: string;
 }
 
 export interface HeartRateRecord {
@@ -35,6 +37,7 @@ export interface HeartRateRecord {
   startTime: string;
   endTime: string;
   id: string;
+  dataOrigin: string;
 }
 
 export interface ActiveCaloriesRecord {
@@ -42,6 +45,7 @@ export interface ActiveCaloriesRecord {
   startTime: string;
   endTime: string;
   id: string;
+  dataOrigin: string;
 }
 
 export interface TotalCaloriesRecord {
@@ -49,15 +53,16 @@ export interface TotalCaloriesRecord {
   startTime: string;
   endTime: string;
   id: string;
+  dataOrigin: string;
 }
 
-export interface ExerciseRoutePoint {
+export interface ExerciseRouteRecord {
   time: string;
   latitude: number;
   longitude: number;
 }
 
-export interface OxygenSaturation {
+export interface OxygenSaturationRecord {
   time: string;
   percentage: number;
   startTime: string;
@@ -105,7 +110,7 @@ export const fetchExerciseSession = async (
       endTime: session.endTime,
       clientRecordId: session.metadata?.clientRecordId || '',
       id: session.metadata?.id || '',
-    }
+    };
   } catch (error) {
     console.error('Error fetching exercise session:', error);
     return null;
@@ -131,6 +136,7 @@ export const fetchStepRecords = async (
       startTime: record.startTime,
       endTime: record.endTime,
       id: record.metadata?.id || '',
+      dataOrigin: record.metadata?.dataOrigin || '',
     }));
   } catch (error) {
     console.error('Error fetching step records:', error);
@@ -157,6 +163,7 @@ export const fetchDistanceRecords = async (
       startTime: record.startTime,
       endTime: record.endTime,
       id: record.metadata?.id || '',
+      dataOrigin: record.metadata?.dataOrigin || '',
     }));
   } catch (error) {
     console.error('Error fetching distance records:', error);
@@ -184,6 +191,7 @@ export const fetchHeartRateRecords = async (
         startTime: sample.time,
         endTime: sample.time,
         id: record.metadata?.id || '',
+        dataOrigin: record.metadata?.dataOrigin || '',
       })),
     );
   } catch (error) {
@@ -211,6 +219,7 @@ export const fetchActiveCaloriesRecords = async (
       startTime: record.startTime,
       endTime: record.endTime,
       id: record.metadata?.id || '',
+      dataOrigin: record.metadata?.dataOrigin || '',
     }));
   } catch (error) {
     console.error('Error fetching calories records:', error);
@@ -229,13 +238,14 @@ export const fetchTotalCaloriesRecords = async (
         startTime,
         endTime,
       },
-    }); 
+    });
 
     return result.records.map(record => ({
       calories: record.energy.inCalories,
       startTime: record.startTime,
       endTime: record.endTime,
       id: record.metadata?.id || '',
+      dataOrigin: record.metadata?.dataOrigin || '',
     }));
   } catch (error) {
     console.error('Error fetching total calories records:', error);
@@ -245,32 +255,36 @@ export const fetchTotalCaloriesRecords = async (
 
 // Exercise Route
 export const fetchExerciseRoute = async (
-  clientRecordId: string,
-  exerciseRoute: any,
-): Promise<ExerciseRoutePoint[]> => {
+  recordId: string,
+  clientRecordId: string
+): Promise<ExerciseRouteRecord[]> => {
   try {
-    if (!exerciseRoute) return [];
-
-    if (exerciseRoute.type === 'CONSENT_REQUIRED') {
-      const {route} = await requestExerciseRoute(clientRecordId);
-      if (!route) return [];
-
-      return route.map((point: any) => ({
-        time: point.time,
-        latitude: point.latitude,
-        longitude: point.longitude,
-      }));
+    const exercise = await readRecord('ExerciseSession', recordId);
+    
+    if (exercise.exerciseRoute?.type === 'CONSENT_REQUIRED') {
+      const { route } = await requestExerciseRoute(clientRecordId);
+      if (route) {
+        return route.map(point => () => {
+          return {
+            time: point.time,
+            latitude: point.latitude,
+            longitude: point.longitude,
+          };
+        })
+      } else {
+        console.log('User denied access');
+        return [];
+      }
+    } else {
+      let routes = exercise.exerciseRoute?.route.map(point => {
+        return {
+          time: point.time,
+          latitude: point.latitude,
+          longitude: point.longitude,
+        };
+      });
+      return routes;
     }
-
-    if (exerciseRoute.route) {
-      return exerciseRoute.route.map((point: any) => ({
-        time: point.time,
-        latitude: point.latitude,
-        longitude: point.longitude,
-      }));
-    }
-
-    return [];
   } catch (error) {
     console.error('Error fetching exercise route:', error);
     return [];
@@ -329,7 +343,7 @@ export const fetchOxygenSaturationRecords = async (
     console.error('Error fetching oxygen saturation records:', error);
     return [];
   }
-}
+};
 
 // Helper function to calculate total steps
 export const calculateTotalSteps = (steps: StepRecord[]): number => {
@@ -349,7 +363,7 @@ export const calculateTotalDistance = (
 
 // Helper function to calculate total calories
 export const calculateTotalCalories = (
-  caloriesRecords: CaloriesRecord[],
+  caloriesRecords: ActiveCaloriesRecord[] | TotalCaloriesRecord[],
 ): number => {
   return caloriesRecords.reduce((total, record) => total + record.calories, 0);
 };
