@@ -2,71 +2,92 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   StatusBar,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
 import Input from '../../Input';
 import { theme } from '../../contants/theme';
 import { useNavigation } from '@react-navigation/native';
-
+import { useRestetPWstore } from '../../utils/useRestetPWstore';
 const PasswordRecoveryScreen = () => {
   const navigation = useNavigation();
+
+  // Local state for email & validation
   const [email, setEmail] = useState('');
   const [isValidEmail, setIsValidEmail] = useState<boolean | null>(null);
 
+  // Import from store
+  const { ResetPassword, status, message, clear } = useRestetPWstore();
+
+  // Check email validity on change
   useEffect(() => {
     if (email.length === 0) {
       setIsValidEmail(null);
       return;
     }
-    
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     setIsValidEmail(emailPattern.test(email));
   }, [email]);
 
+  // Handle store updates (success, error)
+  useEffect(() => {
+    if (status === 'success') {
+      // If password reset request was successful, go to code screen
+      navigation.navigate('PasswordRecoveryCodeScreen', { email });
+      clear();
+    } else if (status === 'error') {
+      // Show an alert or toast with the error message
+      Alert.alert('Error', message || 'Something went wrong.');
+      clear();
+    }
+  }, [status, message, email, navigation, clear]);
+
+  // Submit form → calls store function
   const handleSubmit = () => {
     if (isValidEmail) {
-      navigation.navigate("PasswordRecoveryCodeScreen", { email });
+      ResetPassword(email);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
+      {/* Header with Back Button */}
       <View style={styles.header}>
         <BackButton size={26} />
       </View>
-      
+
       <View style={styles.content}>
         <Text style={styles.title}>Password recovery</Text>
-        
         <Text style={styles.description}>
-          Please confirm your country code and enter the number associates with your account.
+          Please confirm your email address associated with your account.
         </Text>
-        
+
+        {/* Email Input */}
         <View style={styles.inputContainer}>
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
             placeholder="Email"
             value={email}
-            onChangeText={(text) => setEmail(text)}
+            onChangeText={text => setEmail(text)}
             keyboardType="email-address"
           />
           {isValidEmail === false && (
             <Text style={styles.errorText}>Please enter a valid email</Text>
           )}
         </View>
-        
-        <TouchableOpacity 
+
+        {/* Submit Button */}
+        <TouchableOpacity
           style={[
             styles.button,
-            (!email || isValidEmail === false) && styles.buttonDisabled
+            (!email || isValidEmail === false) && styles.buttonDisabled,
           ]}
           onPress={handleSubmit}
           disabled={!email || isValidEmail === false}
@@ -79,6 +100,8 @@ const PasswordRecoveryScreen = () => {
   );
 };
 
+export default PasswordRecoveryScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -89,15 +112,6 @@ const styles = StyleSheet.create({
     height: 44,
     marginTop: 20,
     justifyContent: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -118,22 +132,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 24,
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: 16,
-    top: 15,
-    zIndex: 1,
-  },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingLeft: 48,
-    paddingRight: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   errorText: {
     color: '#EF4444',
@@ -158,5 +156,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-export default PasswordRecoveryScreen;

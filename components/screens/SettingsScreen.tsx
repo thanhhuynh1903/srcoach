@@ -13,12 +13,11 @@ import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useLoginStore} from '../utils/useLoginStore';
-import { useRegisterStore } from '../utils/useRegisterStore';
-import { CommonActions } from '@react-navigation/native';
+import {CommonActions} from '@react-navigation/native';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
-  const {clear} = useLoginStore();
+  const {clearAll} = useLoginStore();
   async function logout() {
     try {
       const currentUser = auth().currentUser;
@@ -43,13 +42,13 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       await AsyncStorage.removeItem('authToken');
       // If you have a clearToken function from your store, call it here.
       clearToken && clearToken();
-      clear();
+      clearAll();
       // Navigate to Login after all operations have finished
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: 'LoginScreen' }],
-        })
+          routes: [{name: 'LoginScreen'}],
+        }),
       );
       Alert.alert('Logged Out', 'You have been successfully logged out.');
     } catch (error: any) {
@@ -132,7 +131,7 @@ const menuItems = [
     title: 'Connect Accounts',
     subtitle: 'Manage your connect account',
     icon: 'construct-outline',
-    screen: 'SettingsDevices',
+    screen: 'DevicesScreen',
   },
   {
     title: 'Goals',
@@ -144,7 +143,7 @@ const menuItems = [
     title: 'Notifications',
     subtitle: 'Manage your notifications',
     icon: 'notifications-outline',
-    screen: 'DeviceNotificationScreen',
+    screen: 'DeviceNotificationsScreen',
   },
   {
     title: 'About',

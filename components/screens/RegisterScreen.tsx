@@ -153,7 +153,8 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
               icon={<Icon name="calendar-outline" size={24} color="black" />}
               placeholder="Date of birth (yyyy-mm-dd)"
               value={dob}
-             
+              editable={false}
+
             />
           </TouchableOpacity>
           {showCalendar && (

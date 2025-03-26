@@ -24,7 +24,7 @@ const HeaderBar = () => {
             name="notifications-outline"
             size={24}
             color="#4B5563"
-            onPress={() => navigate.navigate('ManageNotificationScreen' as never)}
+            onPress={() => navigate.navigate('ManageNotificationsScreen' as never)}
           />
         </TouchableOpacity>
       </View>

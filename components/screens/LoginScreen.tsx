@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   Image,
   View,
@@ -7,18 +7,18 @@ import {
   Pressable,
   TouchableOpacity,
 } from 'react-native';
-import { wp, hp } from '../helpers/common';
+import {wp, hp} from '../helpers/common';
 import ScreenWrapper from '../ScreenWrapper';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { theme } from '../contants/theme';
+import {NavigationProp, useNavigation} from '@react-navigation/native';
+import {theme} from '../contants/theme';
 import Input from '../Input';
 import ButtonModify from '../Button';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import Toast from 'react-native-toast-message';
-import { useLoginStore } from '../utils/useLoginStore';
+import {useLoginStore} from '../utils/useLoginStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RootStackParamList = {
@@ -29,31 +29,37 @@ type RootStackParamList = {
   };
 };
 
-const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> = ({ navigation }) => {
+const LoginScreen: React.FC<{
+  navigation: NavigationProp<RootStackParamList>;
+}> = ({navigation}) => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, message, status, clear } = useLoginStore();
+  const {login, message, status, clear} = useLoginStore();
   const canGoBack = navigation.canGoBack();
 
   useEffect(() => {
     clear();
-    console.log('Token mounted', AsyncStorage.getItem('authToken'));
     GoogleSignin.configure({
-      webClientId: '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
+      webClientId:
+        '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
     });
   }, [clear]);
 
   useEffect(() => {
+    console.log('status', status);
+
     if (status === 'success') {
-      showToast('success', message || 'Login Successful', 'Welcome to the homepage!');
+      showToast('success', message, 'Welcome to back!');
       navigation.navigate('HomeTabs');
+      clear();
     } else if (status === 'wait') {
-      navigation.navigate('VerifyLoginScreen', { emailLabel: email });
+      navigation.navigate('VerifyLoginScreen', {emailLabel: email});
       clear();
     } else if (status === 'error' && message) {
-      showToast('error', message);
+      console.log('message', message);
+      showToast('error', message.toString());
       //If error, clear the clear() function
       clear();
     }
@@ -72,7 +78,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
       showToast('error', 'Please fill in both email and password');
       return;
     }
-    
+
     setLoading(true);
     try {
       await login(email, password);
@@ -88,7 +94,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
       const hasPlayServices = await GoogleSignin.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
-      
+
       if (!hasPlayServices) {
         throw new Error('Google Play Services not available');
       }
@@ -99,14 +105,20 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
         return;
       }
 
-      const googleCredential = auth.GoogleAuthProvider.credential(signInResult.data.idToken);
+      const googleCredential = auth.GoogleAuthProvider.credential(
+        signInResult.data.idToken,
+      );
       await auth().signInWithCredential(googleCredential);
-      
+
       showToast('success', 'Login Successful', 'Welcome to the homepage!');
       navigation.navigate('HomeTabs');
     } catch (error) {
       console.error('Google Sign-In Error:', error);
-      showToast('error', 'Login Failed', 'Invalid username or password. Please try again.');
+      showToast(
+        'error',
+        'Login Failed',
+        'Invalid username or password. Please try again.',
+      );
     }
   };
 
@@ -120,14 +132,14 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
         <View style={styles.backButtonContainer}>
           {canGoBack && <BackButton size={26} />}
         </View>
-        
+
         <View style={styles.header}>
           <Text style={styles.welcomeText}>Hello 😉,</Text>
           <Text style={styles.welcomeSubText}>
             Health is the most important in everyone's life
           </Text>
         </View>
-        
+
         <View style={styles.form}>
           <Text style={styles.formHeaderText}>Please login to continue</Text>
           <Input
@@ -144,16 +156,15 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
             value={password}
             isPassword
           />
-          <Pressable onPress={() => navigation.navigate('PasswordRecoveryScreen' as never)}>
+          <Pressable
+            onPress={() =>
+              navigation.navigate('PasswordRecoveryScreen' as never)
+            }>
             <Text style={styles.forgotPassword}>Forgot password?</Text>
           </Pressable>
         </View>
 
-        <ButtonModify 
-          title="Login" 
-          onPress={handleLogin} 
-          loading={loading} 
-        />
+        <ButtonModify title="Login" onPress={handleLogin} loading={loading} />
 
         <View style={styles.socialContainer}>
           <Text style={styles.orText}>or continue with</Text>
@@ -169,10 +180,11 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
             <Text style={styles.socialText}>Google</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
-          <Pressable onPress={() => navigation.navigate('RegisterScreen' as never)}>
+          <Pressable
+            onPress={() => navigation.navigate('RegisterScreen' as never)}>
             <Text style={styles.footerLinkText}>Sign Up</Text>
           </Pressable>
         </View>

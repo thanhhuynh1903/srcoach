@@ -10,8 +10,11 @@ interface LoginState {
   message: string;
   login: (email: string, password: string) => Promise<void>;
   clear: () => void;
+  clearAll: () => Promise<void>;
   verifyCode: (email: string,code: string) => Promise<void>;
   ResendCode: (email:string) => Promise<void>;
+  setUserData: (data: any) => void;
+
 }
 const MASTER_URL = "https://xavia.pro/api";
 
@@ -19,8 +22,9 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
   status:"",
   resendStatus: "",
-  apiStatus: false,
+  apiStatus: '',
   message: '',
+  setUserData: (data: any) => set({ userdata: data }),
   login: async (email: string, password: string) => {
     try {
       const response = await axios.post(
@@ -34,13 +38,14 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       );
 
       console.log('response', response.data);
-      const apiStatus = response?.data?.status;
-      const message = response?.data?.message;
-      const userdata = response?.data?.user;
+      const { accessToken, user } = response?.data?.data;
+      await AsyncStorage.setItem('authToken', accessToken);
+      await AsyncStorage.setItem('authTokenTimestamp', Date.now().toString());
 
+      console.log('User data:', user);
+      console.log('Token:', accessToken);
 
-      AsyncStorage.setItem('authToken', response?.data?.data?.accessToken);
-      set({userdata, status: apiStatus, message});
+      set({userdata : user, status: response?.data?.status, message : response?.data?.message});
     } catch (error: any) {
       set({
         message: error.response?.data?.message || 'Đăng nhập thất bại',
@@ -102,4 +107,9 @@ export const useLoginStore = create<LoginState>((set, get) => ({
     }
   },
   clear: () => set({userdata: null, status: '', message: ''}),
+  clearAll: async () => {
+    await AsyncStorage.removeItem('authToken');
+    await AsyncStorage.removeItem('authTokenTimestamp');
+    set({userdata: null, status: '', message: ''});
+  },
 }));

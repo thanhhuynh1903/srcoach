@@ -16,7 +16,7 @@ const PasswordRecoverySuccessScreen = () => {
   const handleNavigateToLogin = () => {
     navigation.reset({
       index: 0,
-      routes: [{name: 'LoginScreen'}],
+      routes: [{name: 'LoginScreen' as never}],
     });
   };
 
