@@ -21,7 +21,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
   status:"",
   resendStatus: "",
-  apiStatus: false,
+  apiStatus: '',
   message: '',
   login: async (email: string, password: string) => {
     try {

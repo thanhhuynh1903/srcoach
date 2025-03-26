@@ -49,7 +49,7 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
     
     
     if (status === 'success') {
-      showToast('success', message || 'Login Successfull', 'Welcome to back!');
+      showToast('success', message, 'Welcome to back!');
       navigation.navigate('HomeTabs');
       clear();
     } else if (status === 'wait') {

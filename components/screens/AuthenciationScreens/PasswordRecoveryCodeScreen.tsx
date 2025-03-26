@@ -1,227 +1,237 @@
-import React, {useState, useRef, useEffect} from 'react';
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
+  StyleSheet,
   TouchableOpacity,
+  TextInput,
+  Pressable,
   SafeAreaView,
   StatusBar,
-  Keyboard,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../BackButton';
-import { theme } from '../../contants/theme';
+import { useRestetPWstore } from '../../utils/useRestetPWstore';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-const PasswordRecoveryCodeScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const routes = useRoute();
-  const {email} = routes.params
+interface VerifyParam {
+  email: string;
+}
 
-  const codeLength = 5;
-  const [code, setCode] = useState<string[]>(Array(codeLength).fill(''));
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'success' | 'failure'>('idle');
-  const inputRefs = useRef<Array<TextInput | null>>([]);
+const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
+  const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
+  const [isLoading, setIsLoading] = useState(false);
+  const { message, verifyStatus, ResendPassword, clear } = useRestetPWstore();
+  const inputRefs = useRef<any | null[]>([]);
+  const navigate = useNavigation();
+  const route = useRoute();
+  const { email } = route.params as VerifyParam;
 
+  // Initialize refs array
   useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, codeLength);
-    setTimeout(() => inputRefs.current[0]?.focus(), 100);
+    if (Array.isArray(inputRefs.current)) {
+      inputRefs.current = inputRefs.current.slice(0, 6);
+    }
+    // Reset verification status on mount
+    clear();
   }, []);
 
+  // Handle input change: update code and auto-focus next input
   const handleCodeChange = (text: string, index: number) => {
-    if (status !== 'idle') setStatus('idle');
-    if (!/^\d*$/.test(text)) return;
     const newCode = [...code];
-
-    if (text.length > 1) {
-      const pastedCode = text.split('').slice(0, codeLength - index);
-      pastedCode.forEach((digit, i) => {
-        if (index + i < codeLength) newCode[index + i] = digit;
-      });
-      setCode(newCode);
-      const nextIndex = Math.min(index + pastedCode.length, codeLength - 1);
-      setFocusedIndex(nextIndex);
-      inputRefs.current[nextIndex]?.focus();
-      return;
-    }
-
     newCode[index] = text;
     setCode(newCode);
-    if (text && index < codeLength - 1) {
-      setFocusedIndex(index + 1);
-      inputRefs.current[index + 1]?.focus();
+
+    if (text.length === 1 && index < 5) {
+      inputRefs.current[index + 1].focus();
     }
   };
 
+  // Handle backspace: auto-focus previous input
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-      const newCode = [...code];
-      newCode[index - 1] = '';
-      setCode(newCode);
-      setFocusedIndex(index - 1);
-      inputRefs.current[index - 1]?.focus();
+      inputRefs.current[index - 1].focus();
     }
   };
 
+  // Handle verify: call verifyCode and set loading status
   const handleVerify = async () => {
-    const fullCode = code.join('');
-    if (fullCode.length !== codeLength) return;
-    Keyboard.dismiss();
-
+    setIsLoading(true);
     try {
-      const isSuccess = true;
-      setStatus(isSuccess ? 'success' : 'failure');
-      if (isSuccess) navigation.navigate('PasswordRecoveryNewScreen');
-      else setTimeout(resetCode, 2000);
-    } catch {
-      setStatus('failure');
-      setTimeout(resetCode, 2000);
+      await ResendPassword(email);
+    } catch (error) {
+      console.log('Error verifying code:', error);
     }
+    setIsLoading(false);
   };
 
-  const resetCode = () => {
-    setStatus('idle');
-    setCode(Array(codeLength).fill(''));
-    setFocusedIndex(0);
-    inputRefs.current[0]?.focus();
+  // Monitor verifyStatus changes to handle success or error
+  useEffect(() => {
+    console.log('resendStatus:', verifyStatus);
+    if (verifyStatus === 'success') {
+      Alert.alert('Success', 'Verification successful!');
+      navigate.navigate('PasswordRecoveryNewScreen' as never);
+      // Optionally, clear after navigating if needed:
+      // clear();
+    } else if (verifyStatus === 'error') {
+      Alert.alert(message);
+    }
+  }, [verifyStatus]);
+
+  // Handle resend code
+  const handleResendCode = async () => {
+    setIsLoading(true);
+    console.log('emailLabel', email);
+    
+    try {
+      await ResendPassword(email);
+    } catch (error) {
+      console.log('Error resending code:', error);
+    }
+    setIsLoading(false);
   };
-
-  const getInputStyle = (index: number) => [
-    styles.codeInput,
-    status === 'success' && styles.successInput,
-    status === 'failure' && styles.failureInput,
-    focusedIndex === index && styles.focusedInput,
-  ];
-
-  const getTextStyle = () =>
-    status === 'failure' ? styles.failureText : styles.codeText;
-  const isCodeComplete = code.every(digit => digit !== '');
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Header with back button */}
       <View style={styles.header}>
-        <BackButton size={26} />
+        <TouchableOpacity style={styles.backButton}>
+          <BackButton size={26} />
+        </TouchableOpacity>
       </View>
 
+      {/* Main content */}
       <View style={styles.content}>
-        <Text style={styles.title}>Enter your code</Text>
-        <Text style={styles.description}>
-          Please enter code associated to your email {email}
+        <Text style={styles.title}>Reset Password</Text>
+        <Text style={styles.subtitle}>
+          Please enter code associated to your email:{' '}
+          <Text style={{ color: '#666', fontWeight: 'bold' }}>{email}</Text>
         </Text>
 
-        <View style={styles.codeContainer}>
-          {Array(codeLength)
-            .fill(0)
-            .map((_, index) => (
-              <TextInput
-                key={index}
-                ref={ref => (inputRefs.current[index] = ref)}
-                style={getInputStyle(index)}
-                value={code[index]}
-                onChangeText={text => handleCodeChange(text, index)}
-                onKeyPress={e => handleKeyPress(e, index)}
-                onFocus={() => setFocusedIndex(index)}
-                keyboardType="number-pad"
-                maxLength={codeLength}
-                selectTextOnFocus
-                accessibilityLabel={`Digit ${index + 1} of verification code`}
-                style={[
-                  getInputStyle(index),
-                  {
-                    textAlign: 'center',
-                    fontSize: 20,
-                    fontWeight: 'bold',
-                    color: status === 'failure' ? '#FFFFFF' : '#111827',
-                  },
-                ]}
-              />
-            ))}
+        {/* Verification code inputs */}
+        <View style={[styles.codeContainer, { marginBottom: message ? 25 : 25 }]}>
+          {[0, 1, 2, 3, 4, 5].map((index) => (
+            <TextInput
+              key={index}
+              ref={(ref) => (inputRefs.current[index] = ref)}
+              style={styles.codeInput}
+              value={code[index]}
+              onChangeText={(text) => handleCodeChange(text, index)}
+              onKeyPress={(e) => handleKeyPress(e, index)}
+              keyboardType="number-pad"
+              maxLength={1}
+              selectTextOnFocus
+            />
+          ))}
         </View>
 
+        {message && (
+          <View style={{ alignItems: 'center', marginBottom: 5 }}>
+            <Text style={{ color: 'red' }}>{message}</Text>
+          </View>
+        )}
+        {/* Verify button */}
         <TouchableOpacity
-          style={[styles.button, !isCodeComplete && styles.buttonDisabled]}
+          style={styles.verifyButton}
           onPress={handleVerify}
-          disabled={!isCodeComplete}
-          accessibilityLabel="Verify code">
-          <Text style={styles.buttonText}>Verify</Text>
+          disabled={isLoading || code.join('').length !== 6}>
+          <Text style={styles.verifyButtonText}>
+            {isLoading ? 'Verifying...' : 'Verify'}
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={resetCode}
-          accessibilityLabel="Send code again">
-          <Text style={styles.resendText}>Send code again</Text>
-        </TouchableOpacity>
+        {/* Resend code link */}
+        <Pressable
+          onPress={handleResendCode}
+          style={{
+            borderWidth: 1,
+            borderColor: '#0a2463',
+            borderRadius: 5,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+          }}>
+          {isLoading ? (
+            <ActivityIndicator color="#ccc" size="small" />
+          ) : (
+            <Text style={styles.resendText}>Send code again</Text>
+          )}
+        </Pressable>
       </View>
     </SafeAreaView>
   );
 };
 
-// Styles variables
-const styles = {
-  container: {flex: 1, backgroundColor: '#FFFFFF'},
-  header: {paddingHorizontal: 16, height: 44, justifyContent: 'center', marginTop: 20},
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#111827',
-    textAlign: 'center',
+    color: '#1a1a1a',
   },
-  description: {
+  subtitle: {
     fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 32,
-    textAlign: 'center',
+    color: '#666',
+    marginBottom: 30,
   },
   codeContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 32,
+    justifyContent: 'space-between',
   },
   codeInput: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 6,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    fontSize: 24,
+    fontWeight: '500',
+    textAlign: 'center',
+    color: '#1a1a1a',
   },
-  focusedInput: {borderColor: theme.colors.primaryDark, borderWidth: 2},
-  successInput: {backgroundColor: '#10B981', borderColor: '#10B981'},
-  failureInput: {backgroundColor: '#EF4444', borderColor: '#EF4444'},
-  codeText: {fontSize: 20, fontWeight: 'bold', color: '#111827'},
-  failureText: {fontSize: 20, fontWeight: 'bold', color: '#FFFFFF'},
-  button: {
-    backgroundColor: theme.colors.primaryDark,
-    borderRadius: 4,
-    paddingVertical: 16,
-    alignItems: 'center',
+  verifyButton: {
+    backgroundColor: '#0a2463',
+    height: 50,
+    borderRadius: 8,
     justifyContent: 'center',
-    width: '100%',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  buttonDisabled: {opacity: 0.7},
-  buttonText: {color: '#FFFFFF', fontSize: 16, fontWeight: '600'},
-  resendText: {color: theme.colors.primaryDark, fontSize: 16, fontWeight: '500'},
-};
+  verifyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resendText: {
+    color: '#0a2463',
+    fontSize: 16,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+});
 
 export default PasswordRecoveryCodeScreen;
