@@ -36,7 +36,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
 
       console.log('response', response.data);
       const apiStatus = response?.data?.status;
-      const message = response?.data?.message;
+      const messagesender = response?.data?.message;
       const userdata = response?.data?.user;
       const expiresAt = response.data.data.accessTokenExpiresAt;
       const accessToken = response.data.data.accessToken;
@@ -48,10 +48,10 @@ export const useLoginStore = create<LoginState>((set, get) => ({
         ['accessTokenExpiresAt', expiresAt.toString()],
       ]);
 
-      set({userdata, status: apiStatus, message});
+      set({userdata, status: apiStatus, message : messagesender});
     } catch (error: any) {
       set({
-        message: error.response?.data?.message || 'Đăng nhập thất bại',
+        message: error || 'Đăng nhập thất bại',
       });
     }
   },
@@ -76,7 +76,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       console.log('Response:', response.data);
       console.log('Verify status', response.data.status);
 
-      set({status: response.data.status, message: response.data.message});
+      set({status: response?.data?.status, message: response?.data?.message});
     } catch (error: any) {
       console.log('Error:', error);
       // Xử lý lỗi nếu cần

@@ -18,7 +18,7 @@ import {CommonActions} from '@react-navigation/native';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
-  const {clear} = useLoginStore();
+  const {clearAll} = useLoginStore();
   async function logout() {
     try {
       const currentUser = auth().currentUser;
@@ -43,7 +43,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       await AsyncStorage.removeItem('authToken');
       // If you have a clearToken function from your store, call it here.
       clearToken && clearToken();
-      clear();
+      clearAll();
       // Navigate to Login after all operations have finished
       navigation.dispatch(
         CommonActions.reset({

@@ -45,14 +45,19 @@ const LoginScreen: React.FC<{ navigation: NavigationProp<RootStackParamList> }> 
   }, [clear]);
 
   useEffect(() => {
+    console.log('status', status);
+    
+    
     if (status === 'success') {
-      showToast('success', message || 'Login Successful', 'Welcome to the homepage!');
+      showToast('success', message || 'Login Successfull', 'Welcome to back!');
       navigation.navigate('HomeTabs');
+      clear();
     } else if (status === 'wait') {
       navigation.navigate('VerifyLoginScreen', { emailLabel: email });
       clear();
     } else if (status === 'error' && message) {
-      showToast('error', message);
+      console.log('message', message);
+      showToast('error', message.toString());
       //If error, clear the clear() function
       clear();
     }
