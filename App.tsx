@@ -1,18 +1,10 @@
 import React from 'react';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Icon from '@react-native-vector-icons/ionicons';
 import Toast from 'react-native-toast-message';
-import {
-  homeStackScreens,
-  tabScreens,
-  stackScreens,
-} from './components/routes/routes';
-import AuthLoadingScreen from './components/screens/AuthLoadingScreen/AuthLoadingScreen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLoginStore } from './components/utils/useLoginStore';
-import { useEffect } from 'react';
+import { homeStackScreens,tabScreens,stackScreens } from './components/routes/routes';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -20,8 +12,8 @@ const HomeStack = createNativeStackNavigator();
 
 const HomeStackScreen = () => {
   return (
-    <HomeStack.Navigator screenOptions={{headerShown: false}}>
-      {homeStackScreens.map((screen: any) => (
+    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+      {homeStackScreens.map((screen : any) => (
         <HomeStack.Screen
           key={screen.name}
           name={screen.name}
@@ -35,8 +27,8 @@ const HomeStackScreen = () => {
 const HomeTabs = () => {
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
-        tabBarIcon: ({focused, color, size}) => {
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           switch (route.name) {
             case 'Home':
@@ -60,14 +52,15 @@ const HomeTabs = () => {
             default:
               iconName = 'help-circle';
           }
-          return <Icon name={iconName as never} size={size} color={color} />;
+          return <Icon name={iconName as never}  size={size} color={color} />;
         },
         tabBarActiveTintColor: '#100077',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
-      })}>
+      })}
+    >
       <Tab.Screen name="Home" component={HomeStackScreen} />
-      {tabScreens.slice(1).map((screen: any) => (
+      {tabScreens.slice(1).map((screen : any) => (
         <Tab.Screen
           key={screen.name}
           name={screen.name}
@@ -79,38 +72,22 @@ const HomeTabs = () => {
 };
 
 const App = () => {
-  const checkTokenExpiration = async () => {
-    const expiresAt = await AsyncStorage.getItem('accessTokenExpiresAt');
-    if (expiresAt && Date.now() > parseInt(expiresAt)) {
-      await useLoginStore.getState().clearAll();
-    }
-  };
-
-  useEffect(() => {
-    const interval = setInterval(checkTokenExpiration, 60000); // Kiểm tra mỗi phút
-    return () => clearInterval(interval);
-  }, []);
   return (
     <>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="AuthLoadingScreen">
-          <Stack.Screen
-            name="AuthLoadingScreen"
-            component={AuthLoadingScreen}
-            options={{headerShown: false}}
-          />
-          {stackScreens.map((screen: any) => (
+        <Stack.Navigator initialRouteName="WelcomeScreen">
+          {stackScreens.map((screen : any) => (
             <Stack.Screen
               key={screen.name}
               name={screen.name}
               component={screen.component}
-              options={{headerShown: false}}
+              options={{ headerShown: false }}
             />
           ))}
           <Stack.Screen
             name="HomeTabs"
             component={HomeTabs}
-            options={{headerShown: false}}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>

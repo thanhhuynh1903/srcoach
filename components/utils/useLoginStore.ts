@@ -42,7 +42,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
 
 
       AsyncStorage.setItem('authToken', response?.data?.data?.accessToken);
-      AsyncStorage.setItem('accessTokenExpiresAt', response?.data?.data?.accessTokenExpiresAt);
+      // AsyncStorage.setItem('accessTokenExpiresAt', response?.data?.data?.accessTokenExpiresAt);
 
       set({userdata, status: apiStatus, message});
     } catch (error: any) {

@@ -13,7 +13,6 @@ import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useLoginStore} from '../utils/useLoginStore';
-import {useRegisterStore} from '../utils/useRegisterStore';
 import {CommonActions} from '@react-navigation/native';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
@@ -132,7 +131,7 @@ const menuItems = [
     title: 'Connect Accounts',
     subtitle: 'Manage your connect account',
     icon: 'construct-outline',
-    screen: 'SettingsDevices',
+    screen: 'DevicesScreen',
   },
   {
     title: 'Goals',
@@ -144,7 +143,7 @@ const menuItems = [
     title: 'Notifications',
     subtitle: 'Manage your notifications',
     icon: 'notifications-outline',
-    screen: 'DeviceNotificationScreen',
+    screen: 'DeviceNotificationsScreen',
   },
   {
     title: 'About',
