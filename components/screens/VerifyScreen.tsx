@@ -45,7 +45,7 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
     newCode[index] = text;
     setCode(newCode);
 
-    if (text.length === 1 && index < 5) {
+    if (text.length === 1 && index < 6) {
       inputRefs.current[index + 1].focus();
     }
   };
