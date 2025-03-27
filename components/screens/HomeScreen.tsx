@@ -42,6 +42,7 @@ const HomeScreen = (props: any) => {
   useEffect(() => {
     console.log('authToken', AsyncStorage.getItem('authToken'));
 console.log('authTokenTimestamp at', AsyncStorage.getItem('authTokenTimestamp'));
+console.log('userdata at', AsyncStorage.getItem('userdata'));
     
     opacity.value = withTiming(1, {duration: 1000});
     return () => {

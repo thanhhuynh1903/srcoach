@@ -94,6 +94,7 @@ const App = () => {
             setUserData(token); // Giữ token, hoặc có thể lấy lại dữ liệu user từ API nếu cần
           } else {
             await AsyncStorage.removeItem('authToken');
+            await AsyncStorage.removeItem('userdata');
             await AsyncStorage.removeItem('authTokenTimestamp');
             setUserData(null);
           }
