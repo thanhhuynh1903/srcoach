@@ -1,4 +1,3 @@
-// utils_healthconnect.ts
 import {
   initialize,
   readRecord,
@@ -423,7 +422,6 @@ export const calculateTotalSteps = (steps: StepRecord[]): number => {
   return steps.reduce((total, record) => total + record.count, 0);
 };
 
-// Helper function to calculate total distance in km
 export const calculateTotalDistance = (
   distanceRecords: DistanceRecord[],
 ): number => {
@@ -431,10 +429,9 @@ export const calculateTotalDistance = (
     (total, record) => total + record.distance,
     0,
   );
-  return meters / 1000;
+  return meters / 1000; //km
 };
 
-// Helper function to calculate total calories
 export const calculateTotalCalories = (
   caloriesRecords: ActiveCaloriesRecord[] | TotalCaloriesRecord[],
 ): number => {
