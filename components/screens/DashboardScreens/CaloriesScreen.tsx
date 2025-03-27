@@ -12,14 +12,16 @@ import {
 } from 'react-native';
 import {BarChart, LineChart} from 'react-native-gifted-charts';
 import BackButton from '../../BackButton';
-import {useFocusEffect} from '@react-navigation/native';
-import {
-  initialize,
-  readRecords,
-  requestPermission,
-} from 'react-native-health-connect';
-import {format, subDays, startOfDay, parseISO} from 'date-fns';
+import {format, subDays, startOfDay, parseISO, subMonths, subYears, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
 import Icon from '@react-native-vector-icons/ionicons';
+import {
+  fetchActiveCaloriesRecords,
+  fetchTotalCaloriesRecords,
+  initializeHealthConnect,
+  ActiveCaloriesRecord,
+  TotalCaloriesRecord,
+} from '../../utils/utils_healthconnect';
+import { useFocusEffect } from '@react-navigation/native';
 
 const {width} = Dimensions.get('window');
 const CHART_WIDTH = width - 32;
@@ -34,46 +36,52 @@ interface CaloriesRecord {
   };
 }
 
-const timePeriods = ['Today', 'Week', 'Month', 'Year'];
-
 const CaloriesScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [activePeriod, setActivePeriod] = useState('Today');
-  const [activeCalories, setActiveCalories] = useState<CaloriesRecord[]>([]);
-  const [totalCalories, setTotalCalories] = useState<CaloriesRecord[]>([]);
+  const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeCalories, setActiveCalories] = useState<ActiveCaloriesRecord[]>([]);
+  const [totalCalories, setTotalCalories] = useState<TotalCaloriesRecord[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<any>(null);
   const [showPointDetails, setShowPointDetails] = useState(false);
   const pointDetailsPosition = useRef(new Animated.Value(0)).current;
 
-  const filterRecordsByPeriod = (records: CaloriesRecord[], period: string) => {
-    const now = new Date();
+  const filterRecordsByPeriod = (records: (ActiveCaloriesRecord | TotalCaloriesRecord)[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
     let startDate: Date;
+    let endDate: Date;
 
-    switch (period) {
-      case 'Today':
-        startDate = startOfDay(now);
+    switch (view) {
+      case 'day':
+        startDate = startOfDay(date);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
         break;
-      case 'Week':
-        startDate = subDays(startOfDay(now), 7);
+      case 'week':
+        startDate = startOfWeek(date);
+        endDate = endOfWeek(date);
         break;
-      case 'Month':
-        startDate = subDays(startOfDay(now), 30);
+      case 'month':
+        startDate = startOfMonth(date);
+        endDate = endOfMonth(date);
         break;
-      case 'Year':
-        startDate = subDays(startOfDay(now), 365);
+      case 'year':
+        startDate = startOfYear(date);
+        endDate = endOfYear(date);
         break;
       default:
-        startDate = startOfDay(now);
+        startDate = startOfDay(date);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
     }
 
     return records.filter(record => {
       const recordDate = parseISO(record.startTime);
-      return recordDate >= startDate && recordDate <= now;
+      return recordDate >= startDate && recordDate <= endDate;
     });
   };
 
-  const prepareLineChartData = (records: CaloriesRecord[]) => {
+  const prepareLineChartData = (records: (ActiveCaloriesRecord | TotalCaloriesRecord)[]) => {
     if (records.length === 0) return [];
     
     // Sort records by time
@@ -106,7 +114,7 @@ const CaloriesScreen = () => {
         date: format(date, 'dd/MM/yyyy HH:mm'),
         originalValue: avg,
         labelTextStyle: {
-          width: 50, // Fixed width to prevent truncation
+          width: 50,
           color: '#94A3B8',
           fontSize: 10,
         },
@@ -114,7 +122,7 @@ const CaloriesScreen = () => {
     });
   };
 
-  const prepareBarChartData = (records: CaloriesRecord[]) => {
+  const prepareBarChartData = (records: (ActiveCaloriesRecord | TotalCaloriesRecord)[]) => {
     if (records.length === 0) return [];
     
     // Group by day of week
@@ -124,7 +132,7 @@ const CaloriesScreen = () => {
     records.forEach(record => {
       const date = parseISO(record.startTime);
       const dayKey = format(date, 'EEE');
-      const isActive = record.metadata?.dataOrigin?.includes('active') || false;
+      const isActive = 'dataOrigin' in record && record.dataOrigin.includes('active');
       
       if (!dailyData[dayKey]) {
         dailyData[dayKey] = {active: 0, total: 0, date};
@@ -148,7 +156,7 @@ const CaloriesScreen = () => {
           labelWidth: 30,
           labelTextStyle: {
             color: '#94A3B8',
-            fontSize: width < 400 ? 10 : 12, // Adjust font size for small screens
+            fontSize: width < 400 ? 10 : 12,
           },
           date: format(dailyData[day].date, 'dd/MM/yyyy'),
         });
@@ -164,7 +172,7 @@ const CaloriesScreen = () => {
     return barData;
   };
 
-  const calculateStats = (records: CaloriesRecord[]) => {
+  const calculateStats = (records: (ActiveCaloriesRecord | TotalCaloriesRecord)[]) => {
     if (records.length === 0) {
       return {
         active: 0,
@@ -177,7 +185,7 @@ const CaloriesScreen = () => {
     }
     
     const activeRecords = records.filter(r => 
-      r.metadata?.dataOrigin?.includes('active')
+      'dataOrigin' in r && r.dataOrigin.includes('active')
     );
     const activeSum = activeRecords.reduce((sum, r) => sum + r.calories, 0);
     const totalSum = records.reduce((sum, r) => sum + r.calories, 0);
@@ -199,57 +207,48 @@ const CaloriesScreen = () => {
   const readSampleData = async () => {
     try {
       setIsLoading(true);
-      const isInitialized = await initialize();
+      const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
         setIsLoading(false);
         return;
       }
 
-      const grantedPermissions = await requestPermission([
-        {accessType: 'read', recordType: 'ActiveCaloriesBurned'},
-        {accessType: 'read', recordType: 'TotalCaloriesBurned'},
-      ]);
+      // Calculate date range based on active view
+      let startDate = new Date(currentDate);
+      let endDate = new Date(currentDate);
 
-      if (!grantedPermissions) {
-        console.log('Permissions not granted');
-        setIsLoading(false);
-        return;
+      switch(activeView) {
+        case 'day':
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case 'week':
+          startDate = startOfWeek(currentDate);
+          endDate = endOfWeek(currentDate);
+          break;
+        case 'month':
+          startDate = startOfMonth(currentDate);
+          endDate = endOfMonth(currentDate);
+          break;
+        case 'year':
+          startDate = startOfYear(currentDate);
+          endDate = endOfYear(currentDate);
+          break;
       }
 
-      const startDate = subDays(new Date(), 30).toISOString();
-      const endDate = new Date().toISOString();
-
       const [activeCaloriesData, totalCaloriesData] = await Promise.all([
-        readRecords('ActiveCaloriesBurned', {
-          timeRangeFilter: {
-            operator: 'between',
-            startTime: startDate,
-            endTime: endDate,
-          },
-        }),
-        readRecords('TotalCaloriesBurned', {
-          timeRangeFilter: {
-            operator: 'between',
-            startTime: startDate,
-            endTime: endDate,
-          },
-        }),
+        fetchActiveCaloriesRecords(startDate.toISOString(), endDate.toISOString()),
+        fetchTotalCaloriesRecords(startDate.toISOString(), endDate.toISOString()),
       ]);
 
-      const processedActiveCalories = activeCaloriesData.records.map(r => ({
-        calories: r.energy.inCalories,
-        startTime: r.startTime,
-        endTime: r.endTime,
-        metadata: {...r.metadata, dataOrigin: 'active'},
+      // Map to common structure
+      const processedActiveCalories = activeCaloriesData.map(r => ({
+        ...r,
+        dataOrigin: 'active',
       }));
 
-      const processedTotalCalories = totalCaloriesData.records.map(r => ({
-        calories: r.energy.inCalories,
-        startTime: r.startTime,
-        endTime: r.endTime,
-        metadata: r.metadata,
-      }));
+      const processedTotalCalories = totalCaloriesData;
 
       setActiveCalories(processedActiveCalories);
       setTotalCalories([...processedActiveCalories, ...processedTotalCalories]);
@@ -286,13 +285,58 @@ const CaloriesScreen = () => {
     });
   };
 
+  const changeView = (view: 'day' | 'week' | 'month' | 'year') => {
+    setActiveView(view);
+  };
+
+  const changeDate = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    
+    switch(activeView) {
+      case 'day':
+        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -1 : 1));
+        break;
+      case 'week':
+        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -7 : 7));
+        break;
+      case 'month':
+        newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
+        break;
+      case 'year':
+        newDate.setFullYear(newDate.getFullYear() + (direction === 'prev' ? -1 : 1));
+        break;
+    }
+    
+    setCurrentDate(newDate);
+  };
+
+  const formatDate = (date: Date) => {
+    switch(activeView) {
+      case 'day':
+        return date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      case 'week':
+        const start = startOfWeek(date);
+        const end = endOfWeek(date);
+        return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
+      case 'month':
+        return format(date, 'MMMM yyyy');
+      case 'year':
+        return date.getFullYear().toString();
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       readSampleData();
-    }, []),
+    }, [currentDate, activeView]),
   );
 
-  const filteredRecords = filterRecordsByPeriod(totalCalories, activePeriod);
+  const filteredRecords = filterRecordsByPeriod([...activeCalories, ...totalCalories], activeView, currentDate);
   const lineData = prepareLineChartData(filteredRecords);
   const barData = prepareBarChartData(filteredRecords);
   const stats = calculateStats(filteredRecords);
@@ -323,45 +367,59 @@ const CaloriesScreen = () => {
         </TouchableOpacity>
       </View>
 
+      {/* View Toggle */}
+      <View style={styles.viewToggleContainer}>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'day' && styles.activeToggle]}
+          onPress={() => changeView('day')}>
+          <Text style={[styles.viewToggleText, activeView === 'day' && styles.activeToggleText]}>Day</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'week' && styles.activeToggle]}
+          onPress={() => changeView('week')}>
+          <Text style={[styles.viewToggleText, activeView === 'week' && styles.activeToggleText]}>Week</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'month' && styles.activeToggle]}
+          onPress={() => changeView('month')}>
+          <Text style={[styles.viewToggleText, activeView === 'month' && styles.activeToggleText]}>Month</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'year' && styles.activeToggle]}
+          onPress={() => changeView('year')}>
+          <Text style={[styles.viewToggleText, activeView === 'year' && styles.activeToggleText]}>Year</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Date Navigation */}
+      <View style={styles.dateNavigation}>
+        <TouchableOpacity onPress={() => changeDate('prev')}>
+          <Text style={styles.navArrow}>{'<'}</Text>
+        </TouchableOpacity>
+        <Text style={styles.currentDateText}>{formatDate(currentDate)}</Text>
+        <TouchableOpacity onPress={() => changeDate('next')}>
+          <Text style={styles.navArrow}>{'>'}</Text>
+        </TouchableOpacity>
+      </View>
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#F97316" />
         </View>
       ) : (
         <ScrollView style={styles.content}>
-          {/* Time Period Tabs */}
-          <View style={styles.tabsContainer}>
-            {timePeriods.map(period => (
-              <TouchableOpacity
-                key={period}
-                style={[
-                  styles.tabButton,
-                  activePeriod === period && styles.activeTabButton,
-                ]}
-                onPress={() => setActivePeriod(period)}>
-                <Text
-                  style={[
-                    styles.tabText,
-                    activePeriod === period && styles.activeTabText,
-                  ]}>
-                  {period}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           {/* Calories Summary */}
           <View style={styles.summaryContainer}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Active Calories</Text>
               <Text style={styles.summaryValue}>
-                {formatNumber(stats.active)} kcal
+                {formatNumber(stats.active / 1000)} kcal
               </Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Total Calories</Text>
               <Text style={styles.summaryValue}>
-                {formatNumber(stats.total)} kcal
+                {formatNumber(stats.total / 1000)} kcal
               </Text>
             </View>
           </View>
@@ -370,10 +428,12 @@ const CaloriesScreen = () => {
           <View style={styles.chartContainer}>
             <View style={styles.chartHeader}>
               <Text style={styles.chartTitle}>
-                {activePeriod === 'Today' ? 'Today' : activePeriod}'s Calories
+                {activeView === 'day' ? 'Today' : 
+                 activeView === 'week' ? 'This Week' : 
+                 activeView === 'month' ? 'This Month' : 'This Year'}'s Calories
               </Text>
               <Text style={styles.chartDate}>
-                {format(new Date(), 'dd/MM/yyyy')}
+                {formatDate(currentDate)}
               </Text>
             </View>
 
@@ -383,12 +443,12 @@ const CaloriesScreen = () => {
                 height={250}
                 width={CHART_WIDTH}
                 noOfSections={4}
-                spacing={width < 400 ? 10 : 15} // Adjust spacing for small screens
+                spacing={width < 400 ? 10 : 15}
                 yAxisLabelWidth={40}
                 yAxisTextStyle={styles.yAxisText}
                 xAxisLabelTextStyle={{
                   ...styles.xAxisText,
-                  width: width < 400 ? 40 : undefined, // Fixed width for small screens
+                  width: width < 400 ? 40 : undefined,
                 }}
                 hideDataPoints={false}
                 dataPointsColor="#F97316"
@@ -451,21 +511,21 @@ const CaloriesScreen = () => {
               <View style={styles.statsItem}>
                 <Text style={styles.statsLabel}>Average Daily</Text>
                 <Text style={styles.statsValue}>
-                  {formatNumber(stats.average)} kcal
+                  {formatNumber(stats.average / 1000)} kcal
                 </Text>
               </View>
 
               <View style={styles.statsItem}>
                 <Text style={styles.statsLabel}>Max Hourly</Text>
                 <Text style={styles.statsValue}>
-                  {formatNumber(stats.max)} kcal
+                  {formatNumber(stats.max / 1000)} kcal
                 </Text>
               </View>
 
               <View style={styles.statsItem}>
                 <Text style={styles.statsLabel}>Min Hourly</Text>
                 <Text style={styles.statsValue}>
-                  {formatNumber(stats.min)} kcal
+                  {formatNumber(stats.min / 1000)} kcal
                 </Text>
               </View>
 
@@ -479,7 +539,7 @@ const CaloriesScreen = () => {
           </View>
 
           {/* Weekly Chart */}
-          {activePeriod === 'Week' && (
+          {activeView === 'week' && (
             <View style={styles.weeklyContainer}>
               <Text style={styles.sectionTitle}>This Week</Text>
 
@@ -608,29 +668,49 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  tabsContainer: {
+  viewToggleContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  activeTabButton: {
+  viewToggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  activeToggle: {
     backgroundColor: '#F97316',
   },
-  tabText: {
+  viewToggleText: {
     fontSize: 14,
-    fontWeight: '500',
     color: '#64748B',
   },
-  activeTabText: {
+  activeToggleText: {
     color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  dateNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  currentDateText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  navArrow: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#F97316',
+    paddingHorizontal: 16,
   },
   summaryContainer: {
     flexDirection: 'row',

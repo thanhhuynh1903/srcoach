@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback, useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -9,46 +9,151 @@ import {
   Image,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import SlideCard from '../SlideCard';
 import BackButton from '../BackButton';
 import GridCard from '../GridCard';
-import ScreenWrapper from '../ScreenWrapper';
-import { useNavigation } from '@react-navigation/native';
-import { wp } from '../helpers/common';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {wp} from '../helpers/common';
+import {
+  fetchActiveCaloriesRecords,
+  fetchDistanceRecords,
+  fetchHeartRateRecords,
+  fetchOxygenSaturationRecords,
+  fetchSleepRecords,
+  fetchStepRecords,
+  fetchTotalCaloriesRecords,
+  initializeHealthConnect,
+  StepRecord,
+  DistanceRecord,
+  HeartRateRecord,
+  ActiveCaloriesRecord,
+  TotalCaloriesRecord,
+  OxygenSaturationRecord,
+  SleepSessionRecord,
+} from '../utils/utils_healthconnect';
+
+type TimeRange = 'day' | 'week' | 'month' | 'year';
 
 const ChartDetailScreen = () => {
   const navigation = useNavigation();
-  const metricsData = [
-    {
-      id: '1',
-      icon: 'footsteps-outline',
-      iconColor: '#2563EB',
-      circleColor: '#2563EB',
-      value: '8,547',
-      label: 'Steps',
-    },
-    {
-      id: '2',
-      icon: 'flame',
-      iconColor: '#EF4444',
-      circleColor: '#EF4444',
-      value: '432',
-      label: 'kcal',
-    },
-    {
-      id: '3',
-      icon: 'walk-outline',
-      iconColor: '#6366F1',
-      circleColor: '#6366F1',
-      value: '15',
-      label: 'km',
-    },
-  ];
+  const [timeRange, setTimeRange] = useState<TimeRange>('day');
+  const [healthData, setHealthData] = useState({
+    steps: 0,
+    activeCalories: 0,
+    totalCalories: 0,
+    distance: 0,
+    heartRate: 0,
+    oxygenSaturation: 0,
+    sleep: 0,
+  });
+  const [totals, setTotals] = useState({
+    steps: 10000,
+    activeCalories: 500,
+    totalCalories: 2000,
+    distance: 10000,
+    heartRate: 100,
+    oxygenSaturation: 100,
+    sleep: 8,
+  });
 
-  const heartRateData = [70, 72, 71, 73, 72, 71];
-  const sleepData = [7, 5, 4, 6, 7.5, 7];
-  const caloriesData = [250, 200, 150, 200, 280, 286];
-  const spo2Data = [97, 98, 98, 97.5, 98, 98];
+  const getHealthData = async () => {
+    const isInitialized = await initializeHealthConnect();
+    if (!isInitialized) {
+      console.log('Health Connect initialization failed');
+      return;
+    }
+
+    // Calculate date ranges based on selected time range
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (timeRange) {
+      case 'day':
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+
+    const startDateString = startDate.toISOString();
+    const endDateString = now.toISOString();
+
+    try {
+      const stepsData = await fetchStepRecords(startDateString, endDateString);
+      const activeCaloriesData = await fetchActiveCaloriesRecords(startDateString, endDateString);
+      const totalCaloriesData = await fetchTotalCaloriesRecords(startDateString, endDateString);
+      const sleepData = await fetchSleepRecords(startDateString, endDateString);
+      const spo2Data = await fetchOxygenSaturationRecords(startDateString, endDateString);
+      const heartRateData = await fetchHeartRateRecords(startDateString, endDateString);
+      const distanceData = await fetchDistanceRecords(startDateString, endDateString);
+
+      // Process and aggregate data
+      const steps = stepsData.reduce((sum, record) => sum + record.count, 0);
+      const activeCalories = activeCaloriesData.reduce((sum, record) => sum + record.calories, 0);
+      const totalCalories = totalCaloriesData.reduce((sum, record) => sum + record.calories, 0);
+      const distance = distanceData.reduce((sum, record) => sum + record.distance, 0) / 1000; // convert to km
+      const heartRate = heartRateData.length > 0 ? 
+        heartRateData.reduce((sum, record) => sum + record.beatsPerMinute, 0) / heartRateData.length : 0;
+      const oxygenSaturation = spo2Data.length > 0 ? 
+        spo2Data.reduce((sum, record) => sum + record.percentage, 0) / spo2Data.length : 0;
+      
+      // Calculate sleep duration in hours
+      const sleep = sleepData.reduce((sum, record) => {
+        const start = new Date(record.startTime);
+        const end = new Date(record.endTime);
+        return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      }, 0);
+
+      setHealthData({
+        steps,
+        activeCalories,
+        totalCalories,
+        distance,
+        heartRate,
+        oxygenSaturation,
+        sleep,
+      });
+
+    } catch (error) {
+      console.error('Error fetching health data:', error);
+    }
+  };
+
+  useFocusEffect(useCallback(() => {
+    getHealthData();
+  }, [timeRange]));
+
+  const calculatePercentage = (current: number, total: number) => {
+    return total > 0 ? Math.min(Math.round((current / total) * 100), 100) : 0;
+  };
+
+  const renderTimeRangeToggle = () => (
+    <View style={styles.timeRangeContainer}>
+      {(['day', 'week', 'month', 'year'] as TimeRange[]).map((range) => (
+        <TouchableOpacity
+          key={range}
+          style={[
+            styles.timeRangeButton,
+            timeRange === range && styles.timeRangeButtonActive,
+          ]}
+          onPress={() => setTimeRange(range)}>
+          <Text
+            style={[
+              styles.timeRangeText,
+              timeRange === range && styles.timeRangeTextActive,
+            ]}>
+            {range.charAt(0).toUpperCase() + range.slice(1)}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   return (
     <SafeAreaView style={{backgroundColor: '#F9FAFB', flex: 1}}>
@@ -58,7 +163,7 @@ const ChartDetailScreen = () => {
           <BackButton size={24} />
         </TouchableOpacity>
         <View style={{flex: 1}} />
-        <TouchableOpacity style={styles.syncButton}>
+        <TouchableOpacity style={styles.syncButton} onPress={getHealthData}>
           <Icon name="sync-outline" size={20} color="#3B82F6" />
           <Text style={styles.syncText}>Sync</Text>
         </TouchableOpacity>
@@ -86,130 +191,116 @@ const ChartDetailScreen = () => {
           </View>
           {/* Greeting */}
           <View style={styles.greetingContainer}>
-            <Text style={styles.dateText}>Sunday, March 16</Text>
+            <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
             <Text style={styles.greetingText}>Good morning, Alex</Text>
           </View>
         </View>
-        
-        {/* Running Schedule */}
-        <View style={styles.scheduleCard}>
-          <View style={styles.scheduleHeader}>
-            <Icon name="calendar" size={18} color="#3B82F6" />
-            <Text style={styles.scheduleTitle}>Running Schedules Today</Text>
-          </View>
 
-          <View style={styles.scheduleItem}>
-            <Icon name="walk-sharp" size={16} color="#3B82F6" />
-            <Text style={styles.scheduleText}>Morning Run - 6:00 AM</Text>
-          </View>
-
-          <View style={styles.scheduleItem}>
-            <Icon name="walk-sharp" size={16} color="#3B82F6" />
-            <Text style={styles.scheduleText}>Evening Run - 5:30 PM</Text>
-          </View>
-        </View>
+        {renderTimeRangeToggle()}
 
         {/* Health Metrics Grid */}
         <View style={styles.metricsGrid}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.metricItem}
-            onPress={() => navigation.navigate('StepsScreen')}
-          >
+            onPress={() => navigation.navigate('StepsScreen')}>
             <View style={[styles.metricCircle, {backgroundColor: '#EFF6FF'}]}>
               <Icon name="footsteps-outline" size={24} color="#2563EB" />
             </View>
-            <Text style={styles.metricValue}>8,547</Text>
+            <Text style={styles.metricValue}>{healthData.steps.toLocaleString()}</Text>
+            <Text style={styles.metricPercentage}>
+              {calculatePercentage(healthData.steps, totals.steps)}%
+            </Text>
             <Text style={styles.metricLabel}>Steps</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.metricItem}
-            onPress={() => navigation.navigate('CaloriesScreen')}
-          >
+            onPress={() => navigation.navigate('CaloriesScreen')}>
             <View style={[styles.metricCircle, {backgroundColor: '#FEE2E2'}]}>
               <Icon name="flame" size={24} color="#EF4444" />
             </View>
-            <Text style={styles.metricValue}>432</Text>
-            <Text style={styles.metricLabel}>Calories</Text>
+            <Text style={styles.metricValue}>{Math.round(healthData.activeCalories / 1000 * 100) / 100} kcal</Text>
+            <Text style={styles.metricPercentage}>
+              {calculatePercentage(healthData.activeCalories, totals.activeCalories)}%
+            </Text>
+            <Text style={styles.metricLabel}>Active Calories</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.metricItem}
-            onPress={() => navigation.navigate('SleepScreen')}
-          >
+            onPress={() => navigation.navigate('SleepScreen')}>
             <View style={[styles.metricCircle, {backgroundColor: '#EEF2FF'}]}>
               <Icon name="moon" size={24} color="#6366F1" />
             </View>
-            <Text style={styles.metricValue}>7h 23m</Text>
+            <Text style={styles.metricValue}>
+              {Math.floor(healthData.sleep)}h {Math.round((healthData.sleep % 1) * 60)}m
+            </Text>
+            <Text style={styles.metricPercentage}>
+              {calculatePercentage(healthData.sleep, totals.sleep)}%
+            </Text>
             <Text style={styles.metricLabel}>Sleep</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.metricItem}
-            onPress={() => navigation.navigate('SPo2Screen')}
-          >
+            onPress={() => navigation.navigate('SPo2Screen')}>
             <View style={[styles.metricCircle, {backgroundColor: '#ECFDF5'}]}>
               <Icon name="water-outline" size={24} color="#10B981" />
             </View>
-            <Text style={styles.metricValue}>98%</Text>
+            <Text style={styles.metricValue}>{Math.round(healthData.oxygenSaturation)}%</Text>
+            <Text style={styles.metricPercentage}>
+              {calculatePercentage(healthData.oxygenSaturation, totals.oxygenSaturation)}%
+            </Text>
             <Text style={styles.metricLabel}>SpO2</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Heart Rate and Distance */}
+        {/* Additional Metrics */}
         <View style={styles.row}>
           <TouchableOpacity
             onPress={() => navigation.navigate('HeartRateScreen')}
-            style={styles.touchable}
-          >
-            <GridCard
-              icon="heart"
-              iconColor="#FF4D4F"
-              value="72"
-              unit="bpm"
-              label="Heart Rate"
-              chartColor="#FF4D4F"
-              chartData={heartRateData}
-              chartStyle="flat"
-            />
+            style={styles.touchable}>
+            <View style={styles.additionalMetricCard}>
+              <View style={[styles.metricCircle, {backgroundColor: '#FFF1F0'}]}>
+                <Icon name="heart" size={24} color="#FF4D4F" />
+              </View>
+              <Text style={styles.metricValue}>{Math.round(healthData.heartRate)}</Text>
+              <Text style={styles.metricPercentage}>
+                {calculatePercentage(healthData.heartRate, totals.heartRate)}%
+              </Text>
+              <Text style={styles.metricLabel}>Heart Rate (bpm)</Text>
+            </View>
           </TouchableOpacity>
 
-          <GridCard
-            icon="walk-outline"
-            iconColor="#6366F1"
-            value="15"
-            unit="km"
-            label="Distance"
-            chartColor="#6366F1"
-            chartData={sleepData}
-            chartStyle="wave"
-          />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('DistanceScreen')}
+            style={styles.touchable}>
+            <View style={styles.additionalMetricCard}>
+              <View style={[styles.metricCircle, {backgroundColor: '#F0F5FF'}]}>
+                <Icon name="walk-outline" size={24} color="#6366F1" />
+              </View>
+              <Text style={styles.metricValue}>{healthData.distance.toFixed(1)}</Text>
+              <Text style={styles.metricPercentage}>
+                {calculatePercentage(healthData.distance, totals.distance)}%
+              </Text>
+              <Text style={styles.metricLabel}>Distance (km)</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        {/* Cadence */}
-        <View style={styles.cadenceCard}>
-          <View style={styles.metricHeader}>
-            <Icon name="walk-sharp" size={20} color="#10B981" />
-            <Text style={styles.metricHeaderValue}>
-              112<Text style={styles.metricUnit}>spm</Text>
-            </Text>
+        {/* Total Calories */}
+        <TouchableOpacity
+          style={styles.fullWidthMetric}
+          onPress={() => navigation.navigate('TotalCaloriesScreen')}>
+          <View style={[styles.metricCircle, {backgroundColor: '#FFF7E6'}]}>
+            <Icon name="nutrition-outline" size={24} color="#FAAD14" />
           </View>
-          <View style={styles.barChartContainer}>
-            {[0.6, 0.8, 0.7, 0.9, 0.8, 0.7].map((height, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.barChart,
-                  {
-                    height: `${height * 100}%`,
-                    backgroundColor: '#86EFAC',
-                  },
-                ]}
-              />
-            ))}
-          </View>
-          <Text style={styles.metricLabel}>Cadence</Text>
-        </View>
+          <Text style={styles.metricValue}>{Math.round(healthData.totalCalories / 1000 * 100) / 100}</Text>
+          <Text style={styles.metricPercentage}>
+            {calculatePercentage(healthData.totalCalories, totals.totalCalories)}%
+          </Text>
+          <Text style={styles.metricLabel}>Total Calories</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -286,33 +377,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
   },
-  scheduleCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-  },
-  scheduleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  scheduleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginLeft: 8,
-  },
-  scheduleItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  scheduleText: {
-    fontSize: 14,
-    color: '#334155',
-    marginLeft: 8,
-  },
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -326,6 +390,37 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  additionalMetricCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  fullWidthMetric: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -349,50 +444,40 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 4,
   },
+  metricPercentage: {
+    fontSize: 12,
+    color: '#3B82F6',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
   metricLabel: {
     fontSize: 12,
     color: '#64748B',
   },
-  metricHeader: {
+  timeRangeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 4,
+  },
+  timeRangeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 12,
   },
-  metricHeaderValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
+  timeRangeButtonActive: {
+    backgroundColor: '#3B82F6',
   },
-  metricUnit: {
-    fontSize: 12,
-    fontWeight: '400',
+  timeRangeText: {
+    fontSize: 14,
     color: '#64748B',
   },
-  cadenceCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    marginVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 2,
-  },
-  barChartContainer: {
-    height: 60,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  barChart: {
-    width: 30,
-    borderRadius: 4,
+  timeRangeTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 

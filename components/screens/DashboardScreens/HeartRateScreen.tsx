@@ -19,7 +19,8 @@ import {
   readRecords,
   requestPermission,
 } from 'react-native-health-connect';
-import {format, subDays, startOfDay, endOfDay, parseISO} from 'date-fns';
+import {format, startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
+
 const {width} = Dimensions.get('window');
 
 interface HeartRateRecord {
@@ -50,10 +51,9 @@ interface ZoneData {
   progress: number;
 }
 
-const timePeriods = ['Today', 'Week', 'Month', 'Year'];
-
 const HeartRateScreen = () => {
-  const [activePeriod, setActivePeriod] = useState('Today');
+  const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>([]);
   const [restingHeartRateRecords, setRestingHeartRateRecords] = useState<RestingHeartRateRecord[]>([]);
   const [currentHeartRate, setCurrentHeartRate] = useState<number | null>(null);
@@ -64,30 +64,37 @@ const HeartRateScreen = () => {
   const [showPointDetails, setShowPointDetails] = useState(false);
   const pointDetailsPosition = useRef(new Animated.Value(0)).current;
 
-  const filterRecordsByPeriod = (records: HeartRateRecord[], period: string) => {
-    const now = new Date();
+  const filterRecordsByPeriod = (records: HeartRateRecord[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
     let startDate: Date;
+    let endDate: Date;
 
-    switch (period) {
-      case 'Today':
-        startDate = startOfDay(now);
+    switch (view) {
+      case 'day':
+        startDate = startOfDay(date);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
         break;
-      case 'Week':
-        startDate = subDays(startOfDay(now), 7);
+      case 'week':
+        startDate = startOfWeek(date);
+        endDate = endOfWeek(date);
         break;
-      case 'Month':
-        startDate = subDays(startOfDay(now), 30);
+      case 'month':
+        startDate = startOfMonth(date);
+        endDate = endOfMonth(date);
         break;
-      case 'Year':
-        startDate = subDays(startOfDay(now), 365);
+      case 'year':
+        startDate = startOfYear(date);
+        endDate = endOfYear(date);
         break;
       default:
-        startDate = startOfDay(now);
+        startDate = startOfDay(date);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
     }
 
     return records.filter(record => {
-      const recordDate = parseISO(record.startTime);
-      return recordDate >= startDate && recordDate <= now;
+      const recordDate = new Date(record.startTime);
+      return recordDate >= startDate && recordDate <= endDate;
     });
   };
 
@@ -183,29 +190,49 @@ const HeartRateScreen = () => {
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
 
-    // For demo purposes, we'll create hourly averages with dates
-    const hourlyAverages: {[key: string]: {sum: number, count: number, date: Date}} = {};
+    // Group based on active view
+    const groupedData: {[key: string]: {sum: number, count: number, date: Date}} = {};
     
     sortedRecords.forEach(record => {
-      const date = parseISO(record.startTime);
-      const hour = date.getHours();
-      const dateKey = format(date, 'dd/MM/yyyy');
-      const hourKey = `${dateKey} ${hour}:00`;
-      
-      if (!hourlyAverages[hourKey]) {
-        hourlyAverages[hourKey] = {sum: 0, count: 0, date};
+      const date = new Date(record.startTime);
+      let key = '';
+      let labelKey = '';
+
+      switch (activeView) {
+        case 'day':
+          key = format(date, 'HH:00');
+          labelKey = format(date, 'HH:mm');
+          break;
+        case 'week':
+          key = format(date, 'EEE');
+          labelKey = format(date, 'EEE');
+          break;
+        case 'month':
+          key = format(date, 'dd/MM');
+          labelKey = format(date, 'dd MMM');
+          break;
+        case 'year':
+          key = format(date, 'MMM');
+          labelKey = format(date, 'MMM');
+          break;
       }
       
-      hourlyAverages[hourKey].sum += record.beatsPerMinute;
-      hourlyAverages[hourKey].count++;
+      if (!groupedData[key]) {
+        groupedData[key] = {sum: 0, count: 0, date};
+      }
+      
+      groupedData[key].sum += record.beatsPerMinute;
+      groupedData[key].count++;
     });
     
-    return Object.keys(hourlyAverages).map((hourKey, index) => {
-      const {sum, count, date} = hourlyAverages[hourKey];
+    return Object.keys(groupedData).map((key, index) => {
+      const {sum, count, date} = groupedData[key];
       const avg = Math.round(sum / count);
       return {
         value: avg,
-        label: index % 3 === 0 ? format(date, 'HH:mm') : '', // Show label every 3 points
+        label: index % 2 === 0 ? format(date, activeView === 'day' ? 'HH:mm' : 
+                                  activeView === 'week' ? 'EEE' : 
+                                  activeView === 'month' ? 'dd MMM' : 'MMM') : '',
         date: format(date, 'dd/MM/yyyy HH:mm'),
         originalValue: avg,
       };
@@ -251,23 +278,43 @@ const HeartRateScreen = () => {
         return;
       }
 
-      // Get data for the last 30 days
-      const startDate = subDays(new Date(), 30).toISOString();
-      const endDate = new Date().toISOString();
+      // Calculate date range based on active view
+      let startDate = new Date(currentDate);
+      let endDate = new Date(currentDate);
+
+      switch(activeView) {
+        case 'day':
+          startDate = startOfDay(currentDate);
+          endDate = new Date(startDate);
+          endDate.setHours(23, 59, 59, 999);
+          break;
+        case 'week':
+          startDate = startOfWeek(currentDate);
+          endDate = endOfWeek(currentDate);
+          break;
+        case 'month':
+          startDate = startOfMonth(currentDate);
+          endDate = endOfMonth(currentDate);
+          break;
+        case 'year':
+          startDate = startOfYear(currentDate);
+          endDate = endOfYear(currentDate);
+          break;
+      }
 
       const heartRateData = await readRecords('HeartRate', {
         timeRangeFilter: {
           operator: 'between',
-          startTime: startDate,
-          endTime: endDate,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
         },
       });
 
       const restingHeartRateData = await readRecords('RestingHeartRate', {
         timeRangeFilter: {
           operator: 'between',
-          startTime: startDate,
-          endTime: endDate,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
         },
       });
 
@@ -284,7 +331,6 @@ const HeartRateScreen = () => {
       setHeartRateRecords(processedHeartRateRecords);
       setRestingHeartRateRecords(restingHeartRateData.records);
 
-      // Set current heart rate (most recent reading)
       if (processedHeartRateRecords.length > 0) {
         const sorted = [...processedHeartRateRecords].sort((a, b) => 
           new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
@@ -296,6 +342,46 @@ const HeartRateScreen = () => {
     } catch (error) {
       console.error('Error reading health data:', error);
       setIsLoading(false);
+    }
+  };
+
+  const changeView = (view: 'day' | 'week' | 'month' | 'year') => {
+    setActiveView(view);
+  };
+
+  const changeDate = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    
+    switch(activeView) {
+      case 'day':
+        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -1 : 1));
+        break;
+      case 'week':
+        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -7 : 7));
+        break;
+      case 'month':
+        newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
+        break;
+      case 'year':
+        newDate.setFullYear(newDate.getFullYear() + (direction === 'prev' ? -1 : 1));
+        break;
+    }
+    
+    setCurrentDate(newDate);
+  };
+
+  const formatDate = (date: Date) => {
+    switch(activeView) {
+      case 'day':
+        return format(date, 'EEEE, MMMM d, yyyy');
+      case 'week':
+        const start = startOfWeek(date);
+        const end = endOfWeek(date);
+        return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
+      case 'month':
+        return format(date, 'MMMM yyyy');
+      case 'year':
+        return date.getFullYear().toString();
     }
   };
 
@@ -322,20 +408,20 @@ const HeartRateScreen = () => {
   useFocusEffect(
     useCallback(() => {
       readSampleData();
-    }, []),
+    }, [currentDate, activeView]),
   );
 
   useEffect(() => {
     if (heartRateRecords.length > 0) {
-      const filteredRecords = filterRecordsByPeriod(heartRateRecords, activePeriod);
+      const filteredRecords = filterRecordsByPeriod(heartRateRecords, activeView, currentDate);
       const chartData = prepareChartData(filteredRecords);
       setChartData(chartData);
       setZoneData(calculateZones(filteredRecords));
     }
-  }, [activePeriod, heartRateRecords]);
+  }, [activeView, currentDate, heartRateRecords]);
 
   const {average, max, min} = calculateStats(
-    filterRecordsByPeriod(heartRateRecords, activePeriod)
+    filterRecordsByPeriod(heartRateRecords, activeView, currentDate)
   );
 
   const getRestingHeartRate = () => {
@@ -355,7 +441,42 @@ const HeartRateScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Heart rate</Text>
+        <Text style={styles.headerTitle}>Heart Rate</Text>
+      </View>
+
+      {/* View Toggle */}
+      <View style={styles.viewToggleContainer}>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'day' && styles.activeToggle]}
+          onPress={() => changeView('day')}>
+          <Text style={[styles.viewToggleText, activeView === 'day' && styles.activeToggleText]}>Day</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'week' && styles.activeToggle]}
+          onPress={() => changeView('week')}>
+          <Text style={[styles.viewToggleText, activeView === 'week' && styles.activeToggleText]}>Week</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'month' && styles.activeToggle]}
+          onPress={() => changeView('month')}>
+          <Text style={[styles.viewToggleText, activeView === 'month' && styles.activeToggleText]}>Month</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleButton, activeView === 'year' && styles.activeToggle]}
+          onPress={() => changeView('year')}>
+          <Text style={[styles.viewToggleText, activeView === 'year' && styles.activeToggleText]}>Year</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Date Navigation */}
+      <View style={styles.dateNavigation}>
+        <TouchableOpacity onPress={() => changeDate('prev')}>
+          <Text style={styles.navArrow}>{'<'}</Text>
+        </TouchableOpacity>
+        <Text style={styles.currentDateText}>{formatDate(currentDate)}</Text>
+        <TouchableOpacity onPress={() => changeDate('next')}>
+          <Text style={styles.navArrow}>{'>'}</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -388,31 +509,15 @@ const HeartRateScreen = () => {
             </View>
           </View>
 
-          {/* Time Period Tabs */}
-          <View style={styles.tabsContainer}>
-            {timePeriods.map(period => (
-              <TouchableOpacity
-                key={period}
-                style={[
-                  styles.tabButton,
-                  activePeriod === period && styles.activeTabButton,
-                ]}
-                onPress={() => setActivePeriod(period)}>
-                <Text
-                  style={[
-                    styles.tabText,
-                    activePeriod === period && styles.activeTabText,
-                  ]}>
-                  {period}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
           {/* Heart Rate Chart */}
           <View style={styles.chartContainer}>
             {chartData.length > 0 ? (
               <>
+                <Text style={styles.chartTitle}>
+                  {activeView === 'day' ? 'Today' : 
+                   activeView === 'week' ? 'This Week' : 
+                   activeView === 'month' ? 'This Month' : 'This Year'}'s Heart Rate
+                </Text>
                 <LineChart
                   data={chartData}
                   height={180}
@@ -439,7 +544,7 @@ const HeartRateScreen = () => {
                   yAxisLabelWidth={30}
                   noOfSections={4}
                   maxValue={Math.max(...chartData.map(d => d.value)) + 20}
-                  minValue={Math.max(0, Math.min(...chartData.map(d => d.value)) - 20)}
+                  minValue={Math.max(0, Math.min(...chartData.map(d => d.value))) - 20}
                   onPress={(item: any) => handleDataPointClick(item)}
                   pointerConfig={{
                     pointerStripHeight: 140,
@@ -466,7 +571,7 @@ const HeartRateScreen = () => {
                   }}
                 />
                 <Text style={styles.chartDateText}>
-                  {format(new Date(), 'dd/MM/yyyy')}
+                  {formatDate(currentDate)}
                 </Text>
               </>
             ) : (
@@ -587,6 +692,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
+  viewToggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  viewToggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  activeToggle: {
+    backgroundColor: '#FF4D4F',
+  },
+  viewToggleText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  activeToggleText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  dateNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  currentDateText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  navArrow: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF4D4F',
+    paddingHorizontal: 16,
+  },
   content: {
     flex: 1,
     padding: 16,
@@ -621,35 +770,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginRight: 4,
   },
-  tabsContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    padding: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 20,
-  },
-  activeTabButton: {
-    backgroundColor: '#FF4D4F',
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-  },
   chartContainer: {
     marginBottom: 24,
     paddingVertical: 8,
     height: 220,
     justifyContent: 'center',
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   chartDateText: {
     textAlign: 'center',

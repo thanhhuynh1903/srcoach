@@ -71,6 +71,23 @@ export interface OxygenSaturationRecord {
   dataOrigin: string;
 }
 
+export interface SleepSessionRecord {
+  id: string;
+  dataOrigin: string;
+  stage: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface RestingHeartRateRecord {
+  time: string;
+  beatsPerMinute: number;
+  startTime: string;
+  endTime: string;
+  id: string;
+  dataOrigin: string;
+}
+
 // Health Connect Initialization
 export const initializeHealthConnect = async (): Promise<boolean> => {
   try {
@@ -87,6 +104,8 @@ export const initializeHealthConnect = async (): Promise<boolean> => {
       {accessType: 'read', recordType: 'HeartRate'},
       {accessType: 'read', recordType: 'Distance'},
       {accessType: 'read', recordType: 'ExerciseSession'},
+      {accessType: 'read', recordType: 'OxygenSaturation'},
+      {accessType: 'read', recordType: 'SleepSession'},
       {accessType: 'write', recordType: 'ExerciseSession'},
     ]);
 
@@ -200,6 +219,34 @@ export const fetchHeartRateRecords = async (
   }
 };
 
+export const fetchRestingHeartRateRecords = async (
+  startTime: string,
+  endTime: string,
+): Promise<RestingHeartRateRecord[]> => {
+  try {
+    const result = await readRecords('RestingHeartRate', {
+      timeRangeFilter: {
+        operator: 'between',
+        startTime,
+        endTime,
+      },
+    });
+
+    return result.records.map(record => ({
+      beatsPerMinute: record.beatsPerMinute,
+      time: record.time,
+      startTime: startTime,
+      endTime: endTime,
+      id: record.metadata?.id || '',
+      dataOrigin: record.metadata?.dataOrigin || '',
+    }))
+    return []
+  } catch (error) {
+    console.error('Error fetching heart rate records:', error);
+    return [];
+  }
+}
+
 // Calories Data
 export const fetchActiveCaloriesRecords = async (
   startTime: string,
@@ -256,13 +303,13 @@ export const fetchTotalCaloriesRecords = async (
 // Exercise Route
 export const fetchExerciseRoute = async (
   recordId: string,
-  clientRecordId: string
+  clientRecordId: string,
 ): Promise<ExerciseRouteRecord[]> => {
   try {
     const exercise = await readRecord('ExerciseSession', recordId);
-    
+
     if (exercise.exerciseRoute?.type === 'CONSENT_REQUIRED') {
-      const { route } = await requestExerciseRoute(clientRecordId);
+      const {route} = await requestExerciseRoute(clientRecordId);
       if (route) {
         return route.map(point => () => {
           return {
@@ -270,7 +317,7 @@ export const fetchExerciseRoute = async (
             latitude: point.latitude,
             longitude: point.longitude,
           };
-        })
+        });
       } else {
         console.log('User denied access');
         return [];
@@ -341,6 +388,32 @@ export const fetchOxygenSaturationRecords = async (
     }));
   } catch (error) {
     console.error('Error fetching oxygen saturation records:', error);
+    return [];
+  }
+};
+
+export const fetchSleepRecords = async (startTime: string, endTime: string): Promise<SleepSessionRecord[]> => {
+  try {
+    const result = await readRecords('SleepSession', {
+      timeRangeFilter: {
+        operator: 'between',
+        startTime,
+        endTime,
+      },
+    });
+
+    return result.records.flatMap(record => {
+      return record.stages.map(stage => ({
+        id: record.metadata?.id || '',
+        dataOrigin: record.metadata?.dataOrigin || '',
+        stage: stage.stage,
+        startTime: stage.startTime,
+        endTime: stage.endTime,
+      }));
+    });
+
+  } catch (error) {
+    console.error('Error fetching sleep records:', error);
     return [];
   }
 };
