@@ -46,11 +46,11 @@ export const useRestetPWstore = create<ResetPasswordState>((set, get) => ({
       const apiStatus = response.data?.status;
       const message = response.data?.message;
       const userdata = response.data?.user || null;
-
+      
       set({
         userdata,
         status: apiStatus, // e.g. "success"
-        message: message || '',
+        message: message,
       });
     } catch (error: any) {
       set({

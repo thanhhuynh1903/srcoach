@@ -25,7 +25,7 @@ interface VerifyParam {
 const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const { message, verifyCode ,verifyStatus, ResetPassword, clear } = useRestetPWstore();
+  const { message, verifyCode ,verifyStatus, ResetPassword, clear,status } = useRestetPWstore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
   const route = useRoute();
@@ -72,6 +72,7 @@ const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
   // Monitor verifyStatus changes to handle success or error
   useEffect(() => {
     console.log('resendStatus:', verifyStatus);
+    
     if (verifyStatus === 'success') {
       Alert.alert('Success', 'Verification successful!');
       navigate.navigate('PasswordRecoveryNewScreen' , { emailReset: email });
@@ -81,9 +82,17 @@ const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
       Alert.alert(message);
     }
 
-    clear();
   }, [verifyStatus]);
+  useEffect(() => {
+    if (status === 'success') {
+      Alert.alert('Success', message);
+      // Optionally, clear after navigating if needed:
+      // clear();
+    } else if (verifyStatus === 'error') {
+      Alert.alert(message);
+    }
 
+  }, [status]);
   // Handle resend code
   const handleResendCode = async () => {
     setIsLoading(true);
