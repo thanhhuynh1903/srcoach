@@ -19,12 +19,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 interface VerifyParam {
   email: string;
+  emailReset: string;
 }
 
 const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const { message, verifyStatus, ResendPassword, clear } = useRestetPWstore();
+  const { message, verifyCode ,verifyStatus, ResetPassword, clear,status } = useRestetPWstore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
   const route = useRoute();
@@ -61,7 +62,7 @@ const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
   const handleVerify = async () => {
     setIsLoading(true);
     try {
-      await ResendPassword(email);
+      await verifyCode(email,code.join(''));
     } catch (error) {
       console.log('Error verifying code:', error);
     }
@@ -71,23 +72,34 @@ const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
   // Monitor verifyStatus changes to handle success or error
   useEffect(() => {
     console.log('resendStatus:', verifyStatus);
+    
     if (verifyStatus === 'success') {
       Alert.alert('Success', 'Verification successful!');
-      navigate.navigate('PasswordRecoveryNewScreen' as never);
+      navigate.navigate('PasswordRecoveryNewScreen' , { emailReset: email });
       // Optionally, clear after navigating if needed:
       // clear();
     } else if (verifyStatus === 'error') {
       Alert.alert(message);
     }
-  }, [verifyStatus]);
 
+  }, [verifyStatus]);
+  useEffect(() => {
+    if (status === 'success') {
+      Alert.alert('Success', message);
+      // Optionally, clear after navigating if needed:
+      // clear();
+    } else if (verifyStatus === 'error') {
+      Alert.alert(message);
+    }
+
+  }, [status]);
   // Handle resend code
   const handleResendCode = async () => {
     setIsLoading(true);
     console.log('emailLabel', email);
     
     try {
-      await ResendPassword(email);
+      await ResetPassword(email);
     } catch (error) {
       console.log('Error resending code:', error);
     }

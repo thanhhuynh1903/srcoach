@@ -38,8 +38,16 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       );
 
       console.log('response', response.data);
+      if (response.data.status === 'error') {
+        set({
+          status: response.data.status,
+          message: response.data.message,
+        });
+        return;
+      }
       const { accessToken, user } = response?.data?.data;
       await AsyncStorage.setItem('authToken', accessToken);
+      await AsyncStorage.setItem('userdata', JSON.stringify(user));
       await AsyncStorage.setItem('authTokenTimestamp', Date.now().toString());
 
       console.log('User data:', user);
@@ -109,6 +117,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   clear: () => set({userdata: null, status: '', message: ''}),
   clearAll: async () => {
     await AsyncStorage.removeItem('authToken');
+    await AsyncStorage.removeItem('userdata');
     await AsyncStorage.removeItem('authTokenTimestamp');
     set({userdata: null, status: '', message: ''});
   },

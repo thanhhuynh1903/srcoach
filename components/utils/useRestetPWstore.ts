@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import {create} from 'zustand';
 import axios from 'axios';
 
 const MASTER_URL = 'https://xavia.pro/api';
@@ -10,11 +10,18 @@ interface ResetPasswordState {
   resendStatus: string;
   apiStatus: string;
   message: string;
-  emailForReset: string | null;  // store the email used for reset
+  emailForReset: string | null; // store the email used for reset
+
+  // Các hàm bạn đã có
   ResetPassword: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
-  ResendPassword: (email: string) => Promise<void>;
   clear: () => void;
+
+  // Thêm hàm xác nhận đặt mật khẩu mới (BƯỚC 3)
+  confirmResetPassword: (
+    email: string,
+    newPassword: string,
+  ) => Promise<void>;
 }
 
 export const useRestetPWstore = create<ResetPasswordState>((set, get) => ({
@@ -26,32 +33,26 @@ export const useRestetPWstore = create<ResetPasswordState>((set, get) => ({
   verifyStatus: '',
   emailForReset: null,
 
-  // 1) REQUEST A PASSWORD RESET EMAIL
+  // (1) Gửi email reset
   ResetPassword: async (email: string) => {
-    // Start loading & clear old messages
-    console.log('Resetting password for email:', email);
-    
-    set({ status: 'loading', message: '', emailForReset: email });
+    set({status: 'loading', message: ''});
     try {
       const response = await axios.post(
-        `${MASTER_URL}/users/reset-password`,
-        { email },
-        { headers: { 'Content-Type': 'application/json' } }
+        `${MASTER_URL}/users/send-code-reset`,
+        {email},
+        {headers: {'Content-Type': 'application/json'}},
       );
 
-      console.log('response', response.data);
-
-      const apiStatus = response.data?.status;      
+      const apiStatus = response.data?.status;
       const message = response.data?.message;
       const userdata = response.data?.user || null;
-
+      
       set({
         userdata,
-        status: apiStatus,   // e.g. "success"
-        message: message || '',
+        status: apiStatus, // e.g. "success"
+        message: message,
       });
     } catch (error: any) {
-      console.log('ResetPassword error:', error);
       set({
         status: 'error',
         message: error.response?.data?.message || 'Password reset failed',
@@ -59,77 +60,66 @@ export const useRestetPWstore = create<ResetPasswordState>((set, get) => ({
     }
   },
 
-  // 2) VERIFY THE CODE FROM THE EMAIL
+  // (2) Xác thực mã reset
   verifyCode: async (email: string, code: string) => {
-    console.log('Verifying code for email:', email);
-    set({ status: 'loading', message: '' });
-
+    set({status: 'loading', message: ''});
     try {
       const response = await axios.post(
-        `${MASTER_URL}/users/activate`, // Adjust if your endpoint is different for reset
-        {
-          email,
-          verificationCode: code,
-        },
-        { headers: { 'Content-Type': 'application/json' } }
+        `${MASTER_URL}/users/confirmed-code-verify`,
+        {email, verificationCode: code},
+        {headers: {'Content-Type': 'application/json'}},
       );
-      console.log('Response:', response.data);
-
       set({
-        status: response.data?.status || 'error',
+        verifyStatus: response.data?.status || 'error',
         message: response.data?.message || '',
       });
     } catch (error: any) {
-      console.log('Verify code error:', error);
       set({
-        status: 'error',
+        verifyStatus: 'error',
         message: error.response?.data?.message || 'Verification failed',
       });
     }
   },
 
-  // 3) RESEND THE CODE IF NEEDED
-  ResendPassword: async (email: string) => {
-    // Start loading & clear old messages
-    console.log('Resetting password for email:', email);
+  // (3) Đổi mật khẩu mới sau khi mã đã được xác thực
+  confirmResetPassword: async (email: string, newPassword: string) => {
+    set({status: 'loading', message: ''});
+    console.log('newPassword', newPassword);
+    console.log('email in new pw', email);
     
-    set({ resendStatus: 'loading', message: '', emailForReset: email });
     try {
       const response = await axios.post(
-        `${MASTER_URL}/users/reset-password`,
-        { email },
-        { headers: { 'Content-Type': 'application/json' } }
+        `${MASTER_URL}/users/reset-password-confirmed`,
+        {email : email, newPassword},
+        {headers: {'Content-Type': 'application/json'}},
       );
-
-      console.log('response', response.data);
-
-      const apiStatus = response.data?.status;      
-      const message = response.data?.message;
-      const userdata = response.data?.user || null;
+      
+      const apiStatus = response.data?.status;
+      const message = response.data?.message || '';
+      console.log('Response:', apiStatus);
 
       set({
-        userdata,
-        resendStatus: apiStatus,   // e.g. "success"
-        message: message || '',
+        status: apiStatus,
+        message: message,
       });
     } catch (error: any) {
-      console.log('ResetPassword error:', error);
       set({
         status: 'error',
-        message: error.response?.data?.message || 'Password reset failed',
+        message:
+          error.response?.data?.message || 'Reset password confirm failed',
       });
+  
     }
   },
 
-
-  // 4) CLEAR THE STORE
-  clear: () => set({
-    userdata: null,
-    status: '',
-    verifyStatus: '',
-    message: '',
-    resendStatus: '',
-    apiStatus: '',
-    emailForReset: null,
-  }),
+  // (4) Xoá dữ liệu trong store
+  clear: () =>
+    set({
+      userdata: null,
+      status: '',
+      verifyStatus: '',
+      message: '',
+      resendStatus: '',
+      apiStatus: '',
+    }),
 }));

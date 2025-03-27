@@ -69,7 +69,7 @@ const GenerateScheduleScreen = () => {
           <Text style={styles.actionButtonText}>Add{'\n'}Schedule</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('HistoryCalendarScreen' as never)}}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('ScheduleHistoryScreen' as never)}}>
           <Icon name="time-outline" size={24} color="#555" />
           <Text style={styles.actionButtonText}>History</Text>
         </TouchableOpacity>
