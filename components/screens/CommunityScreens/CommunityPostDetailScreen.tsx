@@ -10,16 +10,16 @@ import {
   StatusBar,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-
-const CommunityPostDetailScreen = ({ onBack }) => {
+import BackButton from '../../BackButton';
+const CommunityPostDetailScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
       {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Icon name="chevron-back" size={24} color="#000" />
+        <TouchableOpacity >
+          <BackButton size={24} />
         </TouchableOpacity>
       </View>
       

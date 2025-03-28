@@ -4,6 +4,7 @@ import WelcomeInfoScreen from '../screens/WelcomeInfoScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import RecordScreen from '../screens/RecordScreen';
+import SearchResultsScreen from '../screens/SearchScreenResult';
 // import ExercisesScreen from '../screens/ExercisesScreen';
 import ExpertChatScreen from '../screens/ExpertChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -66,7 +67,8 @@ export const stackScreens = [
   { name: 'ScheduleScreen', component: ScheduleScreen },
   { name: 'RateScheduleScreen', component: RateScheduleScreen },
   { name: 'RiskWarningScreen', component: RiskWarningScreen },
-  { name: 'SearchScreen', component: SearchScreen },
+  { name: 'SearchScreen', component: SearchResultsScreen },
+  { name: 'SearchResultsScreen', component: SearchResultsScreen },
   { name: 'DeviceNotificationsScreen', component: DeviceNotificationScreen },
   { name: 'CaloriesScreen', component: CaloriesScreen },
   { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },

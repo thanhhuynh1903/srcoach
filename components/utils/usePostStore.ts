@@ -1,6 +1,7 @@
 import {create} from 'zustand';
 import useApiStore from './zustandfetchAPI';
 import useAuthStore from './useAuthStore';
+
 interface Post {
   id: string;
   title: string;
@@ -31,26 +32,26 @@ interface PostState {
   clearCurrent: () => void;
 }
 
+const api = useApiStore.getState();
+
 export const usePostStore = create<PostState>((set, get) => ({
   post: [],
   currentPost: null,
   isLoading: false,
   error: null,
 
-
   getAll: async () => {
-    const api = useApiStore.getState();
     console.log(api);
 
     set({isLoading: true});
 
     try {
       await api.fetchData('/posts');
-      console.log('api',api);
-      
+      console.log('api', api);
+
       const response = useApiStore.getState().data;
-      console.log('response in post',response);
-      
+      console.log('response in post', response);
+
       if (response?.status === 'success' && Array.isArray(response.data)) {
         set({post: response.data, isLoading: false});
       } else {
@@ -67,21 +68,24 @@ export const usePostStore = create<PostState>((set, get) => ({
   },
 
   getDetail: async (id: string) => {
-    const api = useApiStore.getState();
-    set({ isLoading: true, error: null, currentPost: null });
-    
+    set({isLoading: true, error: null, currentPost: null});
+
     try {
       await api.fetchData(`/posts/${id}`);
       const response = api.data as PostApiResponse;
-
-      if (response?.status === "success" && response.data) {
-        set({ currentPost: response.data as Post, isLoading: false });
+      console.log('response in post detail', response);
+      
+      if (response?.status === 'success' && response.data) {
+        set({currentPost: response.data as Post, isLoading: false});
       } else {
-        set({ error: response?.message || "News article not found", isLoading: false });
+        set({
+          error: response?.message || 'News article not found',
+          isLoading: false,
+        });
       }
     } catch (error: any) {
       console.error(error);
-      set({ error: error.message, isLoading: false });
+      set({error: error.message, isLoading: false});
     }
   },
 

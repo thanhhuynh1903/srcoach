@@ -159,7 +159,7 @@ const CommunityScreen = () => {
       style={styles.postItem}
       onPress={() =>
         navigation.navigate('CommunityPostDetailScreen', {
-          id: item.id,
+          id: item.id
         })
       }>
       <View style={styles.postHeader}>
