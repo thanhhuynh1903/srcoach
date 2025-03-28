@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import {useNavigation} from '@react-navigation/native';
-import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
+import { usePostStore } from '../../utils/usePostStore';
 
+// Interface cho dữ liệu tin tức
 interface NewsItem {
   id: string;
   title: string;
@@ -22,8 +24,49 @@ interface NewsItem {
   created_at: string;
 }
 
+// Interface cho User
+interface User {
+  id: string;
+  username: string;
+  user_level: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+// Interface cho Tag
+interface Tag {
+  tag_name: string;
+}
+
+// Interface cho Post từ API
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string | null;
+  exercise_session_record_id: string | null;
+  User: User;
+  postTags: Tag[];
+  PostVote: any[];
+  PostComment: any[];
+  images: string[];
+  upvote_count: number;
+  downvote_count: number;
+  comment_count: number;
+  is_upvoted: boolean;
+  is_downvoted: boolean;
+}
+
 const CommunityScreen = () => {
   const navigation = useNavigation();
+  const { post: posts, isLoading, error, getAll } = usePostStore();
+  
+  useEffect(() => {
+    getAll();
+  }, []);
 
   // Static news data
   const news = [
@@ -52,6 +95,26 @@ const CommunityScreen = () => {
       created_at: '2023-06-05T14:15:00Z',
     },
   ];
+
+  const formatTimeAgo = (dateString) => {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffMs = now.getTime() - postDate.getTime();
+    
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) {
+      return `${diffDays}d ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ago`;
+    } else if (diffMins > 0) {
+      return `${diffMins}m ago`;
+    } else {
+      return 'Just now';
+    }
+  };
 
   const renderNewsItem = ({item}: {item: NewsItem}) => (
     <TouchableOpacity
@@ -91,7 +154,7 @@ const CommunityScreen = () => {
     </TouchableOpacity>
   );
 
-  const renderPostItem = ({item}: {item: any}) => (
+  const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity
       style={styles.postItem}
       onPress={() =>
@@ -102,20 +165,35 @@ const CommunityScreen = () => {
       <View style={styles.postHeader}>
         <View style={[styles.avatar, styles.avatarPlaceholder]} />
         <View>
-          <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.postTime}>{item.time}</Text>
+          <Text style={styles.name}>{item.User.username}</Text>
+          <Text style={styles.postTime}>{formatTimeAgo(item.created_at)}</Text>
         </View>
       </View>
-      <Text style={styles.postText}>{item.post}</Text>
-      <View style={[styles.postImage, styles.postImagePlaceholder]} />
+      {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
+      <Text style={styles.postText}>{item.content}</Text>
+      {item.images && item.images.length > 0 && (
+        <Image 
+          source={{ uri: item.images[0] }} 
+          style={styles.postImage} 
+          resizeMode="cover"
+        />
+      )}
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.postActionButton}>
-          <Icon name="arrow-up-outline" size={20} />
-          <Text style={styles.postActionText}>{item.upvotes}</Text>
+          <Icon 
+            name="arrow-up-outline" 
+            size={20} 
+            color={item.is_upvoted ? theme.colors.primary : undefined} 
+          />
+          <Text style={styles.postActionText}>{item.upvote_count}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.postActionButton}>
-          <Icon name="arrow-down-outline" size={20} />
-          <Text style={styles.postActionText}>{item.downvotes}</Text>
+          <Icon 
+            name="arrow-down-outline" 
+            size={20} 
+            color={item.is_downvoted ? theme.colors.primary : undefined} 
+          />
+          <Text style={styles.postActionText}>{item.downvote_count}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.postActionButton}
@@ -125,11 +203,63 @@ const CommunityScreen = () => {
             })
           }>
           <Icon name="chatbubble-outline" size={20} />
-          <Text style={styles.postActionText}>{item.comments}</Text>
+          <Text style={styles.postActionText}>{item.comment_count}</Text>
         </TouchableOpacity>
+        {item.postTags && item.postTags.length > 0 && (
+          <View style={styles.tagsContainer}>
+            {item.postTags.map((tag, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{tag.tag_name}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
+
+  const renderPostsContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading posts...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle-outline" size={48} color="red" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={getAll}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!posts || posts.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Icon name="document-text-outline" size={48} color="#999" />
+          <Text style={styles.emptyText}>No posts available</Text>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        style={styles.postList}
+        data={posts}
+        renderItem={renderPostItem}
+        showsVerticalScrollIndicator={false}
+        keyExtractor={item => item.id}
+        scrollEnabled={false}
+      />
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -176,14 +306,7 @@ const CommunityScreen = () => {
         />
 
         <Text style={styles.sectionTitle}>Community Posts</Text>
-        <FlatList
-          style={styles.postList}
-          data={communityPosts}
-          renderItem={renderPostItem}
-          showsVerticalScrollIndicator={false}
-          keyExtractor={item => item.id}
-          scrollEnabled={false}
-        />
+        {renderPostsContent()}
       </ScrollView>
     </View>
   );
@@ -259,52 +382,81 @@ const styles = StyleSheet.create({
   name: {fontWeight: 'bold'},
   postList: {marginBottom: 100},
   postTime: {color: '#999', fontSize: 12},
+  postTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginVertical: 5,
+  },
   postText: {marginVertical: 10},
   postImage: {width: '100%', height: 200, borderRadius: 10, marginBottom: 10},
   postImagePlaceholder: {backgroundColor: '#e0e0e0'},
-  postActions: {flexDirection: 'row', justifyContent: 'flex-start'},
+  postActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
   postActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 16,
   },
   postActionText: {marginLeft: 4, fontSize: 14},
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  tag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 8,
+    marginTop: 5,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  errorContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    marginTop: 10,
+    color: '#666',
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 15,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 5,
+  },
+  retryButtonText: {
+    color: 'white',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    marginTop: 10,
+    color: '#666',
+  },
 });
-
-const communityPosts = [
-  {
-    id: '1',
-    name: 'Sarah Miller',
-    time: '1h ago',
-    post: 'Just completed a 5x5 strength program! Feeling stronger than ever.',
-    avatar: null,
-    image: null,
-    upvotes: 128,
-    downvotes: 5,
-    comments: 24,
-  },
-  {
-    id: '2',
-    name: 'Mike Chen',
-    time: '2h ago',
-    post: 'New PR on deadlifts today! 315lbs × 5 reps',
-    avatar: null,
-    image: null,
-    upvotes: 256,
-    downvotes: 10,
-    comments: 42,
-  },
-  {
-    id: '3',
-    name: 'Emma Wilson',
-    time: '3h ago',
-    post: 'Morning yoga session to start the day right! Who else loves morning workouts?',
-    avatar: null,
-    image: null,
-    upvotes: 180,
-    downvotes: 8,
-    comments: 30,
-  },
-];
 
 export default CommunityScreen;

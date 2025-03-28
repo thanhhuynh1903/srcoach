@@ -33,17 +33,22 @@ import Animated, {
 } from 'react-native-reanimated';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../utils/useAuthStore';
 const AnimatedView = Animated.createAnimatedComponent(View);
 
 const HomeScreen = (props: any) => {
   const theme = useTheme();
   const opacity = useSharedValue(0);
   const navigation = useNavigation();
+  const token = useAuthStore.getState().token;
   useEffect(() => {
-    console.log('authToken', AsyncStorage.getItem('authToken'));
-console.log('authTokenTimestamp at', AsyncStorage.getItem('authTokenTimestamp'));
-console.log('userdata at', AsyncStorage.getItem('userdata'));
-    
+    console.log('token at', token);
+    console.log(
+      'authTokenTimestamp at',
+      AsyncStorage.getItem('authTokenTimestamp'),
+    );
+    console.log('userdata at', AsyncStorage.getItem('userdata'));
+
     opacity.value = withTiming(1, {duration: 1000});
     return () => {
       opacity.value = withTiming(0, {duration: 500});
