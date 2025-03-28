@@ -43,7 +43,7 @@ const useAuthStore = create<AuthState>((set) => ({
     try {
       const storedToken = await AsyncStorage.getItem('authToken');
       set({ token: storedToken });
-      console.log('Token loaded:', storedToken);
+      // console.log('Token loaded:', storedToken);
     } catch (error) {
       console.error('Failed to load token:', error);
     }

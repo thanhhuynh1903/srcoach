@@ -19,7 +19,7 @@ import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import Toast from 'react-native-toast-message';
 import {useLoginStore} from '../utils/useLoginStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../utils/useAuthStore';
 
 type RootStackParamList = {
   HomeTabs: undefined;
@@ -38,7 +38,7 @@ const LoginScreen: React.FC<{
   const [showPassword, setShowPassword] = useState(false);
   const {login, message, status, clear} = useLoginStore();
   const canGoBack = navigation.canGoBack();
-
+  const {loadToken} = useAuthStore();
   useEffect(() => {
     clear();
     GoogleSignin.configure({
@@ -52,6 +52,7 @@ const LoginScreen: React.FC<{
 
     if (status === 'success') {
       showToast('success', message, 'Welcome to back!');
+      loadToken();
       navigation.navigate('HomeTabs');
       clear();
     } else if (status === 'wait') {

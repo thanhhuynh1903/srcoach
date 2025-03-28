@@ -3,10 +3,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 import useAuthStore from "./useAuthStore";
 
 const MASTER_URL = "https://xavia.pro/api";
-
 const token = useAuthStore.getState().token;
-console.log("Token at API:", token);
-
 // Interface cho state của API store
 interface ApiState {
   data: any | null;
