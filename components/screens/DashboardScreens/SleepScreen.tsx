@@ -12,6 +12,18 @@ import {PieChart} from 'react-native-gifted-charts';
 import {useFocusEffect} from '@react-navigation/native';
 import { fetchSleepRecords, initializeHealthConnect, SleepSessionRecord } from '../../utils/utils_healthconnect';
 
+// Add these constants at the top of the file
+const SleepType = {
+  UNKNOWN: 0,
+  SLEEPING: 2,
+  OUT_OF_BED: 3,
+  LIGHT: 4,
+  DEEP: 5,
+  REM: 6,
+  AWAKE: 1,
+  AWAKE_IN_BED: 7,
+} as const;
+
 const SleepScreen = () => {
   const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -52,17 +64,22 @@ const SleepScreen = () => {
       const duration = (end.getTime() - start.getTime()) / (1000 * 60); // in minutes
 
       switch(record.stage) {
-        case 'DEEP':
+        case SleepType.DEEP:
           deep += duration;
           break;
-        case 'LIGHT':
+        case SleepType.LIGHT:
           light += duration;
           break;
-        case 'REM':
+        case SleepType.REM:
           rem += duration;
           break;
-        case 'AWAKE':
+        case SleepType.AWAKE:
+        case SleepType.AWAKE_IN_BED:
           awake += duration;
+          break;
+        case SleepType.SLEEPING:
+          // Default to light sleep if just "SLEEPING" is specified
+          light += duration;
           break;
       }
 
@@ -99,17 +116,21 @@ const SleepScreen = () => {
       hours: Math.random() * 2 + 5
     }));
 
+    // Calculate sleep quality based on total sleep time and deep sleep ratio
+    const deepSleepRatio = deep / totalDuration;
+    const totalSleepHours = totalDuration / 60;
+    
     return {
       pieData,
       chartData,
       metrics: {
-        score: Math.min(100, Math.round(80 + (deep / totalDuration * 20))) || 0,
+        score: calculateSleepScore(totalSleepHours, deepSleepRatio),
         heartRate: 60 + Math.round(Math.random() * 10),
         breathing: 12 + Math.round(Math.random() * 4),
         bloodOxygen: 95 + Math.round(Math.random() * 3),
       },
       duration: durationText,
-      quality: getSleepQuality(deep / totalDuration),
+      quality: getSleepQuality(totalSleepHours, deepSleepRatio),
       timeRange: timeRangeText,
       stages: {
         deep,
@@ -120,10 +141,18 @@ const SleepScreen = () => {
     };
   };
 
-  const getSleepQuality = (deepSleepRatio: number): string => {
-    if (deepSleepRatio > 0.25) return 'Excellent';
-    if (deepSleepRatio > 0.2) return 'Good';
-    if (deepSleepRatio > 0.15) return 'Fair';
+  const calculateSleepScore = (totalHours: number, deepSleepRatio: number): number => {
+    // Base score on total sleep time (50% weight) and deep sleep ratio (50% weight)
+    const hoursScore = Math.min(100, Math.max(0, (totalHours / 8) * 50));
+    const deepSleepScore = Math.min(50, deepSleepRatio * 100);
+    return Math.round(hoursScore + deepSleepScore);
+  };
+
+  const getSleepQuality = (totalHours: number, deepSleepRatio: number): string => {
+    // Consider both total sleep time and deep sleep ratio
+    if (totalHours >= 7 && deepSleepRatio >= 0.2) return 'Excellent';
+    if (totalHours >= 6.5 && deepSleepRatio >= 0.15) return 'Good';
+    if (totalHours >= 6 || deepSleepRatio >= 0.1) return 'Fair';
     return 'Poor';
   };
 
@@ -407,14 +436,14 @@ const SleepScreen = () => {
           <View style={styles.notesContainer}>
             <Text style={styles.sectionTitle}>Insights</Text>
             <View style={styles.tagsContainer}>
-              {sleepData.stages.deep / (sleepData.stages.deep + sleepData.stages.light + sleepData.stages.rem) > 0.2 && (
+              {sleepData.quality === 'Excellent' && (
                 <View style={[styles.tag, {backgroundColor: '#F0EEFF'}]}>
-                  <Text style={[styles.tagText, {color: '#6C5CE7'}]}>Good deep sleep</Text>
+                  <Text style={[styles.tagText, {color: '#6C5CE7'}]}>Excellent sleep quality</Text>
                 </View>
               )}
-              {sleepData.stages.awake / (sleepData.stages.deep + sleepData.stages.light + sleepData.stages.rem + sleepData.stages.awake) < 0.1 && (
+              {sleepData.quality === 'Good' && (
                 <View style={[styles.tag, {backgroundColor: '#E6F7EF'}]}>
-                  <Text style={[styles.tagText, {color: '#10B981'}]}>Few awakenings</Text>
+                  <Text style={[styles.tagText, {color: '#10B981'}]}>Good sleep quality</Text>
                 </View>
               )}
               {sleepData.metrics.score > 80 && (

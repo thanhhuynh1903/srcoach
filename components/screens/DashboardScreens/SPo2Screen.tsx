@@ -43,7 +43,6 @@ const SPo2Screen = () => {
         return;
       }
 
-      // Calculate date range based on active view
       let startDate = new Date(currentDate);
       let endDate = new Date(currentDate);
 
