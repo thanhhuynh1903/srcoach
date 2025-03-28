@@ -51,7 +51,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       await AsyncStorage.setItem('authTokenTimestamp', Date.now().toString());
 
       console.log('User data:', user);
-      console.log('Token:', accessToken);
+      console.log('Token when login:', accessToken);
 
       set({userdata : user, status: response?.data?.status, message : response?.data?.message});
     } catch (error: any) {

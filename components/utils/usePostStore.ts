@@ -1,5 +1,6 @@
 import {create} from 'zustand';
 import useApiStore from './zustandfetchAPI';
+import useAuthStore from './useAuthStore';
 interface Post {
   id: string;
   title: string;
@@ -36,6 +37,7 @@ export const usePostStore = create<PostState>((set, get) => ({
   isLoading: false,
   error: null,
 
+
   getAll: async () => {
     const api = useApiStore.getState();
     console.log(api);
@@ -44,8 +46,11 @@ export const usePostStore = create<PostState>((set, get) => ({
 
     try {
       await api.fetchData('/posts');
-      const response = api.data as PostApiResponse;
-
+      console.log('api',api);
+      
+      const response = useApiStore.getState().data;
+      console.log('response in post',response);
+      
       if (response?.status === 'success' && Array.isArray(response.data)) {
         set({post: response.data, isLoading: false});
       } else {
