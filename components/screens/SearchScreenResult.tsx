@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-const SearchResultsScreen = ({route, navigation}) => {
+const SearchResultsScreen = ({}) => {
   // In a real app, you would get the query from route.params
-  const [searchQuery, setSearchQuery] = useState('UI/UX Design');
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Posts');
 
   // Sample data for posts
