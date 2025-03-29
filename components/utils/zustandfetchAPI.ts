@@ -83,7 +83,7 @@ const useApiStore = create<ApiState>((set) => ({
     }
   },
   
-
+//Khoan sử dụng từ function post này trở xuống
   postData: async (path: string, payload: any) => {
     set((state) => ({ ...state, isLoading: true, error: null }));
     try {
