@@ -1,6 +1,5 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import useApiStore from './zustandfetchAPI';
-import useAuthStore from './useAuthStore';
 
 interface Post {
   id: string;
@@ -17,77 +16,74 @@ interface Post {
   is_upvoted: boolean;
   is_downvoted: boolean;
   images: string[];
+  User?: {
+    username: string;
+    avatar?: string;
+  };
 }
-interface PostApiResponse {
+
+interface ApiResponse<T> {
   status: string;
-  message: string;
-  data: Post[] | Post | null;
+  message?: string;
+  data: T;
 }
+
 interface PostState {
-  post: Post[];
+  posts: Post[];
   currentPost: Post | null;
   isLoading: boolean;
-  error: string | null;
+  status: string | null;
   getAll: () => Promise<void>;
+  getDetail: (id: string) => Promise<void>;
   clearCurrent: () => void;
 }
 
 const api = useApiStore.getState();
 
 export const usePostStore = create<PostState>((set, get) => ({
-  post: [],
+  posts: [],
   currentPost: null,
   isLoading: false,
-  error: null,
-
+status: null,
   getAll: async () => {
-    console.log(api);
-
-    set({isLoading: true});
-
+    set({ isLoading: true, status: null });
+    
     try {
-      await api.fetchData('/posts');
-      console.log('api', api);
-
-      const response = useApiStore.getState().data;
-      console.log('response in post', response);
-
-      if (response?.status === 'success' && Array.isArray(response.data)) {
-        set({post: response.data, isLoading: false});
+      const response = await api.fetchData<ApiResponse<Post[]>>('/posts');
+      console.log('Response:', response);
+      
+      if (response && response.status === 'success' && Array.isArray(response.data)) {
+        set({ posts: response.data, isLoading: false, status: response.status });
       } else {
         set({
-          post: [],
-          error: response?.message || 'No posts available',
+          posts: [],
           isLoading: false,
+          status: response?.status || 'Failed to fetch posts',
         });
       }
     } catch (error: any) {
-      console.error(error);
-      set({error: error.message, isLoading: false});
+      set({ isLoading: false, error: error.message });
     }
   },
 
   getDetail: async (id: string) => {
-    set({isLoading: true, error: null, currentPost: null});
-
+    set({ isLoading: true, error: null, currentPost: null });
+    
     try {
-      await api.fetchData(`/posts/${id}`);
-      const response = api.data as PostApiResponse;
-      console.log('response in post detail', response);
+      const response = await api.fetchDataDetail<ApiResponse<Post>>(`/posts/${id}`);
       
-      if (response?.status === 'success' && response.data) {
-        set({currentPost: response.data as Post, isLoading: false});
+      if (response && response.status === 'success' && response.data) {
+        set({ currentPost: response.data, isLoading: false, error: null });
       } else {
         set({
-          error: response?.message || 'News article not found',
           isLoading: false,
+          error: response?.message || 'Post not found',
         });
       }
     } catch (error: any) {
-      console.error(error);
-      set({error: error.message, isLoading: false});
+      set({ isLoading: false, error: error.message });
     }
   },
 
-  clearCurrent: () => set({currentPost: null}),
+  clearCurrent: () => set({ currentPost: null }),
 }));

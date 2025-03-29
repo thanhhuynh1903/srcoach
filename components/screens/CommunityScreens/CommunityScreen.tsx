@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import {useNavigation} from '@react-navigation/native';
-import { usePostStore } from '../../utils/usePostStore';
+import {usePostStore} from '../../utils/usePostStore';
 
 // Interface cho dữ liệu tin tức
 interface NewsItem {
@@ -62,10 +62,12 @@ interface Post {
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const { post: posts, isLoading, error, getAll } = usePostStore();
-  
+  const {isLoading, status, getAll} = usePostStore();
+  const post = usePostStore(state => state.posts);
   useEffect(() => {
-    getAll();
+      getAll();
+      console.log('posts', post);
+      
   }, []);
 
   // Static news data
@@ -100,11 +102,11 @@ const CommunityScreen = () => {
     const now = new Date();
     const postDate = new Date(dateString);
     const diffMs = now.getTime() - postDate.getTime();
-    
+
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffDays > 0) {
       return `${diffDays}d ago`;
     } else if (diffHours > 0) {
@@ -159,7 +161,7 @@ const CommunityScreen = () => {
       style={styles.postItem}
       onPress={() =>
         navigation.navigate('CommunityPostDetailScreen', {
-          id: item.id
+          id: item.id,
         })
       }>
       <View style={styles.postHeader}>
@@ -172,26 +174,26 @@ const CommunityScreen = () => {
       {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
       <Text style={styles.postText}>{item.content}</Text>
       {item.images && item.images.length > 0 && (
-        <Image 
-          source={{ uri: item.images[0] }} 
-          style={styles.postImage} 
+        <Image
+          source={{uri: item.images[0]}}
+          style={styles.postImage}
           resizeMode="cover"
         />
       )}
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.postActionButton}>
-          <Icon 
-            name="arrow-up-outline" 
-            size={20} 
-            color={item.is_upvoted ? theme.colors.primary : undefined} 
+          <Icon
+            name="arrow-up-outline"
+            size={20}
+            color={item.is_upvoted ? theme.colors.primary : undefined}
           />
           <Text style={styles.postActionText}>{item.upvote_count}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.postActionButton}>
-          <Icon 
-            name="arrow-down-outline" 
-            size={20} 
-            color={item.is_downvoted ? theme.colors.primary : undefined} 
+          <Icon
+            name="arrow-down-outline"
+            size={20}
+            color={item.is_downvoted ? theme.colors.primary : undefined}
           />
           <Text style={styles.postActionText}>{item.downvote_count}</Text>
         </TouchableOpacity>
@@ -228,11 +230,11 @@ const CommunityScreen = () => {
       );
     }
 
-    if (error) {
+    if (!status) {
       return (
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={48} color="red" />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{status}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={getAll}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -240,7 +242,7 @@ const CommunityScreen = () => {
       );
     }
 
-    if (!posts || posts.length === 0) {
+    if (!post || post.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <Icon name="document-text-outline" size={48} color="#999" />
@@ -252,7 +254,7 @@ const CommunityScreen = () => {
     return (
       <FlatList
         style={styles.postList}
-        data={posts}
+        data={post}
         renderItem={renderPostItem}
         showsVerticalScrollIndicator={false}
         keyExtractor={item => item.id}

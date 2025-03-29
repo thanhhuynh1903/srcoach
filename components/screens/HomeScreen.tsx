@@ -33,13 +33,22 @@ import Animated, {
 } from 'react-native-reanimated';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuthStore from '../utils/useAuthStore';
+
 const AnimatedView = Animated.createAnimatedComponent(View);
 
 const HomeScreen = (props: any) => {
   const theme = useTheme();
   const opacity = useSharedValue(0);
   const navigation = useNavigation();
+  const { token, loadToken } = useAuthStore(); // Sử dụng hook để lấy state và methods
+
   useEffect(() => {   
+    const loadUserToken = async () => {
+      await loadToken();
+    };
+    loadUserToken();
+    
     console.log('authTokenTimestamp at', AsyncStorage.getItem('authTokenTimestamp'),
     );
     console.log('userdata at', AsyncStorage.getItem('userdata'));
@@ -48,8 +57,13 @@ const HomeScreen = (props: any) => {
     return () => {
       opacity.value = withTiming(0, {duration: 500});
     };
-  }, [opacity]);
+  }, [opacity,loadToken]);
 
+  useEffect(() => {
+    // Log token sau khi đã được load
+    console.log("Token home:", token);
+  }, [token]);
+  
   const fadeInStyle = useAnimatedStyle(() => {
     return {
       opacity: opacity.value,

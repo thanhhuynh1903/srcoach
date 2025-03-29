@@ -11,12 +11,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { usePostStore } from '../../utils/usePostStore';
+import { useNavigation } from '@react-navigation/native';
+
 interface CommunityPostCreateScreenProps {
-  onPost: (postData: PostData) => void;
+  onPost?: (postData: PostData) => void;
 }
 
 interface PostData {
@@ -30,40 +35,98 @@ interface PostData {
 const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   onPost
 }) => {
+  const navigation = useNavigation();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [images, setImages] = useState<string[]>([
-    'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png',
-    'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png',
-    'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png'
-  ]);
+  const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [tags, setTags] = useState('');
   const [runRecord, setRunRecord] = useState('');
-  const { createPost } = usePostStore();
+  
+  const { createPost, isLoading, error } = usePostStore();
+
   const handleAddImage = () => {
-    // In a real app, this would open the image picker
-    console.log('Open image picker');
+    const options = {
+      mediaType: 'photo',
+      includeBase64: false,
+      maxHeight: 2000,
+      maxWidth: 2000,
+      quality: 0.8,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+        Alert.alert('Lỗi', response.errorMessage || 'Đã xảy ra lỗi khi chọn ảnh');
+      } else if (response.assets && response.assets.length > 0) {
+        // Thêm ảnh mới vào danh sách
+        setSelectedImages([...selectedImages, response.assets[0]]);
+      }
+    });
   };
 
   const handleRemoveImage = (index: number) => {
-    const updatedImages = [...images];
+    const updatedImages = [...selectedImages];
     updatedImages.splice(index, 1);
-    setImages(updatedImages);
+    setSelectedImages(updatedImages);
   };
 
-  const handlePost = () => {
-    const postData: PostData = {
-      title,
-      content,
-      images,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-      runRecord: runRecord || undefined
-    };
+  const handlePost = async () => {
+    if (!title.trim() || !content.trim()) {
+      Alert.alert('Enter more info', 'Please enter both title and content');
+      return;
+    }
 
-    onPost(postData);
+    try {
+      // Nếu có onPost callback (từ props), sử dụng nó
+      if (onPost) {
+        const postData: PostData = {
+          title: title.trim(),
+          content: content.trim(),
+          images: selectedImages.map(img => img.uri),
+          tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+          runRecord: runRecord || undefined
+        };
+        onPost(postData);
+        return;
+      }
+
+      // Ngược lại, sử dụng createPost từ usePostStore
+      await createPost({
+        title: title.trim(),
+        content: content.trim(),
+        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+        images: selectedImages,
+        exerciseSessionRecordId: runRecord || '',
+      });
+      
+      // Kiểm tra lỗi sau khi gọi API
+      if (usePostStore.getState().error) {
+        Alert.alert('Error', usePostStore.getState().error || 'Cannot create post');
+        return;
+      }
+
+      // Thành công, quay lại màn hình trước đó
+      Alert.alert('Success', 'Create post successfully', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error: any) {
+      console.error('Error creating post:', error);
+      Alert.alert('Error', error.message || 'Cannot create post');
+    }
   };
 
   const isPostButtonEnabled = title.trim() !== '' && content.trim() !== '';
+
+  // Hiển thị ảnh mẫu nếu không có ảnh được chọn
+  const displayImages = selectedImages.length > 0 
+    ? selectedImages.map(img => ({ uri: img.uri })) 
+    : [
+        { uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png' },
+        { uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png' },
+        { uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png' }
+      ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,10 +134,10 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
-            <BackButton size={24} />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Post</Text>
+        <Text style={styles.headerTitle}>Create post</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -88,7 +151,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
             <Text style={styles.label}>Title</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Enter your post title"
+              placeholder="Enter your title here..."
               placeholderTextColor="#999"
               value={title}
               onChangeText={setTitle}
@@ -112,22 +175,24 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
           {/* Images */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Images</Text>
+            <Text style={styles.label}>Image</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
               <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage}>
                 <Icon name="add" size={24} color="#999" />
                 <Text style={styles.addImageText}>Add</Text>
               </TouchableOpacity>
 
-              {images.map((image, index) => (
+              {displayImages.map((image, index) => (
                 <View key={index} style={styles.imageContainer}>
-                  <Image source={{ uri: image }} style={styles.image} />
-                  <TouchableOpacity
-                    style={styles.removeImageButton}
-                    onPress={() => handleRemoveImage(index)}
-                  >
-                    <Icon name="close-circle" size={22} color="#fff" />
-                  </TouchableOpacity>
+                  <Image source={{ uri: image.uri }} style={styles.image} />
+                  {selectedImages.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => handleRemoveImage(index)}
+                    >
+                      <Icon name="close-circle" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </ScrollView>
@@ -138,7 +203,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
             <Text style={styles.label}>Tags</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Add tags separated by comma"
+              placeholder="Add tags separated by commas..."
               placeholderTextColor="#999"
               value={tags}
               onChangeText={setTags}
@@ -146,11 +211,25 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           </View>
 
           {/* Run Record */}
-          <TouchableOpacity style={styles.runRecordButton}>
+          <TouchableOpacity 
+            style={styles.runRecordButton}
+            onPress={() => {
+              // Điều hướng đến màn hình chọn exercise record
+              // navigation.navigate('SelectExerciseRecordScreen');
+              Alert.alert('Sắp ra mắt', 'Tính năng này sẽ sớm được phát hành');
+            }}
+          >
             <Icon name="fitness-outline" size={20} color="#666" />
             <Text style={styles.runRecordText}>Select run record</Text>
             <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
           </TouchableOpacity>
+
+          {/* Error message */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
           {/* Spacer for bottom padding */}
           <View style={styles.bottomSpacer} />
@@ -162,12 +241,16 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
         <TouchableOpacity
           style={[
             styles.postButton,
-            !isPostButtonEnabled && styles.postButtonDisabled
+            (!isPostButtonEnabled || isLoading) && styles.postButtonDisabled
           ]}
           onPress={handlePost}
-          disabled={!isPostButtonEnabled}
+          disabled={!isPostButtonEnabled || isLoading}
         >
-          <Text style={styles.postButtonText}>Post</Text>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.postButtonText}>Đăng bài</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -203,5 +286,16 @@ const styles = StyleSheet.create({
   postButton: { height: 50, borderRadius: 8, backgroundColor: '#002366', alignItems: 'center', justifyContent: 'center' },
   postButtonDisabled: { backgroundColor: '#002366', opacity: 0.6 },
   postButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  errorContainer: { 
+    padding: 12, 
+    backgroundColor: '#ffebee', 
+    borderRadius: 8, 
+    marginBottom: 20 
+  },
+  errorText: { 
+    color: '#d32f2f', 
+    fontSize: 14 
+  },
 });
+
 export default CommunityPostCreateScreen;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -11,30 +11,64 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
+import {usePostStore} from '../../utils/usePostStore';
+import {useRoute} from '@react-navigation/native';
 const CommunityPostDetailScreen = () => {
+  const {getDetail, currentPost, isLoading, error} = usePostStore();
+  const id = useRoute().params?.id;
+  useEffect(() => {
+    if (id) {
+      getDetail(id);
+    } else {
+      console.error('No post ID provided');
+    }
+  }, [id]);
+
+  const formatTimeAgo = dateString => {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffMs = now.getTime() - postDate.getTime();
+
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) {
+      return `${diffDays}d ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ago`;
+    } else if (diffMins > 0) {
+      return `${diffMins}m ago`;
+    } else {
+      return 'Just now';
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity >
+        <TouchableOpacity>
           <BackButton size={24} />
         </TouchableOpacity>
       </View>
-      
+
       <ScrollView style={styles.scrollView}>
         {/* User info section */}
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
-            <Image 
-              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-              style={styles.avatar} 
+            <Image
+              source={{uri: 'https://randomuser.me/api/portraits/men/32.jpg'}}
+              style={styles.avatar}
             />
             <View style={styles.userTextInfo}>
-              <Text style={styles.userName}>Alex Runner</Text>
+              <Text style={styles.userName}>{currentPost?.User?.username}</Text>
               <View style={styles.postMetaInfo}>
-                <Text style={styles.postTime}>2 hours ago</Text>
+                <Text style={styles.postTime}>
+                  {formatTimeAgo(currentPost?.created_at)}
+                </Text>
                 <Text style={styles.postTime}> • </Text>
                 <Icon name="location-outline" size={14} color="#666" />
                 <Text style={styles.postTime}>Central Park</Text>
@@ -45,34 +79,35 @@ const CommunityPostDetailScreen = () => {
             <Icon name="ellipsis-horizontal" size={20} color="#000" />
           </TouchableOpacity>
         </View>
-        
+
         {/* Post content */}
         <View style={styles.postContent}>
-          <Text style={styles.postTitle}>Morning Run: Breaking Personal Records! 🏃</Text>
-          <Text style={styles.postDescription}>
-            Started the day with an amazing run through Central Park. The weather was perfect, and I managed to beat my previous record! Feeling energized and ready for the day ahead.
-          </Text>
-          
+          <Text style={styles.postTitle}>{currentPost?.title}</Text>
+          <Text style={styles.postDescription}>{currentPost?.content}.</Text>
+
           {/* Run photo */}
-          <Image 
-            source={{ uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.2_%20Community%20Post%20-%20Detail-NnsRFK0HSaCjisRnG2uYQI9JRmUCys.png' }} 
+
+          <Image
+            source={{uri: currentPost?.images[0].url}}
             style={styles.runPhoto}
             resizeMode="cover"
           />
-          
+
           {/* Run map */}
           <View style={styles.mapContainer}>
             <View style={styles.mapTitleContainer}>
               <Icon name="trending-up" size={16} color="#4285F4" />
               <Text style={styles.mapTitle}>Morning Route</Text>
             </View>
-            <Image 
-              source={{ uri: 'https://maps.googleapis.com/maps/api/staticmap?center=40.7831,-73.9712&zoom=14&size=600x300&maptype=roadmap&path=color:0x4285F4|weight:3|40.7831,-73.9712|40.7735,-73.9675|40.7685,-73.9751&key=YOUR_API_KEY' }} 
+            <Image
+              source={{
+                uri: 'https://maps.googleapis.com/maps/api/staticmap?center=40.7831,-73.9712&zoom=14&size=600x300&maptype=roadmap&path=color:0x4285F4|weight:3|40.7831,-73.9712|40.7735,-73.9675|40.7685,-73.9751&key=YOUR_API_KEY',
+              }}
               style={styles.mapImage}
               resizeMode="cover"
             />
           </View>
-          
+
           {/* Run stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
@@ -90,7 +125,7 @@ const CommunityPostDetailScreen = () => {
               <Text style={styles.statLabel}>Avg Heart Rate</Text>
             </View>
           </View>
-          
+
           {/* Post engagement */}
           <View style={styles.engagementContainer}>
             <View style={styles.engagementLeft}>
@@ -118,7 +153,7 @@ const CommunityPostDetailScreen = () => {
             </View>
           </View>
         </View>
-        
+
         {/* Comments section */}
         <View style={styles.commentsSection}>
           <View style={styles.commentsSectionHeader}>
@@ -128,12 +163,12 @@ const CommunityPostDetailScreen = () => {
               <Icon name="chevron-down" size={16} color="#666" />
             </TouchableOpacity>
           </View>
-          
+
           {/* Comment 1 */}
           <View style={styles.commentContainer}>
-            <Image 
-              source={{ uri: 'https://randomuser.me/api/portraits/women/32.jpg' }} 
-              style={styles.commentAvatar} 
+            <Image
+              source={{uri: 'https://randomuser.me/api/portraits/women/32.jpg'}}
+              style={styles.commentAvatar}
             />
             <View style={styles.commentContent}>
               <View style={styles.commentHeader}>
@@ -141,7 +176,8 @@ const CommunityPostDetailScreen = () => {
                 <Text style={styles.commentTime}>1 hour ago</Text>
               </View>
               <Text style={styles.commentText}>
-                Amazing pace! I run this route too, but never managed to get such a good time. Any tips for improving speed?
+                Amazing pace! I run this route too, but never managed to get
+                such a good time. Any tips for improving speed?
               </Text>
               <View style={styles.commentActions}>
                 <View style={styles.commentVotes}>
@@ -157,12 +193,14 @@ const CommunityPostDetailScreen = () => {
                   <Text style={styles.replyButton}>Reply</Text>
                 </TouchableOpacity>
               </View>
-              
+
               {/* Reply to comment 1 */}
               <View style={styles.replyContainer}>
-                <Image 
-                  source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-                  style={styles.replyAvatar} 
+                <Image
+                  source={{
+                    uri: 'https://randomuser.me/api/portraits/men/32.jpg',
+                  }}
+                  style={styles.replyAvatar}
                 />
                 <View style={styles.replyContent}>
                   <View style={styles.commentHeader}>
@@ -170,7 +208,8 @@ const CommunityPostDetailScreen = () => {
                     <Text style={styles.commentTime}>45 mins ago</Text>
                   </View>
                   <Text style={styles.commentText}>
-                    Thanks Sarah! Consistent interval training has been key for me. Happy to share my training schedule!
+                    Thanks Sarah! Consistent interval training has been key for
+                    me. Happy to share my training schedule!
                   </Text>
                   <View style={styles.commentActions}>
                     <View style={styles.commentVotes}>
@@ -190,12 +229,12 @@ const CommunityPostDetailScreen = () => {
               </View>
             </View>
           </View>
-          
+
           {/* Comment 2 */}
           <View style={styles.commentContainer}>
-            <Image 
-              source={{ uri: 'https://randomuser.me/api/portraits/men/44.jpg' }} 
-              style={styles.commentAvatar} 
+            <Image
+              source={{uri: 'https://randomuser.me/api/portraits/men/44.jpg'}}
+              style={styles.commentAvatar}
             />
             <View style={styles.commentContent}>
               <View style={styles.commentHeader}>
@@ -203,7 +242,8 @@ const CommunityPostDetailScreen = () => {
                 <Text style={styles.commentTime}>2 hours ago</Text>
               </View>
               <Text style={styles.commentText}>
-                That heart rate is impressive for the distance. Great job maintaining the pace!
+                That heart rate is impressive for the distance. Great job
+                maintaining the pace!
               </Text>
               <View style={styles.commentActions}>
                 <View style={styles.commentVotes}>

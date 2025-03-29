@@ -52,7 +52,6 @@ const LoginScreen: React.FC<{
 
     if (status === 'success') {
       showToast('success', message, 'Welcome to back!');
-      loadToken();
       navigation.navigate('HomeTabs');
       clear();
     } else if (status === 'wait') {
@@ -64,7 +63,7 @@ const LoginScreen: React.FC<{
       //If error, clear the clear() function
       clear();
     }
-  }, [status, message, navigation]);
+  }, [status, message, navigation,loadToken]);
 
   const showToast = (type: string, text1: string, text2?: string) => {
     Toast.show({
@@ -83,6 +82,10 @@ const LoginScreen: React.FC<{
     setLoading(true);
     try {
       await login(email, password);
+      if (status === 'success') {
+        // Đợi cho quá trình lưu token hoàn tất
+        await loadToken();
+      }
     } catch (error) {
       console.error(error);
     } finally {
