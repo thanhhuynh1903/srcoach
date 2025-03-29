@@ -14,12 +14,8 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
 import BackButton from '../../BackButton';
 import {useFocusEffect} from '@react-navigation/native';
-import {
-  initialize,
-  readRecords,
-  requestPermission,
-} from 'react-native-health-connect';
 import {format, startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
+import { fetchHeartRateRecords, fetchRestingHeartRateRecords, initializeHealthConnect } from '../../utils/utils_healthconnect';
 
 const {width} = Dimensions.get('window');
 
@@ -260,21 +256,9 @@ const HeartRateScreen = () => {
   const readSampleData = async () => {
     try {
       setIsLoading(true);
-      const isInitialized = await initialize();
+      const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
-        setIsLoading(false);
-        return;
-      }
-
-      const grantedPermissions = await requestPermission([
-        {accessType: 'read', recordType: 'HeartRate'},
-        {accessType: 'read', recordType: 'RestingHeartRate'},
-      ]);
-
-      if (!grantedPermissions) {
-        console.log('Permissions not granted');
-        setIsLoading(false);
         return;
       }
 
@@ -302,37 +286,14 @@ const HeartRateScreen = () => {
           break;
       }
 
-      const heartRateData = await readRecords('HeartRate', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: startDate.toISOString(),
-          endTime: endDate.toISOString(),
-        },
-      });
+      const heartRateData = await fetchHeartRateRecords(startDate.toISOString(), endDate.toISOString());
+      const restingHeartRateData = await fetchRestingHeartRateRecords(startDate.toISOString(), endDate.toISOString());
 
-      const restingHeartRateData = await readRecords('RestingHeartRate', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: startDate.toISOString(),
-          endTime: endDate.toISOString(),
-        },
-      });
+      setHeartRateRecords(heartRateData);
+      setRestingHeartRateRecords(restingHeartRateData);
 
-      const processedHeartRateRecords = heartRateData.records.flatMap(r => {
-        return r.samples.map(s => ({
-          beatsPerMinute: s.beatsPerMinute,
-          startTime: s.time,
-          endTime: s.time,
-          metadata: r.metadata,
-          id: `${r.metadata.id}-${s.time}`,
-        }));
-      });
-
-      setHeartRateRecords(processedHeartRateRecords);
-      setRestingHeartRateRecords(restingHeartRateData.records);
-
-      if (processedHeartRateRecords.length > 0) {
-        const sorted = [...processedHeartRateRecords].sort((a, b) => 
+      if (heartRateData.length > 0) {
+        const sorted = [...heartRateData].sort((a, b) => 
           new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         );
         setCurrentHeartRate(sorted[0].beatsPerMinute);

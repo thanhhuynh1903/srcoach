@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import GridCard from '../GridCard';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {wp} from '../helpers/common';
 import {
@@ -22,14 +21,8 @@ import {
   fetchStepRecords,
   fetchTotalCaloriesRecords,
   initializeHealthConnect,
-  StepRecord,
-  DistanceRecord,
-  HeartRateRecord,
-  ActiveCaloriesRecord,
-  TotalCaloriesRecord,
-  OxygenSaturationRecord,
-  SleepSessionRecord,
 } from '../utils/utils_healthconnect';
+import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
 
 type TimeRange = 'day' | 'week' | 'month' | 'year';
 
@@ -54,11 +47,14 @@ const ChartDetailScreen = () => {
     oxygenSaturation: 100,
     sleep: 8,
   });
+  const [loading, setLoading] = useState(true);
 
   const getHealthData = async () => {
+    setLoading(true);
     const isInitialized = await initializeHealthConnect();
     if (!isInitialized) {
       console.log('Health Connect initialization failed');
+      setLoading(false);
       return;
     }
 
@@ -85,13 +81,23 @@ const ChartDetailScreen = () => {
     const endDateString = now.toISOString();
 
     try {
-      const stepsData = await fetchStepRecords(startDateString, endDateString);
-      const activeCaloriesData = await fetchActiveCaloriesRecords(startDateString, endDateString);
-      const totalCaloriesData = await fetchTotalCaloriesRecords(startDateString, endDateString);
-      const sleepData = await fetchSleepRecords(startDateString, endDateString);
-      const spo2Data = await fetchOxygenSaturationRecords(startDateString, endDateString);
-      const heartRateData = await fetchHeartRateRecords(startDateString, endDateString);
-      const distanceData = await fetchDistanceRecords(startDateString, endDateString);
+      const [
+        stepsData,
+        activeCaloriesData,
+        totalCaloriesData,
+        sleepData,
+        spo2Data,
+        heartRateData,
+        distanceData,
+      ] = await Promise.all([
+        fetchStepRecords(startDateString, endDateString),
+        fetchActiveCaloriesRecords(startDateString, endDateString),
+        fetchTotalCaloriesRecords(startDateString, endDateString),
+        fetchSleepRecords(startDateString, endDateString),
+        fetchOxygenSaturationRecords(startDateString, endDateString),
+        fetchHeartRateRecords(startDateString, endDateString),
+        fetchDistanceRecords(startDateString, endDateString),
+      ]);
 
       // Process and aggregate data
       const steps = stepsData.reduce((sum, record) => sum + record.count, 0);
@@ -122,6 +128,8 @@ const ChartDetailScreen = () => {
 
     } catch (error) {
       console.error('Error fetching health data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -155,6 +163,45 @@ const ChartDetailScreen = () => {
     </View>
   );
 
+  const MetricSkeleton = () => (
+    <ContentLoader 
+      speed={1}
+      width={wp(45)}
+      height={150}
+      viewBox={`0 0 ${wp(45)} 150`}
+      backgroundColor="#f3f3f3"
+      foregroundColor="#ecebeb"
+    >
+      <Circle cx="25" cy="25" r="25" />
+      <Rect x="0" y="65" rx="4" ry="4" width="100%" height="20" />
+      <Rect x="0" y="95" rx="4" ry="4" width="60%" height="15" />
+      <Rect x="0" y="120" rx="4" ry="4" width="80%" height="15" />
+    </ContentLoader>
+  );
+
+  const RowSkeleton = () => (
+    <View style={styles.row}>
+      <MetricSkeleton />
+      <MetricSkeleton />
+    </View>
+  );
+
+  const HeaderSkeleton = () => (
+    <ContentLoader 
+      speed={1}
+      width="100%"
+      height={80}
+      viewBox="0 0 400 80"
+      backgroundColor="#f3f3f3"
+      foregroundColor="#ecebeb"
+    >
+      <Circle cx="20" cy="20" r="20" />
+      <Rect x="250" y="10" rx="4" ry="4" width="30" height="30" />
+      <Rect x="20" y="60" rx="4" ry="4" width="150" height="15" />
+      <Rect x="20" y="85" rx="4" ry="4" width="200" height="20" />
+    </ContentLoader>
+  );
+
   return (
     <SafeAreaView style={{backgroundColor: '#F9FAFB', flex: 1}}>
       {/* Header */}
@@ -177,130 +224,152 @@ const ChartDetailScreen = () => {
             paddingHorizontal: 12,
             borderRadius: 12,
           }}>
-          <View style={styles.header_content}>
-            <Image
-              source={{
-                uri: 'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg',
-              }}
-              style={styles.avatar}
-            />
-
-            <TouchableOpacity style={styles.notificationButton}>
-              <Icon name="notifications-outline" size={24} color="#000" />
-            </TouchableOpacity>
-          </View>
-          {/* Greeting */}
-          <View style={styles.greetingContainer}>
-            <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-            <Text style={styles.greetingText}>Good morning, Alex</Text>
-          </View>
+          {loading ? (
+            <HeaderSkeleton />
+          ) : (
+            <>
+              <View style={styles.header_content}>
+                <Image
+                  source={{
+                    uri: 'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg',
+                  }}
+                  style={styles.avatar}
+                />
+                <TouchableOpacity style={styles.notificationButton}>
+                  <Icon name="notifications-outline" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.greetingContainer}>
+                <Text style={styles.dateText}>
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </Text>
+                <Text style={styles.greetingText}>Good morning, Alex</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {renderTimeRangeToggle()}
 
-        {/* Health Metrics Grid */}
-        <View style={styles.metricsGrid}>
-          <TouchableOpacity
-            style={styles.metricItem}
-            onPress={() => navigation.navigate('StepsScreen')}>
-            <View style={[styles.metricCircle, {backgroundColor: '#EFF6FF'}]}>
-              <Icon name="footsteps-outline" size={24} color="#2563EB" />
+        {loading ? (
+          <>
+            <View style={styles.metricsGrid}>
+              <MetricSkeleton />
+              <MetricSkeleton />
             </View>
-            <Text style={styles.metricValue}>{healthData.steps.toLocaleString()}</Text>
-            <Text style={styles.metricPercentage}>
-              {calculatePercentage(healthData.steps, totals.steps)}%
-            </Text>
-            <Text style={styles.metricLabel}>Steps</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.metricItem}
-            onPress={() => navigation.navigate('CaloriesScreen')}>
-            <View style={[styles.metricCircle, {backgroundColor: '#FEE2E2'}]}>
-              <Icon name="flame" size={24} color="#EF4444" />
+            <View style={styles.metricsGrid}>
+              <MetricSkeleton />
+              <MetricSkeleton />
             </View>
-            <Text style={styles.metricValue}>{Math.round(healthData.activeCalories / 1000 * 100) / 100} kcal</Text>
-            <Text style={styles.metricPercentage}>
-              {calculatePercentage(healthData.activeCalories, totals.activeCalories)}%
-            </Text>
-            <Text style={styles.metricLabel}>Active Calories</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.metricItem}
-            onPress={() => navigation.navigate('SleepScreen')}>
-            <View style={[styles.metricCircle, {backgroundColor: '#EEF2FF'}]}>
-              <Icon name="moon" size={24} color="#6366F1" />
+            <RowSkeleton />
+            <View style={{padding: 16}}>
+              <MetricSkeleton />
             </View>
-            <Text style={styles.metricValue}>
-              {Math.floor(healthData.sleep)}h {Math.round((healthData.sleep % 1) * 60)}m
-            </Text>
-            <Text style={styles.metricPercentage}>
-              {calculatePercentage(healthData.sleep, totals.sleep)}%
-            </Text>
-            <Text style={styles.metricLabel}>Sleep</Text>
-          </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={styles.metricsGrid}>
+              <TouchableOpacity
+                style={styles.metricItem}
+                onPress={() => navigation.navigate('StepsScreen')}>
+                <View style={[styles.metricCircle, {backgroundColor: '#EFF6FF'}]}>
+                  <Icon name="footsteps-outline" size={24} color="#2563EB" />
+                </View>
+                <Text style={styles.metricValue}>{healthData.steps.toLocaleString()}</Text>
+                <Text style={styles.metricPercentage}>
+                  {calculatePercentage(healthData.steps, totals.steps)}%
+                </Text>
+                <Text style={styles.metricLabel}>Steps</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.metricItem}
-            onPress={() => navigation.navigate('SPo2Screen')}>
-            <View style={[styles.metricCircle, {backgroundColor: '#ECFDF5'}]}>
-              <Icon name="water-outline" size={24} color="#10B981" />
+              <TouchableOpacity
+                style={styles.metricItem}
+                onPress={() => navigation.navigate('CaloriesScreen')}>
+                <View style={[styles.metricCircle, {backgroundColor: '#FEE2E2'}]}>
+                  <Icon name="flame" size={24} color="#EF4444" />
+                </View>
+                <Text style={styles.metricValue}>{Math.round(healthData.activeCalories / 1000 * 100) / 100} kcal</Text>
+                <Text style={styles.metricPercentage}>
+                  {calculatePercentage(healthData.activeCalories, totals.activeCalories)}%
+                </Text>
+                <Text style={styles.metricLabel}>Active Calories</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.metricItem}
+                onPress={() => navigation.navigate('SleepScreen')}>
+                <View style={[styles.metricCircle, {backgroundColor: '#EEF2FF'}]}>
+                  <Icon name="moon" size={24} color="#6366F1" />
+                </View>
+                <Text style={styles.metricValue}>
+                  {Math.floor(healthData.sleep)}h {Math.round((healthData.sleep % 1) * 60)}m
+                </Text>
+                <Text style={styles.metricPercentage}>
+                  {calculatePercentage(healthData.sleep, totals.sleep)}%
+                </Text>
+                <Text style={styles.metricLabel}>Sleep</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.metricItem}
+                onPress={() => navigation.navigate('SPo2Screen')}>
+                <View style={[styles.metricCircle, {backgroundColor: '#ECFDF5'}]}>
+                  <Icon name="water-outline" size={24} color="#10B981" />
+                </View>
+                <Text style={styles.metricValue}>{Math.round(healthData.oxygenSaturation)}%</Text>
+                <Text style={styles.metricPercentage}>
+                  {calculatePercentage(healthData.oxygenSaturation, totals.oxygenSaturation)}%
+                </Text>
+                <Text style={styles.metricLabel}>SpO2</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.metricValue}>{Math.round(healthData.oxygenSaturation)}%</Text>
-            <Text style={styles.metricPercentage}>
-              {calculatePercentage(healthData.oxygenSaturation, totals.oxygenSaturation)}%
-            </Text>
-            <Text style={styles.metricLabel}>SpO2</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* Additional Metrics */}
-        <View style={styles.row}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('HeartRateScreen')}
-            style={styles.touchable}>
-            <View style={styles.additionalMetricCard}>
-              <View style={[styles.metricCircle, {backgroundColor: '#FFF1F0'}]}>
-                <Icon name="heart" size={24} color="#FF4D4F" />
+            <View style={styles.row}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('HeartRateScreen')}
+                style={styles.touchable}>
+                <View style={styles.additionalMetricCard}>
+                  <View style={[styles.metricCircle, {backgroundColor: '#FFF1F0'}]}>
+                    <Icon name="heart" size={24} color="#FF4D4F" />
+                  </View>
+                  <Text style={styles.metricValue}>{Math.round(healthData.heartRate)}</Text>
+                  <Text style={styles.metricPercentage}>
+                    {calculatePercentage(healthData.heartRate, totals.heartRate)}%
+                  </Text>
+                  <Text style={styles.metricLabel}>Heart Rate (bpm)</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => navigation.navigate('DistanceScreen')}
+                style={styles.touchable}>
+                <View style={styles.additionalMetricCard}>
+                  <View style={[styles.metricCircle, {backgroundColor: '#F0F5FF'}]}>
+                    <Icon name="walk-outline" size={24} color="#6366F1" />
+                  </View>
+                  <Text style={styles.metricValue}>{healthData.distance.toFixed(1)}</Text>
+                  <Text style={styles.metricPercentage}>
+                    {calculatePercentage(healthData.distance, totals.distance)}%
+                  </Text>
+                  <Text style={styles.metricLabel}>Distance (km)</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.fullWidthMetric}
+              onPress={() => navigation.navigate('TotalCaloriesScreen')}>
+              <View style={[styles.metricCircle, {backgroundColor: '#FFF7E6'}]}>
+                <Icon name="nutrition-outline" size={24} color="#FAAD14" />
               </View>
-              <Text style={styles.metricValue}>{Math.round(healthData.heartRate)}</Text>
+              <Text style={styles.metricValue}>{Math.round(healthData.totalCalories / 1000 * 100) / 100}</Text>
               <Text style={styles.metricPercentage}>
-                {calculatePercentage(healthData.heartRate, totals.heartRate)}%
+                {calculatePercentage(healthData.totalCalories, totals.totalCalories)}%
               </Text>
-              <Text style={styles.metricLabel}>Heart Rate (bpm)</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => navigation.navigate('DistanceScreen')}
-            style={styles.touchable}>
-            <View style={styles.additionalMetricCard}>
-              <View style={[styles.metricCircle, {backgroundColor: '#F0F5FF'}]}>
-                <Icon name="walk-outline" size={24} color="#6366F1" />
-              </View>
-              <Text style={styles.metricValue}>{healthData.distance.toFixed(1)}</Text>
-              <Text style={styles.metricPercentage}>
-                {calculatePercentage(healthData.distance, totals.distance)}%
-              </Text>
-              <Text style={styles.metricLabel}>Distance (km)</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Total Calories */}
-        <TouchableOpacity
-          style={styles.fullWidthMetric}
-          onPress={() => navigation.navigate('TotalCaloriesScreen')}>
-          <View style={[styles.metricCircle, {backgroundColor: '#FFF7E6'}]}>
-            <Icon name="nutrition-outline" size={24} color="#FAAD14" />
-          </View>
-          <Text style={styles.metricValue}>{Math.round(healthData.totalCalories / 1000 * 100) / 100}</Text>
-          <Text style={styles.metricPercentage}>
-            {calculatePercentage(healthData.totalCalories, totals.totalCalories)}%
-          </Text>
-          <Text style={styles.metricLabel}>Total Calories</Text>
-        </TouchableOpacity>
+              <Text style={styles.metricLabel}>Total Calories</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

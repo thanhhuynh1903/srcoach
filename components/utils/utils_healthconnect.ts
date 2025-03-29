@@ -230,6 +230,7 @@ export const fetchHeartRateRecords = async (
   startTime: string,
   endTime: string,
 ): Promise<HeartRateRecord[]> => {
+  console.log(startTime)
   try {
     const healthData = await readRecords('HeartRate', {
       timeRangeFilter: {
@@ -260,7 +261,7 @@ export const fetchHeartRateRecords = async (
       params: { startTime, endTime },
     });
 
-    return response.data.data.map((record: any) => ({
+    const finalData = response.data.data.map((record: any) => ({
       beatsPerMinute: record.beats_per_minute,
       time: record.time || record.start_time,
       startTime: record.start_time,
@@ -268,6 +269,8 @@ export const fetchHeartRateRecords = async (
       id: record.record_id || record.id,
       dataOrigin: record.data_origin,
     }));
+
+    return finalData
   } catch (error) {
     console.error('Error with heart rate records:', error);
     return [];
@@ -338,8 +341,6 @@ export const fetchTotalCaloriesRecords = async (
       id: record.metadata?.id || '',
       dataOrigin: record.metadata?.dataOrigin || '',
     }));
-
-    console.log(records)
 
     try {
       await syncToBackend('/record-total-calories', records);
@@ -510,13 +511,12 @@ export const fetchRestingHeartRateRecords = async (
       dataOrigin: record.metadata?.dataOrigin || '',
     }));
 
-    // await syncToBackend('/records/resting-heart-rate', records);
+    await syncToBackend('/record-resting-heart-rate', records);
 
-    // const response = await api.get('/records/resting-heart-rate', {
-    //   params: {startTime, endTime},
-    // });
-    // return response.data.data;
-    return records
+    const response = await api.get('/record-resting-heart-rate', {
+      params: {startTime, endTime},
+    });
+    return response.data.data;
   } catch (error) {
     console.error('Error with resting heart rate records:', error);
     return [];
