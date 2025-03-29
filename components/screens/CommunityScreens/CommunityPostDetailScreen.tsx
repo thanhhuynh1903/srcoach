@@ -86,13 +86,13 @@ const CommunityPostDetailScreen = () => {
           <Text style={styles.postDescription}>{currentPost?.content}.</Text>
 
           {/* Run photo */}
-
+          {currentPost?.images && currentPost.images.length > 0 && (
           <Image
             source={{uri: currentPost?.images[0].url}}
             style={styles.runPhoto}
             resizeMode="cover"
-          />
-
+          />)
+          }
           {/* Run map */}
           <View style={styles.mapContainer}>
             <View style={styles.mapTitleContainer}>
@@ -107,7 +107,16 @@ const CommunityPostDetailScreen = () => {
               resizeMode="cover"
             />
           </View>
-
+          {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              <Text style={{fontSize: 16, fontWeight: 'bold',marginRight: 5}}>Tags : </Text>
+              {currentPost.tags.map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
           {/* Run stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
@@ -366,6 +375,25 @@ const styles = StyleSheet.create({
   mapImage: {
     width: '100%',
     height: 180,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  tag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 8,
+    marginTop: 5,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#666',
   },
   statsContainer: {
     flexDirection: 'row',

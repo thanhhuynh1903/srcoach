@@ -84,15 +84,41 @@ const useApiStore = create<ApiState>((set) => ({
   },
   
 //Khoan sử dụng từ function post này trở xuống
+  // postData: async (path: string, payload: any) => {
+  //   set((state) => ({ ...state, isLoading: true, error: null }));
+  //   try {
+  //     const response: AxiosResponse = await axiosInstance.post(path, payload);
+  //     set({ data: response.data, isLoading: false, status: null });
+  //   } catch (error: any) {
+  //     set({ data: null, isLoading: false, status: error.message });
+  //   }
+  // },
+
   postData: async (path: string, payload: any) => {
-    set((state) => ({ ...state, isLoading: true, error: null }));
+    set({ isLoading: true, status: null });
     try {
-      const response: AxiosResponse = await axiosInstance.post(path, payload);
-      set({ data: response.data, isLoading: false, status: null });
+      let headers = {};
+      
+      // Kiểm tra nếu payload là FormData
+      if (payload instanceof FormData) {
+        headers = { 'Content-Type': 'multipart/form-data' };
+      } else {
+        headers = { 'Content-Type': 'application/json' };
+        payload = JSON.stringify(payload);
+      }
+      
+      const response: AxiosResponse = await axiosInstance.post(path, payload, { headers });
+      console.log('response', response.data); 
+      
+      set({ data: response.data.data, isLoading: false, status: response.data.status });
+      return response.data;
     } catch (error: any) {
-      set({ data: null, isLoading: false, status: error.message });
+      const errorMessage = error.response?.data?.message || error.message;
+      set({ data: null, isLoading: false, status: errorMessage });
+      throw error;
     }
   },
+  
 
   postFileData: async (path: string, selectedFile: File, dataObject: Record<string, any>) => {
     set((state) => ({ ...state, isLoading: true, error: null }));
