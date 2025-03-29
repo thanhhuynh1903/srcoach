@@ -62,26 +62,26 @@ status: null,
         });
       }
     } catch (error: any) {
-      set({ isLoading: false, error: error.message });
+      set({ isLoading: false, status: error.message });
     }
   },
 
   getDetail: async (id: string) => {
-    set({ isLoading: true, error: null, currentPost: null });
+    set({ isLoading: true, status: null, currentPost: null });
     
     try {
       const response = await api.fetchDataDetail<ApiResponse<Post>>(`/posts/${id}`);
       
       if (response && response.status === 'success' && response.data) {
-        set({ currentPost: response.data, isLoading: false, error: null });
+        set({ currentPost: response.data, isLoading: false, status: null });
       } else {
         set({
           isLoading: false,
-          error: response?.message || 'Post not found',
+          status: response?.message || 'Post not found',
         });
       }
     } catch (error: any) {
-      set({ isLoading: false, error: error.message });
+      set({ isLoading: false, status: error.message });
     }
   },
 
