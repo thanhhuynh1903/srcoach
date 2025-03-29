@@ -18,8 +18,8 @@ interface ApiState {
   setData: (data?: any | null) => void;
   setDataDetail: (dataDetail?: any | null) => void;
   
-  fetchData: (path: string) => Promise<void>;
-  fetchDataDetail: (path: string) => Promise<void>;
+  fetchData: <T>(path: string) => Promise<T | null>;
+  fetchDataDetail: <T>(path: string) => Promise<T | null>;
   postData: (path: string, payload: any) => Promise<void>;
   postFileData: (path: string, selectedFile: File, dataObject: Record<string, any>) => Promise<void>;
   updateData: (path: string, payload: any) => Promise<void>;
@@ -58,38 +58,31 @@ const useApiStore = create<ApiState>((set) => ({
   setData: (data = null) => set({ data, isLoading: false }),
   setDataDetail: (dataDetail = null) => set({ dataDetail, isLoading: false }),
 
-  fetchData: async (path: string) => {
-    set((state) => ({ ...state, isLoading: true, error: null }));
+  fetchData: async <T>(path: string): Promise<T | null> => {
+    set({ isLoading: true, status: null });
     try {
       const response: AxiosResponse = await axiosInstance.get(path);
-      console.log("response", response.data);
-      if (response.data.status === "error") {
-        set({ data: null, isLoading: false, status: response.data.status });
-        return;
-      }else if (response.data.status === "success") {
-      set({ data: response.data, isLoading: false, status: response.data.status });
-      }
-      return;
+      set({ isLoading: false });
+      return response.data as T;
     } catch (error: any) {
-      set({ data: null, isLoading: false, status: error.message });
+      const errorMessage = error.response?.data?.message || error.message;
+      set({ isLoading: false, status: errorMessage });
+      return null;
     }
   },
-  fetchDataDetail: async (path: string) => {
-    set((state) => ({ ...state, isLoading: true, error: null }));
+  fetchDataDetail: async <T>(path: string): Promise<T | null> => {
+    set({ isLoading: true, status: null });
     try {
       const response: AxiosResponse = await axiosInstance.get(path);
-      console.log("response detail in zustand", response.data);
-      if (response.data.status === "success") {
-        set({ dataDetail: response.data, isLoading: false, status: response.data.status });
-        return;
-      } else {
-      set({ dataDetail: response.data, isLoading: false, status: response.data.status });
-      }
-      return;
+      set({ isLoading: false });
+      return response.data as T;
     } catch (error: any) {
-      set({ dataDetail: null, isLoading: false, status: error.message });
+      const errorMessage = error.response?.data?.message || error.message;
+      set({ isLoading: false, status: errorMessage });
+      return null;
     }
   },
+  
 
   postData: async (path: string, payload: any) => {
     set((state) => ({ ...state, isLoading: true, error: null }));

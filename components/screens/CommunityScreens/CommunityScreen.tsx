@@ -62,14 +62,13 @@ interface Post {
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const {post: posts, isLoading, status, getAll} = usePostStore();
-
+  const {isLoading, status, getAll} = usePostStore();
+  const post = usePostStore(state => state.posts);
   useEffect(() => {
-    if (status === 'success') {
-      console.log('Posts loaded successfully:', posts);
       getAll();
-    }
-  }, [getAll]);
+      console.log('posts', post);
+      
+  }, []);
 
   // Static news data
   const news = [
@@ -99,7 +98,7 @@ const CommunityScreen = () => {
     },
   ];
 
-  const formatTimeAgo = dateString => {
+  const formatTimeAgo = (dateString) => {
     const now = new Date();
     const postDate = new Date(dateString);
     const diffMs = now.getTime() - postDate.getTime();
@@ -243,7 +242,7 @@ const CommunityScreen = () => {
       );
     }
 
-    if (!posts || posts.length === 0) {
+    if (!post || post.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <Icon name="document-text-outline" size={48} color="#999" />
@@ -255,7 +254,7 @@ const CommunityScreen = () => {
     return (
       <FlatList
         style={styles.postList}
-        data={posts}
+        data={post}
         renderItem={renderPostItem}
         showsVerticalScrollIndicator={false}
         keyExtractor={item => item.id}
