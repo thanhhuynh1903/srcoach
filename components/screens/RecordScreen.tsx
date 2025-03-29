@@ -1,77 +1,82 @@
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ScreenWrapper from '../ScreenWrapper';
 import HeaderBar from '../HeaderBar';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {useCallback, useEffect, useState} from 'react';
-import {
-  initialize,
-  readRecord,
-  readRecords,
-  requestPermission,
-} from 'react-native-health-connect';
+import {useCallback, useState} from 'react';
 import {
   getNameFromExerciseType,
   getIconFromExerciseType,
 } from '../contants/exerciseType';
-import { DistanceRecord, ExerciseSession, fetchDistanceRecords, fetchExerciseSessionRecords, fetchStepRecords, initializeHealthConnect, StepRecord } from '../utils/utils_healthconnect';
+import {
+  DistanceRecord,
+  ExerciseSession,
+  fetchDistanceRecords,
+  fetchExerciseSessionRecords,
+  fetchStepRecords,
+  initializeHealthConnect,
+  StepRecord,
+} from '../utils/utils_healthconnect';
+import ContentLoader, { Rect } from 'react-content-loader/native';
+import {format, parseISO} from 'date-fns';
+
+const {width} = Dimensions.get('window');
 
 export default function RecordScreen() {
   const navigate = useNavigation();
-  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>(
-    [],
-  );
+  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
   const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
   const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Set start date to January 1, 2025
+  const startDate = new Date('2025-01-01T00:00:00.000Z').toISOString();
+  const endDate = new Date().toISOString();
 
   const generateData = (
     sessions: ExerciseSession[],
     steps: StepRecord[],
     distances: DistanceRecord[],
   ) => {
-    // Group sessions by date
     const sessionsByDate: Record<string, any[]> = {};
 
     sessions.forEach(session => {
-      const startDate = new Date(session.startTime);
-      const dateStr = startDate.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
-
+      const startDate = parseISO(session.startTime);
+      const dateStr = format(startDate, 'EEE, MMM d');
+      
       if (!sessionsByDate[dateStr]) {
         sessionsByDate[dateStr] = [];
       }
 
-      const endDate = new Date(session.endTime);
+      const endDate = parseISO(session.endTime);
       const duration = Math.round(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60),
       );
 
-      // Find matching distance record for this session
+      // Find matching distance record or generate reasonable estimate
       const distanceRecord = distances.find(
         d =>
-          new Date(d.startTime).getTime() === startDate.getTime() &&
-          new Date(d.endTime).getTime() === endDate.getTime(),
+          new Date(d.startTime).getTime() <= startDate.getTime() &&
+          new Date(d.endTime).getTime() >= endDate.getTime(),
       );
 
       const distanceInMeters = distanceRecord
         ? Math.round(distanceRecord.distance)
         : Math.round((2 + Math.random() * 8) * 1000);
-      const timeStr = startDate
-        .toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        })
-        .replace('24:', '00:');
+
+      const timeStr = format(startDate, 'HH:mm');
 
       sessionsByDate[dateStr].push({
         time: timeStr,
@@ -81,25 +86,21 @@ export default function RecordScreen() {
         id: session.id,
         clientRecordId: session.clientRecordId,
         exerciseType: session.exerciseType,
+        startTime: session.startTime,
+        endTime: session.endTime,
       });
     });
 
-    // Calculate total steps per day
     const stepsByDate: Record<string, number> = {};
     steps.forEach(step => {
-      const date = new Date(step.startTime);
-      const dateStr = date.toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      });
+      const date = parseISO(step.startTime);
+      const dateStr = format(date, 'EEE, MMM d');
       if (!stepsByDate[dateStr]) {
         stepsByDate[dateStr] = 0;
       }
       stepsByDate[dateStr] += step.count;
     });
 
-    // Calculate metrics for each date
     const result = Object.keys(sessionsByDate).map(dateStr => {
       const activities = sessionsByDate[dateStr];
       const totalSteps =
@@ -109,14 +110,7 @@ export default function RecordScreen() {
             (sum, activity) => sum + (activity.distance / 1000) * 1300,
             0,
           ),
-        ); // Approximate steps based on distance
-      const totalPoints = Math.round(
-        activities.reduce(
-          (sum, activity) =>
-            sum + activity.duration * (0.8 + Math.random() * 0.4),
-          0,
-        ),
-      );
+        );
       const totalDistance = activities.reduce(
         (sum, activity) => sum + activity.distance,
         0,
@@ -124,17 +118,17 @@ export default function RecordScreen() {
 
       return {
         date: dateStr,
-        dateObj: new Date(activities[0].time), // For sorting
+        dateObj: parseISO(activities[0].startTime),
         metrics: {
           steps: totalSteps,
-          points: totalPoints,
           distance: totalDistance,
         },
-        activities: activities,
+        activities: activities.sort((a, b) => 
+          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        ),
       };
     });
 
-    // Sort by date descending (newest first)
     return result.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
   };
 
@@ -146,23 +140,36 @@ export default function RecordScreen() {
 
   const readSampleData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
-        console.log('Health Connect initialization failed');
-        return;
+        throw new Error('Health Connect initialization failed');
       }
 
-      const data = await fetchExerciseSessionRecords('2025-03-02T00:00:00.000Z', new Date().toISOString());
-      const stepData = await fetchStepRecords('2025-03-02T00:00:00.000Z', new Date().toISOString());
-      const distanceData = await fetchDistanceRecords('2025-03-02T00:00:00.000Z', new Date().toISOString());
+      const [data, stepData, distanceData] = await Promise.all([
+        fetchExerciseSessionRecords(startDate, endDate),
+        fetchStepRecords(startDate, endDate),
+        fetchDistanceRecords(startDate, endDate),
+      ]);
 
       setExerciseSessions(data);
       setStepRecords(stepData);
       setDistanceRecords(distanceData);
     } catch (error) {
       console.error('Error reading health data:', error);
+      setError('Failed to load health data. Please check Health Connect permissions.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    readSampleData();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -170,11 +177,74 @@ export default function RecordScreen() {
     }, []),
   );
 
+  const renderLoadingSkeleton = () => (
+    <View style={styles.loadingContainer}>
+      {[...Array(3)].map((_, i) => (
+        <View key={i} style={styles.skeletonDayContainer}>
+          <ContentLoader 
+            speed={1}
+            width={width - 32}
+            height={200}
+            viewBox={`0 0 ${width - 32} 200`}
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="150" height="24" />
+            <Rect x={width - 182} y="0" rx="4" ry="4" width="150" height="24" />
+            <Rect x="0" y="40" rx="4" ry="4" width={width - 32} height="20" />
+            <Rect x="0" y="70" rx="4" ry="4" width={width - 32} height="20" />
+            <Rect x="0" y="100" rx="4" ry="4" width={width - 32} height="20" />
+            <Rect x="0" y="140" rx="4" ry="4" width={width - 32} height="20" />
+            <Rect x="0" y="170" rx="4" ry="4" width={width - 32} height="20" />
+          </ContentLoader>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderErrorState = () => (
+    <View style={styles.emptyState}>
+      <Icon name="warning" size={48} color="#FF5252" />
+      <Text style={styles.emptyText}>Error loading data</Text>
+      <Text style={styles.emptySubtext}>{error}</Text>
+      <TouchableOpacity 
+        style={styles.retryButton}
+        onPress={readSampleData}
+      >
+        <Text style={styles.retryButtonText}>Try Again</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Icon name="walk" size={48} color="#ACADAE" />
+      <Text style={styles.emptyText}>No workout data available</Text>
+      <Text style={styles.emptySubtext}>
+        Your recorded workouts will appear here
+      </Text>
+    </View>
+  );
+
   return (
     <ScreenWrapper bg={'#FFFFFF'}>
       <HeaderBar />
-      <ScrollView style={styles.container}>
-        {exerciseData.length > 0 ? (
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1E3A8A']}
+            tintColor="#1E3A8A"
+          />
+        }
+      >
+        {loading ? (
+          renderLoadingSkeleton()
+        ) : error ? (
+          renderErrorState()
+        ) : exerciseData.length > 0 ? (
           exerciseData.map((day, dayIndex) => (
             <View key={dayIndex} style={styles.dayContainer}>
               <View style={styles.dayHeader}>
@@ -188,20 +258,9 @@ export default function RecordScreen() {
                       style={styles.metricIcon}
                     />
                     <Text style={styles.metricText}>
-                      {day.metrics.steps} steps
+                      {day.metrics.steps.toLocaleString()} steps
                     </Text>
                   </View>
-                  {/* <View style={styles.metricItem}>
-                    <Icon
-                      name="analytics"
-                      size={19}
-                      color="#F4B400"
-                      style={styles.metricIcon}
-                    />
-                    <Text style={styles.metricText}>
-                      {day.metrics.points} pts
-                    </Text>
-                  </View> */}
                   <View style={styles.metricItem}>
                     <Icon
                       name="map"
@@ -238,7 +297,7 @@ export default function RecordScreen() {
                     <View style={styles.activityDetails}>
                       <Text style={styles.activityType}>{activity.type}</Text>
                       <Text style={styles.activityMetrics}>
-                        {activity.duration} min • {activity.distance} m
+                        {activity.duration} min • {(activity.distance / 1000).toFixed(1)} km
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -247,13 +306,7 @@ export default function RecordScreen() {
             </View>
           ))
         ) : (
-          <View style={styles.emptyState}>
-            <Icon name="walk" size={48} color="#ACADAE" />
-            <Text style={styles.emptyText}>No workout data available</Text>
-            <Text style={styles.emptySubtext}>
-              Your recorded workouts will appear here
-            </Text>
-          </View>
+          renderEmptyState()
         )}
       </ScrollView>
     </ScreenWrapper>
@@ -266,14 +319,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
   },
+  loadingContainer: {
+    flex: 1,
+    width: '100%',
+  },
+  skeletonDayContainer: {
+    marginBottom: 24,
+    width: '100%',
+  },
   dayContainer: {
     marginBottom: 24,
+    width: '100%',
   },
   dayHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    width: '100%',
   },
   dateText: {
     fontSize: 20,
@@ -298,16 +361,17 @@ const styles = StyleSheet.create({
   },
   activityContainer: {
     marginVertical: 8,
-    marginHorizontal: 16,
     marginBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#ACADAE',
     paddingBottom: 16,
+    width: '100%',
   },
   activityRow: {
     gap: 18,
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
   },
   timeText: {
     width: 48,
@@ -343,15 +407,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 100,
+    padding: 20,
+    width: '100%',
   },
   emptyText: {
     fontSize: 18,
     color: '#333333',
     marginTop: 16,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: '#757575',
     marginTop: 8,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#4285F4',
+    borderRadius: 5,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
   },
 });

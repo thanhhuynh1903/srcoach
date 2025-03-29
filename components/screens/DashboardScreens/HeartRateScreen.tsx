@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
+import ContentLoader, { Rect } from 'react-content-loader/native';
 import BackButton from '../../BackButton';
 import {useFocusEffect} from '@react-navigation/native';
 import {format, startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
@@ -58,6 +59,7 @@ const HeartRateScreen = () => {
   const [zoneData, setZoneData] = useState<ZoneData[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<any>(null);
   const [showPointDetails, setShowPointDetails] = useState(false);
+  const [hasData, setHasData] = useState(false);
   const pointDetailsPosition = useRef(new Animated.Value(0)).current;
 
   const filterRecordsByPeriod = (records: HeartRateRecord[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
@@ -238,9 +240,9 @@ const HeartRateScreen = () => {
   const calculateStats = (records: HeartRateRecord[]) => {
     if (records.length === 0) {
       return {
-        average: 0,
-        max: 0,
-        min: 0,
+        average: '--',
+        max: '--',
+        min: '--',
       };
     }
     
@@ -291,18 +293,23 @@ const HeartRateScreen = () => {
 
       setHeartRateRecords(heartRateData);
       setRestingHeartRateRecords(restingHeartRateData);
+      setHasData(heartRateData.length > 0);
 
       if (heartRateData.length > 0) {
         const sorted = [...heartRateData].sort((a, b) => 
           new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         );
         setCurrentHeartRate(sorted[0].beatsPerMinute);
+      } else {
+        setCurrentHeartRate(null);
       }
 
       setIsLoading(false);
     } catch (error) {
       console.error('Error reading health data:', error);
       setIsLoading(false);
+      setHasData(false);
+      setCurrentHeartRate(null);
     }
   };
 
@@ -378,6 +385,9 @@ const HeartRateScreen = () => {
       const chartData = prepareChartData(filteredRecords);
       setChartData(chartData);
       setZoneData(calculateZones(filteredRecords));
+    } else {
+      setChartData([]);
+      setZoneData(calculateZones([]));
     }
   }, [activeView, currentDate, heartRateRecords]);
 
@@ -386,7 +396,7 @@ const HeartRateScreen = () => {
   );
 
   const getRestingHeartRate = () => {
-    if (restingHeartRateRecords.length === 0) return 0;
+    if (restingHeartRateRecords.length === 0) return '--';
     
     const sorted = [...restingHeartRateRecords].sort((a, b) => 
       new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
@@ -441,11 +451,68 @@ const HeartRateScreen = () => {
       </View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF4D4F" />
-        </View>
+        <ScrollView style={styles.content} contentContainerStyle={styles.loadingContent}>
+          {/* Current Heart Rate Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={80}
+            viewBox="0 0 380 80"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="40" height="40" />
+            <Rect x="60" y="0" rx="4" ry="4" width="200" height="30" />
+            <Rect x="60" y="40" rx="4" ry="4" width="150" height="20" />
+          </ContentLoader>
+
+          {/* Chart Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={220}
+            viewBox="0 0 380 220"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.chartContainer}
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="200" height="24" />
+            <Rect x="0" y="40" rx="8" ry="8" width="100%" height="180" />
+          </ContentLoader>
+
+          {/* Zones Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={240}
+            viewBox="0 0 380 240"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.zonesContainer}
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="150" height="24" />
+            <Rect x="0" y="40" rx="8" ry="8" width="100%" height="48" />
+            <Rect x="0" y="104" rx="8" ry="8" width="100%" height="48" />
+            <Rect x="0" y="168" rx="8" ry="8" width="100%" height="48" />
+          </ContentLoader>
+
+          {/* Stats Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={100}
+            viewBox="0 0 380 100"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.statsContainer}
+          >
+            <Rect x="0" y="0" rx="8" ry="8" width="30%" height="80" />
+            <Rect x="35%" y="0" rx="8" ry="8" width="30%" height="80" />
+            <Rect x="70%" y="0" rx="8" ry="8" width="30%" height="80" />
+          </ContentLoader>
+        </ScrollView>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
           {/* Current Heart Rate */}
           <View style={styles.currentRateContainer}>
             <View style={styles.heartIconContainer}>
@@ -575,15 +642,15 @@ const HeartRateScreen = () => {
           {/* Summary Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{average} BPM</Text>
+              <Text style={styles.statValue}>{average}</Text>
               <Text style={styles.statLabel}>Average</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{max} BPM</Text>
+              <Text style={styles.statValue}>{max}</Text>
               <Text style={styles.statLabel}>Maximum</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{min} BPM</Text>
+              <Text style={styles.statValue}>{min}</Text>
               <Text style={styles.statLabel}>Minimum</Text>
             </View>
           </View>
@@ -640,11 +707,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   backButton: {
     marginRight: 16,
   },
@@ -700,6 +762,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  loadingContent: {
+    paddingBottom: 32, // Add bottom padding for loading state
+  },
+  scrollContent: {
+    paddingBottom: 32, // Add bottom padding for content
   },
   currentRateContainer: {
     flexDirection: 'row',

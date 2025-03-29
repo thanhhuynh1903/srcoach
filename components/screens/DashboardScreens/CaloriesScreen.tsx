@@ -11,6 +11,7 @@ import {
   Animated,
 } from 'react-native';
 import {BarChart, LineChart} from 'react-native-gifted-charts';
+import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
 import BackButton from '../../BackButton';
 import {format, subDays, startOfDay, parseISO, subMonths, subYears, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
 import Icon from '@react-native-vector-icons/ionicons';
@@ -84,12 +85,10 @@ const CaloriesScreen = () => {
   const prepareLineChartData = (records: (ActiveCaloriesRecord | TotalCaloriesRecord)[]) => {
     if (records.length === 0) return [];
     
-    // Sort records by time
     const sortedRecords = [...records].sort((a, b) => 
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
 
-    // Group by hour
     const hourlyData: {[key: string]: {sum: number, count: number, date: Date}} = {};
     
     sortedRecords.forEach(record => {
@@ -125,7 +124,6 @@ const CaloriesScreen = () => {
   const prepareBarChartData = (records: (ActiveCaloriesRecord | TotalCaloriesRecord)[]) => {
     if (records.length === 0) return [];
     
-    // Group by day of week
     const dailyData: {[key: string]: {active: number, total: number, date: Date}} = {};
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
@@ -144,7 +142,6 @@ const CaloriesScreen = () => {
       dailyData[dayKey].total += record.calories;
     });
     
-    // Create bar data for each day
     const barData: any[] = [];
     days.forEach(day => {
       if (dailyData[day]) {
@@ -214,7 +211,6 @@ const CaloriesScreen = () => {
         return;
       }
 
-      // Calculate date range based on active view
       let startDate = new Date(currentDate);
       let endDate = new Date(currentDate);
 
@@ -242,7 +238,6 @@ const CaloriesScreen = () => {
         fetchTotalCaloriesRecords(startDate.toISOString(), endDate.toISOString()),
       ]);
 
-      // Map to common structure
       const processedActiveCalories = activeCaloriesData.map(r => ({
         ...r,
         dataOrigin: 'active',
@@ -341,7 +336,6 @@ const CaloriesScreen = () => {
   const barData = prepareBarChartData(filteredRecords);
   const stats = calculateStats(filteredRecords);
 
-  // Format numbers to 2 decimal places
   const formatNumber = (num: number) => {
     return num % 1 === 0 ? num.toString() : num.toFixed(2);
   };
@@ -403,8 +397,69 @@ const CaloriesScreen = () => {
       </View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#F97316" />
+        <View style={styles.content}>
+          {/* Summary Loaders */}
+          <View style={styles.summaryContainer}>
+            <ContentLoader 
+              speed={1}
+              width="100%"
+              height={100}
+              viewBox="0 0 380 100"
+              backgroundColor="#f3f3f3"
+              foregroundColor="#ecebeb"
+            >
+              <Rect x="0" y="0" rx="16" ry="16" width="48%" height="100" />
+              <Rect x="52%" y="0" rx="16" ry="16" width="48%" height="100" />
+            </ContentLoader>
+          </View>
+
+          {/* Chart Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={250}
+            viewBox="0 0 380 250"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.chartContainer}
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Rect x="0" y="34" rx="4" ry="4" width="180" height="16" />
+            <Rect x="0" y="70" rx="8" ry="8" width="100%" height="180" />
+          </ContentLoader>
+
+          {/* Stats Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={200}
+            viewBox="0 0 380 200"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.statsContainer}
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Rect x="0" y="44" rx="8" ry="8" width="48%" height="120" />
+            <Rect x="52%" y="44" rx="8" ry="8" width="48%" height="120" />
+            <Rect x="0" y="174" rx="8" ry="8" width="48%" height="120" />
+            <Rect x="52%" y="174" rx="8" ry="8" width="48%" height="120" />
+          </ContentLoader>
+
+          {/* Weekly Chart Loader (only shown in week view) */}
+          {activeView === 'week' && (
+            <ContentLoader 
+              speed={1}
+              width="100%"
+              height={220}
+              viewBox="0 0 380 220"
+              backgroundColor="#f3f3f3"
+              foregroundColor="#ecebeb"
+              style={styles.weeklyContainer}
+            >
+              <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+              <Rect x="0" y="44" rx="8" ry="8" width="100%" height="176" />
+            </ContentLoader>
+          )}
         </View>
       ) : (
         <ScrollView style={styles.content}>
@@ -645,11 +700,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   backButton: {
     marginRight: 16,
   },
@@ -744,6 +794,9 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     marginBottom: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
   },
   chartHeader: {
     marginBottom: 12,
@@ -768,6 +821,9 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     marginBottom: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -807,6 +863,9 @@ const styles = StyleSheet.create({
   },
   weeklyContainer: {
     marginBottom: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
   },
   noDataContainer: {
     flex: 1,

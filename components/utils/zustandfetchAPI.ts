@@ -2,7 +2,7 @@ import { create } from "zustand";
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 import useAuthStore from "./useAuthStore";
 
-const MASTER_URL = "https://xavia.pro/api";
+const MASTER_URL = "http://192.168.1.8/api";
 const token = useAuthStore.getState().token;
 console.log("Token in Auth:", token);
 

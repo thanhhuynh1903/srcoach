@@ -1,22 +1,19 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useState, useMemo} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
-  Image,
-  Platform,
-  PermissionsAndroid,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
 import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import {hp, wp} from '../helpers/common';
-import MapView, {Marker, Polyline} from 'react-native-maps';
-import Geolocation from 'react-native-geolocation-service';
+import MapView, {Polyline} from 'react-native-maps';
 import {
   useFocusEffect,
   useNavigation,
@@ -24,159 +21,176 @@ import {
 } from '@react-navigation/native';
 import {
   initializeHealthConnect,
-  fetchExerciseSession,
   fetchStepRecords,
   fetchDistanceRecords,
   fetchHeartRateRecords,
   fetchActiveCaloriesRecords,
-  fetchExerciseRoute,
-  ExerciseSession,
-  StepRecord,
-  DistanceRecord,
-  HeartRateRecord,
-  ActiveCaloriesRecord,
   ExerciseRouteRecord,
   calculateTotalSteps,
   calculateTotalDistance,
   calculateTotalCalories,
+  fetchExerciseRoute,
+  StepRecord,
+  DistanceRecord,
+  HeartRateRecord,
+  ActiveCaloriesRecord,
 } from '../utils/utils_healthconnect';
 import {getNameFromExerciseType} from '../contants/exerciseType';
+import {format, parseISO, differenceInMinutes, differenceInSeconds} from 'date-fns';
+
+const {width} = Dimensions.get('window');
 
 const RecordDetailScreen = () => {
   const route = useRoute();
-  const {id, clientRecordId } = route.params;
+  const {id, clientRecordId, exerciseType, startTime, endTime} = route.params;
 
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [exerciseSessionRecord, setExerciseSessionRecord] = useState<ExerciseSession | null>(null);
   const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
   const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
   const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>([]);
   const [caloriesRecords, setCaloriesRecords] = useState<ActiveCaloriesRecord[]>([]);
   const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRouteRecord[]>([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(true);
+
+  const durationMinutes = useMemo(() => {
+    return differenceInMinutes(parseISO(endTime), parseISO(startTime));
+  }, [startTime, endTime]);
 
   const readSampleData = async () => {
     try {
+      setLoadingMetrics(true);
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
         return;
       }
 
-      const session = await fetchExerciseSession(id);
-      if (!session) return;
-
-      setExerciseSessionRecord(session);
-
-      const [
-        steps,
-        distance,
-        heartRate,
-        calories,
-      ] = await Promise.all([
-        fetchStepRecords(session.startTime, session.endTime),
-        fetchDistanceRecords(session.startTime, session.endTime),
-        fetchHeartRateRecords(session.startTime, session.endTime),
-        fetchActiveCaloriesRecords(session.startTime, session.endTime),
+      const [steps, distance, heartRate, calories] = await Promise.all([
+        fetchStepRecords(startTime, endTime),
+        fetchDistanceRecords(startTime, endTime),
+        fetchHeartRateRecords(startTime, endTime),
+        fetchActiveCaloriesRecords(startTime, endTime),
       ]);
 
       setStepRecords(steps);
       setDistanceRecords(distance);
       setHeartRateRecords(heartRate);
       setCaloriesRecords(calories);
+      setLoadingMetrics(false);
 
-      const routes = await fetchExerciseRoute(id, clientRecordId);
-      setExerciseRoutes(routes || []);
+      console.log('Successfully read health data');
+      await fetchRoutes();
     } catch (error) {
       console.error('Error reading health data:', error);
+      setLoadingMetrics(false);
+    }
+  };
+
+  const fetchRoutes = async () => {
+    try {
+      setLoadingRoutes(true);
+      setRouteError(null);
+      const routes = await fetchExerciseRoute(id, clientRecordId);
+      if (routes) {
+        setExerciseRoutes(routes);
+      } else {
+        setRouteError('Could not load route data');
+      }
+    } catch (error) {
+      console.error('Error fetching routes:', error);
+      setRouteError('Failed to load route data');
+    } finally {
+      setLoadingRoutes(false);
     }
   };
 
   const getMapRegion = () => {
     if (exerciseRoutes.length === 0) {
       return {
-        latitude: currentLocation?.latitude || 0,
-        longitude: currentLocation?.longitude || 0,
+        latitude: currentLocation?.latitude || 37.78825,
+        longitude: currentLocation?.longitude || -122.4324,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       };
     }
 
-    let minLat = Math.min(...exerciseRoutes.map(p => p.latitude));
-    let maxLat = Math.max(...exerciseRoutes.map(p => p.latitude));
-    let minLng = Math.min(...exerciseRoutes.map(p => p.longitude));
-    let maxLng = Math.max(...exerciseRoutes.map(p => p.longitude));
+    const latitudes = exerciseRoutes.map(p => p.latitude);
+    const longitudes = exerciseRoutes.map(p => p.longitude);
+    
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
 
     return {
       latitude: (minLat + maxLat) / 2,
       longitude: (minLng + maxLng) / 2,
-      latitudeDelta: maxLat - minLat + 0.01,
-      longitudeDelta: maxLng - minLng + 0.01,
+      latitudeDelta: (maxLat - minLat) * 1.5 + 0.01,
+      longitudeDelta: (maxLng - minLng) * 1.5 + 0.01,
     };
   };
 
-  const calculateDuration = (startTime: string, endTime: string) => {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const duration = end.getTime() - start.getTime();
-    const minutes = Math.floor(duration / (1000 * 60));
-    const seconds = Math.floor((duration % (1000 * 60)) / 1000);
+  const calculateDuration = () => {
+    const start = parseISO(startTime);
+    const end = parseISO(endTime);
+    const minutes = differenceInMinutes(end, start);
+    const seconds = differenceInSeconds(end, start) % 60;
 
     return `${minutes} min ${seconds} sec`;
   };
 
-  const calculateAveragePaceInKm = (distance: number, duration: number) => {
-    const km = distance / 1000;
-    const minutes = duration / 60;
-    const averagePace = km / minutes;
-    return averagePace.toFixed(2);
+  const calculateAveragePace = () => {
+    const totalDistanceKm = calculateTotalDistance(distanceRecords) / 1000;
+    if (totalDistanceKm <= 0 || durationMinutes <= 0) return 'N/A';
+    
+    const pace = durationMinutes / totalDistanceKm;
+    const paceMinutes = Math.floor(pace);
+    const paceSeconds = Math.round((pace - paceMinutes) * 60);
+    
+    return `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')} min/km`;
   };
 
   const prepareHeartRateData = () => {
     if (heartRateRecords.length === 0) return [];
 
     const sortedRecords = [...heartRateRecords].sort(
-      (a, b) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
     );
 
+    // Sample data points to avoid overcrowding the chart
+    const sampleInterval = Math.max(1, Math.floor(sortedRecords.length / 10));
     return sortedRecords
-      .filter((_, index) => index % Math.floor(sortedRecords.length / 10) === 0)
+      .filter((_, index) => index % sampleInterval === 0)
       .map(record => ({
         value: record.beatsPerMinute,
-        label: new Date(record.startTime).toLocaleTimeString(),
-        labelTextStyle: {color: 'gray'},
+        label: format(parseISO(record.startTime), 'HH:mm'),
+        labelTextStyle: {color: 'gray', width: 60},
       }));
   };
 
-  const requestLocationPermission = async () => {
-    if (Platform.OS === 'android') {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      );
-    } else {
-      await Geolocation.requestAuthorization('whenInUse');
+  const heartRateStats = useMemo(() => {
+    if (heartRateRecords.length === 0) {
+      return {
+        min: 0,
+        avg: 0,
+        max: 0,
+      };
     }
-    getCurrentLocation();
-  };
 
-  const getCurrentLocation = () => {
-    Geolocation.getCurrentPosition(
-      position => {
-        setCurrentLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-      },
-      error => console.log(error),
-      {enableHighAccuracy: true},
-    );
-  };
+    const values = heartRateRecords.map(r => r.beatsPerMinute);
+    return {
+      min: Math.min(...values),
+      max: Math.max(...values),
+      avg: values.reduce((sum, val) => sum + val, 0) / values.length,
+    };
+  }, [heartRateRecords]);
 
   useFocusEffect(
     useCallback(() => {
       readSampleData();
-      // requestLocationPermission();
-    }, []),
+    }, [id, clientRecordId, startTime, endTime]),
   );
 
   const navigate = useNavigation();
@@ -184,21 +198,24 @@ const RecordDetailScreen = () => {
     <ScreenWrapper bg={'#f9fafb'}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigate.goBack()}
+        >
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Record Running Session</Text>
+        <Text style={styles.headerTitle}>Session Details</Text>
       </View>
-      <ScrollView style={styles.content}>
+      
+      <ScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>
-          {getNameFromExerciseType(exerciseSessionRecord?.exerciseType)}
+          {getNameFromExerciseType(exerciseType)}
         </Text>
         <Text style={styles.dateTime}>
-          {exerciseSessionRecord?.startTime &&
-            new Date(exerciseSessionRecord.startTime).toLocaleDateString(
-              'en-US',
-              {year: 'numeric', month: 'long', day: 'numeric'},
-            )}
+          {format(parseISO(startTime), 'EEEE, MMMM d, yyyy')}
         </Text>
 
         {/* Key Metrics Grid */}
@@ -206,33 +223,43 @@ const RecordDetailScreen = () => {
           <View style={styles.metricCard}>
             <Icon name="walk-sharp" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Distance</Text>
-            <Text style={styles.metricValue}>
-              {calculateTotalDistance(distanceRecords).toFixed(2)} km
-            </Text>
-          </View>
-          <View style={styles.metricCard}>
-            <Icon name="time-outline" size={24} color="#1E3A8A" />
-            <Text style={styles.metricLabel}>Duration</Text>
-            {exerciseSessionRecord && (
+            {loadingMetrics ? (
+              <ActivityIndicator size="small" color="#1E3A8A" />
+            ) : (
               <Text style={styles.metricValue}>
-                {calculateDuration(
-                  exerciseSessionRecord.startTime,
-                  exerciseSessionRecord.endTime,
-                )}
+                {(calculateTotalDistance(distanceRecords) / 1000).toFixed(2)} km
               </Text>
             )}
           </View>
+          
+          <View style={styles.metricCard}>
+            <Icon name="time-outline" size={24} color="#1E3A8A" />
+            <Text style={styles.metricLabel}>Duration</Text>
+            <Text style={styles.metricValue}>{calculateDuration()}</Text>
+          </View>
+          
           <View style={styles.metricCard}>
             <Icon name="flame-outline" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Calories</Text>
-            <Text style={styles.metricValue}>
-              {(calculateTotalCalories(caloriesRecords) / 1000).toFixed(2)} kcal
-            </Text>
+            {loadingMetrics ? (
+              <ActivityIndicator size="small" color="#1E3A8A" />
+            ) : (
+              <Text style={styles.metricValue}>
+                {calculateTotalCalories(caloriesRecords).toFixed(0)} kcal
+              </Text>
+            )}
           </View>
+          
           <View style={styles.metricCard}>
             <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
             <Text style={styles.metricLabel}>Avg. Pace</Text>
-            <Text style={styles.metricValue}>Unknown</Text>
+            {loadingMetrics ? (
+              <ActivityIndicator size="small" color="#1E3A8A" />
+            ) : (
+              <Text style={styles.metricValue}>
+                {calculateAveragePace()}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -241,65 +268,53 @@ const RecordDetailScreen = () => {
           <View style={styles.sectionHeader}>
             <Icon name="heart" size={20} color="#1E3A8A" />
             <Text style={styles.sectionTitle}>Heart Rate</Text>
+            {loadingMetrics && <ActivityIndicator size="small" color="#1E3A8A" />}
           </View>
-          <View style={styles.heartRateStats}>
-            <View>
-              <Text style={styles.heartRateLabel}>Min</Text>
-              <Text style={styles.heartRateValue}>
-                {Number(
-                  heartRateRecords
-                    .reduce(
-                      (min, record) => Math.min(min, record.beatsPerMinute),
-                      Infinity,
-                    )
-                    .toFixed(2),
-                )}{' '}
-                BPM
-              </Text>
-            </View>
-            <View>
-              <Text style={styles.heartRateLabel}>Average</Text>
-              <Text style={styles.heartRateValue}>
-                {Number(
-                  heartRateRecords.reduce(
-                    (total, record) => total + record.beatsPerMinute,
-                    0,
-                  ) / heartRateRecords.length,
-                ).toFixed(2)}{' '}
-                BPM
-              </Text>
-            </View>
-          </View>
-          <View>
-            <Text style={styles.heartRateLabel}>Max</Text>
-            <Text style={styles.heartRateValue}>
-              {Number(
-                heartRateRecords
-                  .reduce(
-                    (max, record) => Math.max(max, record.beatsPerMinute),
-                    0,
-                  )
-                  .toFixed(2),
-              )}{' '}
-              BPM
-            </Text>
-          </View>
-          <View style={styles.chartContainer}>
-            <LineChart
-              data={prepareHeartRateData()}
-              height={150}
-              width={wp(65)}
-              spacing={60}
-              color="#1E3A8A"
-              thickness={3}
-              curved
-              yAxisOffset={20}
-              noOfSections={4}
-              maxValue={
-                Math.max(...heartRateRecords.map(r => r.beatsPerMinute)) + 20
-              }
-            />
-          </View>
+          
+          {heartRateRecords.length > 0 ? (
+            <>
+              <View style={styles.heartRateStats}>
+                <View>
+                  <Text style={styles.heartRateLabel}>Min</Text>
+                  <Text style={styles.heartRateValue}>
+                    {heartRateStats.min.toFixed(0)} BPM
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.heartRateLabel}>Average</Text>
+                  <Text style={styles.heartRateValue}>
+                    {heartRateStats.avg.toFixed(0)} BPM
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.heartRateLabel}>Max</Text>
+                  <Text style={styles.heartRateValue}>
+                    {heartRateStats.max.toFixed(0)} BPM
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.chartContainer}>
+                <LineChart
+                  data={prepareHeartRateData()}
+                  height={150}
+                  width={wp(85)}
+                  spacing={60}
+                  color="#1E3A8A"
+                  thickness={3}
+                  curved
+                  yAxisOffset={20}
+                  noOfSections={4}
+                  maxValue={heartRateStats.max + 20}
+                  initialSpacing={10}
+                  yAxisLabelWidth={40}
+                  xAxisLabelTextStyle={{width: 60}}
+                />
+              </View>
+            </>
+          ) : (
+            <Text style={styles.noDataText}>No heart rate data available</Text>
+          )}
         </View>
 
         {/* Route Map Section */}
@@ -307,58 +322,87 @@ const RecordDetailScreen = () => {
           <View style={styles.sectionHeader}>
             <Icon name="location-outline" size={20} color="#1E3A8A" />
             <Text style={styles.sectionTitle}>Route Map</Text>
+            {loadingRoutes && <ActivityIndicator size="small" color="#1E3A8A" />}
+            {routeError && (
+              <TouchableOpacity 
+                onPress={fetchRoutes} 
+                style={{marginLeft: 'auto'}}
+              >
+                <Text style={{color: '#1E3A8A'}}>Retry</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={{borderRadius: 16, overflow: 'hidden'}}>
-            <MapView
-              style={styles.map}
-              initialRegion={getMapRegion()}
-              region={getMapRegion()}>
-              <Polyline coordinates={exerciseRoutes} />
-              {currentLocation && (
-                <Marker
-                  coordinate={currentLocation}
-                  title="Your Location"
-                  pinColor="#22C55E" // Green marker
-                />
-              )}
-            </MapView>
-          </View>
+          
+          {routeError ? (
+            <View style={styles.errorContainer}>
+              <Icon name="warning-outline" size={24} color="#FF5252" />
+              <Text style={styles.errorText}>{routeError}</Text>
+            </View>
+          ) : (
+            <View style={{borderRadius: 16, overflow: 'hidden'}}>
+              <MapView
+                style={styles.map}
+                initialRegion={getMapRegion()}
+                region={getMapRegion()}
+                scrollEnabled={false}
+                zoomEnabled={false}
+              >
+                {exerciseRoutes.length > 0 && (
+                  <Polyline 
+                    coordinates={exerciseRoutes} 
+                    strokeColor="#1E3A8A"
+                    strokeWidth={4}
+                  />
+                )}
+              </MapView>
+            </View>
+          )}
+          
           <View style={styles.mapStats}>
             <View style={styles.mapStat}>
               <Icon name="walk-outline" size={20} color="#22C55E" />
               <View>
                 <Text style={styles.mapStatLabel}>Distance</Text>
-                <Text style={styles.mapStatValue}>
-                  {new Intl.NumberFormat('en-US').format(
-                    calculateTotalDistance(distanceRecords),
-                  )}{' '}
-                  km
-                </Text>
+                {loadingMetrics ? (
+                  <ActivityIndicator size="small" color="#22C55E" />
+                ) : (
+                  <Text style={styles.mapStatValue}>
+                    {(calculateTotalDistance(distanceRecords) / 1000).toFixed(2)} km
+                  </Text>
+                )}
               </View>
             </View>
             <View style={styles.mapStat}>
               <Icon name="footsteps-outline" size={20} color="#22C55E" />
               <View>
                 <Text style={styles.mapStatLabel}>Steps</Text>
-                <Text style={styles.mapStatValue}>
-                  {new Intl.NumberFormat('en-US').format(
-                    calculateTotalSteps(stepRecords),
-                  )}
-                </Text>
+                {loadingMetrics ? (
+                  <ActivityIndicator size="small" color="#22C55E" />
+                ) : (
+                  <Text style={styles.mapStatValue}>
+                    {calculateTotalSteps(stepRecords).toLocaleString()}
+                  </Text>
+                )}
               </View>
             </View>
           </View>
         </View>
 
+        {/* Action Buttons */}
         <TouchableOpacity
-          style={styles.shareButton}
-          onPress={() => navigate.navigate('RiskWarningScreen' as never)}>
+          style={styles.primaryButton}
+          onPress={() => navigate.navigate('RiskWarningScreen' as never)}
+        >
           <Icon name="document-text-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.shareButtonText}>Risk analysis</Text>
+          <Text style={styles.primaryButtonText}>Risk Analysis</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.ButtonFooter}>
-          <Icon name="share-outline" size={20} color="#000000" />
-          <Text style={styles.ButtonFooterText}>Share your data</Text>
+        
+        <TouchableOpacity 
+          style={styles.secondaryButton}
+          onPress={() => {/* Implement share functionality */}}
+        >
+          <Icon name="share-outline" size={20} color="#1E3A8A" />
+          <Text style={styles.secondaryButtonText}>Share Session</Text>
         </TouchableOpacity>
       </ScrollView>
     </ScreenWrapper>
@@ -366,17 +410,13 @@ const RecordDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
-    backgroundColor: '#FFFFF',
+    backgroundColor: '#FFFFFF',
   },
   backButton: {
     width: 40,
@@ -390,10 +430,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#000',
+    marginLeft: 8,
   },
   content: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 8,
   },
   title: {
     fontSize: 24,
@@ -452,7 +494,7 @@ const styles = StyleSheet.create({
   },
   heartRateStats: {
     flexDirection: 'row',
-    gap: 24,
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   heartRateLabel: {
@@ -468,17 +510,17 @@ const styles = StyleSheet.create({
   chartContainer: {
     height: 200,
     marginTop: 16,
+    alignItems: 'center',
   },
-  mapImage: {
+  map: {
     width: '100%',
-    height: 200,
-    borderRadius: 16,
+    height: hp(25),
     marginBottom: 16,
   },
   mapStats: {
-    marginTop: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 8,
   },
   mapStat: {
     flexDirection: 'row',
@@ -494,34 +536,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  additionalStats: {
-    gap: 16,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statLabel: {
+  errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
     gap: 8,
   },
-  statText: {
+  errorText: {
+    color: '#D32F2F',
     fontSize: 14,
+  },
+  noDataText: {
     color: '#64748B',
-  },
-  statValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
+    textAlign: 'center',
+    marginVertical: 16,
   },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  shareButton: {
+  primaryButton: {
     backgroundColor: '#1E3A8A',
     flexDirection: 'row',
     alignItems: 'center',
@@ -531,15 +565,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 8,
   },
-  shareButtonText: {
+  primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  ButtonFooter: {
+  secondaryButton: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#000000',
+    borderColor: '#1E3A8A',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -548,14 +582,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 8,
   },
-  ButtonFooterText: {
-    color: '#4A4A4A',
+  secondaryButtonText: {
+    color: '#1E3A8A',
     fontSize: 16,
     fontWeight: '600',
-  },
-  map: {
-    width: '100%',
-    height: hp(25),
   },
 });
 

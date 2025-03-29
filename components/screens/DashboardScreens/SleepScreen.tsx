@@ -9,10 +9,10 @@ import {
 } from 'react-native';
 import BackButton from '../../BackButton';
 import {PieChart} from 'react-native-gifted-charts';
+import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
 import {useFocusEffect} from '@react-navigation/native';
 import { fetchSleepRecords, initializeHealthConnect, SleepSessionRecord } from '../../utils/utils_healthconnect';
 
-// Add these constants at the top of the file
 const SleepType = {
   UNKNOWN: 0,
   SLEEPING: 2,
@@ -29,20 +29,20 @@ const SleepScreen = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sleepRecords, setSleepRecords] = useState<SleepSessionRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
-  // Process sleep records into displayable data
   const processSleepData = (records: SleepSessionRecord[]) => {
     if (!records || records.length === 0) {
       return {
         pieData: [],
         chartData: [],
         metrics: {
-          score: 0,
-          heartRate: 0,
-          breathing: 0,
-          bloodOxygen: 0,
+          score: '--',
+          heartRate: '--',
+          breathing: '--',
+          bloodOxygen: '--',
         },
-        duration: '0h 0m',
+        duration: '--h --m',
         quality: 'No data',
         timeRange: '--:-- - --:--',
         stages: {
@@ -54,14 +54,13 @@ const SleepScreen = () => {
       };
     }
 
-    // Calculate sleep stages duration in minutes
     let deep = 0, light = 0, rem = 0, awake = 0;
     let totalDuration = 0;
 
     records.forEach(record => {
       const start = new Date(record.startTime);
       const end = new Date(record.endTime);
-      const duration = (end.getTime() - start.getTime()) / (1000 * 60); // in minutes
+      const duration = (end.getTime() - start.getTime()) / (1000 * 60);
 
       switch(record.stage) {
         case SleepType.DEEP:
@@ -78,7 +77,6 @@ const SleepScreen = () => {
           awake += duration;
           break;
         case SleepType.SLEEPING:
-          // Default to light sleep if just "SLEEPING" is specified
           light += duration;
           break;
       }
@@ -86,7 +84,6 @@ const SleepScreen = () => {
       totalDuration += duration;
     });
 
-    // Format for pie chart
     const pieData = [
       {value: deep, color: '#6C5CE7', text: Math.round(deep).toString(), legend: 'Deep Sleep'},
       {value: light, color: '#A29BFE', text: Math.round(light).toString(), legend: 'Light Sleep'},
@@ -94,12 +91,10 @@ const SleepScreen = () => {
       {value: awake, color: '#E9E5FF', text: Math.round(awake).toString(), legend: 'Awake'},
     ];
 
-    // Format duration (hours and minutes)
     const hours = Math.floor(totalDuration / 60);
     const minutes = Math.round(totalDuration % 60);
     const durationText = `${hours}h ${minutes}m`;
 
-    // Get time range (first record start to last record end)
     const firstRecord = records[0];
     const lastRecord = records[records.length - 1];
     const startTime = new Date(firstRecord.startTime);
@@ -116,7 +111,6 @@ const SleepScreen = () => {
       hours: Math.random() * 2 + 5
     }));
 
-    // Calculate sleep quality based on total sleep time and deep sleep ratio
     const deepSleepRatio = deep / totalDuration;
     const totalSleepHours = totalDuration / 60;
     
@@ -141,15 +135,15 @@ const SleepScreen = () => {
     };
   };
 
-  const calculateSleepScore = (totalHours: number, deepSleepRatio: number): number => {
-    // Base score on total sleep time (50% weight) and deep sleep ratio (50% weight)
+  const calculateSleepScore = (totalHours: number, deepSleepRatio: number): number | string => {
+    if (totalHours <= 0) return '--';
     const hoursScore = Math.min(100, Math.max(0, (totalHours / 8) * 50));
     const deepSleepScore = Math.min(50, deepSleepRatio * 100);
     return Math.round(hoursScore + deepSleepScore);
   };
 
   const getSleepQuality = (totalHours: number, deepSleepRatio: number): string => {
-    // Consider both total sleep time and deep sleep ratio
+    if (totalHours <= 0) return 'No data';
     if (totalHours >= 7 && deepSleepRatio >= 0.2) return 'Excellent';
     if (totalHours >= 6.5 && deepSleepRatio >= 0.15) return 'Good';
     if (totalHours >= 6 || deepSleepRatio >= 0.1) return 'Fair';
@@ -159,13 +153,13 @@ const SleepScreen = () => {
   const initializeHealthData = async () => {
     try {
       setIsLoading(true);
+      setHasData(false);
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
         return;
       }
 
-      // Calculate date range based on active view
       let startDate = new Date(currentDate);
       let endDate = new Date(currentDate);
 
@@ -175,7 +169,7 @@ const SleepScreen = () => {
           endDate.setHours(23, 59, 59, 999);
           break;
         case 'week':
-          startDate.setDate(startDate.getDate() - startDate.getDay()); // Start of week
+          startDate.setDate(startDate.getDate() - startDate.getDay());
           endDate.setDate(startDate.getDate() + 6);
           endDate.setHours(23, 59, 59, 999);
           break;
@@ -193,8 +187,10 @@ const SleepScreen = () => {
 
       const records = await fetchSleepRecords(startDate.toISOString(), endDate.toISOString());
       setSleepRecords(records);
+      setHasData(records.length > 0);
     } catch (error) {
       console.error('Error initializing health data:', error);
+      setHasData(false);
     } finally {
       setIsLoading(false);
     }
@@ -301,15 +297,78 @@ const SleepScreen = () => {
       </View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <Text>Loading sleep data...</Text>
-        </View>
-      ) : sleepRecords.length === 0 ? (
+        <ScrollView style={styles.content} contentContainerStyle={styles.loadingContent}>
+          {/* Duration Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={120}
+            viewBox="0 0 380 120"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.loadingSection}
+          >
+            <Rect x="120" y="20" rx="4" ry="4" width="140" height="40" />
+            <Rect x="150" y="70" rx="4" ry="4" width="80" height="20" />
+            <Rect x="120" y="100" rx="4" ry="4" width="140" height="16" />
+          </ContentLoader>
+
+          {/* Pie Chart Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={300}
+            viewBox="0 0 380 300"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.loadingSection}
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Circle cx="190" cy="150" r="80" />
+            <Circle cx="190" cy="150" r="60" />
+            <Rect x="50" y="250" rx="4" ry="4" width="120" height="16" />
+            <Rect x="210" y="250" rx="4" ry="4" width="120" height="16" />
+          </ContentLoader>
+
+          {/* Metrics Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={120}
+            viewBox="0 0 380 120"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.loadingSection}
+          >
+            <Rect x="0" y="0" rx="8" ry="8" width="180" height="100" />
+            <Rect x="200" y="0" rx="8" ry="8" width="180" height="100" />
+          </ContentLoader>
+
+          {/* Weekly Chart Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={200}
+            viewBox="0 0 380 200"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.loadingSection}
+          >
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Rect x="0" y="40" rx="4" ry="4" width="40" height="100" />
+            <Rect x="60" y="60" rx="4" ry="4" width="40" height="80" />
+            <Rect x="120" y="40" rx="4" ry="4" width="40" height="100" />
+            <Rect x="180" y="60" rx="4" ry="4" width="40" height="80" />
+            <Rect x="240" y="30" rx="4" ry="4" width="40" height="110" />
+            <Rect x="300" y="50" rx="4" ry="4" width="40" height="90" />
+          </ContentLoader>
+        </ScrollView>
+      ) : !hasData ? (
         <View style={styles.emptyContainer}>
-          <Text>No sleep data available</Text>
+          <Text style={styles.emptyText}>No sleep data available</Text>
         </View>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
           {/* Date and Sleep Duration */}
           <View style={styles.dateContainer}>
             <Text style={styles.durationText}>{sleepData.duration}</Text>
@@ -528,14 +587,18 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  loadingContent: {
+    paddingBottom: 32,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  loadingSection: {
+    marginBottom: 24,
+  },
   dateContainer: {
     marginBottom: 24,
     alignItems: 'center',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#64748B',
-    marginBottom: 8,
   },
   durationText: {
     fontSize: 32,
@@ -676,15 +739,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#64748B',
   },
 });
 

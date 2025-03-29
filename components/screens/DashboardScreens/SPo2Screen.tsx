@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
+import ContentLoader, { Rect } from 'react-content-loader/native';
 import BackButton from '../../BackButton';
 import ScreenWrapper from '../../ScreenWrapper';
 import {useFocusEffect} from '@react-navigation/native';
@@ -33,10 +34,12 @@ const SPo2Screen = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState<ChartPointDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
   const fetchHealthData = async () => {
     try {
       setIsLoading(true);
+      setHasData(false);
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
@@ -68,8 +71,10 @@ const SPo2Screen = () => {
 
       const records = await fetchOxygenSaturationRecords(startDate.toISOString(), endDate.toISOString());
       setSpO2Records(records);
+      setHasData(records.length > 0);
     } catch (error) {
       console.error('Error fetching health data:', error);
+      setHasData(false);
     } finally {
       setIsLoading(false);
     }
@@ -185,10 +190,10 @@ const SPo2Screen = () => {
   const calculateStatistics = () => {
     if (spo2Records.length === 0) {
       return {
-        average: 0,
-        highest: {value: 0, time: ''},
-        lowest: {value: 100, time: ''},
-        current: 0,
+        average: '--',
+        highest: {value: '--', time: '--'},
+        lowest: {value: '--', time: '--'},
+        current: '--',
       };
     }
 
@@ -215,9 +220,20 @@ const SPo2Screen = () => {
     });
 
     const average = Math.round(sum / spo2Records.length);
-    const current = spo2Records[spo2Records.length - 1]?.percentage || 0;
+    const current = spo2Records[spo2Records.length - 1]?.percentage || '--';
 
-    return {average, highest, lowest, current};
+    return {
+      average: average || '--',
+      highest: {
+        value: highest.value !== -Infinity ? highest.value : '--',
+        time: highest.time || '--'
+      },
+      lowest: {
+        value: lowest.value !== Infinity ? lowest.value : '--',
+        time: lowest.time || '--'
+      },
+      current
+    };
   };
 
   const {data: chartData, xAxisLabelText} = processChartData();
@@ -269,11 +285,52 @@ const SPo2Screen = () => {
       </View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
-        </View>
+        <ScrollView style={styles.content} contentContainerStyle={styles.loadingContent}>
+          {/* Current Reading Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={120}
+            viewBox="0 0 380 120"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+          >
+            <Rect x="120" y="20" rx="4" ry="4" width="140" height="40" />
+            <Rect x="150" y="70" rx="4" ry="4" width="80" height="20" />
+            <Rect x="120" y="100" rx="4" ry="4" width="140" height="16" />
+          </ContentLoader>
+
+          {/* Chart Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={220}
+            viewBox="0 0 380 220"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.chartContainer}
+          >
+            <Rect x="100" y="0" rx="4" ry="4" width="180" height="20" />
+            <Rect x="0" y="40" rx="8" ry="8" width="100%" height="180" />
+          </ContentLoader>
+
+          {/* Stats Loader */}
+          <ContentLoader 
+            speed={1}
+            width="100%"
+            height={120}
+            viewBox="0 0 380 120"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.statsContainer}
+          >
+            <Rect x="0" y="0" rx="8" ry="8" width="110" height="120" />
+            <Rect x="125" y="0" rx="8" ry="8" width="110" height="120" />
+            <Rect x="250" y="0" rx="8" ry="8" width="110" height="120" />
+          </ContentLoader>
+        </ScrollView>
       ) : (
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
           {/* Current SpO2 Reading */}
           <View style={styles.readingContainer}>
             <Text style={styles.readingValue}>{stats.current}%</Text>
@@ -286,7 +343,7 @@ const SPo2Screen = () => {
 
           {/* SpO2 Chart */}
           <View style={styles.chartContainer}>
-            {chartData.length > 0 ? (
+            {hasData && chartData.length > 0 ? (
               <>
                 <Text style={styles.chartTitle}>SPO2 ({activeView === 'day' ? 'Daily' : 
                   activeView === 'week' ? 'Weekly' : 
@@ -333,9 +390,7 @@ const SPo2Screen = () => {
                 />
               </>
             ) : (
-              <Text style={{textAlign: 'center', color: '#64748B'}}>
-                No SPO2 data available
-              </Text>
+              <Text style={styles.noDataText}>No SPO2 data available</Text>
             )}
           </View>
 
@@ -474,16 +529,16 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     paddingHorizontal: 16,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
   content: {
     flex: 1,
     padding: 16,
     backgroundColor: '#FFFFFF',
+  },
+  loadingContent: {
+    paddingBottom: 32,
+  },
+  scrollContent: {
+    paddingBottom: 32,
   },
   readingContainer: {
     alignItems: 'center',
@@ -616,6 +671,11 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  noDataText: {
+    textAlign: 'center', 
+    color: '#64748B',
+    marginVertical: 20,
   },
 });
 

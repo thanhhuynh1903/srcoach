@@ -7,6 +7,7 @@ import {
   requestExerciseRoute,
   requestPermission,
 } from 'react-native-health-connect';
+import { ExerciseType, getNameFromExerciseType } from '../contants/exerciseType';
 
 const api = axios.create({
   baseURL: 'http://192.168.1.8:5000/api',
@@ -27,7 +28,9 @@ export interface ExerciseSession {
   startTime: string;
   endTime: string;
   id: string;
+  routes?: ExerciseRouteRecord[];
 }
+
 
 export interface StepRecord {
   count: number;
@@ -134,7 +137,27 @@ const syncToBackend = async (endpoint: string, data: any) => {
     await api.post(endpoint, data);
     console.log(`Successfully synced data to ${endpoint}`);
   } catch (error) {
-    
+    console.error(`Error syncing to ${endpoint}:`, error);
+  }
+};
+
+const syncExerciseSessionToBackend = async (session: ExerciseSession) => {
+  try {
+    // First create the session
+    const sessionResponse = await api.post('/record-exercise-session', {
+      exercise_type: session.exerciseType,
+      record_id: session.id,
+      data_origin: session.dataOrigin,
+      start_time: session.startTime,
+      end_time: session.endTime,
+      client_record_id: session.clientRecordId,
+      routes: []
+    });
+
+    return sessionResponse.data;
+  } catch (error) {
+    console.error('Error syncing exercise session:', error);
+    throw error;
   }
 };
 
@@ -370,6 +393,7 @@ export const fetchExerciseSessionRecords = async (
   endTime: string,
 ): Promise<ExerciseSession[]> => {
   try {
+
     const healthData = await readRecords('ExerciseSession', {
       timeRangeFilter: {
         operator: 'between',
@@ -378,24 +402,104 @@ export const fetchExerciseSessionRecords = async (
       },
     });
 
-    const records = healthData.records.map(record => ({
-      startTime: record.startTime,
-      endTime: record.endTime,
+    // Process basic session data without routes
+    const sessions = healthData.records.map(record => ({
       id: record.metadata?.id || '',
       exerciseType: record.exerciseType,
       clientRecordId: record.metadata?.clientRecordId || '',
       dataOrigin: record.metadata?.dataOrigin || '',
+      startTime: record.startTime,
+      endTime: record.endTime,
+      routes: []
     }));
 
-    await syncToBackend('/record-exercise-session', records);
+    // Sync basic session data to backend
+    await Promise.all(sessions.map(session => 
+      syncExerciseSessionToBackend(session).catch(console.error)
+    ));
 
+    // Get the final data from backend
     const response = await api.get('/record-exercise-session', {
-      params: {startTime, endTime},
+      params: { startTime, endTime },
     });
-    return response.data.data;
+
+    return response.data.data.map((session: any) => ({
+      id: session.record_id || session.id,
+      exerciseType: session.exercise_type,
+      clientRecordId: session.client_record_id,
+      dataOrigin: session.data_origin,
+      startTime: session.start_time,
+      endTime: session.end_time,
+      routes: []
+    }));
+
+    // return []
   } catch (error) {
     console.error('Error with exercise sessions:', error);
     return [];
+  }
+};
+
+// In utils_healthconnect.ts - update the fetchExerciseRoute function
+export const fetchExerciseRoute = async (
+  sessionId: string, // This should be the normal record ID (id)
+): Promise<ExerciseRouteRecord[] | null> => {
+  try {
+    // First try to get from backend using the session ID
+    try {
+      const response = await api.get(`/record-exercise-session/${sessionId}/routes`);
+      if (response.data.data?.length > 0) {
+        return response.data.data.map((route: any) => ({
+          time: route.time,
+          latitude: route.latitude,
+          longitude: route.longitude
+        }));
+      }
+    } catch (error) {
+      console.log('No routes found in backend, fetching from Health Connect');
+    }
+
+    console.log("Condition passed")
+
+    // If not found in backend, try Health Connect
+    const isInitialized = await initializeHealthConnect();
+    if (!isInitialized) {
+      console.log('Health Connect not initialized');
+      return null;
+    }
+
+    const granted = await requestPermission([
+      {accessType: 'read', recordType: 'ExerciseSession'}
+    ]);
+    
+    if (!granted) {
+      console.log('Permission denied for ExerciseRoute');
+      return null;
+    }
+
+    const routeData = await requestExerciseRoute(sessionId);
+
+    const routes = routeData.map(point => ({
+      time: point.time,
+      latitude: point.latitude,
+      longitude: point.longitude,
+    }));
+
+    // Save routes to backend if we have routes
+    if (routes.length > 0) {
+      try {
+        await api.post(`/record-exercise-session/${sessionId}/routes`, { routes });
+        console.log('Successfully saved routes to backend');
+      } catch (error) {
+        console.error('Error saving routes to backend:', error);
+      }
+    }
+
+    // Return the newly fetched routes
+    return routes;
+  } catch (error) {
+    console.error('Error fetching exercise route:', error);
+    return null;
   }
 };
 

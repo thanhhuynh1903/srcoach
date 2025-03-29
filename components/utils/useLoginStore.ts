@@ -16,7 +16,7 @@ interface LoginState {
   setUserData: (data: any) => void;
 
 }
-const MASTER_URL = "http://192.168.1.8/api";
+const MASTER_URL = "http://192.168.1.8:5000/api";
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
@@ -27,6 +27,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   setUserData: (data: any) => set({ userdata: data }),
   login: async (email: string, password: string) => {
     try {
+      console.log(MASTER_URL);
       const response = await axios.post(
         `${MASTER_URL}/users/login`,
         {identifier: email, password},
@@ -36,6 +37,8 @@ export const useLoginStore = create<LoginState>((set, get) => ({
           },
         },
       );
+
+      console.log("Identified")
 
       console.log('response', response.data);
       if (response.data.status === 'error') {
