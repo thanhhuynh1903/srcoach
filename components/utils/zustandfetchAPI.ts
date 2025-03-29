@@ -4,23 +4,29 @@ import useAuthStore from "./useAuthStore";
 
 const MASTER_URL = "https://xavia.pro/api";
 const token = useAuthStore.getState().token;
+console.log("Token in Auth:", token);
+
 // Interface cho state của API store
 interface ApiState {
   data: any | null;
+  dataDetail: any | null;
   isLoading: boolean;
-  error: string | null;
+  status: string | null;
   
   setLoading: () => void;
   setError: (error?: string | null) => void;
   setData: (data?: any | null) => void;
+  setDataDetail: (dataDetail?: any | null) => void;
   
   fetchData: (path: string) => Promise<void>;
+  fetchDataDetail: (path: string) => Promise<void>;
   postData: (path: string, payload: any) => Promise<void>;
   postFileData: (path: string, selectedFile: File, dataObject: Record<string, any>) => Promise<void>;
   updateData: (path: string, payload: any) => Promise<void>;
   patchData: (path: string, payload: any) => Promise<void>;
   deleteData: (path: string) => Promise<any>;
   fetchStepCount: (token: string) => Promise<void>;
+  clear: () => void;
 }
 
 // Cấu hình cho Axios instance
@@ -43,23 +49,45 @@ axiosInstance.interceptors.request.use(
 
 const useApiStore = create<ApiState>((set) => ({
   data: null,
+  dataDetail: null,
   isLoading: false,
-  error: null,
+  status: null,
 
-  setLoading: () => set({ isLoading: true, error: null }),
-  setError: (error = null) => set({ error, isLoading: false }),
+  setLoading: () => set({ isLoading: true, status: null }),
+  setError: (status = null) => set({ status, isLoading: false }),
   setData: (data = null) => set({ data, isLoading: false }),
+  setDataDetail: (dataDetail = null) => set({ dataDetail, isLoading: false }),
 
   fetchData: async (path: string) => {
     set((state) => ({ ...state, isLoading: true, error: null }));
     try {
       const response: AxiosResponse = await axiosInstance.get(path);
-
       console.log("response", response.data);
-      
-      set({ data: response.data, isLoading: false, error: null });
+      if (response.data.status === "error") {
+        set({ data: null, isLoading: false, status: response.data.status });
+        return;
+      }else if (response.data.status === "success") {
+      set({ data: response.data, isLoading: false, status: response.data.status });
+      }
+      return;
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
+    }
+  },
+  fetchDataDetail: async (path: string) => {
+    set((state) => ({ ...state, isLoading: true, error: null }));
+    try {
+      const response: AxiosResponse = await axiosInstance.get(path);
+      console.log("response detail in zustand", response.data);
+      if (response.data.status === "success") {
+        set({ dataDetail: response.data, isLoading: false, status: response.data.status });
+        return;
+      } else {
+      set({ dataDetail: response.data, isLoading: false, status: response.data.status });
+      }
+      return;
+    } catch (error: any) {
+      set({ dataDetail: null, isLoading: false, status: error.message });
     }
   },
 
@@ -67,9 +95,9 @@ const useApiStore = create<ApiState>((set) => ({
     set((state) => ({ ...state, isLoading: true, error: null }));
     try {
       const response: AxiosResponse = await axiosInstance.post(path, payload);
-      set({ data: response.data, isLoading: false, error: null });
+      set({ data: response.data, isLoading: false, status: null });
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
     }
   },
 
@@ -87,9 +115,9 @@ const useApiStore = create<ApiState>((set) => ({
       const response: AxiosResponse = await axiosInstance.post(path, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      set({ data: response.data, isLoading: false, error: null });
+      set({ data: response.data, isLoading: false, status: null });
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
     }
   },
 
@@ -97,9 +125,9 @@ const useApiStore = create<ApiState>((set) => ({
     set((state) => ({ ...state, isLoading: true, error: null }));
     try {
       const response: AxiosResponse = await axiosInstance.put(path, payload);
-      set({ data: response.data, isLoading: false, error: null });
+      set({ data: response.data, isLoading: false, status: null });
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
     }
   },
 
@@ -107,9 +135,9 @@ const useApiStore = create<ApiState>((set) => ({
     set((state) => ({ ...state, isLoading: true, error: null }));
     try {
       const response: AxiosResponse = await axiosInstance.patch(path, payload);
-      set({ data: response.data, isLoading: false, error: null });
+      set({ data: response.data, isLoading: false, status: null });
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
     }
   },
 
@@ -117,10 +145,10 @@ const useApiStore = create<ApiState>((set) => ({
     set((state) => ({ ...state, isLoading: true, error: null }));
     try {
       const response: AxiosResponse = await axiosInstance.delete(path);
-      set({ data: null, isLoading: false, error: null });
+      set({ data: null, isLoading: false, status: null });
       return response.data;
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
       return null;
     }
   },
@@ -136,11 +164,12 @@ const useApiStore = create<ApiState>((set) => ({
           endTimeMillis: Date.now(),
         },
       });
-      set({ data: response.data, isLoading: false, error: null });
+      set({ data: response.data, isLoading: false, status: null });
     } catch (error: any) {
-      set({ data: null, isLoading: false, error: error.message });
+      set({ data: null, isLoading: false, status: error.message });
     }
   },
+  clear: () => set({ data: null, dataDetail: null ,isLoading: false, status: null }),
 }));
 
 export default useApiStore;
