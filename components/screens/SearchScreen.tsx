@@ -1,366 +1,287 @@
-import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Image,
-  SafeAreaView,
-} from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
-import BackButton from '../BackButton';
+"use client"
 
-const filters = ['All', '5km', 'Available Now', '10km'];
-
-const experts = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    image: 'https://randomuser.me/api/portraits/women/32.jpg',
-    rating: 4.5,
-    reviews: 128,
-    tags: ['Marathon', 'Beginners'],
-    available: true,
-  },
-  {
-    id: 2,
-    name: 'Michael Chen',
-    image: 'https://randomuser.me/api/portraits/men/44.jpg',
-    rating: 4.8,
-    reviews: 93,
-    tags: ['Sprint', 'HIIT'],
-    available: true,
-  },
-  {
-    id: 3,
-    name: 'Emma Wilson',
-    image: 'https://randomuser.me/api/portraits/women/65.jpg',
-    rating: 4.7,
-    reviews: 156,
-    tags: ['Trail Running', '10km'],
-    available: false,
-  },
-  {
-    id: 4,
-    name: 'David Martinez',
-    image: 'https://randomuser.me/api/portraits/men/33.jpg',
-    rating: 4.6,
-    reviews: 201,
-    tags: ['5km', 'Expert'],
-    available: true,
-  },
-];
+import { useState } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, SafeAreaView, StatusBar } from "react-native"
+import Icon from "@react-native-vector-icons/ionicons"
 
 const SearchScreen = () => {
-  const [activeTab, setActiveTab] = useState('Expert');
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("All")
 
-  const renderStars = (rating: number) => {
-    return [...Array(5)].map((_, index) => (
-      <Icon
-        key={index}
-        name={index < Math.floor(rating) ? 'star' : 'star'}
-        size={16}
-        color={index < Math.floor(rating) ? '#FFB800' : '#E2E8F0'}
-        style={{marginRight: 2}}
-      />
-    ));
-  };
+  // Recent searches data
+  const recentSearches = [
+    { id: 1, query: "UI/UX Design Tips", timestamp: new Date() },
+    { id: 2, query: "React Development", timestamp: new Date() },
+    { id: 3, query: "Mobile App Design", timestamp: new Date() },
+    { id: 4, query: "Frontend Jobs", timestamp: new Date() },
+    { id: 5, query: "Design Systems", timestamp: new Date() },
+  ]
+
+  // Popular tags
+  const popularTags = [
+    { id: 1, name: "photography" },
+    { id: 2, name: "technology" },
+    { id: 3, name: "travel" },
+  ]
+
+  // Trending topics
+  const trendingTopics = [
+    { id: 1, name: "AI Development", percentage: 25 },
+    { id: 2, name: "Remote Work Tips", percentage: 18 },
+    { id: 3, name: "Design Tools", percentage: 15 },
+    { id: 4, name: "Product Management", percentage: 12 },
+    { id: 5, name: "Coding Bootcamps", percentage: 10 },
+  ]
+
+  // Clear a single recent search
+  const clearRecentSearch = (id) => {
+    // In a real app, you would remove the item from the array
+    console.log(`Clearing search with id: ${id}`)
+  }
+
+  // Clear all recent searches
+  const clearAllRecentSearches = () => {
+    // In a real app, you would clear the entire array
+    console.log("Clearing all recent searches")
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      <StatusBar barStyle="dark-content" />
+
+      {/* Header with Search Bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
-          <BackButton size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search Expert</Text>
-      </View>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
-          <Icon name="filter-outline" size={24} color="#000" />
+          <Icon name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
         <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#94A3B8" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search posts or experts..."
-            placeholderTextColor="#64748B"
+            placeholder="Search posts, users, or experts"
+            placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <Icon name="search" size={20} color="#64748B" />
         </View>
       </View>
 
-      {/* Tabs */}
-      {/* <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          onPress={() => setActiveTab('Post')}
-          style={styles.tab}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'Post' && styles.activeTabText,
-            ]}>
-            Post
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab('Expert')}
-          style={styles.tab}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'Expert' && styles.activeTabText,
-            ]}>
-            Expert
-          </Text>
-        </TouchableOpacity>
-      </View> */}
-
-      {/* Filters */}
-      <View style={styles.filtersContainer}>
-        <Text></Text>
-        {filters.map(filter => (
+      {/* Tab Navigation */}
+      <View style={styles.tabsContainer}>
+        {["All", "People", "Posts", "Experts"].map((tab) => (
           <TouchableOpacity
-            key={filter}
-            style={[
-              styles.filterChip,
-              activeFilter === filter && styles.activeFilterChip,
-            ]}
-            onPress={() => setActiveFilter(filter)}>
-            <Text
-              style={[
-                styles.filterText,
-                activeFilter === filter && styles.activeFilterText,
-              ]}>
-              {filter}
-            </Text>
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.activeTab]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Expert List */}
-      <ScrollView style={styles.expertList}>
-        {experts.map(expert => (
-          <View key={expert.id} style={styles.expertCard}>
-            <View style={styles.expertInfo}>
-              <Image source={{uri: expert.image}} style={styles.expertImage} />
-              <View style={styles.expertDetails}>
-                <Text style={styles.expertName}>{expert.name}</Text>
-                <View style={styles.ratingContainer}>
-                  {renderStars(expert.rating)}
-                  <Text style={styles.reviewCount}>({expert.reviews})</Text>
-                </View>
-                <View style={styles.tagsContainer}>
-                  {expert.tags.map(tag => (
-                    <Text key={tag} style={styles.tag}>
-                      {tag}
-                    </Text>
-                  ))}
-                </View>
-                {expert.available && (
-                  <View style={styles.availableContainer}>
-                    <View style={styles.availableDot} />
-                    <Text style={styles.availableText}>Available now</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            <TouchableOpacity style={styles.contactButton}>
-              <Text style={styles.contactButtonText}>Contact</Text>
+      <ScrollView style={styles.content}>
+        {/* Recent Searches */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Searches</Text>
+          <TouchableOpacity onPress={clearAllRecentSearches}>
+            <Text style={styles.clearAllText}>Clear All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {recentSearches.map((search) => (
+          <View key={search.id} style={styles.recentSearchItem}>
+            <Icon name="time-outline" size={20} color="#94A3B8" style={styles.timeIcon} />
+            <Text style={styles.recentSearchText}>{search.query}</Text>
+            <TouchableOpacity onPress={() => clearRecentSearch(search.id)}>
+              <Icon name="close" size={20} color="#94A3B8" />
             </TouchableOpacity>
           </View>
         ))}
+
+        {/* Popular Tags */}
+        <View style={styles.tagsSection}>
+          <View style={styles.tagsSectionHeader}>
+            <Icon name="pricetag" size={18} color="#000" />
+            <Text style={styles.tagsSectionTitle}>Popular Tags</Text>
+          </View>
+
+          <View style={styles.tagsContainer}>
+            {popularTags.map((tag) => (
+              <TouchableOpacity key={tag.id} style={styles.tagChip}>
+                <Text style={styles.tagText}># {tag.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Trending Now */}
+        <Text style={styles.sectionTitle}>Trending Now</Text>
+
+        {trendingTopics.map((topic) => (
+          <TouchableOpacity key={topic.id} style={styles.trendingItem}>
+            <View style={styles.trendingItemLeft}>
+              <Icon name="trending-up" size={20} color="#10B981" />
+              <Text style={styles.trendingText}>{topic.name}</Text>
+            </View>
+            <View style={styles.trendingItemRight}>
+              <Text style={styles.percentageText}>+{topic.percentage}%</Text>
+              <Icon name="chevron-forward" size={20} color="#94A3B8" />
+            </View>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 0,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginRight: 12,
   },
   searchContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
     borderRadius: 20,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     height: 40,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#000000',
+    color: "#0F172A",
     padding: 0,
-    marginRight: 8,
   },
   tabsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   tab: {
-    marginRight: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: "#F1F5F9",
+  },
+  activeTab: {
+    backgroundColor: "#0F2B5B",
   },
   tabText: {
-    fontSize: 16,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 14,
+    color: "#64748B",
   },
   activeTabText: {
-    color: '#000000',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "500",
   },
-  filtersContainer: {
+  content: {
+    flex: 1,
     paddingHorizontal: 16,
-    marginVertical: 12,
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
-  filtersContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    marginRight: 8,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 12,
   },
-  activeFilterChip: {
-    backgroundColor: '#1E3A8A',
-  },
-  filterText: {
+  clearAllText: {
     fontSize: 14,
-    color: '#64748B',
+    color: "#3B82F6",
   },
-  activeFilterText: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
-  expertList: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  expertCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
+  recentSearchItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: "#F1F5F9",
   },
-  expertInfo: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  expertImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  timeIcon: {
     marginRight: 12,
   },
-  expertDetails: {
+  recentSearchText: {
     flex: 1,
-    justifyContent: 'center',
-  },
-  expertName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
+    color: "#0F172A",
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  tagsSection: {
+    marginTop: 24,
+    marginBottom: 24,
   },
-  reviewCount: {
-    fontSize: 14,
-    color: '#64748B',
-    marginLeft: 4,
+  tagsSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  tagsSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginLeft: 8,
   },
   tagsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 4,
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
-  tag: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  availableContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  availableDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#22C55E',
-    marginRight: 4,
-  },
-  availableText: {
-    fontSize: 14,
-    color: '#22C55E',
-  },
-  contactButton: {
-    backgroundColor: '#1E3A8A',
+  tagChip: {
+    backgroundColor: "#F1F5F9",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
   },
-  contactButtonText: {
-    color: '#FFFFFF',
+  tagText: {
     fontSize: 14,
-    fontWeight: '500',
+    color: "#0F172A",
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    backgroundColor: '#FFFFFF',
+  trendingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  navItem: {
-    alignItems: 'center',
+  trendingItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  navText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 4,
+  trendingItemRight: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-});
+  trendingText: {
+    fontSize: 16,
+    color: "#0F172A",
+    marginLeft: 12,
+  },
+  percentageText: {
+    fontSize: 14,
+    color: "#10B981",
+    marginRight: 8,
+  },
+})
 
-export default SearchScreen;
+export default SearchScreen
+

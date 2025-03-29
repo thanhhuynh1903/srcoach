@@ -13,14 +13,13 @@ import {
   StatusBar,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-
+import BackButton from '../../BackButton';
+import { usePostStore } from '../../utils/usePostStore';
 interface CommunityPostCreateScreenProps {
-  onBack: () => void;
   onPost: (postData: PostData) => void;
 }
 
 interface PostData {
-  category: string;
   title: string;
   content: string;
   images: string[];
@@ -29,10 +28,8 @@ interface PostData {
 }
 
 const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
-  onBack,
   onPost
 }) => {
-  const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([
@@ -42,7 +39,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   ]);
   const [tags, setTags] = useState('');
   const [runRecord, setRunRecord] = useState('');
-
+  const { createPost } = usePostStore();
   const handleAddImage = () => {
     // In a real app, this would open the image picker
     console.log('Open image picker');
@@ -56,7 +53,6 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
   const handlePost = () => {
     const postData: PostData = {
-      category,
       title,
       content,
       images,
@@ -75,8 +71,8 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Icon name="chevron-back" size={24} color="#000" />
+        <TouchableOpacity>
+            <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Post</Text>
         <View style={styles.headerRight} />
@@ -87,17 +83,6 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
         style={styles.keyboardAvoidView}
       >
         <ScrollView style={styles.scrollView}>
-          {/* Category */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Category</Text>
-            <TouchableOpacity style={styles.selectInput}>
-              <Text style={category ? styles.inputText : styles.placeholderText}>
-                {category || 'Select category'}
-              </Text>
-              <Icon name="chevron-down" size={20} color="#999" />
-            </TouchableOpacity>
-          </View>
-
           {/* Title */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Title</Text>
