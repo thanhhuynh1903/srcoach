@@ -62,15 +62,13 @@ interface Post {
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const {isLoading, status, getAll} = usePostStore();
+  const {isLoading, status, getAll,clearCurrent} = usePostStore();
   const post = usePostStore(state => state.posts);
   useEffect(() => {
       getAll();
-      console.log('posts', post);
-      
+      clearCurrent();
   }, []);
 
-  // Static news data
   const news = [
     {
       id: '1',
@@ -230,7 +228,7 @@ const CommunityScreen = () => {
       );
     }
 
-    if (!status) {
+    if (status === "error") {
       return (
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={48} color="red" />
