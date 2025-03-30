@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState, useRef} from 'react';
+import React, {useCallback, useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -10,59 +10,32 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
-import ContentLoader, { Rect } from 'react-content-loader/native';
+import ContentLoader, {Rect} from 'react-content-loader/native';
 import BackButton from '../../BackButton';
+import {format, subDays, startOfDay, parseISO, subMonths, subYears, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
+import Icon from '@react-native-vector-icons/ionicons';
+import {
+  fetchHeartRateRecords,
+  initializeHealthConnect,
+} from '../../utils/utils_healthconnect';
 import {useFocusEffect} from '@react-navigation/native';
-import {format, startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
-import { fetchHeartRateRecords, fetchRestingHeartRateRecords, initializeHealthConnect } from '../../utils/utils_healthconnect';
 
 const {width} = Dimensions.get('window');
-
-interface HeartRateRecord {
-  beatsPerMinute: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-  id: string;
-}
-
-interface RestingHeartRateRecord {
-  beatsPerMinute: number;
-  startTime: string;
-  endTime: string;
-  metadata: {
-    id: string;
-  };
-  id: string;
-}
-
-interface ZoneData {
-  name: string;
-  range: string;
-  duration: string;
-  color: string;
-  progress: number;
-}
+const CHART_WIDTH = width - 32;
 
 const HeartRateScreen = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>([]);
-  const [restingHeartRateRecords, setRestingHeartRateRecords] = useState<RestingHeartRateRecord[]>([]);
-  const [currentHeartRate, setCurrentHeartRate] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [zoneData, setZoneData] = useState<ZoneData[]>([]);
+  const [heartRateRecords, setHeartRateRecords] = useState<any[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<any>(null);
   const [showPointDetails, setShowPointDetails] = useState(false);
-  const [hasData, setHasData] = useState(false);
   const pointDetailsPosition = useRef(new Animated.Value(0)).current;
+  const [restingHeartRate, setRestingHeartRate] = useState<number | null>(null);
 
-  const filterRecordsByPeriod = (records: HeartRateRecord[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
+  const filterRecordsByPeriod = (records: any[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
     let startDate: Date;
     let endDate: Date;
 
@@ -91,187 +64,169 @@ const HeartRateScreen = () => {
     }
 
     return records.filter(record => {
-      const recordDate = new Date(record.startTime);
+      const recordDate = parseISO(record.startTime);
       return recordDate >= startDate && recordDate <= endDate;
     });
   };
 
-  const calculateZones = (records: HeartRateRecord[]) => {
-    if (records.length === 0) {
-      return [
-        {
-          name: 'Peak',
-          range: '170-190 BPM',
-          duration: '0 min',
-          color: '#FF4D4F',
-          progress: 0,
-        },
-        {
-          name: 'Cardio',
-          range: '140-170 BPM',
-          duration: '0 min',
-          color: '#FF7A45',
-          progress: 0,
-        },
-        {
-          name: 'Fat Burn',
-          range: '110-140 BPM',
-          duration: '0 min',
-          color: '#52C41A',
-          progress: 0,
-        },
-        {
-          name: 'Rest',
-          range: '60-110 BPM',
-          duration: '0 min',
-          color: '#1890FF',
-          progress: 0,
-        },
-      ];
-    }
-
-    const zoneCounts = {
-      peak: {count: 0, min: 170, max: 190},
-      cardio: {count: 0, min: 140, max: 170},
-      fatBurn: {count: 0, min: 110, max: 140},
-      rest: {count: 0, min: 60, max: 110},
-    };
-
-    records.forEach(record => {
-      const bpm = record.beatsPerMinute;
-      if (bpm >= 170) zoneCounts.peak.count++;
-      else if (bpm >= 140) zoneCounts.cardio.count++;
-      else if (bpm >= 110) zoneCounts.fatBurn.count++;
-      else if (bpm >= 60) zoneCounts.rest.count++;
-    });
-
-    const total = records.length;
-    const totalMinutes = total; // Assuming 1 record per minute for simplicity
-
-    return [
-      {
-        name: 'Peak',
-        range: '170-190 BPM',
-        duration: `${zoneCounts.peak.count} min`,
-        color: '#FF4D4F',
-        progress: zoneCounts.peak.count / total,
-      },
-      {
-        name: 'Cardio',
-        range: '140-170 BPM',
-        duration: `${zoneCounts.cardio.count} min`,
-        color: '#FF7A45',
-        progress: zoneCounts.cardio.count / total,
-      },
-      {
-        name: 'Fat Burn',
-        range: '110-140 BPM',
-        duration: `${zoneCounts.fatBurn.count} min`,
-        color: '#52C41A',
-        progress: zoneCounts.fatBurn.count / total,
-      },
-      {
-        name: 'Rest',
-        range: '60-110 BPM',
-        duration: `${zoneCounts.rest.count} min`,
-        color: '#1890FF',
-        progress: zoneCounts.rest.count / total,
-      },
-    ];
-  };
-
-  const prepareChartData = (records: HeartRateRecord[]) => {
+  const prepareLineChartData = (records: any[]) => {
     if (records.length === 0) return [];
     
-    // Sort records by time
     const sortedRecords = [...records].sort((a, b) => 
       new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     );
 
-    // Group based on active view
-    const groupedData: {[key: string]: {sum: number, count: number, date: Date}} = {};
+    // For day view, show hourly data points
+    if (activeView === 'day') {
+      return sortedRecords.map((record, index) => ({
+        value: record.beatsPerMinute,
+        label: index % 3 === 0 ? format(parseISO(record.startTime), 'HH:mm') : '',
+        date: format(parseISO(record.startTime), 'dd/MM/yyyy HH:mm'),
+        originalValue: record.beatsPerMinute,
+        labelTextStyle: {
+          width: 50,
+          color: '#94A3B8',
+          fontSize: 10,
+        },
+      }));
+    }
+
+    // For other views, aggregate data by day
+    const dailyData: {[key: string]: {sum: number, count: number, date: Date}} = {};
     
     sortedRecords.forEach(record => {
-      const date = new Date(record.startTime);
-      let key = '';
-      let labelKey = '';
-
-      switch (activeView) {
-        case 'day':
-          key = format(date, 'HH:00');
-          labelKey = format(date, 'HH:mm');
-          break;
-        case 'week':
-          key = format(date, 'EEE');
-          labelKey = format(date, 'EEE');
-          break;
-        case 'month':
-          key = format(date, 'dd/MM');
-          labelKey = format(date, 'dd MMM');
-          break;
-        case 'year':
-          key = format(date, 'MMM');
-          labelKey = format(date, 'MMM');
-          break;
+      const date = parseISO(record.startTime);
+      const dayKey = format(date, 'yyyy-MM-dd');
+      
+      if (!dailyData[dayKey]) {
+        dailyData[dayKey] = {sum: 0, count: 0, date};
       }
       
-      if (!groupedData[key]) {
-        groupedData[key] = {sum: 0, count: 0, date};
-      }
-      
-      groupedData[key].sum += record.beatsPerMinute;
-      groupedData[key].count++;
+      dailyData[dayKey].sum += record.beatsPerMinute;
+      dailyData[dayKey].count++;
     });
     
-    return Object.keys(groupedData).map((key, index) => {
-      const {sum, count, date} = groupedData[key];
+    return Object.keys(dailyData).map((dayKey, index) => {
+      const {sum, count, date} = dailyData[dayKey];
       const avg = Math.round(sum / count);
       return {
         value: avg,
-        label: index % 2 === 0 ? format(date, activeView === 'day' ? 'HH:mm' : 
-                                  activeView === 'week' ? 'EEE' : 
-                                  activeView === 'month' ? 'dd MMM' : 'MMM') : '',
-        date: format(date, 'dd/MM/yyyy HH:mm'),
+        label: index % 2 === 0 ? format(date, 'MMM d') : '',
+        date: format(date, 'dd/MM/yyyy'),
         originalValue: avg,
+        labelTextStyle: {
+          width: 50,
+          color: '#94A3B8',
+          fontSize: 10,
+        },
       };
     });
   };
 
-  const calculateStats = (records: HeartRateRecord[]) => {
+  const calculateStats = (records: any[]) => {
     if (records.length === 0) {
       return {
-        average: '--',
-        max: '--',
-        min: '--',
+        average: 0,
+        max: 0,
+        min: 0,
       };
     }
     
     const values = records.map(r => r.beatsPerMinute);
     const sum = values.reduce((a, b) => a + b, 0);
-    const average = Math.round(sum / values.length);
     const max = Math.max(...values);
     const min = Math.min(...values);
     
-    return {average, max, min};
+    return {
+      average: Math.round(sum / values.length),
+      max,
+      min,
+    };
   };
 
-  const readSampleData = async () => {
+  const calculateHeartRateZones = (maxBpm: number) => {
+    // Using Karvonen formula for heart rate zones
+    if (!restingHeartRate || !maxBpm) return [];
+    
+    const heartRateReserve = maxBpm - restingHeartRate;
+    
+    return [
+      {
+        name: 'Peak',
+        range: `${Math.round(0.9 * heartRateReserve + restingHeartRate)}-${maxBpm} BPM`,
+        duration: '0 min',
+        color: '#FF4D4F',
+        progress: 0,
+      },
+      {
+        name: 'Cardio',
+        range: `${Math.round(0.8 * heartRateReserve + restingHeartRate)}-${Math.round(0.89 * heartRateReserve + restingHeartRate)} BPM`,
+        duration: '0 min',
+        color: '#FF7A45',
+        progress: 0,
+      },
+      {
+        name: 'Fat Burn',
+        range: `${Math.round(0.7 * heartRateReserve + restingHeartRate)}-${Math.round(0.79 * heartRateReserve + restingHeartRate)} BPM`,
+        duration: '0 min',
+        color: '#52C41A',
+        progress: 0,
+      },
+      {
+        name: 'Warm Up',
+        range: `${Math.round(0.6 * heartRateReserve + restingHeartRate)}-${Math.round(0.69 * heartRateReserve + restingHeartRate)} BPM`,
+        duration: '0 min',
+        color: '#1890FF',
+        progress: 0,
+      },
+      {
+        name: 'Rest',
+        range: `${restingHeartRate}-${Math.round(0.59 * heartRateReserve + restingHeartRate)} BPM`,
+        duration: '0 min',
+        color: '#D3D3D3',
+        progress: 0,
+      },
+    ];
+  };
+
+  const calculateTimeInZones = (records: any[], zones: any[]) => {
+    if (records.length === 0 || !zones.length) return zones;
+    
+    const updatedZones = [...zones];
+    const totalMinutes = records.length; // Assuming 1 record per minute for simplicity
+    
+    records.forEach(record => {
+      const bpm = record.beatsPerMinute;
+      for (let i = 0; i < updatedZones.length; i++) {
+        const [min, max] = updatedZones[i].range.split('-').map((n: string) => parseInt(n));
+        if (bpm >= min && bpm <= max) {
+          const currentDuration = parseInt(updatedZones[i].duration) || 0;
+          updatedZones[i].duration = `${currentDuration + 1} min`;
+          updatedZones[i].progress = ((currentDuration + 1) / totalMinutes);
+          break;
+        }
+      }
+    });
+    
+    return updatedZones;
+  };
+
+  const readHeartRateData = async () => {
     try {
       setIsLoading(true);
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
+        setIsLoading(false);
         return;
       }
 
-      // Calculate date range based on active view
       let startDate = new Date(currentDate);
       let endDate = new Date(currentDate);
 
       switch(activeView) {
         case 'day':
-          startDate = startOfDay(currentDate);
-          endDate = new Date(startDate);
+          startDate.setHours(0, 0, 0, 0);
           endDate.setHours(23, 59, 59, 999);
           break;
         case 'week':
@@ -288,29 +243,49 @@ const HeartRateScreen = () => {
           break;
       }
 
-      const heartRateData = await fetchHeartRateRecords(startDate.toISOString(), endDate.toISOString());
-      const restingHeartRateData = await fetchRestingHeartRateRecords(startDate.toISOString(), endDate.toISOString());
+      const heartRateData = await fetchHeartRateRecords(
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
 
       setHeartRateRecords(heartRateData);
-      setRestingHeartRateRecords(restingHeartRateData);
-      setHasData(heartRateData.length > 0);
 
+      // Get resting heart rate (assuming it's the minimum from the data)
       if (heartRateData.length > 0) {
-        const sorted = [...heartRateData].sort((a, b) => 
-          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-        );
-        setCurrentHeartRate(sorted[0].beatsPerMinute);
-      } else {
-        setCurrentHeartRate(null);
+        const minBpm = Math.min(...heartRateData.map(r => r.beatsPerMinute));
+        setRestingHeartRate(minBpm);
       }
-
-      setIsLoading(false);
     } catch (error) {
-      console.error('Error reading health data:', error);
+      console.log('Error reading heart rate data:', error);
+    } finally {
       setIsLoading(false);
-      setHasData(false);
-      setCurrentHeartRate(null);
+      setIsSyncing(false);
     }
+  };
+
+  const handleSyncPress = () => {
+    setIsSyncing(true);
+    readHeartRateData();
+  };
+
+  const handleDataPointClick = (item: any) => {
+    setSelectedPoint(item);
+    setShowPointDetails(true);
+    Animated.timing(pointDetailsPosition, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hidePointDetails = () => {
+    Animated.timing(pointDetailsPosition, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowPointDetails(false);
+    });
   };
 
   const changeView = (view: 'day' | 'week' | 'month' | 'year') => {
@@ -341,7 +316,12 @@ const HeartRateScreen = () => {
   const formatDate = (date: Date) => {
     switch(activeView) {
       case 'day':
-        return format(date, 'EEEE, MMMM d, yyyy');
+        return date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
       case 'week':
         const start = startOfWeek(date);
         const end = endOfWeek(date);
@@ -353,57 +333,19 @@ const HeartRateScreen = () => {
     }
   };
 
-  const handleDataPointClick = (item: any) => {
-    setSelectedPoint(item);
-    setShowPointDetails(true);
-    Animated.timing(pointDetailsPosition, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const hidePointDetails = () => {
-    Animated.timing(pointDetailsPosition, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowPointDetails(false);
-    });
-  };
-
   useFocusEffect(
     useCallback(() => {
-      readSampleData();
+      readHeartRateData();
     }, [currentDate, activeView]),
   );
 
-  useEffect(() => {
-    if (heartRateRecords.length > 0) {
-      const filteredRecords = filterRecordsByPeriod(heartRateRecords, activeView, currentDate);
-      const chartData = prepareChartData(filteredRecords);
-      setChartData(chartData);
-      setZoneData(calculateZones(filteredRecords));
-    } else {
-      setChartData([]);
-      setZoneData(calculateZones([]));
-    }
-  }, [activeView, currentDate, heartRateRecords]);
-
-  const {average, max, min} = calculateStats(
-    filterRecordsByPeriod(heartRateRecords, activeView, currentDate)
+  const filteredRecords = filterRecordsByPeriod(heartRateRecords, activeView, currentDate);
+  const lineData = prepareLineChartData(filteredRecords);
+  const stats = calculateStats(filteredRecords);
+  const heartRateZones = calculateTimeInZones(
+    filteredRecords,
+    calculateHeartRateZones(stats.max)
   );
-
-  const getRestingHeartRate = () => {
-    if (restingHeartRateRecords.length === 0) return '--';
-    
-    const sorted = [...restingHeartRateRecords].sort((a, b) => 
-      new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-    );
-    
-    return sorted[0].beatsPerMinute;
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -413,6 +355,17 @@ const HeartRateScreen = () => {
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Heart Rate</Text>
+        <TouchableOpacity 
+          style={styles.syncButton} 
+          onPress={handleSyncPress}
+          disabled={isSyncing}
+        >
+          {isSyncing ? (
+            <ActivityIndicator size="small" color="#3B82F6" />
+          ) : (
+            <Icon name="sync" size={24} color="#3B82F6" />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* View Toggle */}
@@ -451,157 +404,150 @@ const HeartRateScreen = () => {
       </View>
 
       {isLoading ? (
-        <ScrollView style={styles.content} contentContainerStyle={styles.loadingContent}>
-          {/* Current Heart Rate Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={80}
-            viewBox="0 0 380 80"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-          >
-            <Rect x="0" y="0" rx="4" ry="4" width="40" height="40" />
-            <Rect x="60" y="0" rx="4" ry="4" width="200" height="30" />
-            <Rect x="60" y="40" rx="4" ry="4" width="150" height="20" />
-          </ContentLoader>
+        <View style={styles.content}>
+          {/* Summary Loaders */}
+          <View style={styles.summaryContainer}>
+            <ContentLoader 
+              speed={1}
+              width="100%"
+              height={100}
+              viewBox="0 0 380 100"
+              backgroundColor="#f3f3f3"
+              foregroundColor="#ecebeb"
+            >
+              <Rect x="0" y="0" rx="16" ry="16" width="48%" height="100" />
+              <Rect x="52%" y="0" rx="16" ry="16" width="48%" height="100" />
+            </ContentLoader>
+          </View>
 
           {/* Chart Loader */}
           <ContentLoader 
             speed={1}
             width="100%"
-            height={220}
-            viewBox="0 0 380 220"
+            height={250}
+            viewBox="0 0 380 250"
             backgroundColor="#f3f3f3"
             foregroundColor="#ecebeb"
             style={styles.chartContainer}
           >
-            <Rect x="0" y="0" rx="4" ry="4" width="200" height="24" />
-            <Rect x="0" y="40" rx="8" ry="8" width="100%" height="180" />
-          </ContentLoader>
-
-          {/* Zones Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={240}
-            viewBox="0 0 380 240"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.zonesContainer}
-          >
-            <Rect x="0" y="0" rx="4" ry="4" width="150" height="24" />
-            <Rect x="0" y="40" rx="8" ry="8" width="100%" height="48" />
-            <Rect x="0" y="104" rx="8" ry="8" width="100%" height="48" />
-            <Rect x="0" y="168" rx="8" ry="8" width="100%" height="48" />
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Rect x="0" y="34" rx="4" ry="4" width="180" height="16" />
+            <Rect x="0" y="70" rx="8" ry="8" width="100%" height="180" />
           </ContentLoader>
 
           {/* Stats Loader */}
           <ContentLoader 
             speed={1}
             width="100%"
-            height={100}
-            viewBox="0 0 380 100"
+            height={200}
+            viewBox="0 0 380 200"
             backgroundColor="#f3f3f3"
             foregroundColor="#ecebeb"
             style={styles.statsContainer}
           >
-            <Rect x="0" y="0" rx="8" ry="8" width="30%" height="80" />
-            <Rect x="35%" y="0" rx="8" ry="8" width="30%" height="80" />
-            <Rect x="70%" y="0" rx="8" ry="8" width="30%" height="80" />
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Rect x="0" y="44" rx="8" ry="8" width="48%" height="120" />
+            <Rect x="52%" y="44" rx="8" ry="8" width="48%" height="120" />
+            <Rect x="0" y="174" rx="8" ry="8" width="48%" height="120" />
+            <Rect x="52%" y="174" rx="8" ry="8" width="48%" height="120" />
           </ContentLoader>
-        </ScrollView>
+        </View>
       ) : (
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        <ScrollView style={styles.content}>
           {/* Current Heart Rate */}
-          <View style={styles.currentRateContainer}>
-            <View style={styles.heartIconContainer}>
-              <Icon name="heart" size={28} color="#FF4D4F" />
-            </View>
-            <View style={styles.rateTextContainer}>
-              <Text style={styles.currentRate}>
-                {currentHeartRate || '--'} <Text style={styles.bpmLabel}>BPM</Text>
-              </Text>
-              <View style={styles.restingRateContainer}>
-                <Text style={styles.restingRateText}>
-                  Resting Rate: {getRestingHeartRate()} BPM
-                </Text>
-                <TouchableOpacity>
-                  <Icon
-                    name="information-circle-outline"
-                    size={16}
-                    color="#64748B"
-                  />
-                </TouchableOpacity>
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryItem}>
+              <View style={styles.heartIconContainer}>
+                <Icon name="heart" size={28} color="#FF4D4F" />
               </View>
+              <Text style={styles.summaryLabel}>Current</Text>
+              <Text style={styles.summaryValue}>
+                {heartRateRecords.length > 0 ? 
+                  heartRateRecords[heartRateRecords.length - 1].beatsPerMinute : '--'} 
+                <Text style={styles.bpmLabel}> BPM</Text>
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Resting</Text>
+              <Text style={styles.summaryValue}>
+                {restingHeartRate || '--'}
+                <Text style={styles.bpmLabel}> BPM</Text>
+              </Text>
             </View>
           </View>
 
           {/* Heart Rate Chart */}
           <View style={styles.chartContainer}>
-            {chartData.length > 0 ? (
-              <>
-                <Text style={styles.chartTitle}>
-                  {activeView === 'day' ? 'Today' : 
-                   activeView === 'week' ? 'This Week' : 
-                   activeView === 'month' ? 'This Month' : 'This Year'}'s Heart Rate
-                </Text>
-                <LineChart
-                  data={chartData}
-                  height={180}
-                  width={width - 32}
-                  spacing={(width - 32) / (chartData.length - 1)}
-                  initialSpacing={0}
-                  color="#FF4D4F"
-                  thickness={2}
-                  dataPointsColor="#FF4D4F"
-                  dataPointsRadius={4}
-                  hideRules
-                  yAxisColor="transparent"
-                  xAxisColor="transparent"
-                  yAxisTextStyle={styles.chartAxisText}
-                  xAxisLabelTextStyle={styles.chartAxisText}
-                  areaChart
-                  startFillColor="#FF4D4F"
-                  endFillColor="rgba(255, 77, 79, 0.1)"
-                  startOpacity={0.8}
-                  endOpacity={0.2}
-                  rulesType="solid"
-                  rulesColor="#E5E7EB"
-                  yAxisTextNumberOfLines={1}
-                  yAxisLabelWidth={30}
-                  noOfSections={4}
-                  maxValue={Math.max(...chartData.map(d => d.value)) + 20}
-                  minValue={Math.max(0, Math.min(...chartData.map(d => d.value))) - 20}
-                  onPress={(item: any) => handleDataPointClick(item)}
-                  pointerConfig={{
-                    pointerStripHeight: 140,
-                    pointerStripColor: 'lightgray',
-                    pointerStripWidth: 1,
-                    pointerColor: '#FF4D4F',
-                    radius: 6,
-                    pointerLabelWidth: 100,
-                    pointerLabelHeight: 90,
-                    activatePointersOnLongPress: true,
-                    autoAdjustPointerLabelPosition: true,
-                    pointerLabelComponent: (items: any[]) => {
-                      return (
-                        <View style={styles.pointerLabel}>
-                          <Text style={styles.pointerLabelText}>
-                            {items[0].date}
-                          </Text>
-                          <Text style={styles.pointerLabelValue}>
-                            {items[0].value} BPM
-                          </Text>
-                        </View>
-                      );
-                    },
-                  }}
-                />
-                <Text style={styles.chartDateText}>
-                  {formatDate(currentDate)}
-                </Text>
-              </>
+            <View style={styles.chartHeader}>
+              <Text style={styles.chartTitle}>
+                {activeView === 'day' ? 'Today' : 
+                 activeView === 'week' ? 'This Week' : 
+                 activeView === 'month' ? 'This Month' : 'This Year'}'s Heart Rate
+              </Text>
+              <Text style={styles.chartDate}>
+                {formatDate(currentDate)}
+              </Text>
+            </View>
+
+            {lineData.length > 0 ? (
+              <LineChart
+                data={lineData}
+                height={250}
+                width={CHART_WIDTH}
+                noOfSections={4}
+                spacing={width < 400 ? 10 : 15}
+                yAxisLabelWidth={40}
+                yAxisTextStyle={styles.yAxisText}
+                xAxisLabelTextStyle={{
+                  ...styles.xAxisText,
+                  width: width < 400 ? 40 : undefined,
+                }}
+                hideDataPoints={false}
+                dataPointsColor="#FF4D4F"
+                dataPointsRadius={4}
+                startFillColor="rgba(255, 77, 79, 0.1)"
+                endFillColor="rgba(255, 77, 79, 0)"
+                color="#FF4D4F"
+                thickness={2}
+                yAxisThickness={1}
+                xAxisThickness={1}
+                yAxisColor="#E2E8F0"
+                xAxisColor="#E2E8F0"
+                backgroundColor="#FFFFFF"
+                rulesType="solid"
+                rulesColor="#E2E8F0"
+                showVerticalLines={false}
+                initialSpacing={10}
+                endSpacing={10}
+                maxValue={Math.max(...lineData.map(d => d.value)) * 1.2}
+                yAxisLabelPrefix=""
+                yAxisLabelSuffix=""
+                yAxisTextNumberOfLines={1}
+                xAxisLabelsVerticalShift={10}
+                curved
+                pointerConfig={{
+                  pointerStripHeight: 160,
+                  pointerStripColor: 'lightgray',
+                  pointerStripWidth: 2,
+                  pointerColor: 'lightgray',
+                  radius: 6,
+                  pointerLabelWidth: 100,
+                  pointerLabelHeight: 90,
+                  activatePointersOnLongPress: true,
+                  autoAdjustPointerLabelPosition: true,
+                  pointerLabelComponent: (items: any[]) => (
+                    <View style={styles.pointerLabel}>
+                      <Text style={styles.pointerLabelText}>
+                        {items[0].date}
+                      </Text>
+                      <Text style={styles.pointerLabelValue}>
+                        {items[0].value} BPM
+                      </Text>
+                    </View>
+                  ),
+                }}
+                onPress={(item: any) => handleDataPointClick(item)}
+              />
             ) : (
               <View style={styles.noDataContainer}>
                 <Text style={styles.noDataText}>No heart rate data available</Text>
@@ -609,12 +555,40 @@ const HeartRateScreen = () => {
             )}
           </View>
 
+          {/* Statistics */}
+          <View style={styles.statsContainer}>
+            <Text style={styles.sectionTitle}>Statistics</Text>
+
+            <View style={styles.statsGrid}>
+              <View style={styles.statsItem}>
+                <Text style={styles.statsLabel}>Average</Text>
+                <Text style={styles.statsValue}>
+                  {stats.average} BPM
+                </Text>
+              </View>
+
+              <View style={styles.statsItem}>
+                <Text style={styles.statsLabel}>Maximum</Text>
+                <Text style={styles.statsValue}>
+                  {stats.max} BPM
+                </Text>
+              </View>
+
+              <View style={styles.statsItem}>
+                <Text style={styles.statsLabel}>Minimum</Text>
+                <Text style={styles.statsValue}>
+                  {stats.min} BPM
+                </Text>
+              </View>
+            </View>
+          </View>
+
           {/* Heart Rate Zones */}
           <View style={styles.zonesContainer}>
-            <Text style={styles.zonesTitle}>Heart Rate Zones</Text>
+            <Text style={styles.sectionTitle}>Heart Rate Zones</Text>
 
-            {zoneData.map((zone, index) => (
-              <View key={index} style={styles.zoneCard}>
+            {heartRateZones.map((zone, index) => (
+              <View key={index} style={styles.zoneContainer}>
                 <View style={styles.zoneItem}>
                   <View style={styles.zoneInfo}>
                     <Text style={styles.zoneName}>{zone.name}</Text>
@@ -638,28 +612,12 @@ const HeartRateScreen = () => {
               </View>
             ))}
           </View>
-
-          {/* Summary Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{average}</Text>
-              <Text style={styles.statLabel}>Average</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{max}</Text>
-              <Text style={styles.statLabel}>Maximum</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{min}</Text>
-              <Text style={styles.statLabel}>Minimum</Text>
-            </View>
-          </View>
         </ScrollView>
       )}
 
       {/* Point Details Modal */}
       {showPointDetails && selectedPoint && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.pointDetailsContainer,
             {
@@ -671,22 +629,20 @@ const HeartRateScreen = () => {
                 }),
               }],
             },
-          ]}
-        >
-          <TouchableOpacity 
+          ]}>
+          <TouchableOpacity
             style={styles.pointDetailsCloseButton}
-            onPress={hidePointDetails}
-          >
+            onPress={hidePointDetails}>
             <Icon name="close" size={20} color="#000" />
           </TouchableOpacity>
           <Text style={styles.pointDetailsTitle}>Heart Rate Details</Text>
           <Text style={styles.pointDetailsText}>
             <Text style={styles.pointDetailsLabel}>Time: </Text>
-            {selectedPoint.date}
+            {selectedPoint.date || 'N/A'}
           </Text>
           <Text style={styles.pointDetailsText}>
-            <Text style={styles.pointDetailsLabel}>BPM: </Text>
-            {selectedPoint.value}
+            <Text style={styles.pointDetailsLabel}>Heart Rate: </Text>
+            {selectedPoint.value} BPM
           </Text>
         </Animated.View>
       )}
@@ -714,6 +670,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
+    flex: 1,
+    textAlign: 'center',
+  },
+  syncButton: {
+    marginLeft: 'auto',
+    padding: 4,
+  },
+  content: {
+    flex: 1,
+    padding: 16,
   },
   viewToggleContainer: {
     flexDirection: 'row',
@@ -759,94 +725,124 @@ const styles = StyleSheet.create({
     color: '#FF4D4F',
     paddingHorizontal: 16,
   },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  loadingContent: {
-    paddingBottom: 32, // Add bottom padding for loading state
-  },
-  scrollContent: {
-    paddingBottom: 32, // Add bottom padding for content
-  },
-  currentRateContainer: {
+  summaryContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 24,
+    gap: 8,
+  },
+  summaryItem: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   heartIconContainer: {
-    marginRight: 12,
+    marginBottom: 8,
   },
-  rateTextContainer: {
-    flex: 1,
+  summaryLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 4,
   },
-  currentRate: {
-    fontSize: 36,
+  summaryValue: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#000000',
   },
   bpmLabel: {
     fontSize: 16,
+    color: '#64748B',
     fontWeight: '500',
-    color: '#64748B',
-  },
-  restingRateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  restingRateText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginRight: 4,
   },
   chartContainer: {
     marginBottom: 24,
-    paddingVertical: 8,
-    height: 220,
-    justifyContent: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+  },
+  chartHeader: {
+    marginBottom: 12,
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 4,
   },
-  chartDateText: {
-    textAlign: 'center',
-    marginTop: 8,
-    color: '#64748B',
-    fontSize: 12,
-  },
-  noDataContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 180,
-  },
-  noDataText: {
-    fontSize: 16,
+  chartDate: {
+    fontSize: 14,
     color: '#64748B',
   },
-  chartAxisText: {
+  yAxisText: {
     fontSize: 12,
     color: '#94A3B8',
   },
-  zonesContainer: {
-    marginBottom: 24,
+  xAxisText: {
+    fontSize: 12,
+    color: '#94A3B8',
   },
-  zonesTitle: {
+  statsContainer: {
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 16,
   },
-  zoneCard: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statsItem: {
+    width: '48%',
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statsLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  statsValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  zonesContainer: {
+    marginBottom: 24,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+  },
+  zoneContainer: {
     marginBottom: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
   },
   zoneItem: {
     marginBottom: 0,
@@ -883,28 +879,14 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 12,
-  },
-  statItem: {
-    backgroundColor: '#F9FAFB',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+  noDataContainer: {
     flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    height: 180,
   },
-  statValue: {
+  noDataText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
     color: '#64748B',
   },
   pointerLabel: {

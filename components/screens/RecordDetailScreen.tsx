@@ -115,7 +115,6 @@ const RecordDetailScreen = () => {
       if (routes && routes.length > 0) {
         setExerciseRoutes(routes);
         
-        // Update time range based on route data if available
         const timestamps = routes.map(route => new Date(route.time).getTime());
         const minTime = new Date(Math.min(...timestamps)).toISOString();
         const maxTime = new Date(Math.max(...timestamps)).toISOString();

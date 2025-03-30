@@ -10,7 +10,7 @@ import {
 import { ExerciseType, getNameFromExerciseType } from '../contants/exerciseType';
 
 const api = axios.create({
-  baseURL: 'http://192.168.1.8:5000/api',
+  baseURL: 'https://xavia.pro/api',
 });
 
 api.interceptors.request.use(async config => {
@@ -135,6 +135,7 @@ export const initializeHealthConnect = async (): Promise<boolean> => {
 // Helper function to sync data to backend
 const syncToBackend = async (endpoint: string, data: any) => {
   try {
+    if (!data) return;
     await api.post(endpoint, data);
     console.log(`Successfully synced data to ${endpoint}`);
   } catch (error) {
@@ -244,9 +245,7 @@ export const fetchDistanceRecords = async (
       id: record.record_id || record.id,
       dataOrigin: record.data_origin,
     }));
-
-    console.log(finalData)
-
+    
     return finalData
   } catch (error) {
     console.error('Error with distance records:', error);
