@@ -30,6 +30,7 @@ interface ApiResponse<T> {
 
 interface PostState {
   posts: Post[];
+  myPosts: Post[]; // Thêm state để lưu danh sách bài đăng của chính user
   currentPost: Post | null;
   isLoading: boolean;
   message: string | null;
@@ -37,6 +38,7 @@ interface PostState {
   getAll: () => Promise<void>;
   getDetail: (id: string) => Promise<void>;
   clearCurrent: () => void;
+  getMyPosts: () => Promise<void>;
   createPost: (postData: {
     title: string;
     content: string;
@@ -56,12 +58,13 @@ const api = useApiStore.getState();
 
 export const usePostStore = create<PostState>((set, get) => ({
   posts: [],
+  myPosts: [], // Khởi tạo rỗng
   currentPost: null,
   isLoading: false,
   message: null,
-status: null,
+  status: null,
 
-searchResults: [],
+  searchResults: [],
   searchLoading: false,
   searchError: null,
 
@@ -85,6 +88,26 @@ searchResults: [],
       set({ isLoading: false, status: error.message });
     }
   },
+
+  getMyPosts: async () => {
+    set({ isLoading: true, status: null });
+    try {
+      // Gọi endpoint /posts/self
+      const response = await api.fetchData<ApiResponse<Post[]>>('/posts/self');
+      if (response && response.status === 'success' && Array.isArray(response.data)) {
+        set({ myPosts: response.data, isLoading: false, status: response.status });
+      } else {
+        set({
+          myPosts: [],
+          isLoading: false,
+          status: response?.status || 'Failed to fetch your posts',
+        });
+      }
+    } catch (error: any) {
+      set({ isLoading: false, status: error.message });
+    }
+  },
+
 
   getDetail: async (id: string) => {
     set({ isLoading: true, status: null, currentPost: null });
