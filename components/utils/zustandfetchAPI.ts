@@ -3,8 +3,6 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 import useAuthStore from "./useAuthStore";
 
 const MASTER_URL = "https://xavia.pro/api";
-const token = useAuthStore.getState().token;
-console.log("Token in Auth:", token);
 
 // Interface cho state của API store
 interface ApiState {
@@ -39,8 +37,13 @@ const axiosInstance: AxiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
+    const token = useAuthStore.getState().token;
+console.log("Token in Auth:", token);
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("Token:", token);
+      
     }
     return config;
   },

@@ -14,10 +14,11 @@ import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useLoginStore} from '../utils/useLoginStore';
 import {CommonActions} from '@react-navigation/native';
-
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
-  const {clearAll} = useLoginStore();
+  const {clearAll,profile} = useLoginStore();
+  console.log('profile', profile);
+  
   async function logout() {
     try {
       const currentUser = auth().currentUser;
@@ -67,7 +68,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
           source={{uri: 'https://via.placeholder.com/100'}}
           style={styles.profileImage}
         />
-        <Text style={styles.profileName}>Sarah Johnson</Text>
+        <Text style={styles.profileName}>{profile?.username}</Text>
         <View style={styles.statsContainer}>
           <Text style={styles.statText}>
             <Text style={styles.boldText}>2,547</Text> Points

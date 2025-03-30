@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
+import { useLoginStore } from './utils/useLoginStore';
 const HomeHeader = () => {
+  const { profile } = useLoginStore();
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
     day: '2-digit',
@@ -41,10 +43,10 @@ const HomeHeader = () => {
             style={styles.avatar}
           />
           <View style={styles.userInfo}>
-            <Text style={styles.greeting}>Hi, Dekomori! 👋</Text>
+            <Text style={styles.greeting}>Hi, {profile?.username}! 👋</Text>
             <View style={styles.membershipContainer}>
               <Icon name="star" size={12} color="#FFD700" />
-              <Text style={styles.membershipText}>Pro Member</Text>
+              <Text style={styles.membershipText}>{profile?.roles[0].charAt(0).toUpperCase() + profile?.roles[0].slice(1)} Member</Text>
             </View>
           </View>
         </View>
