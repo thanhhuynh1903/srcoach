@@ -44,6 +44,12 @@ interface PostState {
     images: any[];
     exerciseSessionRecordId?: string;
   }) => Promise<void>;
+
+  searchResults: Post[];
+  searchLoading: boolean;
+  searchError: string | null;
+  searchPost: (params: { title?: string; tagName?: string; pageSize?: number; pageIndex?: number }) => Promise<void>;
+
 }
 
 const api = useApiStore.getState();
@@ -54,6 +60,11 @@ export const usePostStore = create<PostState>((set, get) => ({
   isLoading: false,
   message: null,
 status: null,
+
+searchResults: [],
+  searchLoading: false,
+  searchError: null,
+
   getAll: async () => {
     set({ isLoading: true, status: null });
     
@@ -135,6 +146,55 @@ status: null,
       set({ isLoading: false, status: error.message || 'Không thể tạo bài viết' });
     }
   },
-
+  searchPost: async (params) => {
+    set({ searchLoading: true, searchError: null });
+    console.log('params', params);
+    
+    try {
+      // Xây dựng query params
+      const queryParams = new URLSearchParams();
+      
+      if (params.title) {
+        queryParams.append('title', params.title);
+      }
+      
+      if (params.tagName) {
+        queryParams.append('tagName', params.tagName);
+      }
+      
+      if (params.pageSize) {
+        queryParams.append('pageSize', params.pageSize.toString());
+      }
+      
+      if (params.pageIndex) {
+        queryParams.append('pageIndex', params.pageIndex.toString());
+      }
+      
+      const queryString = queryParams.toString();
+      const endpoint = `/posts${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await api.fetchData<ApiResponse<Post[]>>(endpoint);
+      console.log('Response:', response);
+      
+      if (response && response.status === 'success' && Array.isArray(response.data)) {
+        set({ 
+          searchResults: response.data, 
+          searchLoading: false 
+        });
+      } else {
+        set({
+          searchResults: [],
+          searchLoading: false,
+          searchError: response?.message || 'Không tìm thấy kết quả'
+        });
+      }
+    } catch (error: any) {
+      set({ 
+        searchLoading: false, 
+        searchError: error.message || 'Đã xảy ra lỗi khi tìm kiếm',
+        searchResults: []
+      });
+    }
+  },
   clearCurrent: () => set({ currentPost: null }),
 }));

@@ -119,7 +119,7 @@ const menuItems = [
     title: 'View Profile',
     subtitle: 'View your profile information',
     icon: 'person-circle-outline',
-    screen: '',
+    screen: 'RunnerProfileScreen',
   },
   {
     title: 'Edit Profile',
