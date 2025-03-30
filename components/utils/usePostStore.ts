@@ -32,10 +32,18 @@ interface PostState {
   posts: Post[];
   currentPost: Post | null;
   isLoading: boolean;
+  message: string | null;
   status: string | null;
   getAll: () => Promise<void>;
   getDetail: (id: string) => Promise<void>;
   clearCurrent: () => void;
+  createPost: (postData: {
+    title: string;
+    content: string;
+    tags: string[];
+    images: any[];
+    exerciseSessionRecordId?: string;
+  }) => Promise<void>;
 }
 
 const api = useApiStore.getState();
@@ -44,6 +52,7 @@ export const usePostStore = create<PostState>((set, get) => ({
   posts: [],
   currentPost: null,
   isLoading: false,
+  message: null,
 status: null,
   getAll: async () => {
     set({ isLoading: true, status: null });
@@ -82,6 +91,48 @@ status: null,
       }
     } catch (error: any) {
       set({ isLoading: false, status: error.message });
+    }
+  },
+  createPost: async (postData) => {
+    set({ isLoading: true, status: null });
+    
+    try {
+      // Chuẩn bị FormData từ dữ liệu bài viết
+      const formData = new FormData();
+      console.log('postData', postData);
+      
+      formData.append('title', postData.title);
+      formData.append('content', postData.content);
+      
+      // Thêm tags dưới dạng mảng
+      postData.tags.forEach((tag, index) => {
+        formData.append(`tags[${index}]`, tag);
+      });
+      
+      // Thêm exerciseSessionRecordId nếu có
+      if (postData.exerciseSessionRecordId) {
+        formData.append('exerciseSessionRecordId', postData.exerciseSessionRecordId);
+      }
+      
+      // Thêm images
+      if (postData.images && postData.images.length > 0) {
+        postData.images.forEach((image, index) => {
+          const imageFile = {
+            uri: image.uri,
+            type: image.type || 'image/jpeg',
+            name: image.fileName || `image-${index}.jpg`,
+          };
+          formData.append(`images`, imageFile);
+        });
+      }
+      
+      // Gọi API để tạo bài viết
+      await api.postData('/posts/create', formData);
+
+      
+      set({ isLoading: false, status: api.status,message: api.message  });
+    } catch (error: any) {
+      set({ isLoading: false, status: error.message || 'Không thể tạo bài viết' });
     }
   },
 

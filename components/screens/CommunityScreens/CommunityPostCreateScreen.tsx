@@ -40,9 +40,9 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   const [content, setContent] = useState('');
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [tags, setTags] = useState('');
-  const [runRecord, setRunRecord] = useState('');
+  const [runRecord, setRunRecord] = useState(null);
   
-  const { createPost, isLoading, error } = usePostStore();
+  const { createPost, isLoading, status,message,getAll } = usePostStore();
 
   const handleAddImage = () => {
     const options = {
@@ -86,31 +86,29 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           content: content.trim(),
           images: selectedImages.map(img => img.uri),
           tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-          runRecord: runRecord || undefined
+          runRecord: runRecord || null
         };
         onPost(postData);
         return;
       }
 
       // Ngược lại, sử dụng createPost từ usePostStore
+      const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
+      
+      
       await createPost({
         title: title.trim(),
         content: content.trim(),
-        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-        images: selectedImages,
-        exerciseSessionRecordId: runRecord || '',
+        tags: tagsArray || [],
+        images: selectedImages || [],
+        exerciseSessionRecordId: runRecord || null,
       });
-      
-      // Kiểm tra lỗi sau khi gọi API
-      if (usePostStore.getState().error) {
-        Alert.alert('Error', usePostStore.getState().error || 'Cannot create post');
-        return;
-      }
-
+      console.log('status', usePostStore.getState().status);
       // Thành công, quay lại màn hình trước đó
       Alert.alert('Success', 'Create post successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
+      getAll();
     } catch (error: any) {
       console.error('Error creating post:', error);
       Alert.alert('Error', error.message || 'Cannot create post');
@@ -225,9 +223,9 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           </TouchableOpacity>
 
           {/* Error message */}
-          {error && (
+          {status !== "success" && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{message}</Text>
             </View>
           )}
 
@@ -249,7 +247,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           {isLoading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.postButtonText}>Đăng bài</Text>
+            <Text style={styles.postButtonText}>Create</Text>
           )}
         </TouchableOpacity>
       </View>
