@@ -117,6 +117,7 @@ export const initializeHealthConnect = async (): Promise<boolean> => {
       {accessType: 'read', recordType: 'ActiveCaloriesBurned'},
       {accessType: 'read', recordType: 'TotalCaloriesBurned'},
       {accessType: 'read', recordType: 'HeartRate'},
+      {accessType: 'read', recordType: 'RestingHeartRate'},
       {accessType: 'read', recordType: 'Distance'},
       {accessType: 'read', recordType: 'ExerciseSession'},
       {accessType: 'read', recordType: 'OxygenSaturation'},
@@ -236,13 +237,17 @@ export const fetchDistanceRecords = async (
       params: { startTime, endTime },
     });
 
-    return response.data.data.map((record: any) => ({
+    const finalData = response.data.data.map((record: any) => ({
       distance: record.distance,
       startTime: record.start_time,
       endTime: record.end_time,
       id: record.record_id || record.id,
       dataOrigin: record.data_origin,
     }));
+
+    console.log(finalData)
+
+    return finalData
   } catch (error) {
     console.error('Error with distance records:', error);
     return [];
@@ -439,6 +444,31 @@ export const fetchExerciseSessionRecords = async (
     return [];
   }
 };
+
+export const fetchExerciseSessionByRecordId = async (
+  recordId: string,
+): Promise<ExerciseSession | null> => {
+  try {
+    const response = await api.get(`/record-exercise-session/record-id/${recordId}`);
+    if (response.data.status === 'success') {
+      const session = response.data.data;
+      return {
+        id: session.record_id || session.id,
+        exerciseType: session.exercise_type,
+        clientRecordId: session.client_record_id,
+        dataOrigin: session.data_origin,
+        startTime: session.start_time,
+        endTime: session.end_time,
+        routes: session.routes || [],
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching exercise session by record ID:', error);
+    return null;
+  }
+};
+
 
 // In utils_healthconnect.ts - update the fetchExerciseRoute function
 export const fetchExerciseRoute = async (
