@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,20 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
+import {usePostStore} from '../utils/usePostStore';
+
 const SearchResultsScreen = ({}) => {
   // In a real app, you would get the query from route.params
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('Posts');
+  const [activeTab, setActiveTab] = useState('All');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  const {searchPost, searchResults, searchLoading, searchError} =
+    usePostStore();
 
   // Sample data for posts
   const posts = [
@@ -89,6 +96,25 @@ const SearchResultsScreen = ({}) => {
       />
     ));
   };
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (debouncedQuery) {
+      searchPost({title: debouncedQuery});
+    }
+  }, [debouncedQuery, searchPost]);
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      searchPost({title: searchQuery});
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -112,6 +138,8 @@ const SearchResultsScreen = ({}) => {
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
           />
         </View>
       </View>
@@ -135,91 +163,154 @@ const SearchResultsScreen = ({}) => {
       </View>
 
       <ScrollView style={styles.content}>
-        {activeTab === 'Posts' || activeTab === 'All' ? (
+        {searchLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0F2B5B" />
+            <Text style={styles.loadingText}>Đang tìm kiếm...</Text>
+          </View>
+        ) : searchError ? (
+          <View style={styles.errorContainer}>
+            <Icon name="alert-circle" size={40} color="#EF4444" />
+            <Text style={styles.errorText}>{searchError}</Text>
+          </View>
+        ) : (
           <>
-            {activeTab === 'All' && (
-              <Text style={styles.sectionTitle}>Posts</Text>
-            )}
-            {posts.map(post => (
-              <TouchableOpacity key={post.id} style={styles.postCard}>
-                <View style={styles.postHeader}>
-                  <Image
-                    source={{uri: post.authorImage}}
-                    style={styles.authorImage}
-                  />
-                  <View>
-                    <Text style={styles.authorName}>{post.author}</Text>
-                    <Text style={styles.postTime}>{post.time}</Text>
-                  </View>
-                </View>
-                <Text style={styles.postTitle}>{post.title}</Text>
-                <Text style={styles.postExcerpt}>{post.excerpt}</Text>
-                <Image
-                  source={{
-                    uri: 'https://images.unsplash.com/photo-1612838320302-3b3b3f1b3b3b',
-                  }}
-                  style={styles.postImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.tagsContainer}>
-                  {post.tags.map(tag => (
-                    <View key={tag} style={styles.tagChip}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.postStats}>
-                  <View style={styles.statItem}>
-                    <Icon name="arrow-up-outline" size={18} color="#000" />
-                    <Text style={styles.statText}>{post.likes}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Icon name="arrow-down-outline" size={18} color="#000" />
-                    <Text style={styles.statText}>{post.comments}</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Icon name="chatbubble-outline" size={18} color="#000" />
-                    <Text style={styles.statText}>{post.comments}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </>
-        ) : null}
-
-        {activeTab === 'Experts' || activeTab === 'All' ? (
-          <>
-            {activeTab === 'All' && (
-              <Text style={styles.sectionTitle}>Experts</Text>
-            )}
-            {experts.map(expert => (
-              <TouchableOpacity key={expert.id} style={styles.expertCard}>
-                <Image
-                  source={{uri: expert.image}}
-                  style={styles.expertImage}
-                />
-                <View style={styles.expertInfo}>
-                  <View style={styles.expertNameRow}>
-                    <Text style={styles.expertName}>{expert.name}</Text>
-                    {expert.verified && (
-                      <Icon name="checkmark-circle" size={16} color="#3B82F6" />
-                    )}
-                  </View>
-                  <Text style={styles.expertSpecialty}>{expert.specialty}</Text>
-                  <View style={styles.ratingContainer}>
-                    {renderStars(expert.rating)}
-                    <Text style={styles.ratingText}>
-                      {expert.rating} ({expert.reviews})
+            {(activeTab === 'Posts' || activeTab === 'All') && (
+              <>
+                {activeTab === 'All' && (
+                  <Text style={styles.sectionTitle}>Bài viết</Text>
+                )}
+                {searchResults.length > 0 ? (
+                  searchResults.map(post => (
+                    <TouchableOpacity key={post.id} style={styles.postCard}>
+                      <View style={styles.postHeader}>
+                        <Image
+                          source={{
+                            uri:
+                              post.User?.avatar ||
+                              'https://randomuser.me/api/portraits/women/32.jpg',
+                          }}
+                          style={styles.authorImage}
+                        />
+                        <View>
+                          <Text style={styles.authorName}>
+                            {post.User?.username || 'Người dùng'}
+                          </Text>
+                          <Text style={styles.postTime}>
+                            {new Date(post.created_at).toLocaleDateString(
+                              'vi-VN',
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.postTitle}>{post.title}</Text>
+                      <Text style={styles.postExcerpt}>
+                        {post.content.length > 150
+                          ? post.content.substring(0, 150) + '...'
+                          : post.content}
+                      </Text>
+                      {post.images && post.images.length > 0 && (
+                        <Image
+                          source={{uri: post.images[0]}}
+                          style={styles.postImage}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View style={styles.tagsContainer}>
+                        {post?.tags?.map(tag => (
+                          <View key={tag} style={styles.tagChip}>
+                            <Text style={styles.tagText}>{tag}</Text>
+                          </View>
+                        ))}
+                      </View>
+                      <View style={styles.postStats}>
+                        <View style={styles.statItem}>
+                          <Icon
+                            name="arrow-up-outline"
+                            size={18}
+                            color={post.is_upvoted ? '#3B82F6' : '#000'}
+                          />
+                          <Text style={styles.statText}>
+                            {post.upvote_count}
+                          </Text>
+                        </View>
+                        <View style={styles.statItem}>
+                          <Icon
+                            name="arrow-down-outline"
+                            size={18}
+                            color={post.is_downvoted ? '#EF4444' : '#000'}
+                          />
+                          <Text style={styles.statText}>
+                            {post.downvote_count}
+                          </Text>
+                        </View>
+                        <View style={styles.statItem}>
+                          <Icon
+                            name="chatbubble-outline"
+                            size={18}
+                            color="#000"
+                          />
+                          <Text style={styles.statText}>
+                            {post.comment_count}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Icon name="search-outline" size={40} color="#94A3B8" />
+                    <Text style={styles.emptyText}>
+                      {debouncedQuery
+                        ? 'Không tìm thấy bài viết nào phù hợp'
+                        : 'Nhập từ khóa để tìm kiếm bài viết'}
                     </Text>
                   </View>
-                </View>
-                <TouchableOpacity style={styles.followButton}>
-                  <Text style={styles.followButtonText}>Follow</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))}
+                )}
+              </>
+            )}
+
+            {(activeTab === 'Experts' || activeTab === 'All') && (
+              <>
+                {activeTab === 'All' && (
+                  <Text style={styles.sectionTitle}>Chuyên gia</Text>
+                )}
+                {experts.map(expert => (
+                  <TouchableOpacity key={expert.id} style={styles.expertCard}>
+                    <Image
+                      source={{uri: expert.image}}
+                      style={styles.expertImage}
+                    />
+                    <View style={styles.expertInfo}>
+                      <View style={styles.expertNameRow}>
+                        <Text style={styles.expertName}>{expert.name}</Text>
+                        {expert.verified && (
+                          <Icon
+                            name="checkmark-circle"
+                            size={16}
+                            color="#3B82F6"
+                          />
+                        )}
+                      </View>
+                      <Text style={styles.expertSpecialty}>
+                        {expert.specialty}
+                      </Text>
+                      <View style={styles.ratingContainer}>
+                        {renderStars(expert.rating)}
+                        <Text style={styles.ratingText}>
+                          {expert.rating} ({expert.reviews})
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity style={styles.followButton}>
+                      <Text style={styles.followButtonText}>Theo dõi</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
           </>
-        ) : null}
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -412,6 +503,42 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748B',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });
 

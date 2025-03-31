@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface LoginState {
   userdata: any | null;
+  profile: any | null;
   apiStatus: any;
   resendStatus: any;
   status: any;
@@ -20,6 +21,7 @@ const MASTER_URL = "https://xavia.pro/api";
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,
+  profile: null,
   status:"",
   resendStatus: "",
   apiStatus: '',
@@ -56,7 +58,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       console.log('User data:', user);
       console.log('Token when login:', accessToken);
 
-      set({userdata : user, status: response?.data?.status, message : response?.data?.message});
+      set({userdata : user, profile: response?.data?.data?.user ,status: response?.data?.status, message : response?.data?.message});
     } catch (error: any) {
       set({
         message: error.response?.data?.message || 'Đăng nhập thất bại',
@@ -122,6 +124,6 @@ export const useLoginStore = create<LoginState>((set, get) => ({
     await AsyncStorage.removeItem('authToken');
     await AsyncStorage.removeItem('userdata');
     await AsyncStorage.removeItem('authTokenTimestamp');
-    set({userdata: null, status: '', message: ''});
+    set({userdata: null, profile: null ,status: '', message: ''});
   },
 }));

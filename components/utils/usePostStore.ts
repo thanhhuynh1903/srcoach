@@ -30,6 +30,7 @@ interface ApiResponse<T> {
 
 interface PostState {
   posts: Post[];
+  myPosts: Post[]; // Thêm state để lưu danh sách bài đăng của chính user
   currentPost: Post | null;
   isLoading: boolean;
   message: string | null;
@@ -37,6 +38,7 @@ interface PostState {
   getAll: () => Promise<void>;
   getDetail: (id: string) => Promise<void>;
   clearCurrent: () => void;
+  getMyPosts: () => Promise<void>;
   createPost: (postData: {
     title: string;
     content: string;
@@ -44,16 +46,28 @@ interface PostState {
     images: any[];
     exerciseSessionRecordId?: string;
   }) => Promise<void>;
+
+  searchResults: Post[];
+  searchLoading: boolean;
+  searchError: string | null;
+  searchPost: (params: { title?: string; tagName?: string; pageSize?: number; pageIndex?: number }) => Promise<void>;
+
 }
 
 const api = useApiStore.getState();
 
 export const usePostStore = create<PostState>((set, get) => ({
   posts: [],
+  myPosts: [], // Khởi tạo rỗng
   currentPost: null,
   isLoading: false,
   message: null,
-status: null,
+  status: null,
+
+  searchResults: [],
+  searchLoading: false,
+  searchError: null,
+
   getAll: async () => {
     set({ isLoading: true, status: null });
     
@@ -74,6 +88,26 @@ status: null,
       set({ isLoading: false, status: error.message });
     }
   },
+
+  getMyPosts: async () => {
+    set({ isLoading: true, status: null });
+    try {
+      // Gọi endpoint /posts/self
+      const response = await api.fetchData<ApiResponse<Post[]>>('/posts/self');
+      if (response && response.status === 'success' && Array.isArray(response.data)) {
+        set({ myPosts: response.data, isLoading: false, status: response.status });
+      } else {
+        set({
+          myPosts: [],
+          isLoading: false,
+          status: response?.status || 'Failed to fetch your posts',
+        });
+      }
+    } catch (error: any) {
+      set({ isLoading: false, status: error.message });
+    }
+  },
+
 
   getDetail: async (id: string) => {
     set({ isLoading: true, status: null, currentPost: null });
@@ -135,6 +169,55 @@ status: null,
       set({ isLoading: false, status: error.message || 'Không thể tạo bài viết' });
     }
   },
-
+  searchPost: async (params) => {
+    set({ searchLoading: true, searchError: null });
+    console.log('params', params);
+    
+    try {
+      // Xây dựng query params
+      const queryParams = new URLSearchParams();
+      
+      if (params.title) {
+        queryParams.append('title', params.title);
+      }
+      
+      if (params.tagName) {
+        queryParams.append('tagName', params.tagName);
+      }
+      
+      if (params.pageSize) {
+        queryParams.append('pageSize', params.pageSize.toString());
+      }
+      
+      if (params.pageIndex) {
+        queryParams.append('pageIndex', params.pageIndex.toString());
+      }
+      
+      const queryString = queryParams.toString();
+      const endpoint = `/posts${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await api.fetchData<ApiResponse<Post[]>>(endpoint);
+      console.log('Response:', response);
+      
+      if (response && response.status === 'success' && Array.isArray(response.data)) {
+        set({ 
+          searchResults: response.data, 
+          searchLoading: false 
+        });
+      } else {
+        set({
+          searchResults: [],
+          searchLoading: false,
+          searchError: response?.message || 'Không tìm thấy kết quả'
+        });
+      }
+    } catch (error: any) {
+      set({ 
+        searchLoading: false, 
+        searchError: error.message || 'Đã xảy ra lỗi khi tìm kiếm',
+        searchResults: []
+      });
+    }
+  },
   clearCurrent: () => set({ currentPost: null }),
 }));
