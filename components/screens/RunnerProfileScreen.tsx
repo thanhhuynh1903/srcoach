@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,14 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import { usePostStore } from '../utils/usePostStore';
-import { useLoginStore } from '../utils/useLoginStore';
-const RunnerProfileScreen = () => {
-  const {
-    myPosts,        
-    getMyPosts,      
-    isLoading,       
-  } = usePostStore();
-  const { profile } = useLoginStore();
+import {usePostStore} from '../utils/usePostStore';
+import {useLoginStore} from '../utils/useLoginStore';
+import {useNavigation} from '@react-navigation/native';
 
+const RunnerProfileScreen = () => {
+  const {myPosts, getMyPosts, isLoading} = usePostStore();
+  const {profile} = useLoginStore();
+  const navigate = useNavigation();
   useEffect(() => {
     getMyPosts();
   }, [getMyPosts]);
@@ -39,7 +37,7 @@ const RunnerProfileScreen = () => {
 
       {isLoading ? (
         // Nếu đang tải dữ liệu thì hiển thị loading
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <ActivityIndicator size="large" color="#000" />
         </View>
       ) : (
@@ -47,12 +45,13 @@ const RunnerProfileScreen = () => {
           {/* Profile Section */}
           <View style={styles.profileSection}>
             <Image
-              source={{ uri: 'https://randomuser.me/api/portraits/women/32.jpg' }}
+              source={{uri: 'https://randomuser.me/api/portraits/women/32.jpg'}}
               style={styles.profileImage}
             />
             <Text style={styles.profileName}>{profile?.name}</Text>
             <Text style={styles.profileBio}>
-              Fitness enthusiast | Marathon runner | Helping others achieve their fitness goals
+              Fitness enthusiast | Marathon runner | Helping others achieve
+              their fitness goals
             </Text>
             <View style={styles.locationContainer}>
               <Icon name="location-outline" size={16} color="#64748B" />
@@ -82,29 +81,35 @@ const RunnerProfileScreen = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>Achievements</Text>
             <View style={styles.achievementsContainer}>
-            <View style={styles.achievementItem}>
-              <View style={styles.achievementIconContainer}>
-                <Icon name="medal" size={24} color="#0F2B5B" />
+              <View style={styles.achievementItem}>
+                <View style={styles.achievementIconContainer}>
+                  <Icon name="medal" size={24} color="#0F2B5B" />
+                </View>
+                <Text style={styles.achievementTitle}>Marathon Master</Text>
+                <Text style={styles.achievementDescription}>
+                  Completed 10 marathons
+                </Text>
               </View>
-              <Text style={styles.achievementTitle}>Marathon Master</Text>
-              <Text style={styles.achievementDescription}>Completed 10 marathons</Text>
-            </View>
 
-            <View style={styles.achievementItem}>
-              <View style={styles.achievementIconContainer}>
-                <Icon name="trophy" size={24} color="#0F2B5B" />
+              <View style={styles.achievementItem}>
+                <View style={styles.achievementIconContainer}>
+                  <Icon name="trophy" size={24} color="#0F2B5B" />
+                </View>
+                <Text style={styles.achievementTitle}>Top Contributor</Text>
+                <Text style={styles.achievementDescription}>
+                  1000+ helpful posts
+                </Text>
               </View>
-              <Text style={styles.achievementTitle}>Top Contributor</Text>
-              <Text style={styles.achievementDescription}>1000+ helpful posts</Text>
-            </View>
 
-            <View style={styles.achievementItem}>
-              <View style={styles.achievementIconContainer}>
-                <Icon name="people" size={24} color="#0F2B5B" />
+              <View style={styles.achievementItem}>
+                <View style={styles.achievementIconContainer}>
+                  <Icon name="people" size={24} color="#0F2B5B" />
+                </View>
+                <Text style={styles.achievementTitle}>Community Leader</Text>
+                <Text style={styles.achievementDescription}>
+                  Most active expert
+                </Text>
               </View>
-              <Text style={styles.achievementTitle}>Community Leader</Text>
-              <Text style={styles.achievementDescription}>Most active expert</Text>
-            </View>
             </View>
           </View>
 
@@ -113,14 +118,38 @@ const RunnerProfileScreen = () => {
             <Text style={styles.sectionTitle}>My Posts</Text>
 
             {myPosts && myPosts.length > 0 ? (
-              myPosts.map((post) => (
-                <View key={post.id} style={styles.postCard}>
+              myPosts.map(post => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.postCard}
+                  onPress={() =>
+                    navigate.navigate('CommunityPostDetailScreen', {
+                      id: post.id,
+                    })
+                  }>
                   <Text style={styles.postTitle}>{post.title}</Text>
                   <Text style={styles.postContent}>{post.content}</Text>
 
+                  <View style={styles.runStatsContainer}>
+                    <View style={styles.runStatItem}>
+                      <Icon name="walk" size={16} color="#64748B" />
+                      <Text style={styles.runStatText}>10.2km</Text>
+                    </View>
+                    <Text style={styles.runStatDot}>•</Text>
+                    <View style={styles.runStatItem}>
+                      <Icon name="time" size={16} color="#64748B" />
+                      <Text style={styles.runStatText}>48:23</Text>
+                    </View>
+                    <Text style={styles.runStatDot}>•</Text>
+                    <View style={styles.runStatItem}>
+                      <Icon name="speedometer" size={16} color="#64748B" />
+                      <Text style={styles.runStatText}>4'45"/km</Text>
+                    </View>
+                  </View>
+
                   {post.images && post.images.length > 0 && (
                     <Image
-                      source={{ uri: post.images[0] }}
+                      source={{uri: post.images[0]}}
                       style={styles.postImage}
                     />
                   )}
@@ -129,21 +158,31 @@ const RunnerProfileScreen = () => {
                   <View style={styles.postEngagement}>
                     <View style={styles.engagementItem}>
                       <Icon name="arrow-up" size={20} color="#0F2B5B" />
-                      <Text style={styles.engagementText}>{post.upvote_count || 0}</Text>
+                      <Text style={styles.engagementText}>
+                        {post.upvote_count || 0}
+                      </Text>
                     </View>
                     <View style={styles.engagementItem}>
                       <Icon name="arrow-down" size={20} color="#64748B" />
-                      <Text style={styles.engagementText}>{post.downvote_count || 0}</Text>
+                      <Text style={styles.engagementText}>
+                        {post.downvote_count || 0}
+                      </Text>
                     </View>
                     <View style={styles.engagementItemRight}>
-                      <Icon name="chatbubble-outline" size={20} color="#64748B" />
-                      <Text style={styles.engagementText}>{post.comment_count || 0}</Text>
+                      <Icon
+                        name="chatbubble-outline"
+                        size={20}
+                        color="#64748B"
+                      />
+                      <Text style={styles.engagementText}>
+                        {post.comment_count || 0}
+                      </Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             ) : (
-              <Text style={{ color: '#64748B' }}>No posts yet.</Text>
+              <Text style={{color: '#64748B'}}>No posts yet.</Text>
             )}
           </View>
         </ScrollView>
@@ -299,28 +338,48 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   achievementItem: {
-    alignItems: "center",
-    width: "30%",
+    alignItems: 'center',
+    width: '30%',
   },
   achievementIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#E0E7FF",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#E0E7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
   achievementTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-    textAlign: "center",
+    fontWeight: '600',
+    color: '#0F172A',
+    textAlign: 'center',
     marginBottom: 4,
   },
   achievementDescription: {
     fontSize: 12,
-    color: "#64748B",
-    textAlign: "center",
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  runStatsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  runStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  runStatText: {
+    fontSize: 14,
+    color: '#64748B',
+    marginLeft: 4,
+  },
+  runStatDot: {
+    fontSize: 14,
+    color: '#64748B',
+    marginHorizontal: 8,
   },
 });

@@ -67,7 +67,7 @@ const CommunityScreen = () => {
   useEffect(() => {
       getAll();
       clearCurrent();
-  }, [navigation]);
+  }, []);
 
   const news = [
     {
