@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
@@ -16,13 +18,101 @@ import {usePostStore} from '../utils/usePostStore';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation} from '@react-navigation/native';
 
+// Interface cho Post từ API
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string | null;
+  exercise_session_record_id: string | null;
+  images: string[];
+  upvote_count: number;
+  downvote_count: number;
+  comment_count: number;
+  is_upvoted: boolean;
+  is_downvoted: boolean;
+}
+
 const RunnerProfileScreen = () => {
-  const {myPosts, getMyPosts, isLoading} = usePostStore();
+  const {myPosts, getMyPosts, isLoading, deletePost} = usePostStore();
   const {profile} = useLoginStore();
-  const navigate = useNavigation();
+  const navigation = useNavigation();
+  
+  // State cho modal và bài viết đã chọn
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
+
+  // Cập nhật localPosts khi myPosts từ store thay đổi
+  useEffect(() => {
+    if (myPosts && myPosts.length > 0) {
+      setLocalPosts(myPosts);
+    }
+  }, [myPosts]);
+
   useEffect(() => {
     getMyPosts();
   }, [getMyPosts]);
+
+  // Xử lý khi nhấn nút "More"
+  const handleMorePress = (post: Post) => {
+    setSelectedPost(post);
+    setModalVisible(true);
+  };
+
+  // Xử lý xóa bài viết
+  const handleDelete = async () => {
+    if (!selectedPost) return;
+    
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const postId = selectedPost.id;
+              console.log('Deleting post with id:', postId);
+              
+              // Cập nhật UI trước khi gọi API để UX mượt mà hơn
+              setLocalPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+              setModalVisible(false);
+              
+              // Gọi API xóa bài viết
+              const success = await deletePost(postId);
+              
+              if (success) {
+                // Thông báo thành công
+                Alert.alert('Success', 'Post deleted successfully');
+              } else {
+                // Nếu xóa thất bại, khôi phục lại danh sách
+                Alert.alert('Error', 'Failed to delete post');
+                getMyPosts(); // Tải lại danh sách từ API
+              }
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'An error occurred while deleting the post');
+              getMyPosts(); // Tải lại danh sách từ API
+            }
+          },
+        },
+      ],
+      {cancelable: true}
+    );
+  };
+
+  // Xử lý chỉnh sửa bài viết
+  const handleUpdate = () => {
+    setModalVisible(false);
+    if (selectedPost) {
+      navigation.navigate('CommunityUpdatePostScreen', {id: selectedPost.id});
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -35,7 +125,7 @@ const RunnerProfileScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {isLoading && localPosts.length === 0 ? (
         // Nếu đang tải dữ liệu thì hiển thị loading
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <ActivityIndicator size="large" color="#000" />
@@ -117,69 +207,85 @@ const RunnerProfileScreen = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>My Posts</Text>
 
-            {myPosts && myPosts.length > 0 ? (
-              myPosts.map(post => (
-                <TouchableOpacity
-                  key={post.id}
-                  style={styles.postCard}
-                  onPress={() =>
-                    navigate.navigate('CommunityPostDetailScreen', {
-                      id: post.id,
-                    })
-                  }>
-                  <Text style={styles.postTitle}>{post.title}</Text>
-                  <Text style={styles.postContent}>{post.content}</Text>
-
-                  <View style={styles.runStatsContainer}>
-                    <View style={styles.runStatItem}>
-                      <Icon name="walk" size={16} color="#64748B" />
-                      <Text style={styles.runStatText}>10.2km</Text>
-                    </View>
-                    <Text style={styles.runStatDot}>•</Text>
-                    <View style={styles.runStatItem}>
-                      <Icon name="time" size={16} color="#64748B" />
-                      <Text style={styles.runStatText}>48:23</Text>
-                    </View>
-                    <Text style={styles.runStatDot}>•</Text>
-                    <View style={styles.runStatItem}>
-                      <Icon name="speedometer" size={16} color="#64748B" />
-                      <Text style={styles.runStatText}>4'45"/km</Text>
-                    </View>
+            {localPosts && localPosts.length > 0 ? (
+              localPosts.map(post => (
+                <View key={post.id} style={styles.postCard}>
+                  <View style={styles.postHeader}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate('CommunityPostDetailScreen', {
+                          id: post.id,
+                        })
+                      }>
+                      <Text style={styles.postTitle}>{post.title}</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.moreButton}
+                      onPress={() => handleMorePress(post)}>
+                      <Icon name="ellipsis-horizontal" size={20} color="#64748B" />
+                    </TouchableOpacity>
                   </View>
+                  
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('CommunityPostDetailScreen', {
+                        id: post.id,
+                      })
+                    }>
+                    <Text style={styles.postContent}>{post.content}</Text>
 
-                  {post.images && post.images.length > 0 && (
-                    <Image
-                      source={{uri: post.images[0]}}
-                      style={styles.postImage}
-                    />
-                  )}
+                    <View style={styles.runStatsContainer}>
+                      <View style={styles.runStatItem}>
+                        <Icon name="walk" size={16} color="#64748B" />
+                        <Text style={styles.runStatText}>10.2km</Text>
+                      </View>
+                      <Text style={styles.runStatDot}>•</Text>
+                      <View style={styles.runStatItem}>
+                        <Icon name="time" size={16} color="#64748B" />
+                        <Text style={styles.runStatText}>48:23</Text>
+                      </View>
+                      <Text style={styles.runStatDot}>•</Text>
+                      <View style={styles.runStatItem}>
+                        <Icon name="speedometer" size={16} color="#64748B" />
+                        <Text style={styles.runStatText}>4'45"/km</Text>
+                      </View>
+                    </View>
 
-                  {/* Engagement */}
-                  <View style={styles.postEngagement}>
-                    <View style={styles.engagementItem}>
-                      <Icon name="arrow-up" size={20} color="#0F2B5B" />
-                      <Text style={styles.engagementText}>
-                        {post.upvote_count || 0}
-                      </Text>
-                    </View>
-                    <View style={styles.engagementItem}>
-                      <Icon name="arrow-down" size={20} color="#64748B" />
-                      <Text style={styles.engagementText}>
-                        {post.downvote_count || 0}
-                      </Text>
-                    </View>
-                    <View style={styles.engagementItemRight}>
-                      <Icon
-                        name="chatbubble-outline"
-                        size={20}
-                        color="#64748B"
+                    {post.images && post.images.length > 0 && (
+                      <Image
+                        source={{uri: post.images[0]}}
+                        style={styles.postImage}
                       />
-                      <Text style={styles.engagementText}>
-                        {post.comment_count || 0}
-                      </Text>
+                    )}
+
+                    {/* Engagement */}
+                    <View style={styles.postEngagement}>
+                      <View style={styles.engagementItem}>
+                        <Icon name="arrow-up" size={20} color="#0F2B5B" />
+                        <Text style={styles.engagementText}>
+                          {post.upvote_count || 0}
+                        </Text>
+                      </View>
+                      <View style={styles.engagementItem}>
+                        <Icon name="arrow-down" size={20} color="#64748B" />
+                        <Text style={styles.engagementText}>
+                          {post.downvote_count || 0}
+                        </Text>
+                      </View>
+                      <View style={styles.engagementItemRight}>
+                        <Icon
+                          name="chatbubble-outline"
+                          size={20}
+                          color="#64748B"
+                        />
+                        <Text style={styles.engagementText}>
+                          {post.comment_count || 0}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                </View>
               ))
             ) : (
               <Text style={{color: '#64748B'}}>No posts yet.</Text>
@@ -187,6 +293,40 @@ const RunnerProfileScreen = () => {
           </View>
         </ScrollView>
       )}
+
+      {/* Modal hiển thị các tùy chọn */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
+              <Icon name="create-outline" size={24} color="#0F2B5B" />
+              <Text style={styles.modalOptionText}>Edit Post</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.modalDivider} />
+            
+            <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
+              <Icon name="trash-outline" size={24} color="red" />
+              <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete Post</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.modalDivider} />
+            
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -296,12 +436,22 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
     overflow: 'hidden',
   },
+  postHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  moreButton: {
+    padding: 8,
+  },
   postTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#0F172A',
     padding: 16,
     paddingBottom: 8,
+    flex: 1,
   },
   postContent: {
     fontSize: 14,
@@ -381,5 +531,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginHorizontal: 8,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#0F172A',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+  },
+  modalCancelButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F2B5B',
   },
 });

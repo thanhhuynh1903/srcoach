@@ -6,14 +6,16 @@ import {
   Image,
   FlatList,
   TouchableOpacity,
-  TextInput,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import {useNavigation} from '@react-navigation/native';
 import {usePostStore} from '../../utils/usePostStore';
+import {useLoginStore} from '../../utils/useLoginStore';
 
 // Interface cho dữ liệu tin tức
 interface NewsItem {
@@ -62,14 +64,31 @@ interface Post {
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const {isLoading, status, getAll,clearCurrent} = usePostStore();
-  const post = usePostStore(state => state.posts);
+  const {isLoading, status, getAll, clearCurrent, deletePost} = usePostStore();
+  const posts = usePostStore(state => state.posts);
+  const [localPosts, setLocalPosts] = useState<Post[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const {profile} = useLoginStore();
+  // Lấy currentUserId từ profile
+  const currentUserId = profile?.id;
+
+  // Cập nhật localPosts khi posts từ store thay đổi
   useEffect(() => {
-      getAll();
-      clearCurrent();
+    console.log('posts', posts.length);
+    console.log('localPosts', localPosts.length);
+    
+    if (posts && posts.length > 0) {
+      setLocalPosts(posts);
+    }
+  }, [posts]);
+
+  useEffect(() => {
+    getAll();
+    clearCurrent();
   }, []);
 
-  const news = [
+  const news: NewsItem[] = [
     {
       id: '1',
       title: 'New Gym Equipment Arrived',
@@ -96,15 +115,13 @@ const CommunityScreen = () => {
     },
   ];
 
-  const formatTimeAgo = (dateString) => {
+  const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const postDate = new Date(dateString);
     const diffMs = now.getTime() - postDate.getTime();
-
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-
     if (diffDays > 0) {
       return `${diffDays}d ago`;
     } else if (diffHours > 0) {
@@ -119,12 +136,12 @@ const CommunityScreen = () => {
   const renderNewsItem = ({item}: {item: NewsItem}) => (
     <TouchableOpacity
       style={styles.newsItem}
-      onPress={() => {
+      onPress={() =>
         navigation.navigate('CommunityNewsDetailScreen', {
           id: item.id,
           newsItem: item,
-        });
-      }}>
+        })
+      }>
       <View style={styles.newsImageContainer}>
         <View style={[styles.newsImage, styles.newsImagePlaceholder]} />
       </View>
@@ -141,12 +158,12 @@ const CommunityScreen = () => {
           </Text>
           <TouchableOpacity
             style={styles.readMoreButton}
-            onPress={() => {
+            onPress={() =>
               navigation.navigate('CommunityNewsDetailScreen', {
                 id: item.id,
                 newsItem: item,
-              });
-            }}>
+              })
+            }>
             <Text style={styles.readMoreText}>Read more</Text>
           </TouchableOpacity>
         </View>
@@ -154,20 +171,91 @@ const CommunityScreen = () => {
     </TouchableOpacity>
   );
 
+  // Khi nhấn icon ellipsis, mở modal và lưu post được chọn
+  const handleMorePress = (post: Post) => {
+    setSelectedPost(post);
+    setModalVisible(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPost) return;
+    
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Hiển thị loading nếu cần
+              const postId = selectedPost.id;
+              console.log('Deleting post with id:', postId);
+              
+              // Cập nhật UI trước khi gọi API để UX mượt mà hơn
+              setLocalPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+              setModalVisible(false);
+              
+              // Gọi API xóa bài viết
+              const success = await deletePost(postId);
+              
+              if (success) {
+                // Thông báo thành công
+                Alert.alert('Success', 'Post deleted successfully');
+              } else {
+                // Nếu xóa thất bại, khôi phục lại danh sách
+                Alert.alert('Error', 'Failed to delete post');
+                getAll(); // Tải lại danh sách từ API
+              }
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'An error occurred while deleting the post');
+              getAll(); // Tải lại danh sách từ API
+            }
+          },
+        },
+      ],
+      {cancelable: true}
+    );
+  };
+
+  const handleHide = () => {
+    if (selectedPost) {
+      // Chỉ ẩn bài viết khỏi danh sách hiển thị cục bộ
+      setLocalPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+      console.log('Hiding post with id:', selectedPost.id);
+    }
+    setModalVisible(false);
+  };
+
+  const handleUpdate = () => {
+    setModalVisible(false);
+    if (selectedPost) {
+      navigation.navigate('CommunityUpdatePostScreen', {id: selectedPost.id});
+    }
+  };
+
   const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity
       style={styles.postItem}
       onPress={() =>
-        navigation.navigate('CommunityPostDetailScreen', {
-          id: item.id,
-        })
+        navigation.navigate('CommunityPostDetailScreen', {id: item.id})
       }>
-      <View style={styles.postHeader}>
-        <View style={[styles.avatar, styles.avatarPlaceholder]} />
-        <View>
-          <Text style={styles.name}>{item.User.username}</Text>
-          <Text style={styles.postTime}>{formatTimeAgo(item.created_at)}</Text>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+        <View style={styles.postHeader}>
+          <View style={[styles.avatar, styles.avatarPlaceholder]} />
+          <View>
+            <Text style={styles.name}>{item.User.username}</Text>
+            <Text style={styles.postTime}>{formatTimeAgo(item.created_at)}</Text>
+          </View>
         </View>
+        <TouchableOpacity
+          style={styles.moreButton}
+          onPress={() => handleMorePress(item)}>
+          <Icon name="ellipsis-horizontal" size={20} color="#000" />
+        </TouchableOpacity>
       </View>
       {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
       <Text style={styles.postText}>{item.content}</Text>
@@ -198,9 +286,7 @@ const CommunityScreen = () => {
         <TouchableOpacity
           style={styles.postActionButton}
           onPress={() =>
-            navigation.navigate('CommunityPostDetailScreen', {
-              id: item.id,
-            })
+            navigation.navigate('CommunityPostDetailScreen', {id: item.id})
           }>
           <Icon name="chatbubble-outline" size={20} />
           <Text style={styles.postActionText}>{item.comment_count}</Text>
@@ -219,7 +305,7 @@ const CommunityScreen = () => {
   );
 
   const renderPostsContent = () => {
-    if (isLoading) {
+    if (isLoading && localPosts.length === 0) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -227,8 +313,7 @@ const CommunityScreen = () => {
         </View>
       );
     }
-
-    if (status === "error") {
+    if (status === 'error' && localPosts.length === 0) {
       return (
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={48} color="red" />
@@ -239,8 +324,7 @@ const CommunityScreen = () => {
         </View>
       );
     }
-
-    if (!post || post.length === 0) {
+    if (!localPosts || localPosts.length === 0) {
       return (
         <View style={styles.emptyContainer}>
           <Icon name="document-text-outline" size={48} color="#999" />
@@ -248,11 +332,10 @@ const CommunityScreen = () => {
         </View>
       );
     }
-
     return (
       <FlatList
         style={styles.postList}
-        data={post}
+        data={localPosts}
         renderItem={renderPostItem}
         showsVerticalScrollIndicator={false}
         keyExtractor={item => item.id}
@@ -280,7 +363,6 @@ const CommunityScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.searchContainer}>
           <Image
@@ -292,10 +374,9 @@ const CommunityScreen = () => {
             onPress={() =>
               navigation.navigate('CommunityCreatePostScreen' as never)
             }>
-            <Text style={{color: '#999'}}>Search posts, people, or topics</Text>
+            <Text style={{color: '#999'}}>Create posts</Text>
           </TouchableOpacity>
         </View>
-
         <Text style={styles.sectionTitle}>Official News</Text>
         <FlatList
           data={news}
@@ -304,10 +385,50 @@ const CommunityScreen = () => {
           showsHorizontalScrollIndicator={false}
           keyExtractor={item => item.id}
         />
-
         <Text style={styles.sectionTitle}>Community Posts</Text>
         {renderPostsContent()}
       </ScrollView>
+
+      {/* Modal hiển thị các tùy chọn */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
+              <Icon name="create-outline" size={24} color={theme.colors.primary} />
+              <Text style={styles.modalOptionText}>Update</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.modalDivider} />
+            
+            {selectedPost && selectedPost.user_id === currentUserId ? (
+              <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
+                <Icon name="trash-outline" size={24} color="red" />
+                <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
+                <Icon name="eye-off-outline" size={24} color="#666" />
+                <Text style={styles.modalOptionText}>Hide</Text>
+              </TouchableOpacity>
+            )}
+            
+            <View style={styles.modalDivider} />
+            
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -378,6 +499,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
   },
+  moreButton: {padding: 8},
   postHeader: {flexDirection: 'row', alignItems: 'center'},
   name: {fontWeight: 'bold'},
   postList: {marginBottom: 100},
@@ -388,8 +510,12 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   postText: {marginVertical: 10},
-  postImage: {width: '100%', height: 200, borderRadius: 10, marginBottom: 10},
-  postImagePlaceholder: {backgroundColor: '#e0e0e0'},
+  postImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
   postActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -415,19 +541,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginTop: 5,
   },
-  tagText: {
-    fontSize: 12,
-    color: '#666',
-  },
+  tagText: {fontSize: 12, color: '#666'},
   loadingContainer: {
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
-  },
+  loadingText: {marginTop: 10, color: '#666'},
   errorContainer: {
     padding: 20,
     alignItems: 'center',
@@ -445,17 +565,47 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 5,
   },
-  retryButtonText: {
-    color: 'white',
-  },
+  retryButtonText: {color: 'white'},
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyText: {
-    marginTop: 10,
-    color: '#666',
+  emptyText: {marginTop: 10, color: '#666'},
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  modalCancelButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
   },
 });
 

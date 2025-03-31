@@ -164,14 +164,19 @@ const useApiStore = create<ApiState>((set) => ({
   },
 
   deleteData: async (path: string) => {
-    set((state) => ({ ...state, isLoading: true, error: null }));
+    set({ isLoading: true, status: null });
     try {
       const response: AxiosResponse = await axiosInstance.delete(path);
-      set({ data: null, isLoading: false, status: null });
+      set({ 
+        data: response.data.data, 
+        isLoading: false, 
+        status: response.data.status 
+      });
       return response.data;
     } catch (error: any) {
-      set({ data: null, isLoading: false, status: error.message });
-      return null;
+      const errorMessage = error.response?.data?.message || error.message;
+      set({ data: null, isLoading: false, status: errorMessage });
+      throw error;
     }
   },
 

@@ -8,15 +8,19 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  TextInput,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
 import {usePostStore} from '../../utils/usePostStore';
 import {useRoute} from '@react-navigation/native';
+
 const CommunityPostDetailScreen = () => {
   const {getDetail, currentPost, isLoading, error} = usePostStore();
   const id = useRoute().params?.id;
   useEffect(() => {
+    console.log('comments',currentPost );
+    
     if (id) {
       getDetail(id);
     } else {
@@ -87,12 +91,12 @@ const CommunityPostDetailScreen = () => {
 
           {/* Run photo */}
           {currentPost?.images && currentPost.images.length > 0 && (
-          <Image
-            source={{uri: currentPost?.images[0].url}}
-            style={styles.runPhoto}
-            resizeMode="cover"
-          />)
-          }
+            <Image
+              source={{uri: currentPost?.images[0].url}}
+              style={styles.runPhoto}
+              resizeMode="cover"
+            />
+          )}
           {/* Run map */}
           <View style={styles.mapContainer}>
             <View style={styles.mapTitleContainer}>
@@ -109,7 +113,9 @@ const CommunityPostDetailScreen = () => {
           </View>
           {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
             <View style={styles.tagsContainer}>
-              <Text style={{fontSize: 16, fontWeight: 'bold',marginRight: 5}}>Tags : </Text>
+              <Text style={{fontSize: 16, fontWeight: 'bold', marginRight: 5}}>
+                Tags :{' '}
+              </Text>
               {currentPost.tags.map((tag, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
@@ -143,13 +149,14 @@ const CommunityPostDetailScreen = () => {
               </TouchableOpacity>
               <Text style={styles.voteCount}>428</Text>
               <TouchableOpacity style={styles.voteButton}>
-                <Icon name="arrow-down" size={20} color="#666" />
+                <Icon name="arrow-down" size={20} color="#666" />  
               </TouchableOpacity>
+              <Text style={styles.voteCount}>100</Text>
             </View>
             <View style={styles.engagementMiddle}>
               <TouchableOpacity style={styles.commentButton}>
                 <Icon name="chatbubble-outline" size={20} color="#666" />
-                <Text style={styles.commentCount}>234</Text>
+                <Text style={styles.commentCount}>{currentPost?.comment_count}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.engagementRight}>
@@ -166,7 +173,7 @@ const CommunityPostDetailScreen = () => {
         {/* Comments section */}
         <View style={styles.commentsSection}>
           <View style={styles.commentsSectionHeader}>
-            <Text style={styles.commentsSectionTitle}>Comments (234)</Text>
+            <Text style={styles.commentsSectionTitle}>Comments ({currentPost?.comment_count})</Text>
             <TouchableOpacity style={styles.sortButton}>
               <Text style={styles.sortButtonText}>Sort by: Best</Text>
               <Icon name="chevron-down" size={16} color="#666" />
@@ -272,6 +279,19 @@ const CommunityPostDetailScreen = () => {
           </View>
         </View>
       </ScrollView>
+      <View style={styles.inputContainer}>
+        <TouchableOpacity style={styles.attachButton}>
+          <Icon name="person-circle-outline" size={32} color="#64748B" />
+        </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="Type your message..."
+          placeholderTextColor="#64748B"
+        />
+        <TouchableOpacity style={[styles.sendButton]}>
+          <Icon name="send" size={20} color={'#A1A1AA'} />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -553,6 +573,31 @@ const styles = StyleSheet.create({
   replyContent: {
     flex: 1,
     marginLeft: 10,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 12,
+  },
+  attachButton: {
+    padding: 8,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  sendButton: {
+    padding: 8,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
   },
 });
 

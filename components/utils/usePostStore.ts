@@ -20,6 +20,8 @@ interface Post {
     username: string;
     avatar?: string;
   };
+  PostVote: [],
+  PostComment: [],
 }
 
 interface ApiResponse<T> {
@@ -37,6 +39,7 @@ interface PostState {
   status: string | null;
   getAll: () => Promise<void>;
   getDetail: (id: string) => Promise<void>;
+  deletePost: (id: string) => Promise<boolean>;
   clearCurrent: () => void;
   getMyPosts: () => Promise<void>;
   createPost: (postData: {
@@ -116,6 +119,8 @@ export const usePostStore = create<PostState>((set, get) => ({
       const response = await api.fetchDataDetail<ApiResponse<Post>>(`/posts/${id}`);
       
       if (response && response.status === 'success' && response.data) {
+        console.log('response.data', response.data);
+        
         set({ currentPost: response.data, isLoading: false, status: null });
       } else {
         set({
@@ -169,6 +174,51 @@ export const usePostStore = create<PostState>((set, get) => ({
       set({ isLoading: false, status: error.message || 'Không thể tạo bài viết' });
     }
   },
+
+  deletePost: async (id: string) => {
+    set({ isLoading: true, status: null });
+    console.log("id", id);
+    
+    try {
+      const response = await api.deleteData(`/posts/${id}`);
+      console.log('response delete', response);
+      
+      // Nếu API trả về 204 No Content, response có thể là {} hoặc null
+      const isDeleted = !response || (response && response.status === 'success');
+      console.log('isDeleted', isDeleted);
+      
+      if (isDeleted) {
+        const currentPosts = get().posts;
+        const currentMyPosts = get().myPosts;
+        
+        set({
+          posts: currentPosts.filter(post => post.id !== id),
+          myPosts: currentMyPosts.filter(post => post.id !== id),
+          isLoading: false,
+          status: 'success',
+          message: 'Bài viết đã được xóa thành công'
+        });
+        return true;
+      } else {
+        set({
+          isLoading: false,
+          status: 'error',
+          message: response?.message || 'Không thể xóa bài viết'
+        });
+        return false;
+      }
+    } catch (error: any) {
+      set({ 
+        isLoading: false, 
+        status: 'error',
+        message: error.message || 'Đã xảy ra lỗi khi xóa bài viết'
+      });
+      return false;
+    }
+  },
+  
+
+
   searchPost: async (params) => {
     set({ searchLoading: true, searchError: null });
     console.log('params', params);
