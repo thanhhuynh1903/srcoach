@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,30 @@ import {
   TouchableOpacity,
   StatusBar,
   TextInput,
+  Modal,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
 import {usePostStore} from '../../utils/usePostStore';
-import {useRoute} from '@react-navigation/native';
+import {useRoute, useNavigation} from '@react-navigation/native';
+import {useLoginStore} from '../../utils/useLoginStore';
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, isLoading, error} = usePostStore();
-  const id = useRoute().params?.id;
+  const {getDetail, currentPost, isLoading, deletePost} = usePostStore();
+  const {profile} = useLoginStore();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const id = route.params?.id;
+  
+  // State cho modal
+  const [modalVisible, setModalVisible] = useState(false);
+  
+  // Lấy currentUserId từ profile
+  const currentUserId = profile?.id;
+  console.log('currentUserId', currentUserId);
+  
   useEffect(() => {
-    console.log('comments',currentPost );
-    
     if (id) {
       getDetail(id);
     } else {
@@ -48,13 +60,108 @@ const CommunityPostDetailScreen = () => {
     }
   };
 
+  // Xử lý khi nhấn nút "More"
+  const handleMorePress = () => {
+    setModalVisible(true);
+  };
+
+  // Xử lý xóa bài viết
+  const handleDelete = async () => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const postId = currentPost.id;
+              console.log('Deleting post with id:', postId);
+              
+              setModalVisible(false);
+              
+              // Gọi API xóa bài viết
+              const success = await deletePost(postId);
+              
+              if (success) {
+                // Thông báo thành công và quay lại màn hình trước
+                Alert.alert('Success', 'Post deleted successfully', [
+                  {text: 'OK', onPress: () => navigation.goBack()}
+                ]);
+              } else {
+                // Nếu xóa thất bại
+                Alert.alert('Error', 'Failed to delete post');
+              }
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'An error occurred while deleting the post');
+            }
+          },
+        },
+      ],
+      {cancelable: true}
+    );
+  };
+
+  // Xử lý cập nhật bài viết
+  const handleUpdate = () => {
+    setModalVisible(false);
+    navigation.navigate('CommunityUpdatePostScreen', {postId: currentPost.id});
+  };
+
+  // Xử lý lưu nháp bài viết
+  const handleSaveDraft = () => {
+    setModalVisible(false);
+    // Thực hiện lưu nháp
+    Alert.alert('Success', 'Post saved to drafts');
+  };
+
+  // Xử lý ẩn bài viết
+  const handleHide = () => {
+    setModalVisible(false);
+    Alert.alert('Success', 'Post hidden from your feed');
+    navigation.goBack();
+  };
+
+  const postCommentMap = currentPost?.postComment?.map((comment, index) => (
+    <View key={comment.id} style={styles.commentContainer}>
+      <Image
+        source={{ uri: 'https://randomuser.me/api/portraits/women/32.jpg' }}
+        style={styles.commentAvatar}
+      />
+      <View style={styles.commentContent}>
+        <View style={styles.commentHeader}>
+          <Text style={styles.commentUserName}>{comment.user.username}</Text>
+          <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
+        </View>
+        <Text style={styles.commentText}>{comment.content}</Text>
+        <View style={styles.commentActions}>
+          <View style={styles.commentVotes}>
+            <TouchableOpacity>
+              <Icon name="arrow-up" size={16} color="#4285F4" />
+            </TouchableOpacity>
+            <Text style={styles.commentVoteCount}>0</Text>
+            <TouchableOpacity>
+              <Icon name="arrow-down" size={16} color="#666" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity>
+            <Text style={styles.replyButton}>Reply</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  ));
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
       {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <BackButton size={24} />
         </TouchableOpacity>
       </View>
@@ -79,7 +186,7 @@ const CommunityPostDetailScreen = () => {
               </View>
             </View>
           </View>
-          <TouchableOpacity style={styles.moreButton}>
+          <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
             <Icon name="ellipsis-horizontal" size={20} color="#000" />
           </TouchableOpacity>
         </View>
@@ -87,7 +194,7 @@ const CommunityPostDetailScreen = () => {
         {/* Post content */}
         <View style={styles.postContent}>
           <Text style={styles.postTitle}>{currentPost?.title}</Text>
-          <Text style={styles.postDescription}>{currentPost?.content}.</Text>
+          <Text style={styles.postDescription}>{currentPost?.content}</Text>
 
           {/* Run photo */}
           {currentPost?.images && currentPost.images.length > 0 && (
@@ -147,11 +254,11 @@ const CommunityPostDetailScreen = () => {
               <TouchableOpacity style={styles.voteButton}>
                 <Icon name="arrow-up" size={20} color="#4285F4" />
               </TouchableOpacity>
-              <Text style={styles.voteCount}>428</Text>
+              <Text style={styles.voteCount}>{currentPost?.upvote_count}</Text>
               <TouchableOpacity style={styles.voteButton}>
                 <Icon name="arrow-down" size={20} color="#666" />  
               </TouchableOpacity>
-              <Text style={styles.voteCount}>100</Text>
+              <Text style={styles.voteCount}>{currentPost?.downvote_count}</Text>
             </View>
             <View style={styles.engagementMiddle}>
               <TouchableOpacity style={styles.commentButton}>
@@ -180,103 +287,8 @@ const CommunityPostDetailScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Comment 1 */}
-          <View style={styles.commentContainer}>
-            <Image
-              source={{uri: 'https://randomuser.me/api/portraits/women/32.jpg'}}
-              style={styles.commentAvatar}
-            />
-            <View style={styles.commentContent}>
-              <View style={styles.commentHeader}>
-                <Text style={styles.commentUserName}>Sarah Chen</Text>
-                <Text style={styles.commentTime}>1 hour ago</Text>
-              </View>
-              <Text style={styles.commentText}>
-                Amazing pace! I run this route too, but never managed to get
-                such a good time. Any tips for improving speed?
-              </Text>
-              <View style={styles.commentActions}>
-                <View style={styles.commentVotes}>
-                  <TouchableOpacity>
-                    <Icon name="arrow-up" size={16} color="#4285F4" />
-                  </TouchableOpacity>
-                  <Text style={styles.commentVoteCount}>24</Text>
-                  <TouchableOpacity>
-                    <Icon name="arrow-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity>
-                  <Text style={styles.replyButton}>Reply</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Reply to comment 1 */}
-              <View style={styles.replyContainer}>
-                <Image
-                  source={{
-                    uri: 'https://randomuser.me/api/portraits/men/32.jpg',
-                  }}
-                  style={styles.replyAvatar}
-                />
-                <View style={styles.replyContent}>
-                  <View style={styles.commentHeader}>
-                    <Text style={styles.commentUserName}>Alex Runner</Text>
-                    <Text style={styles.commentTime}>45 mins ago</Text>
-                  </View>
-                  <Text style={styles.commentText}>
-                    Thanks Sarah! Consistent interval training has been key for
-                    me. Happy to share my training schedule!
-                  </Text>
-                  <View style={styles.commentActions}>
-                    <View style={styles.commentVotes}>
-                      <TouchableOpacity>
-                        <Icon name="arrow-up" size={16} color="#4285F4" />
-                      </TouchableOpacity>
-                      <Text style={styles.commentVoteCount}>12</Text>
-                      <TouchableOpacity>
-                        <Icon name="arrow-down" size={16} color="#666" />
-                      </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity>
-                      <Text style={styles.replyButton}>Reply</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Comment 2 */}
-          <View style={styles.commentContainer}>
-            <Image
-              source={{uri: 'https://randomuser.me/api/portraits/men/44.jpg'}}
-              style={styles.commentAvatar}
-            />
-            <View style={styles.commentContent}>
-              <View style={styles.commentHeader}>
-                <Text style={styles.commentUserName}>Mike Johnson</Text>
-                <Text style={styles.commentTime}>2 hours ago</Text>
-              </View>
-              <Text style={styles.commentText}>
-                That heart rate is impressive for the distance. Great job
-                maintaining the pace!
-              </Text>
-              <View style={styles.commentActions}>
-                <View style={styles.commentVotes}>
-                  <TouchableOpacity>
-                    <Icon name="arrow-up" size={16} color="#4285F4" />
-                  </TouchableOpacity>
-                  <Text style={styles.commentVoteCount}>8</Text>
-                  <TouchableOpacity>
-                    <Icon name="arrow-down" size={16} color="#666" />
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity>
-                  <Text style={styles.replyButton}>Reply</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+          {/* Comments */}
+          {postCommentMap}
         </View>
       </ScrollView>
       <View style={styles.inputContainer}>
@@ -292,6 +304,58 @@ const CommunityPostDetailScreen = () => {
           <Icon name="send" size={20} color={'#A1A1AA'} />
         </TouchableOpacity>
       </View>
+
+      {/* Modal hiển thị các tùy chọn */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            {currentPost && currentPost.user.id === currentUserId ? (
+              <>
+                <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
+                  <Icon name="create-outline" size={24} color="#4285F4" />
+                  <Text style={styles.modalOptionText}>Update</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.modalDivider} />
+                
+                <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
+                  <Icon name="trash-outline" size={24} color="red" />
+                  <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.modalOption} onPress={handleSaveDraft}>
+                  <Icon name="bookmark-outline" size={24} color="#4285F4" />
+                  <Text style={styles.modalOptionText}>Save draft</Text>
+                </TouchableOpacity>
+                
+                <View style={styles.modalDivider} />
+                
+                <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
+                  <Icon name="eye-off-outline" size={24} color="#666" />
+                  <Text style={styles.modalOptionText}>Hide</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            
+            <View style={styles.modalDivider} />
+            
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -598,6 +662,41 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  modalCancelButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4285F4',
   },
 });
 

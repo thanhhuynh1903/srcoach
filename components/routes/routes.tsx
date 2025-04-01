@@ -38,6 +38,7 @@ import CommunityScreen from '../screens/CommunityScreens/CommunityScreen';
 import CommunityNewsDetailScreen from '../screens/CommunityScreens/CommunityNewsDetailScreen';
 import CommunityPostDetailScreen from '../screens/CommunityScreens/CommunityPostDetailScreen';
 import CommunityPostCreateScreen from '../screens/CommunityScreens/CommunityPostCreateScreen';
+import CommunityUpdatePostScreen from '../screens/CommunityScreens/CommunityUpdatePostScreen';
 import AddScheduleScreen from '../screens/AddScheduleScreen';
 import PasswordRecoveryScreen from '../screens/AuthenciationScreens/PasswordRecoveryScreen';
 import PasswordRecoveryCodeScreen from '../screens/AuthenciationScreens/PasswordRecoveryCodeScreen';
@@ -87,6 +88,7 @@ export const stackScreens = [
   { name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen },
   { name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen },
   { name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen },
+  { name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen },
 
   // About Screens
   { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },

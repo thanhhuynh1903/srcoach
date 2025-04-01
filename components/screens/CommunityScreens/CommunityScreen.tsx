@@ -77,7 +77,7 @@ const CommunityScreen = () => {
   useEffect(() => {
     console.log('posts', posts.length);
     console.log('localPosts', localPosts.length);
-    
+
     if (posts && posts.length > 0) {
       setLocalPosts(posts);
     }
@@ -179,7 +179,7 @@ const CommunityScreen = () => {
 
   const handleDelete = async () => {
     if (!selectedPost) return;
-    
+
     Alert.alert(
       'Delete Post',
       'Are you sure you want to delete this post?',
@@ -193,14 +193,16 @@ const CommunityScreen = () => {
               // Hiển thị loading nếu cần
               const postId = selectedPost.id;
               console.log('Deleting post with id:', postId);
-              
+
               // Cập nhật UI trước khi gọi API để UX mượt mà hơn
-              setLocalPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+              setLocalPosts(prevPosts =>
+                prevPosts.filter(post => post.id !== postId),
+              );
               setModalVisible(false);
-              
+
               // Gọi API xóa bài viết
               const success = await deletePost(postId);
-              
+
               if (success) {
                 // Thông báo thành công
                 Alert.alert('Success', 'Post deleted successfully');
@@ -217,14 +219,16 @@ const CommunityScreen = () => {
           },
         },
       ],
-      {cancelable: true}
+      {cancelable: true},
     );
   };
 
   const handleHide = () => {
     if (selectedPost) {
       // Chỉ ẩn bài viết khỏi danh sách hiển thị cục bộ
-      setLocalPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+      setLocalPosts(prevPosts =>
+        prevPosts.filter(post => post.id !== selectedPost.id),
+      );
       console.log('Hiding post with id:', selectedPost.id);
     }
     setModalVisible(false);
@@ -233,7 +237,7 @@ const CommunityScreen = () => {
   const handleUpdate = () => {
     setModalVisible(false);
     if (selectedPost) {
-      navigation.navigate('CommunityUpdatePostScreen', {id: selectedPost.id});
+      navigation.navigate('CommunityUpdatePostScreen', {postId: selectedPost.id});
     }
   };
 
@@ -248,7 +252,9 @@ const CommunityScreen = () => {
           <View style={[styles.avatar, styles.avatarPlaceholder]} />
           <View>
             <Text style={styles.name}>{item.User.username}</Text>
-            <Text style={styles.postTime}>{formatTimeAgo(item.created_at)}</Text>
+            <Text style={styles.postTime}>
+              {formatTimeAgo(item.created_at)}
+            </Text>
           </View>
         </View>
         <TouchableOpacity
@@ -289,7 +295,7 @@ const CommunityScreen = () => {
             navigation.navigate('CommunityPostDetailScreen', {id: item.id})
           }>
           <Icon name="chatbubble-outline" size={20} />
-          <Text style={styles.postActionText}>{item.comment_count}</Text>
+          <Text style={styles.postActionText}>{item?.comment_count}</Text>
         </TouchableOpacity>
         {item.postTags && item.postTags.length > 0 && (
           <View style={styles.tagsContainer}>
@@ -400,17 +406,33 @@ const CommunityScreen = () => {
           activeOpacity={1}
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
-              <Icon name="create-outline" size={24} color={theme.colors.primary} />
-              <Text style={styles.modalOptionText}>Update</Text>
-            </TouchableOpacity>
-            
-            <View style={styles.modalDivider} />
-            
             {selectedPost && selectedPost.user_id === currentUserId ? (
-              <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={handleUpdate}>
+                <Icon
+                  name="create-outline"
+                  size={24}
+                  color={theme.colors.primary}
+                />
+                <Text style={styles.modalOptionText}>Update</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.modalOption}>
+                <Icon name="bookmark-outline" size={24}  color={theme.colors.primary} />
+                <Text style={styles.modalOptionText}>Save draft</Text>
+              </TouchableOpacity>
+            )}
+            <View style={styles.modalDivider} />
+
+            {selectedPost && selectedPost.user_id === currentUserId ? (
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={handleDelete}>
                 <Icon name="trash-outline" size={24} color="red" />
-                <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete</Text>
+                <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                  Delete
+                </Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
@@ -418,9 +440,9 @@ const CommunityScreen = () => {
                 <Text style={styles.modalOptionText}>Hide</Text>
               </TouchableOpacity>
             )}
-            
+
             <View style={styles.modalDivider} />
-            
+
             <TouchableOpacity
               style={styles.modalCancelButton}
               onPress={() => setModalVisible(false)}>

@@ -29,7 +29,6 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   setUserData: (data: any) => set({ userdata: data }),
   login: async (email: string, password: string) => {
     try {
-      console.log(MASTER_URL);
       const response = await axios.post(
         `${MASTER_URL}/users/login`,
         {identifier: email, password},

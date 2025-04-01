@@ -33,13 +33,14 @@ interface Post {
   comment_count: number;
   is_upvoted: boolean;
   is_downvoted: boolean;
+  tags: string[];
 }
 
 const RunnerProfileScreen = () => {
   const {myPosts, getMyPosts, isLoading, deletePost} = usePostStore();
   const {profile} = useLoginStore();
   const navigation = useNavigation();
-  
+
   // State cho modal và bài viết đã chọn
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -50,6 +51,7 @@ const RunnerProfileScreen = () => {
     if (myPosts && myPosts.length > 0) {
       setLocalPosts(myPosts);
     }
+    console.log('myPosts', myPosts);
   }, [myPosts]);
 
   useEffect(() => {
@@ -65,7 +67,7 @@ const RunnerProfileScreen = () => {
   // Xử lý xóa bài viết
   const handleDelete = async () => {
     if (!selectedPost) return;
-    
+
     Alert.alert(
       'Delete Post',
       'Are you sure you want to delete this post?',
@@ -78,14 +80,16 @@ const RunnerProfileScreen = () => {
             try {
               const postId = selectedPost.id;
               console.log('Deleting post with id:', postId);
-              
+
               // Cập nhật UI trước khi gọi API để UX mượt mà hơn
-              setLocalPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+              setLocalPosts(prevPosts =>
+                prevPosts.filter(post => post.id !== postId),
+              );
               setModalVisible(false);
-              
+
               // Gọi API xóa bài viết
               const success = await deletePost(postId);
-              
+
               if (success) {
                 // Thông báo thành công
                 Alert.alert('Success', 'Post deleted successfully');
@@ -102,7 +106,7 @@ const RunnerProfileScreen = () => {
           },
         },
       ],
-      {cancelable: true}
+      {cancelable: true},
     );
   };
 
@@ -110,7 +114,7 @@ const RunnerProfileScreen = () => {
   const handleUpdate = () => {
     setModalVisible(false);
     if (selectedPost) {
-      navigation.navigate('CommunityUpdatePostScreen', {id: selectedPost.id});
+      navigation.navigate('CommunityUpdatePostScreen', {postid: selectedPost.id});
     }
   };
 
@@ -219,14 +223,18 @@ const RunnerProfileScreen = () => {
                       }>
                       <Text style={styles.postTitle}>{post.title}</Text>
                     </TouchableOpacity>
-                    
+
                     <TouchableOpacity
                       style={styles.moreButton}
                       onPress={() => handleMorePress(post)}>
-                      <Icon name="ellipsis-horizontal" size={20} color="#64748B" />
+                      <Icon
+                        name="ellipsis-horizontal"
+                        size={20}
+                        color="#64748B"
+                      />
                     </TouchableOpacity>
                   </View>
-                  
+
                   <TouchableOpacity
                     onPress={() =>
                       navigation.navigate('CommunityPostDetailScreen', {
@@ -273,6 +281,15 @@ const RunnerProfileScreen = () => {
                           {post.downvote_count || 0}
                         </Text>
                       </View>
+                      {post.tags && post.tags.length > 0 && (
+                        <View style={styles.tagsContainer}>
+                          {post.tags.map((tag, index) => (
+                            <View key={index} style={styles.tag}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
                       <View style={styles.engagementItemRight}>
                         <Icon
                           name="chatbubble-outline"
@@ -309,16 +326,18 @@ const RunnerProfileScreen = () => {
               <Icon name="create-outline" size={24} color="#0F2B5B" />
               <Text style={styles.modalOptionText}>Edit Post</Text>
             </TouchableOpacity>
-            
+
             <View style={styles.modalDivider} />
-            
+
             <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
               <Icon name="trash-outline" size={24} color="red" />
-              <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete Post</Text>
+              <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                Delete Post
+              </Text>
             </TouchableOpacity>
-            
+
             <View style={styles.modalDivider} />
-            
+
             <TouchableOpacity
               style={styles.modalCancelButton}
               onPress={() => setModalVisible(false)}>
@@ -568,4 +587,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F2B5B',
   },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 8,
+    marginTop: 5,
+  },
+  tagText: {fontSize: 12, color: '#666'},
 });
