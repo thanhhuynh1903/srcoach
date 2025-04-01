@@ -425,7 +425,7 @@ const CommunityScreen = () => {
             )}
             <View style={styles.modalDivider} />
 
-            {selectedPost && selectedPost.user_id === currentUserId ? (
+            {selectedPost && selectedPost?.user?.id === currentUserId ? (
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={handleDelete}>
@@ -553,7 +553,10 @@ const styles = StyleSheet.create({
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
+    justifyContent: 'flex-start',
+    alignContent: 'flex-start',
+    alignItems: 'flex-start',
+    width: '58%',
   },
   tag: {
     backgroundColor: '#f0f0f0',

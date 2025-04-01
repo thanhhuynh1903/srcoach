@@ -19,6 +19,8 @@ interface ApiState {
   fetchData: <T>(path: string) => Promise<T | null>;
   fetchDataDetail: <T>(path: string) => Promise<T | null>;
   postData: (path: string, payload: any) => Promise<void>;
+  putData: (path: string, payload: any) => Promise<void>;
+
   postFileData: (path: string, selectedFile: File, dataObject: Record<string, any>) => Promise<void>;
   updateData: (path: string, payload: any) => Promise<void>;
   patchData: (path: string, payload: any) => Promise<void>;
@@ -120,6 +122,38 @@ const useApiStore = create<ApiState>((set) => ({
     }
   },
   
+
+  putData: async (path: string, payload: any) => {
+    set({ isLoading: true, status: null });
+    try {
+      let headers = {};
+      
+      // Kiểm tra nếu payload là FormData
+      if (payload instanceof FormData) {
+        headers = { 'Content-Type': 'multipart/form-data' };
+      } else {
+        headers = { 'Content-Type': 'application/json' };
+        payload = JSON.stringify(payload);
+      }
+      console.log('payload', payload);
+      
+      const response: AxiosResponse = await axiosInstance.put(path, payload, { headers });
+      console.log('response put', response.data); 
+      
+      set({ 
+        data: response.data.data, 
+        isLoading: false, 
+        status: response.data.status,
+        message: response.data.message 
+      });
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message;
+      set({ data: null, isLoading: false, status: errorMessage });
+      throw error;
+    }
+  },
+
 
   postFileData: async (path: string, selectedFile: File, dataObject: Record<string, any>) => {
     set((state) => ({ ...state, isLoading: true, error: null }));

@@ -60,6 +60,8 @@ const RunnerProfileScreen = () => {
 
   // Xử lý khi nhấn nút "More"
   const handleMorePress = (post: Post) => {
+    console.log('post', post);
+
     setSelectedPost(post);
     setModalVisible(true);
   };
@@ -112,9 +114,13 @@ const RunnerProfileScreen = () => {
 
   // Xử lý chỉnh sửa bài viết
   const handleUpdate = () => {
+    console.log('Selected post:', selectedPost.id);
+
     setModalVisible(false);
     if (selectedPost) {
-      navigation.navigate('CommunityUpdatePostScreen', {postid: selectedPost.id});
+      navigation.navigate('CommunityUpdatePostScreen', {
+        postId: selectedPost?.id,
+      });
     }
   };
 
@@ -280,7 +286,18 @@ const RunnerProfileScreen = () => {
                         <Text style={styles.engagementText}>
                           {post.downvote_count || 0}
                         </Text>
+                        <View style={styles.engagementItemRight}>
+                          <Icon
+                            name="chatbubble-outline"
+                            size={20}
+                            color="#64748B"
+                          />
+                          <Text style={styles.engagementText}>
+                            {post.comment_count || 0}
+                          </Text>
+                        </View>
                       </View>
+
                       {post.tags && post.tags.length > 0 && (
                         <View style={styles.tagsContainer}>
                           {post.tags.map((tag, index) => (
@@ -290,16 +307,6 @@ const RunnerProfileScreen = () => {
                           ))}
                         </View>
                       )}
-                      <View style={styles.engagementItemRight}>
-                        <Icon
-                          name="chatbubble-outline"
-                          size={20}
-                          color="#64748B"
-                        />
-                        <Text style={styles.engagementText}>
-                          {post.comment_count || 0}
-                        </Text>
-                      </View>
                     </View>
                   </TouchableOpacity>
                 </View>
@@ -499,7 +506,7 @@ const styles = StyleSheet.create({
   engagementItemRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 'auto',
+    marginLeft: 12,
   },
   engagementText: {
     fontSize: 14,
@@ -589,7 +596,11 @@ const styles = StyleSheet.create({
   },
   tagsContainer: {
     flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    alignContent: 'flex-start',
     flexWrap: 'wrap',
+    width: '58%',
   },
   tag: {
     backgroundColor: '#f0f0f0',

@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import {create} from 'zustand';
 import useApiStore from './zustandfetchAPI';
 
 interface Post {
@@ -20,8 +20,8 @@ interface Post {
     username: string;
     avatar?: string;
   };
-  PostVote: [],
-  PostComment: [],
+  PostVote: [];
+  PostComment: [];
 }
 
 interface ApiResponse<T> {
@@ -49,12 +49,23 @@ interface PostState {
     images: any[];
     exerciseSessionRecordId?: string;
   }) => Promise<void>;
+  updatePost: (id: string, postData: {
+    title: string;
+    content: string;
+    tags: string[];
+    exerciseSessionRecordId?: string;
+    images?: any[];
+  }) => Promise<void>;
 
   searchResults: Post[];
   searchLoading: boolean;
   searchError: string | null;
-  searchPost: (params: { title?: string; tagName?: string; pageSize?: number; pageIndex?: number }) => Promise<void>;
-
+  searchPost: (params: {
+    title?: string;
+    tagName?: string;
+    pageSize?: number;
+    pageIndex?: number;
+  }) => Promise<void>;
 }
 
 const api = useApiStore.getState();
@@ -72,14 +83,18 @@ export const usePostStore = create<PostState>((set, get) => ({
   searchError: null,
 
   getAll: async () => {
-    set({ isLoading: true, status: null });
-    
+    set({isLoading: true, status: null});
+
     try {
       const response = await api.fetchData<ApiResponse<Post[]>>('/posts');
       console.log('Response:', response);
-      
-      if (response && response.status === 'success' && Array.isArray(response.data)) {
-        set({ posts: response.data, isLoading: false, status: response.status });
+
+      if (
+        response &&
+        response.status === 'success' &&
+        Array.isArray(response.data)
+      ) {
+        set({posts: response.data, isLoading: false, status: response.status});
       } else {
         set({
           posts: [],
@@ -88,17 +103,25 @@ export const usePostStore = create<PostState>((set, get) => ({
         });
       }
     } catch (error: any) {
-      set({ isLoading: false, status: error.message });
+      set({isLoading: false, status: error.message});
     }
   },
 
   getMyPosts: async () => {
-    set({ isLoading: true, status: null });
+    set({isLoading: true, status: null});
     try {
       // Gọi endpoint /posts/self
       const response = await api.fetchData<ApiResponse<Post[]>>('/posts/self');
-      if (response && response.status === 'success' && Array.isArray(response.data)) {
-        set({ myPosts: response.data, isLoading: false, status: response.status });
+      if (
+        response &&
+        response.status === 'success' &&
+        Array.isArray(response.data)
+      ) {
+        set({
+          myPosts: response.data,
+          isLoading: false,
+          status: response.status,
+        });
       } else {
         set({
           myPosts: [],
@@ -107,21 +130,22 @@ export const usePostStore = create<PostState>((set, get) => ({
         });
       }
     } catch (error: any) {
-      set({ isLoading: false, status: error.message });
+      set({isLoading: false, status: error.message});
     }
   },
 
-
   getDetail: async (id: string) => {
-    set({ isLoading: true, status: null, currentPost: null });
-    
+    set({isLoading: true, status: null, currentPost: null});
+
     try {
-      const response = await api.fetchDataDetail<ApiResponse<Post>>(`/posts/${id}`);
-      
+      const response = await api.fetchDataDetail<ApiResponse<Post>>(
+        `/posts/${id}`,
+      );
+
       if (response && response.status === 'success' && response.data) {
         console.log('response.data', response.data);
-        
-        set({ currentPost: response.data, isLoading: false, status: null });
+
+        set({currentPost: response.data, isLoading: false, status: null});
       } else {
         set({
           isLoading: false,
@@ -129,30 +153,33 @@ export const usePostStore = create<PostState>((set, get) => ({
         });
       }
     } catch (error: any) {
-      set({ isLoading: false, status: error.message });
+      set({isLoading: false, status: error.message});
     }
   },
-  createPost: async (postData) => {
-    set({ isLoading: true, status: null });
-    
+  createPost: async postData => {
+    set({isLoading: true, status: null});
+
     try {
       // Chuẩn bị FormData từ dữ liệu bài viết
       const formData = new FormData();
       console.log('postData', postData);
-      
+
       formData.append('title', postData.title);
       formData.append('content', postData.content);
-      
+
       // Thêm tags dưới dạng mảng
       postData.tags.forEach((tag, index) => {
         formData.append(`tags[${index}]`, tag);
       });
-      
+
       // Thêm exerciseSessionRecordId nếu có
       if (postData.exerciseSessionRecordId) {
-        formData.append('exerciseSessionRecordId', postData.exerciseSessionRecordId);
+        formData.append(
+          'exerciseSessionRecordId',
+          postData.exerciseSessionRecordId,
+        );
       }
-      
+
       // Thêm images
       if (postData.images && postData.images.length > 0) {
         postData.images.forEach((image, index) => {
@@ -164,110 +191,203 @@ export const usePostStore = create<PostState>((set, get) => ({
           formData.append(`images`, imageFile);
         });
       }
-      
+      console.log('formData', formData);
+
       // Gọi API để tạo bài viết
       await api.postData('/posts/create', formData);
 
-      
-      set({ isLoading: false, status: api.status,message: api.message  });
+      set({isLoading: false, status: api.status, message: api.message});
     } catch (error: any) {
-      set({ isLoading: false, status: error.message || 'Không thể tạo bài viết' });
+      set({
+        isLoading: false,
+        status: error.message || 'Không thể tạo bài viết',
+      });
     }
   },
+  updatePost: async (id, postData) => {
+    set({isLoading: true, status: null});
+  
+    try {
+      const formData = new FormData();
+  
+      // Append basic fields
+      formData.append('title', postData.title);
+      formData.append('content', postData.content);
+  
+      // Handle tags array
+      postData.tags.forEach((tag, index) => {
+        formData.append(`tags[${index}]`, tag);
+      });
+  
+      // Handle exercise session record ID
+      if (postData.exerciseSessionRecordId) {
+        formData.append(
+          'exerciseSessionRecordId',
+          postData.exerciseSessionRecordId,
+        );
+      }
+  
+      // Handle images (new uploads)
+      if (postData.images && postData.images.length > 0) {
+        postData.images.forEach((image, index) => {
+          // Check if it's a new image (has uri property)
+          if (image.uri) {
+            const imageFile = {
+              uri: image.uri,
+              type: image.type || 'image/jpeg',
+              name: image.fileName || `image-${index}.jpg`,
+            };
+            console.log('imageFiles', imageFile);
+            
+            formData.append(`images`, imageFile);
+          }
+        });
+      }
+      console.log('formData', formData);
+      
+      // Make PUT request
+      const response = await api.putData(`/posts/${id}`, formData);
+      console.log('response', response);
+      
+      // Update local state
+      if (response && response.status === 'success') {
+        // Cập nhật bài viết trong danh sách posts
+        const updatedPosts = get().posts.map(post => 
+          post.id === id ? { ...post, ...response.data } : post
+        );
+        
+        // Cập nhật bài viết trong danh sách myPosts
+        const updatedMyPosts = get().myPosts.map(post => 
+          post.id === id ? { ...post, ...response.data } : post
+        );
+        
+        // Cập nhật currentPost nếu đang xem bài viết này
+        const updatedCurrentPost = get().currentPost?.id === id 
+          ? { ...get().currentPost, ...response.data } 
+          : get().currentPost;
+  
+        set({
+          posts: updatedPosts,
+          myPosts: updatedMyPosts,
+          currentPost: updatedCurrentPost,
+          isLoading: false,
+          status: 'success',
+          message: 'Bài viết đã được cập nhật thành công',
+        });
+      } else {
+        set({
+          isLoading: false,
+          status: 'error',
+          message: response?.message || 'Không thể cập nhật bài viết',
+        });
+      }
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        status: 'error',
+        message: error.message || 'Đã xảy ra lỗi khi cập nhật bài viết',
+      });
+      throw error;
+    }
+  },
+  
 
   deletePost: async (id: string) => {
-    set({ isLoading: true, status: null });
-    console.log("id", id);
-    
+    set({isLoading: true, status: null});
+    console.log('id', id);
+
     try {
       const response = await api.deleteData(`/posts/${id}`);
       console.log('response delete', response);
-      
+
       // Nếu API trả về 204 No Content, response có thể là {} hoặc null
-      const isDeleted = !response || (response && response.status === 'success');
+      const isDeleted =
+        !response || (response && response.status === 'success');
       console.log('isDeleted', isDeleted);
-      
+
       if (isDeleted) {
         const currentPosts = get().posts;
         const currentMyPosts = get().myPosts;
-        
+
         set({
           posts: currentPosts.filter(post => post.id !== id),
           myPosts: currentMyPosts.filter(post => post.id !== id),
           isLoading: false,
           status: 'success',
-          message: 'Bài viết đã được xóa thành công'
+          message: 'Bài viết đã được xóa thành công',
         });
         return true;
       } else {
         set({
           isLoading: false,
           status: 'error',
-          message: response?.message || 'Không thể xóa bài viết'
+          message: response?.message || 'Không thể xóa bài viết',
         });
         return false;
       }
     } catch (error: any) {
-      set({ 
-        isLoading: false, 
+      set({
+        isLoading: false,
         status: 'error',
-        message: error.message || 'Đã xảy ra lỗi khi xóa bài viết'
+        message: error.message || 'Đã xảy ra lỗi khi xóa bài viết',
       });
       return false;
     }
   },
-  
 
-
-  searchPost: async (params) => {
-    set({ searchLoading: true, searchError: null });
+  searchPost: async params => {
+    set({searchLoading: true, searchError: null});
     console.log('params', params);
-    
+
     try {
       // Xây dựng query params
       const queryParams = new URLSearchParams();
-      
+
       if (params.title) {
         queryParams.append('title', params.title);
       }
-      
+
       if (params.tagName) {
         queryParams.append('tagName', params.tagName);
       }
-      
+
       if (params.pageSize) {
         queryParams.append('pageSize', params.pageSize.toString());
       }
-      
+
       if (params.pageIndex) {
         queryParams.append('pageIndex', params.pageIndex.toString());
       }
-      
+
       const queryString = queryParams.toString();
       const endpoint = `/posts${queryString ? `?${queryString}` : ''}`;
-      
+
       const response = await api.fetchData<ApiResponse<Post[]>>(endpoint);
       console.log('Response:', response);
-      
-      if (response && response.status === 'success' && Array.isArray(response.data)) {
-        set({ 
-          searchResults: response.data, 
-          searchLoading: false 
+
+      if (
+        response &&
+        response.status === 'success' &&
+        Array.isArray(response.data)
+      ) {
+        set({
+          searchResults: response.data,
+          searchLoading: false,
         });
       } else {
         set({
           searchResults: [],
           searchLoading: false,
-          searchError: response?.message || 'Không tìm thấy kết quả'
+          searchError: response?.message || 'Không tìm thấy kết quả',
         });
       }
     } catch (error: any) {
-      set({ 
-        searchLoading: false, 
+      set({
+        searchLoading: false,
         searchError: error.message || 'Đã xảy ra lỗi khi tìm kiếm',
-        searchResults: []
+        searchResults: [],
       });
     }
   },
-  clearCurrent: () => set({ currentPost: null }),
+  clearCurrent: () => set({currentPost: null}),
 }));

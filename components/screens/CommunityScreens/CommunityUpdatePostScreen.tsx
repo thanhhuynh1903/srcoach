@@ -45,6 +45,8 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
   // Tải dữ liệu bài viết khi màn hình được mở
   useEffect(() => {
+    console.log('postId', postId);
+    
     const loadPostData = async () => {
       if (postId) {
         await getDetail(postId);
@@ -56,6 +58,9 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
   // Cập nhật state từ dữ liệu bài viết hiện tại
   useEffect(() => {
+    console.log('currentPost', currentPost);
+    console.log('existingImages', existingImages);
+    
     if (currentPost) {
       setTitle(currentPost.title || '');
       setContent(currentPost.content || '');
@@ -99,24 +104,6 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
     setSelectedImages(updatedImages);
   };
 
-  const handleRemoveExistingImage = (imageUrl: string, index: number) => {
-    // Hiển thị thông báo cho người dùng về giới hạn của API
-    Alert.alert(
-      'Thông báo',
-      'Hiện tại chức năng xóa ảnh đã tồn tại chưa được hỗ trợ. Bạn chỉ có thể thêm ảnh mới.',
-      [{ text: 'OK', style: 'default' }]
-    );
-    
-    // Không xóa ảnh khỏi giao diện vì không thể xóa khỏi server
-    // Nếu muốn vẫn cho phép xóa khỏi giao diện (nhưng sẽ không xóa khỏi server), 
-    // bạn có thể bỏ comment đoạn code dưới đây
-    /*
-    const updatedExistingImages = [...existingImages];
-    updatedExistingImages.splice(index, 1);
-    setExistingImages(updatedExistingImages);
-    */
-  };
-
   const handleUpdate = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Thông tin không đầy đủ', 'Vui lòng nhập cả tiêu đề và nội dung');
@@ -126,7 +113,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
     try {
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
       
-      const success = await updatePost(postId, {
+      await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray,
@@ -134,7 +121,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
         exerciseSessionRecordId: runRecord,
       });
       
-      if (success) {
+      if (status !== 'error') {
         Alert.alert('Thành công', 'Bài viết đã được cập nhật thành công', [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -154,7 +141,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
     return (
       <SafeAreaView style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color="#002366" />
-        <Text style={styles.loadingText}>Loading post contents...</Text>
+        <Text style={styles.loadingText}>Đang tải nội dung bài viết...</Text>
       </SafeAreaView>
     );
   }
@@ -168,7 +155,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Update post</Text>
+        <Text style={styles.headerTitle}>Edit post</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -182,7 +169,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
             <Text style={styles.label}>Title</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Enter your title here..."
+              placeholder="Input title..."
               placeholderTextColor="#999"
               value={title}
               onChangeText={setTitle}
@@ -194,7 +181,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
             <Text style={styles.label}>Content</Text>
             <TextInput
               style={styles.textArea}
-              placeholder="Write your post content here..."
+              placeholder="Write your content here..."
               placeholderTextColor="#999"
               multiline
               numberOfLines={6}
@@ -205,20 +192,17 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
           </View>
 
           {/* Existing Images */}
-          {existingImages.length > 0 && (
+          {currentPost?.images && currentPost?.images?.length > 0 && (
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Current Images</Text>
-              <Text style={styles.noteText}>Lưu ý: Hiện tại chức năng xóa ảnh đã tồn tại chưa được hỗ trợ.</Text>
+              <Text style={styles.label}>Current images</Text>
+              
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
                 {existingImages.map((imageUrl, index) => (
                   <View key={`existing-${index}`} style={styles.imageContainer}>
-                    <Image source={{ uri: imageUrl }} style={styles.image} />
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => handleRemoveExistingImage(imageUrl, index)}
-                    >
-                      <Icon name="close-circle" size={22} color="#fff" />
-                    </TouchableOpacity>
+                    <Image 
+                      source={{ uri: imageUrl }} 
+                      style={[styles.image, selectedImages.length > 0 && styles.dimmedImage]} 
+                    />
                   </View>
                 ))}
               </ScrollView>
@@ -227,7 +211,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
           {/* New Images */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>{existingImages.length > 0 ? 'Add New Images' : 'Images'}</Text>
+            <Text style={styles.label}>{existingImages.length > 0 ? 'Add new images' : 'Images'}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
               <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage}>
                 <Icon name="add" size={24} color="#999" />
@@ -253,7 +237,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
             <Text style={styles.label}>Tags</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Add tags separated by commas..."
+              placeholder="Add tags, separated by commas..."
               placeholderTextColor="#999"
               value={tags}
               onChangeText={setTags}
@@ -269,7 +253,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
           >
             <Icon name="fitness-outline" size={20} color="#666" />
             <Text style={styles.runRecordText}>
-              {runRecord ? 'Change run record' : 'Select run record'}
+              {runRecord ? 'Thay đổi bản ghi chạy' : 'Chọn bản ghi chạy'}
             </Text>
             <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
           </TouchableOpacity>
@@ -363,9 +347,9 @@ const styles = StyleSheet.create({
     color: '#000', 
     marginBottom: 8 
   },
-  noteText: {
+  warningText: {
     fontSize: 12,
-    color: '#666',
+    color: '#ff6b6b',
     fontStyle: 'italic',
     marginBottom: 8
   },
@@ -430,6 +414,9 @@ const styles = StyleSheet.create({
     width: 80, 
     height: 80, 
     borderRadius: 8 
+  },
+  dimmedImage: {
+    opacity: 0.5,
   },
   removeImageButton: { 
     position: 'absolute', 
