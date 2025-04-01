@@ -132,7 +132,6 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
         tags: tagsArray,
         images: selectedImages,
         exerciseSessionRecordId: runRecord,
-        // Đã loại bỏ tham số removedImageIds vì API không hỗ trợ
       });
       
       if (success) {

@@ -16,7 +16,7 @@ interface Post {
   is_upvoted: boolean;
   is_downvoted: boolean;
   images: string[];
-  User?: {
+  user?: {
     username: string;
     avatar?: string;
   };

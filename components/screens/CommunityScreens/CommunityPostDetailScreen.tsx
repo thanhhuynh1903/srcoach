@@ -175,7 +175,7 @@ const CommunityPostDetailScreen = () => {
               style={styles.avatar}
             />
             <View style={styles.userTextInfo}>
-              <Text style={styles.userName}>{currentPost?.User?.username}</Text>
+              <Text style={styles.userName}>{currentPost?.user?.username}</Text>
               <View style={styles.postMetaInfo}>
                 <Text style={styles.postTime}>
                   {formatTimeAgo(currentPost?.created_at)}
@@ -199,7 +199,7 @@ const CommunityPostDetailScreen = () => {
           {/* Run photo */}
           {currentPost?.images && currentPost.images.length > 0 && (
             <Image
-              source={{uri: currentPost?.images[0].url}}
+              source={{uri: currentPost?.images[0]}}
               style={styles.runPhoto}
               resizeMode="cover"
             />
