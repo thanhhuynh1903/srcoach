@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -11,34 +11,87 @@ import {
   TextInput,
   Modal,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
 import {usePostStore} from '../../utils/usePostStore';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
+import {useCommentStore} from '../../utils/useCommentStore';
 
 const CommunityPostDetailScreen = () => {
   const {getDetail, currentPost, isLoading, deletePost} = usePostStore();
   const {profile} = useLoginStore();
+  const {
+    createComment,
+    getCommentsByPostId,
+    comments,
+    isLoading: isLoadingComments,
+  } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
   const id = route.params?.id;
-  
+
   // State cho modal
   const [modalVisible, setModalVisible] = useState(false);
-  
+  const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
   // Lấy currentUserId từ profile
-  const currentUserId = profile?.id;
-  console.log('currentUserId', currentUserId);
-  
+  const currentUserId = useMemo(() => profile?.id, [profile]);
+
+  // Tham chiếu đến input để focus
+  const inputRef = useRef(null);
+
   useEffect(() => {
     if (id) {
+      // Tải thông tin bài viết
       getDetail(id);
+      // Tải bình luận
+      getCommentsByPostId(id);
     } else {
       console.error('No post ID provided');
     }
   }, [id]);
+
+  // Hàm xử lý gửi bình luận
+  const handleSendComment = async () => {
+    if (!commentText.trim()) return;
+
+    try {
+      setIsSubmittingComment(true);
+
+      const result = await createComment(id, commentText, replyingTo);
+
+      if (result) {
+        // Reset input và trạng thái reply
+        setCommentText('');
+        setReplyingTo(null);
+
+        // Cập nhật lại danh sách bình luận
+        await getCommentsByPostId(id);
+        // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
+        await getDetail(id);
+      } else {
+        Alert.alert('Error', 'Failed to post comment');
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      Alert.alert('Error', 'An error occurred while posting your comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  // Hàm xử lý khi nhấn Reply trên một bình luận
+  const handleReplyComment = commentId => {
+    setReplyingTo(commentId);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
 
   const formatTimeAgo = dateString => {
     const now = new Date();
@@ -77,18 +130,18 @@ const CommunityPostDetailScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const postId = currentPost.id;
+              const postId = currentPost?.id;
               console.log('Deleting post with id:', postId);
-              
+
               setModalVisible(false);
-              
+
               // Gọi API xóa bài viết
               const success = await deletePost(postId);
-              
+
               if (success) {
                 // Thông báo thành công và quay lại màn hình trước
                 Alert.alert('Success', 'Post deleted successfully', [
-                  {text: 'OK', onPress: () => navigation.goBack()}
+                  {text: 'OK', onPress: () => navigation.goBack()},
                 ]);
               } else {
                 // Nếu xóa thất bại
@@ -101,7 +154,7 @@ const CommunityPostDetailScreen = () => {
           },
         },
       ],
-      {cancelable: true}
+      {cancelable: true},
     );
   };
 
@@ -125,35 +178,58 @@ const CommunityPostDetailScreen = () => {
     navigation.goBack();
   };
 
-  const postCommentMap = currentPost?.postComment?.map((comment, index) => (
-    <View key={comment.id} style={styles.commentContainer}>
-      <Image
-        source={{ uri: 'https://randomuser.me/api/portraits/women/32.jpg' }}
-        style={styles.commentAvatar}
-      />
-      <View style={styles.commentContent}>
-        <View style={styles.commentHeader}>
-          <Text style={styles.commentUserName}>{comment.user.username}</Text>
-          <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
-        </View>
-        <Text style={styles.commentText}>{comment.content}</Text>
-        <View style={styles.commentActions}>
-          <View style={styles.commentVotes}>
-            <TouchableOpacity>
-              <Icon name="arrow-up" size={16} color="#4285F4" />
-            </TouchableOpacity>
-            <Text style={styles.commentVoteCount}>0</Text>
-            <TouchableOpacity>
-              <Icon name="arrow-down" size={16} color="#666" />
+  // Render một bình luận
+  const renderComment = comment => {
+
+    return (
+      <View key={comment.id} style={styles.commentContainer}>
+        <Image
+          source={{
+            uri:
+              comment.user?.avatar ||
+              'https://randomuser.me/api/portraits/women/32.jpg',
+          }}
+          style={styles.commentAvatar}
+        />
+        <View style={styles.commentContent}>
+          <View style={styles.commentHeader}>
+            <Text style={styles.commentUserName}>
+              {comment?.User?.username}
+            </Text>
+            <Text style={styles.commentTime}>
+              {formatTimeAgo(comment.created_at)}
+            </Text>
+          </View>
+          <Text style={styles.commentText}>{comment.content}</Text>
+          <View style={styles.commentActions}>
+            <View style={styles.commentVotes}>
+              <TouchableOpacity>
+                <Icon name="arrow-up" size={16} color="#4285F4" />
+              </TouchableOpacity>
+              <Text style={styles.commentVoteCount}>
+                {comment.upvote_count || 0}
+              </Text>
+              <TouchableOpacity>
+                <Icon name="arrow-down" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
+              <Text style={styles.replyButton}>Reply</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity>
-            <Text style={styles.replyButton}>Reply</Text>
-          </TouchableOpacity>
+
+          {/* Render các bình luận con (nếu có) */}
+          {comment.children && comment.children.length > 0 && (
+            <View style={styles.repliesContainer}>
+              {comment.children.map(childComment =>
+                renderComment(childComment),
+              )}
+            </View>
+          )}
         </View>
       </View>
-    </View>
-  ));
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -171,7 +247,11 @@ const CommunityPostDetailScreen = () => {
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
             <Image
-              source={{uri: 'https://randomuser.me/api/portraits/men/32.jpg'}}
+              source={{
+                uri:
+                  currentPost?.user?.avatar ||
+                  'https://randomuser.me/api/portraits/men/32.jpg',
+              }}
               style={styles.avatar}
             />
             <View style={styles.userTextInfo}>
@@ -256,14 +336,18 @@ const CommunityPostDetailScreen = () => {
               </TouchableOpacity>
               <Text style={styles.voteCount}>{currentPost?.upvote_count}</Text>
               <TouchableOpacity style={styles.voteButton}>
-                <Icon name="arrow-down" size={20} color="#666" />  
+                <Icon name="arrow-down" size={20} color="#666" />
               </TouchableOpacity>
-              <Text style={styles.voteCount}>{currentPost?.downvote_count}</Text>
+              <Text style={styles.voteCount}>
+                {currentPost?.downvote_count}
+              </Text>
             </View>
             <View style={styles.engagementMiddle}>
               <TouchableOpacity style={styles.commentButton}>
                 <Icon name="chatbubble-outline" size={20} color="#666" />
-                <Text style={styles.commentCount}>{currentPost?.comment_count}</Text>
+                <Text style={styles.commentCount}>
+                  {currentPost?.comment_count}
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.engagementRight}>
@@ -280,7 +364,9 @@ const CommunityPostDetailScreen = () => {
         {/* Comments section */}
         <View style={styles.commentsSection}>
           <View style={styles.commentsSectionHeader}>
-            <Text style={styles.commentsSectionTitle}>Comments ({currentPost?.comment_count})</Text>
+            <Text style={styles.commentsSectionTitle}>
+              Comments ({currentPost?.comment_count || 0})
+            </Text>
             <TouchableOpacity style={styles.sortButton}>
               <Text style={styles.sortButtonText}>Sort by: Best</Text>
               <Icon name="chevron-down" size={16} color="#666" />
@@ -288,20 +374,50 @@ const CommunityPostDetailScreen = () => {
           </View>
 
           {/* Comments */}
-          {postCommentMap}
+          {isLoadingComments ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#4285F4" />
+            </View>
+          ) : comments && comments.length > 0 ? (
+            comments.map(comment => renderComment(comment))
+          ) : (
+            <Text style={styles.noCommentsText}>
+              No comments yet. Be the first to comment!
+            </Text>
+          )}
         </View>
       </ScrollView>
+
+      {/* Input container cho bình luận */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
           <Icon name="person-circle-outline" size={32} color="#64748B" />
         </TouchableOpacity>
         <TextInput
+          ref={inputRef}
           style={styles.input}
-          placeholder="Type your message..."
+          placeholder={replyingTo ? 'Write a reply...' : 'Type your message...'}
           placeholderTextColor="#64748B"
+          value={commentText}
+          onChangeText={setCommentText}
+          multiline
         />
-        <TouchableOpacity style={[styles.sendButton]}>
-          <Icon name="send" size={20} color={'#A1A1AA'} />
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            commentText.trim() ? styles.activeSendButton : null,
+          ]}
+          onPress={handleSendComment}
+          disabled={!commentText.trim() || isSubmittingComment}>
+          {isSubmittingComment ? (
+            <ActivityIndicator size="small" color="#4285F4" />
+          ) : (
+            <Icon
+              name="send"
+              size={20}
+              color={commentText.trim() ? '#4285F4' : '#A1A1AA'}
+            />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -316,38 +432,48 @@ const CommunityPostDetailScreen = () => {
           activeOpacity={1}
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
-            {currentPost && currentPost.user.id === currentUserId ? (
+            {currentPost && currentPost?.user?.id === currentUserId ? (
               <>
-                <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleUpdate}>
                   <Icon name="create-outline" size={24} color="#4285F4" />
                   <Text style={styles.modalOptionText}>Update</Text>
                 </TouchableOpacity>
-                
+
                 <View style={styles.modalDivider} />
-                
-                <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
+
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleDelete}>
                   <Icon name="trash-outline" size={24} color="red" />
-                  <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete</Text>
+                  <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                    Delete
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <TouchableOpacity style={styles.modalOption} onPress={handleSaveDraft}>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleSaveDraft}>
                   <Icon name="bookmark-outline" size={24} color="#4285F4" />
                   <Text style={styles.modalOptionText}>Save draft</Text>
                 </TouchableOpacity>
-                
+
                 <View style={styles.modalDivider} />
-                
-                <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
+
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleHide}>
                   <Icon name="eye-off-outline" size={24} color="#666" />
                   <Text style={styles.modalOptionText}>Hide</Text>
                 </TouchableOpacity>
               </>
             )}
-            
+
             <View style={styles.modalDivider} />
-            
+
             <TouchableOpacity
               style={styles.modalCancelButton}
               onPress={() => setModalVisible(false)}>
@@ -364,6 +490,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -548,6 +678,7 @@ const styles = StyleSheet.create({
   commentsSection: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 20,
   },
   commentsSectionHeader: {
     flexDirection: 'row',
@@ -622,21 +753,12 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
-  replyContainer: {
-    flexDirection: 'row',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f5f5f5',
-  },
-  replyAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  replyContent: {
-    flex: 1,
+  repliesContainer: {
     marginLeft: 10,
+    marginTop: 12,
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: '#e0e0e0',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -697,6 +819,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#4285F4',
+  },
+  replyingToContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 8,
+    marginBottom: 5,
+    width: '100%',
+  },
+  replyingToText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+  activeSendButton: {
+    backgroundColor: '#EEF2FF',
+  },
+  noCommentsText: {
+    textAlign: 'center',
+    color: '#64748B',
+    marginVertical: 20,
+    fontStyle: 'italic',
   },
 });
 

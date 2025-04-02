@@ -280,7 +280,7 @@ const CommunityScreen = () => {
     <TouchableOpacity
       style={styles.postItem}
       onPress={() =>
-        navigation.navigate('CommunityPostDetailScreen', {id: item.id})
+        navigation.navigate('CommunityPostDetailScreen' , {id: item.id})
       }>
       <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
         <View style={styles.postHeader}>
@@ -580,11 +580,10 @@ const styles = StyleSheet.create({
   postActionText: {marginLeft: 4, fontSize: 14},
   tagsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'flex-start',
     alignContent: 'flex-start',
     alignItems: 'flex-start',
-    width: '58%',
+    width: '56%',
   },
   tag: {
     backgroundColor: '#f0f0f0',
