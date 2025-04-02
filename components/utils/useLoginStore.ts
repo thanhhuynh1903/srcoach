@@ -17,7 +17,7 @@ interface LoginState {
   setUserData: (data: any) => void;
 
 }
-const MASTER_URL = "http://192.168.1.8:5000/api";
+const MASTER_URL = "https://xavia.pro/api";
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,

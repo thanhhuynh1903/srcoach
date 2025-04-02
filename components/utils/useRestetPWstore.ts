@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import axios from 'axios';
 
-const MASTER_URL = 'http://192.168.1.8:5000/api';
+const MASTER_URL = 'https://xavia.pro/api';
 
 interface ResetPasswordState {
   userdata: any | null;
