@@ -190,8 +190,10 @@ const useApiStore = create<ApiState>((set) => ({
     try {
       const response: AxiosResponse = await axiosInstance.patch(path, payload);
       set({ data: response.data, isLoading: false, status: null });
+      return response.data;
     } catch (error: any) {
       set({ data: null, isLoading: false, status: error.message });
+      return null;
     }
   },
 

@@ -150,28 +150,24 @@ export const useCommentStore = create<CommentState>((set, get) => {
       }
     },
     
-    deleteComment: async (commentId: string) => {
+    deleteComment: async (commentId) => {
       try {
         set({ isLoading: true });
-        const response = await api.delete(`/api/posts-comments/${commentId}`);
+        
+        const response = await api.patchData(`/posts-comments/${commentId}/soft-delete`);
+        console.log('Delete comment response:', response);
         
         if (response.status === 'success') {
-          // Cập nhật state sau khi xóa bình luận
-          set(state => ({
-            comments: state.comments.filter(comment => {
-              // Lọc ra bình luận đã xóa và các bình luận con của nó
-              if (comment.id === commentId) return false;
-              
-              // Cập nhật childComments nếu có
-              if (comment.childComments && comment.childComments.length > 0) {
-                comment.childComments = comment.childComments.filter(child => child.id !== commentId);
-              }
-              
-              return true;
-            }),
-            isLoading: false,
-            status: 'success'
-          }));
+          // Lấy postId từ state hiện tại để cập nhật lại danh sách bình luận
+          const currentComments = get().comments;
+          const postId = currentComments.length > 0 ? currentComments[0].postId : null;
+          
+          if (postId) {
+            // Cập nhật lại danh sách bình luận
+            await get().getCommentsByPostId(postId);
+          }
+          
+          set({ isLoading: false, status: 'success' });
           return true;
         } else {
           set({ 
@@ -182,6 +178,7 @@ export const useCommentStore = create<CommentState>((set, get) => {
           return false;
         }
       } catch (error) {
+        console.error('Error deleting comment:', error);
         set({ 
           message: error instanceof Error ? error.message : 'An unknown error occurred',
           isLoading: false,
@@ -190,7 +187,8 @@ export const useCommentStore = create<CommentState>((set, get) => {
         return false;
       }
     },
-    
+  
+  
     updateComment: async (commentId: string, content: string) => {
       try {
         set({ isLoading: true });

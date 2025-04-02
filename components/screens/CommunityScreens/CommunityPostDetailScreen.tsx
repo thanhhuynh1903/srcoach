@@ -19,6 +19,7 @@ import {usePostStore} from '../../utils/usePostStore';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
+import ModalPoppup from '../../ModalPoppup';
 
 const CommunityPostDetailScreen = () => {
   const {getDetail, currentPost, isLoading, deletePost} = usePostStore();
@@ -28,23 +29,27 @@ const CommunityPostDetailScreen = () => {
     getCommentsByPostId,
     comments,
     isLoading: isLoadingComments,
+    deleteComment,
   } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
   const id = route.params?.id;
+  const [showModal, setShowModal] = useState(false);
 
   // State cho modal
   const [modalVisible, setModalVisible] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [selectedCommentId, setSelectedCommentId] = useState(null);
 
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
 
   // Tham chiếu đến input để focus
   const inputRef = useRef(null);
-
+  console.log('currentPost', currentPost);
+  
   useEffect(() => {
     if (id) {
       // Tải thông tin bài viết
@@ -164,6 +169,23 @@ const CommunityPostDetailScreen = () => {
     navigation.navigate('CommunityUpdatePostScreen', {postId: currentPost.id});
   };
 
+  const handleDeleteComment = async commentId => {
+    try {
+      const success = await deleteComment(commentId);
+
+      if (success) {
+        // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
+        await getDetail(id);
+        Alert.alert('Success', 'Comment deleted successfully');
+      } else {
+        Alert.alert('Error', 'Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      Alert.alert('Error', 'An error occurred while deleting the comment');
+    }
+  };
+
   // Xử lý lưu nháp bài viết
   const handleSaveDraft = () => {
     setModalVisible(false);
@@ -180,9 +202,14 @@ const CommunityPostDetailScreen = () => {
 
   // Render một bình luận
   const renderComment = comment => {
-
     return (
-      <View key={comment.id} style={styles.commentContainer}>
+      <TouchableOpacity
+        key={comment.id}
+        style={styles.commentContainer}
+        onPress={() => {
+          setSelectedCommentId(comment.id);
+          setShowModal(true);
+        }}>
         <Image
           source={{
             uri:
@@ -194,7 +221,7 @@ const CommunityPostDetailScreen = () => {
         <View style={styles.commentContent}>
           <View style={styles.commentHeader}>
             <Text style={styles.commentUserName}>
-              {comment?.User?.username}
+              {comment.User?.username || comment.user?.username}
             </Text>
             <Text style={styles.commentTime}>
               {formatTimeAgo(comment.created_at)}
@@ -227,7 +254,7 @@ const CommunityPostDetailScreen = () => {
             </View>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -379,7 +406,7 @@ const CommunityPostDetailScreen = () => {
               <ActivityIndicator size="small" color="#4285F4" />
             </View>
           ) : comments && comments.length > 0 ? (
-            comments.map(comment => renderComment(comment))
+            comments.filter(comment => comment?.is_deleted === false).map(comment => renderComment(comment))
           ) : (
             <Text style={styles.noCommentsText}>
               No comments yet. Be the first to comment!
@@ -482,6 +509,13 @@ const CommunityPostDetailScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <ModalPoppup
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        deleteComment={handleDeleteComment}
+        commentId={selectedCommentId}
+      />
     </SafeAreaView>
   );
 };
