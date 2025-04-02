@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -16,19 +16,21 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { usePostStore } from '../../utils/usePostStore';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {usePostStore} from '../../utils/usePostStore';
+import {useNavigation, useRoute} from '@react-navigation/native';
 
 interface CommunityPostUpdateScreenProps {
   route?: {
     params: {
       postId: string;
-    }
+    };
   };
 }
 
-const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () => {
+const CommunityPostUpdateScreen: React.FC<
+  CommunityPostUpdateScreenProps
+> = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const postId = route.params?.postId;
@@ -38,21 +40,30 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [tags, setTags] = useState('');
+  const [displayTags, setDisplayTags] = useState<string[]>([]);
   const [runRecord, setRunRecord] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
-  
-  const { updatePost, getDetail, currentPost, isLoading, status, message } = usePostStore();
+
+  const {
+    updatePost,
+    getDetail,
+    getAll,
+    currentPost,
+    isLoading,
+    status,
+    message,
+  } = usePostStore();
 
   // Tải dữ liệu bài viết khi màn hình được mở
   useEffect(() => {
     console.log('postId', postId);
-    
+
     const loadPostData = async () => {
       if (postId) {
         await getDetail(postId);
       }
     };
-    
+
     loadPostData();
   }, [postId]);
 
@@ -60,21 +71,51 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
   useEffect(() => {
     console.log('currentPost', currentPost);
     console.log('existingImages', existingImages);
-    
+    console.log('selectedImages', selectedImages);
+
     if (currentPost) {
       setTitle(currentPost.title || '');
       setContent(currentPost.content || '');
-      setTags(currentPost.tags?.join(', ') || '');
+
+      // Xử lý tags
+      if (currentPost.tags && currentPost.tags.length > 0) {
+        setTags(currentPost.tags.join(', ') || '');
+
+        // Tạo chuỗi hiển thị tags
+        const tagsArray = [...currentPost.tags];
+        if (tagsArray.length > 0) {
+          setDisplayTags(tagsArray);
+        }
+      } else {
+        setTags('');
+        setDisplayTags([]);
+      }
+
       setRunRecord(currentPost.exercise_session_record_id || null);
-      
+
       // Lưu trữ ảnh hiện có
       if (currentPost.images && currentPost.images.length > 0) {
         setExistingImages(currentPost.images);
       }
-      
+
       setInitialLoading(false);
     }
   }, [currentPost]);
+
+  // Cập nhật displayTags khi tags thay đổi
+  useEffect(() => {
+    if (tags) {
+      const tagsArray = tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag !== '');
+      if (tagsArray.length > 0) {
+        setDisplayTags(tagsArray);
+      }
+    } else {
+      setDisplayTags([]);
+    }
+  }, [tags]);
 
   const handleAddImage = () => {
     const options = {
@@ -85,12 +126,15 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
       quality: 0.8,
     };
 
-    launchImageLibrary(options, (response) => {
+    launchImageLibrary(options, response => {
       if (response.didCancel) {
         console.log('User cancelled image picker');
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
-        Alert.alert('Lỗi', response.errorMessage || 'Đã xảy ra lỗi khi chọn ảnh');
+        Alert.alert(
+          'Lỗi',
+          response.errorMessage || 'Đã xảy ra lỗi khi chọn ảnh',
+        );
       } else if (response.assets && response.assets.length > 0) {
         // Thêm ảnh mới vào danh sách
         setSelectedImages([...selectedImages, response.assets[0]]);
@@ -106,24 +150,31 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
   const handleUpdate = async () => {
     if (!title.trim() || !content.trim()) {
-      Alert.alert('Thông tin không đầy đủ', 'Vui lòng nhập cả tiêu đề và nội dung');
+      Alert.alert(
+        'Thông tin không đầy đủ',
+        'Vui lòng nhập cả tiêu đề và nội dung',
+      );
       return;
     }
 
     try {
-      const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-      
+      const tagsArray = tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag !== '');
+
       await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray,
-        images: selectedImages,
+        images: [...existingImages, ...selectedImages],
         exerciseSessionRecordId: runRecord,
       });
-      
+
       if (status !== 'error') {
+        getAll();
         Alert.alert('Thành công', 'Bài viết đã được cập nhật thành công', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          {text: 'OK', onPress: () => navigation.goBack()},
         ]);
       } else {
         Alert.alert('Lỗi', message || 'Không thể cập nhật bài viết');
@@ -146,6 +197,11 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
     );
   }
 
+  const handleRemoveExistingImage = (index: number) => {
+    const updatedImages = [...existingImages];
+    updatedImages.splice(index, 1);
+    setExistingImages(updatedImages);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -161,8 +217,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidView}
-      >
+        style={styles.keyboardAvoidView}>
         <ScrollView style={styles.scrollView}>
           {/* Title */}
           <View style={styles.formGroup}>
@@ -195,14 +250,24 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
           {currentPost?.images && currentPost?.images?.length > 0 && (
             <View style={styles.formGroup}>
               <Text style={styles.label}>Current images</Text>
-              
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.imagesContainer}>
                 {existingImages.map((imageUrl, index) => (
                   <View key={`existing-${index}`} style={styles.imageContainer}>
-                    <Image 
-                      source={{ uri: imageUrl }} 
-                      style={[styles.image, selectedImages.length > 0 && styles.dimmedImage]} 
+                    <Image
+                      source={{uri: imageUrl}}
+                      style={[
+                        styles.image,
+                        selectedImages.length > 0 && styles.dimmedImage,
+                      ]}
                     />
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => handleRemoveExistingImage(index)}>
+                      <Icon name="close-circle" size={22} color="#fff" />
+                    </TouchableOpacity>
                   </View>
                 ))}
               </ScrollView>
@@ -211,20 +276,26 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
           {/* New Images */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>{existingImages.length > 0 ? 'Add new images' : 'Images'}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
-              <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage}>
+            <Text style={styles.label}>
+              {existingImages.length > 0 ? 'Add new images' : 'Images'}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.imagesContainer}>
+              <TouchableOpacity
+                style={styles.addImageButton}
+                onPress={handleAddImage}>
                 <Icon name="add" size={24} color="#999" />
                 <Text style={styles.addImageText}>Add</Text>
               </TouchableOpacity>
 
               {selectedImages.map((image, index) => (
                 <View key={`new-${index}`} style={styles.imageContainer}>
-                  <Image source={{ uri: image.uri }} style={styles.image} />
+                  <Image source={{uri: image.uri}} style={styles.image} />
                   <TouchableOpacity
                     style={styles.removeImageButton}
-                    onPress={() => handleRemoveNewImage(index)}
-                  >
+                    onPress={() => handleRemoveNewImage(index)}>
                     <Icon name="close-circle" size={22} color="#fff" />
                   </TouchableOpacity>
                 </View>
@@ -235,6 +306,18 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
           {/* Tags */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Tags</Text>
+
+            {/* Display Tags */}
+            {displayTags.length > 0 && (
+              <View style={styles.displayTagsContainer}>
+                {displayTags.map((tag, index) => (
+                  <View key={index} style={styles.tagChip}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
             <TextInput
               style={styles.textInput}
               placeholder="Add tags, separated by commas..."
@@ -245,21 +328,25 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
           </View>
 
           {/* Run Record */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.runRecordButton}
             onPress={() => {
               Alert.alert('Sắp ra mắt', 'Tính năng này sẽ sớm được phát hành');
-            }}
-          >
+            }}>
             <Icon name="fitness-outline" size={20} color="#666" />
             <Text style={styles.runRecordText}>
               {runRecord ? 'Thay đổi bản ghi chạy' : 'Chọn bản ghi chạy'}
             </Text>
-            <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
+            <Icon
+              name="chevron-forward"
+              size={20}
+              color="#999"
+              style={styles.chevronIcon}
+            />
           </TouchableOpacity>
 
           {/* Error message */}
-          {status === "error" && message && (
+          {status === 'error' && message && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{message}</Text>
             </View>
@@ -275,11 +362,11 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
         <TouchableOpacity
           style={[
             styles.updateButton,
-            (!isUpdateButtonEnabled || isLoading) && styles.updateButtonDisabled
+            (!isUpdateButtonEnabled || isLoading) &&
+              styles.updateButtonDisabled,
           ]}
           onPress={handleUpdate}
-          disabled={!isUpdateButtonEnabled || isLoading}
-        >
+          disabled={!isUpdateButtonEnabled || isLoading}>
           {isLoading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
@@ -292,9 +379,9 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff' 
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -305,177 +392,195 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingHorizontal: 16, 
-    height: 56, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#f0f0f0' 
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    height: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  backButton: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    backgroundColor: '#f5f5f5', 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTitle: { 
-    fontSize: 18, 
-    fontWeight: '600', 
-    color: '#000' 
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
   },
-  headerRight: { 
-    width: 40 
+  headerRight: {
+    width: 40,
   },
-  keyboardAvoidView: { 
-    flex: 1 
+  keyboardAvoidView: {
+    flex: 1,
   },
-  scrollView: { 
-    flex: 1, 
-    paddingHorizontal: 16, 
-    paddingTop: 16 
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
-  formGroup: { 
-    marginBottom: 20 
+  formGroup: {
+    marginBottom: 20,
   },
-  label: { 
-    fontSize: 16, 
-    fontWeight: '500', 
-    color: '#000', 
-    marginBottom: 8 
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000',
+    marginBottom: 8,
   },
   warningText: {
     fontSize: 12,
     color: '#ff6b6b',
     fontStyle: 'italic',
-    marginBottom: 8
+    marginBottom: 8,
   },
-  selectInput: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    height: 50, 
-    paddingHorizontal: 16, 
-    backgroundColor: '#f5f5f5', 
-    borderRadius: 8 
+  selectInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
   },
-  textInput: { 
-    height: 50, 
-    paddingHorizontal: 16, 
-    backgroundColor: '#f5f5f5', 
-    borderRadius: 8, 
-    fontSize: 16, 
-    color: '#333' 
+  textInput: {
+    height: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    fontSize: 16,
+    color: '#333',
   },
-  textArea: { 
-    minHeight: 150, 
-    paddingHorizontal: 16, 
-    paddingTop: 12, 
-    paddingBottom: 12, 
-    backgroundColor: '#f5f5f5', 
-    borderRadius: 8, 
-    fontSize: 16, 
-    color: '#333' 
+  textArea: {
+    minHeight: 150,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    fontSize: 16,
+    color: '#333',
   },
-  inputText: { 
-    fontSize: 16, 
-    color: '#333' 
+  inputText: {
+    fontSize: 16,
+    color: '#333',
   },
-  placeholderText: { 
-    fontSize: 16, 
-    color: '#999' 
+  placeholderText: {
+    fontSize: 16,
+    color: '#999',
   },
-  imagesContainer: { 
-    flexDirection: 'row', 
-    marginBottom: 8 
+  imagesContainer: {
+    flexDirection: 'row',
+    marginBottom: 8,
   },
-  addImageButton: { 
-    width: 80, 
-    height: 80, 
-    borderRadius: 8, 
-    backgroundColor: '#f5f5f5', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginRight: 12 
+  addImageButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  addImageText: { 
-    fontSize: 14, 
-    color: '#999', 
-    marginTop: 4 
+  addImageText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 4,
   },
-  imageContainer: { 
-    position: 'relative', 
-    marginRight: 12 
+  imageContainer: {
+    position: 'relative',
+    marginRight: 12,
   },
-  image: { 
-    width: 80, 
-    height: 80, 
-    borderRadius: 8 
+  image: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
   },
   dimmedImage: {
     opacity: 0.5,
   },
-  removeImageButton: { 
-    position: 'absolute', 
-    top: -8, 
-    right: -8, 
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    borderRadius: 12 
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
   },
-  runRecordButton: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    height: 50, 
-    paddingHorizontal: 16, 
-    backgroundColor: '#f5f5f5', 
-    borderRadius: 8, 
-    marginBottom: 20 
+  // Styles cho display tags
+  displayTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
   },
-  runRecordText: { 
-    fontSize: 16, 
-    color: '#666', 
-    marginLeft: 12 
+  tagChip: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
   },
-  chevronIcon: { 
-    marginLeft: 'auto' 
+  tagText: {
+    fontSize: 14,
+    color: '#333',
   },
-  bottomSpacer: { 
-    height: 40 
+  runRecordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 20,
   },
-  footer: { 
-    padding: 16, 
-    borderTopWidth: 1, 
-    borderTopColor: '#f0f0f0', 
-    backgroundColor: '#fff' 
+  runRecordText: {
+    fontSize: 16,
+    color: '#666',
+    marginLeft: 12,
   },
-  updateButton: { 
-    height: 50, 
-    borderRadius: 8, 
-    backgroundColor: '#002366', 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  chevronIcon: {
+    marginLeft: 'auto',
   },
-  updateButtonDisabled: { 
-    backgroundColor: '#002366', 
-    opacity: 0.6 
+  bottomSpacer: {
+    height: 40,
   },
-  updateButtonText: { 
-    fontSize: 16, 
-    fontWeight: '600', 
-    color: '#fff' 
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fff',
   },
-  errorContainer: { 
-    padding: 12, 
-    backgroundColor: '#ffebee', 
-    borderRadius: 8, 
-    marginBottom: 20 
+  updateButton: {
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#002366',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  errorText: { 
-    color: '#d32f2f', 
-    fontSize: 14 
+  updateButtonDisabled: {
+    backgroundColor: '#002366',
+    opacity: 0.6,
+  },
+  updateButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  errorContainer: {
+    padding: 12,
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#d32f2f',
+    fontSize: 14,
   },
 });
 

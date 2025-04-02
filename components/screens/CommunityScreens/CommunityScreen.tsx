@@ -241,6 +241,41 @@ const CommunityScreen = () => {
     }
   };
 
+  // Hàm render tags với chỉ hiển thị 2 tags đầu tiên + số lượng tags còn lại
+  const renderTags = (tags: Tag[]) => {
+    if (!tags || tags.length === 0) {
+      return null;
+    }
+
+    // Nếu có 1-2 tags, hiển thị tất cả
+    if (tags.length <= 2) {
+      return (
+        <View style={styles.tagsContainer}>
+          {tags.map((tag, index) => (
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>{tag.tag_name}</Text>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    // Nếu có nhiều hơn 2 tags, hiển thị 2 đầu tiên + "+n"
+    return (
+      <View style={styles.tagsContainer}>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[0].tag_name}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[1].tag_name}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>+{tags.length - 2}</Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity
       style={styles.postItem}
@@ -297,15 +332,8 @@ const CommunityScreen = () => {
           <Icon name="chatbubble-outline" size={20} />
           <Text style={styles.postActionText}>{item?.comment_count}</Text>
         </TouchableOpacity>
-        {item.postTags && item.postTags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {item.postTags.map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag.tag_name}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
+        {renderTags(item.postTags)}
       </View>
     </TouchableOpacity>
   );
