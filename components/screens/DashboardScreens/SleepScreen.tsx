@@ -6,133 +6,202 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  FlatList,
 } from 'react-native';
 import BackButton from '../../BackButton';
 import {PieChart} from 'react-native-gifted-charts';
 import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
 import {useFocusEffect} from '@react-navigation/native';
-import { fetchSleepRecords, initializeHealthConnect, SleepSessionRecord } from '../../utils/utils_healthconnect';
+import { fetchSleepRecords, initializeHealthConnect } from '../../utils/utils_healthconnect';
+import { ChevronDown, ChevronUp } from 'react-native-feather';
 
 const SleepType = {
   UNKNOWN: 0,
+  AWAKE: 1,
   SLEEPING: 2,
   OUT_OF_BED: 3,
   LIGHT: 4,
   DEEP: 5,
   REM: 6,
-  AWAKE: 1,
   AWAKE_IN_BED: 7,
 } as const;
+
+interface SleepRecord {
+  id: string;
+  startTime: string;
+  endTime: string;
+  stage: number;
+  dataOrigin: string;
+  sleepScore?: number;
+  avgHeartRate?: number;
+  avgBreathing?: number;
+  avgSpO2?: number;
+}
+
+interface ProcessedSleepData {
+  id: string;
+  sessions: SleepRecord[];
+  pieData: {
+    value: number;
+    color: string;
+    text: string;
+    legend: string;
+  }[];
+  metrics: {
+    score: number | string;
+    heartRate: number;
+    breathing: number;
+    bloodOxygen: number;
+  };
+  duration: string;
+  quality: string;
+  timeRange: string;
+  stages: {
+    deep: number;
+    light: number;
+    rem: number;
+    awake: number;
+  };
+}
 
 const SleepScreen = () => {
   const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [sleepRecords, setSleepRecords] = useState<SleepSessionRecord[]>([]);
+  const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    stages: true,
+    metrics: true,
+    weekly: true,
+    insights: true,
+  });
 
-  const processSleepData = (records: SleepSessionRecord[]) => {
-    if (!records || records.length === 0) {
-      return {
-        pieData: [],
-        chartData: [],
-        metrics: {
-          score: '--',
-          heartRate: '--',
-          breathing: '--',
-          bloodOxygen: '--',
-        },
-        duration: '--h --m',
-        quality: 'No data',
-        timeRange: '--:-- - --:--',
-        stages: {
-          deep: 0,
-          light: 0,
-          rem: 0,
-          awake: 0,
+  // Group records by their ID
+  const groupRecordsById = (records: SleepRecord[]) => {
+    const grouped: {[key: string]: SleepRecord[]} = {};
+    
+    records.forEach(record => {
+      if (!grouped[record.id]) {
+        grouped[record.id] = [];
+      }
+      grouped[record.id].push(record);
+    });
+    
+    return grouped;
+  };
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const processSleepData = (records: SleepRecord[]): ProcessedSleepData[] => {
+    const groupedRecords = groupRecordsById(records);
+    const results: ProcessedSleepData[] = [];
+
+    for (const id in groupedRecords) {
+      const sessions = groupedRecords[id];
+      let deep = 0, light = 0, rem = 0, awake = 0;
+      let totalDuration = 0;
+      let earliestStart = new Date(sessions[0].startTime);
+      let latestEnd = new Date(sessions[0].endTime);
+
+      // Calculate average metrics across all sessions
+      let totalHeartRate = 0;
+      let totalBreathing = 0;
+      let totalSpO2 = 0;
+      let validMetricsCount = 0;
+
+      sessions.forEach(record => {
+        const start = new Date(record.startTime);
+        const end = new Date(record.endTime);
+        const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+
+        if (start < earliestStart) earliestStart = start;
+        if (end > latestEnd) latestEnd = end;
+
+        switch(record.stage) {
+          case SleepType.DEEP:
+            deep += duration;
+            break;
+          case SleepType.LIGHT:
+            light += duration;
+            break;
+          case SleepType.REM:
+            rem += duration;
+            break;
+          case SleepType.AWAKE:
+          case SleepType.AWAKE_IN_BED:
+            awake += duration;
+            break;
+          case SleepType.SLEEPING:
+            light += duration;
+            break;
         }
+
+        // Aggregate metrics if available
+        if (record.avgHeartRate) {
+          totalHeartRate += record.avgHeartRate;
+          totalBreathing += record.avgBreathing || 0;
+          totalSpO2 += record.avgSpO2 || 0;
+          validMetricsCount++;
+        }
+
+        totalDuration += duration;
+      });
+
+      const hours = Math.floor(totalDuration / 60);
+      const minutes = Math.round(totalDuration % 60);
+      const durationText = `${hours}h ${minutes}m`;
+
+      const formatTime = (date: Date) => {
+        return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
       };
+
+      const timeRangeText = `${formatTime(earliestStart)} - ${formatTime(latestEnd)}`;
+
+      const deepSleepRatio = totalDuration > 0 ? deep / totalDuration : 0;
+      const totalSleepHours = totalDuration / 60;
+
+      // Calculate average metrics
+      const avgHeartRate = validMetricsCount > 0 ? Math.round(totalHeartRate / validMetricsCount) : 60 + Math.round(Math.random() * 10);
+      const avgBreathing = validMetricsCount > 0 ? Math.round(totalBreathing / validMetricsCount) : 12 + Math.round(Math.random() * 4);
+      const avgSpO2 = validMetricsCount > 0 ? Math.round(totalSpO2 / validMetricsCount) : 95 + Math.round(Math.random() * 3);
+
+      // Use sleepScore from API if available, otherwise calculate it
+      const sleepScore = sessions[0].sleepScore || calculateSleepScore(totalSleepHours, deepSleepRatio);
+
+      results.push({
+        id,
+        sessions,
+        pieData: [
+          {value: deep, color: '#6C5CE7', text: Math.round(deep).toString(), legend: 'Deep Sleep'},
+          {value: light, color: '#A29BFE', text: Math.round(light).toString(), legend: 'Light Sleep'},
+          {value: rem, color: '#6C5CE7', text: Math.round(rem).toString(), legend: 'REM'},
+          {value: awake, color: '#E9E5FF', text: Math.round(awake).toString(), legend: 'Awake'},
+        ],
+        metrics: {
+          score: sleepScore,
+          heartRate: avgHeartRate,
+          breathing: avgBreathing,
+          bloodOxygen: avgSpO2,
+        },
+        duration: durationText,
+        quality: getSleepQuality(totalSleepHours, deepSleepRatio),
+        timeRange: timeRangeText,
+        stages: {
+          deep,
+          light,
+          rem,
+          awake
+        }
+      });
     }
 
-    let deep = 0, light = 0, rem = 0, awake = 0;
-    let totalDuration = 0;
-
-    records.forEach(record => {
-      const start = new Date(record.startTime);
-      const end = new Date(record.endTime);
-      const duration = (end.getTime() - start.getTime()) / (1000 * 60);
-
-      switch(record.stage) {
-        case SleepType.DEEP:
-          deep += duration;
-          break;
-        case SleepType.LIGHT:
-          light += duration;
-          break;
-        case SleepType.REM:
-          rem += duration;
-          break;
-        case SleepType.AWAKE:
-        case SleepType.AWAKE_IN_BED:
-          awake += duration;
-          break;
-        case SleepType.SLEEPING:
-          light += duration;
-          break;
-      }
-
-      totalDuration += duration;
-    });
-
-    const pieData = [
-      {value: deep, color: '#6C5CE7', text: Math.round(deep).toString(), legend: 'Deep Sleep'},
-      {value: light, color: '#A29BFE', text: Math.round(light).toString(), legend: 'Light Sleep'},
-      {value: rem, color: '#6C5CE7', text: Math.round(rem).toString(), legend: 'REM'},
-      {value: awake, color: '#E9E5FF', text: Math.round(awake).toString(), legend: 'Awake'},
-    ];
-
-    const hours = Math.floor(totalDuration / 60);
-    const minutes = Math.round(totalDuration % 60);
-    const durationText = `${hours}h ${minutes}m`;
-
-    const firstRecord = records[0];
-    const lastRecord = records[records.length - 1];
-    const startTime = new Date(firstRecord.startTime);
-    const endTime = new Date(lastRecord.endTime);
-
-    const formatTime = (date: Date) => {
-      return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-    };
-
-    const timeRangeText = `${formatTime(startTime)} - ${formatTime(endTime)}`;
-
-    const chartData = Array(7).fill(0).map((_, i) => ({
-      day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i],
-      hours: Math.random() * 2 + 5
-    }));
-
-    const deepSleepRatio = deep / totalDuration;
-    const totalSleepHours = totalDuration / 60;
-    
-    return {
-      pieData,
-      chartData,
-      metrics: {
-        score: calculateSleepScore(totalSleepHours, deepSleepRatio),
-        heartRate: 60 + Math.round(Math.random() * 10),
-        breathing: 12 + Math.round(Math.random() * 4),
-        bloodOxygen: 95 + Math.round(Math.random() * 3),
-      },
-      duration: durationText,
-      quality: getSleepQuality(totalSleepHours, deepSleepRatio),
-      timeRange: timeRangeText,
-      stages: {
-        deep,
-        light,
-        rem,
-        awake
-      }
-    };
+    return results;
   };
 
   const calculateSleepScore = (totalHours: number, deepSleepRatio: number): number | string => {
@@ -249,7 +318,11 @@ const SleepScreen = () => {
     setCurrentDate(newDate);
   };
 
-  const sleepData = processSleepData(sleepRecords);
+  const sleepDataGroups = processSleepData(sleepRecords);
+  const chartData = Array(7).fill(0).map((_, i) => ({
+    day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i],
+    hours: Math.random() * 2 + 5
+  }));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -369,109 +442,149 @@ const SleepScreen = () => {
         </View>
       ) : (
         <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-          {/* Date and Sleep Duration */}
-          <View style={styles.dateContainer}>
-            <Text style={styles.durationText}>{sleepData.duration}</Text>
-            <Text style={styles.qualityText}>{sleepData.quality} sleep quality</Text>
-            {activeView === 'day' && <Text style={styles.timeRangeText}>{sleepData.timeRange}</Text>}
-          </View>
+          {/* Sleep Sessions */}
+          {sleepDataGroups.map((group, index) => (
+            <View key={group.id} style={styles.sessionContainer}>
+              <View style={styles.sessionHeader}>
+                <Text style={styles.sessionTitle}>Sleep Session {index + 1}</Text>
+                <Text style={styles.sessionDuration}>{group.duration}</Text>
+              </View>
+              <Text style={styles.sessionTime}>{group.timeRange}</Text>
+              <Text style={styles.sessionQuality}>{group.quality} sleep quality</Text>
 
-          {/* Sleep Stages */}
-          {sleepData.pieData.length > 0 && (
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Sleep Stages</Text>
-              <View style={styles.chartContainer}>
-                <PieChart
-                  data={sleepData.pieData}
-                  donut
-                  radius={80}
-                  innerRadius={60}
-                  centerLabelComponent={() => (
-                    <View style={styles.centerLabel}>
-                      <Text style={styles.centerLabelText}>Total</Text>
-                      <Text style={styles.centerLabelText}>{sleepData.duration}</Text>
+              {/* Sleep Stages */}
+              <TouchableOpacity 
+                style={styles.sectionHeader}
+                onPress={() => toggleSection('stages')}
+              >
+                <Text style={styles.sectionTitle}>Sleep Stages</Text>
+                {expandedSections.stages ? (
+                  <ChevronUp width={20} height={20} color="#6C5CE7" />
+                ) : (
+                  <ChevronDown width={20} height={20} color="#6C5CE7" />
+                )}
+              </TouchableOpacity>
+              
+              {expandedSections.stages && (
+                <>
+                  <View style={styles.chartContainer}>
+                    <PieChart
+                      data={group.pieData}
+                      donut
+                      radius={80}
+                      innerRadius={60}
+                      centerLabelComponent={() => (
+                        <View style={styles.centerLabel}>
+                          <Text style={styles.centerLabelText}>Total</Text>
+                          <Text style={styles.centerLabelText}>{group.duration}</Text>
+                        </View>
+                      )}
+                    />
+                  </View>
+
+                  <View style={styles.stagesLegend}>
+                    <View style={styles.legendRow}>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, {backgroundColor: '#6C5CE7'}]} />
+                        <Text style={styles.legendLabel}>Deep Sleep</Text>
+                        <Text style={styles.legendValue}>{Math.round(group.stages.deep / 60)}h {Math.round(group.stages.deep % 60)}m</Text>
+                      </View>
+
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, {backgroundColor: '#A29BFE'}]} />
+                        <Text style={styles.legendLabel}>Light Sleep</Text>
+                        <Text style={styles.legendValue}>{Math.round(group.stages.light / 60)}h {Math.round(group.stages.light % 60)}m</Text>
+                      </View>
                     </View>
-                  )}
-                />
-              </View>
 
-              <View style={styles.stagesLegend}>
-                <View style={styles.legendRow}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, {backgroundColor: '#6C5CE7'}]} />
-                    <Text style={styles.legendLabel}>Deep Sleep</Text>
-                    <Text style={styles.legendValue}>{Math.round(sleepData.stages.deep / 60)}h {Math.round(sleepData.stages.deep % 60)}m</Text>
+                    <View style={styles.legendRow}>
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, {backgroundColor: '#6C5CE7'}]} />
+                        <Text style={styles.legendLabel}>REM</Text>
+                        <Text style={styles.legendValue}>{Math.round(group.stages.rem / 60)}h {Math.round(group.stages.rem % 60)}m</Text>
+                      </View>
+
+                      <View style={styles.legendItem}>
+                        <View style={[styles.legendDot, {backgroundColor: '#E9E5FF'}]} />
+                        <Text style={styles.legendLabel}>Awake</Text>
+                        <Text style={styles.legendValue}>{Math.round(group.stages.awake / 60)}h {Math.round(group.stages.awake % 60)}m</Text>
+                      </View>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* Health Metrics */}
+              <TouchableOpacity 
+                style={styles.sectionHeader}
+                onPress={() => toggleSection('metrics')}
+              >
+                <Text style={styles.sectionTitle}>Health Metrics</Text>
+                {expandedSections.metrics ? (
+                  <ChevronUp width={20} height={20} color="#6C5CE7" />
+                ) : (
+                  <ChevronDown width={20} height={20} color="#6C5CE7" />
+                )}
+              </TouchableOpacity>
+              
+              {expandedSections.metrics && (
+                <View style={styles.metricsContainer}>
+                  <View style={styles.metricRow}>
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>Sleep Score</Text>
+                      <Text style={[styles.metricValue, {color: '#6C5CE7'}]}>
+                        {group.metrics.score}
+                      </Text>
+                    </View>
+
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>Heart Rate</Text>
+                      <Text style={[styles.metricValue, {color: '#FF4D4F'}]}>
+                        {group.metrics.heartRate}<Text style={styles.metricUnit}>BPM avg.</Text>
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, {backgroundColor: '#A29BFE'}]} />
-                    <Text style={styles.legendLabel}>Light Sleep</Text>
-                    <Text style={styles.legendValue}>{Math.round(sleepData.stages.light / 60)}h {Math.round(sleepData.stages.light % 60)}m</Text>
+                  <View style={styles.metricRow}>
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>Breathing</Text>
+                      <Text style={[styles.metricValue, {color: '#10B981'}]}>
+                        {group.metrics.breathing}<Text style={styles.metricUnit}>br/min</Text>
+                      </Text>
+                    </View>
+
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>Blood Oxygen</Text>
+                      <Text style={[styles.metricValue, {color: '#3B82F6'}]}>
+                        {group.metrics.bloodOxygen}<Text style={styles.metricUnit}>%</Text>
+                      </Text>
+                    </View>
                   </View>
                 </View>
-
-                <View style={styles.legendRow}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, {backgroundColor: '#6C5CE7'}]} />
-                    <Text style={styles.legendLabel}>REM</Text>
-                    <Text style={styles.legendValue}>{Math.round(sleepData.stages.rem / 60)}h {Math.round(sleepData.stages.rem % 60)}m</Text>
-                  </View>
-
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, {backgroundColor: '#E9E5FF'}]} />
-                    <Text style={styles.legendLabel}>Awake</Text>
-                    <Text style={styles.legendValue}>{Math.round(sleepData.stages.awake / 60)}h {Math.round(sleepData.stages.awake % 60)}m</Text>
-                  </View>
-                </View>
-              </View>
+              )}
             </View>
-          )}
-
-          {/* Health Metrics */}
-          <View style={styles.metricsContainer}>
-            <View style={styles.metricRow}>
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Sleep Score</Text>
-                <Text style={[styles.metricValue, {color: '#6C5CE7'}]}>
-                  {sleepData.metrics.score}
-                </Text>
-              </View>
-
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Heart Rate</Text>
-                <Text style={[styles.metricValue, {color: '#FF4D4F'}]}>
-                  {sleepData.metrics.heartRate}<Text style={styles.metricUnit}>BPM avg.</Text>
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.metricRow}>
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Breathing</Text>
-                <Text style={[styles.metricValue, {color: '#10B981'}]}>
-                  {sleepData.metrics.breathing}<Text style={styles.metricUnit}>br/min</Text>
-                </Text>
-              </View>
-
-              <View style={styles.metricItem}>
-                <Text style={styles.metricLabel}>Blood Oxygen</Text>
-                <Text style={[styles.metricValue, {color: '#3B82F6'}]}>
-                  {sleepData.metrics.bloodOxygen}<Text style={styles.metricUnit}>%</Text>
-                </Text>
-              </View>
-            </View>
-          </View>
+          ))}
 
           {/* Weekly Chart */}
-          <View style={styles.weeklyContainer}>
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('weekly')}
+          >
             <Text style={styles.sectionTitle}>
               {activeView === 'day' ? 'This Week' : 
               activeView === 'week' ? 'Weekly Overview' :
               activeView === 'month' ? 'Monthly Overview' : 'Yearly Overview'}
             </Text>
-
+            {expandedSections.weekly ? (
+              <ChevronUp width={20} height={20} color="#6C5CE7" />
+            ) : (
+              <ChevronDown width={20} height={20} color="#6C5CE7" />
+            )}
+          </TouchableOpacity>
+          
+          {expandedSections.weekly && (
             <View style={styles.weeklyChart}>
-              {sleepData.chartData.map((item, index) => (
+              {chartData.map((item, index) => (
                 <View key={index} style={styles.weeklyBarContainer}>
                   <View
                     style={[
@@ -489,29 +602,40 @@ const SleepScreen = () => {
                 </View>
               ))}
             </View>
-          </View>
+          )}
 
-          {/* Notes */}
-          <View style={styles.notesContainer}>
+          {/* Insights */}
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('insights')}
+          >
             <Text style={styles.sectionTitle}>Insights</Text>
+            {expandedSections.insights ? (
+              <ChevronUp width={20} height={20} color="#6C5CE7" />
+            ) : (
+              <ChevronDown width={20} height={20} color="#6C5CE7" />
+            )}
+          </TouchableOpacity>
+          
+          {expandedSections.insights && sleepDataGroups.length > 0 && (
             <View style={styles.tagsContainer}>
-              {sleepData.quality === 'Excellent' && (
+              {sleepDataGroups[0].quality === 'Excellent' && (
                 <View style={[styles.tag, {backgroundColor: '#F0EEFF'}]}>
                   <Text style={[styles.tagText, {color: '#6C5CE7'}]}>Excellent sleep quality</Text>
                 </View>
               )}
-              {sleepData.quality === 'Good' && (
+              {sleepDataGroups[0].quality === 'Good' && (
                 <View style={[styles.tag, {backgroundColor: '#E6F7EF'}]}>
                   <Text style={[styles.tagText, {color: '#10B981'}]}>Good sleep quality</Text>
                 </View>
               )}
-              {sleepData.metrics.score > 80 && (
+              {sleepDataGroups[0].metrics.score > 80 && (
                 <View style={[styles.tag, {backgroundColor: '#EFF6FF'}]}>
                   <Text style={[styles.tagText, {color: '#3B82F6'}]}>High sleep score</Text>
                 </View>
               )}
             </View>
-          </View>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -596,34 +720,50 @@ const styles = StyleSheet.create({
   loadingSection: {
     marginBottom: 24,
   },
-  dateContainer: {
+  sessionContainer: {
     marginBottom: 24,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
-  durationText: {
-    fontSize: 32,
-    fontWeight: '700',
+  sessionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#000000',
-    marginBottom: 4,
   },
-  qualityText: {
-    fontWeight: 'bold',
+  sessionDuration: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#6C5CE7',
-    marginBottom: 4,
   },
-  timeRangeText: {
+  sessionTime: {
     fontSize: 14,
     color: '#64748B',
+    marginBottom: 4,
   },
-  sectionContainer: {
-    marginBottom: 24,
+  sessionQuality: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6C5CE7',
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 16,
   },
   chartContainer: {
     alignItems: 'center',
@@ -666,7 +806,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   metricsContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   metricRow: {
     flexDirection: 'row',
@@ -674,11 +814,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   metricItem: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
     width: '48%',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   metricLabel: {
     fontSize: 14,
@@ -694,14 +836,12 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: '#64748B',
   },
-  weeklyContainer: {
-    marginBottom: 24,
-  },
   weeklyChart: {
     height: 120,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    marginBottom: 24,
   },
   weeklyBarContainer: {
     flex: 1,
@@ -719,21 +859,16 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 4,
   },
-  notesContainer: {
-    marginBottom: 24,
-  },
   tagsContainer: {
-    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    marginBottom: 24,
   },
   tag: {
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
   },
   tagText: {
     fontSize: 14,

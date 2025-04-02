@@ -12,41 +12,60 @@ import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {wp} from '../helpers/common';
-import {
-  fetchActiveCaloriesRecords,
-  fetchDistanceRecords,
-  fetchHeartRateRecords,
-  fetchOxygenSaturationRecords,
-  fetchSleepRecords,
-  fetchStepRecords,
-  fetchTotalCaloriesRecords,
-  initializeHealthConnect,
-} from '../utils/utils_healthconnect';
+import {initializeHealthConnect} from '../utils/utils_healthconnect';
 import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type TimeRange = 'day' | 'week' | 'month' | 'year';
+
+interface SummaryData {
+  steps: {
+    value: number;
+    percentage: number;
+  };
+  activeCalories: {
+    value: number;
+    percentage: number;
+  };
+  totalCalories: {
+    value: number;
+    percentage: number;
+  };
+  distance: {
+    value: number;
+    percentage: number;
+  };
+  heartRate: {
+    value: number;
+    percentage: number;
+  };
+  oxygenSaturation: {
+    value: number;
+    percentage: number;
+  };
+  sleep: {
+    value: number;
+    percentage: number;
+  };
+}
+
+const api = axios.create({
+  baseURL: 'http://192.168.1.8:5000/api',
+});
+
+api.interceptors.request.use(async config => {
+  const token = await AsyncStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 const ChartDetailScreen = () => {
   const navigation = useNavigation();
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
-  const [healthData, setHealthData] = useState({
-    steps: 0,
-    activeCalories: 0,
-    totalCalories: 0,
-    distance: 0,
-    heartRate: 0,
-    oxygenSaturation: 0,
-    sleep: 0,
-  });
-  const [totals, setTotals] = useState({
-    steps: 10000,
-    activeCalories: 500,
-    totalCalories: 2000,
-    distance: 10000,
-    heartRate: 100,
-    oxygenSaturation: 100,
-    sleep: 8,
-  });
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const getHealthData = async () => {
@@ -58,7 +77,6 @@ const ChartDetailScreen = () => {
       return;
     }
 
-    // Calculate date ranges based on selected time range
     const now = new Date();
     let startDate = new Date();
 
@@ -81,53 +99,15 @@ const ChartDetailScreen = () => {
     const endDateString = now.toISOString();
 
     try {
-      const [
-        stepsData,
-        activeCaloriesData,
-        totalCaloriesData,
-        sleepData,
-        spo2Data,
-        heartRateData,
-        distanceData,
-      ] = await Promise.all([
-        fetchStepRecords(startDateString, endDateString),
-        fetchActiveCaloriesRecords(startDateString, endDateString),
-        fetchTotalCaloriesRecords(startDateString, endDateString),
-        fetchSleepRecords(startDateString, endDateString),
-        fetchOxygenSaturationRecords(startDateString, endDateString),
-        fetchHeartRateRecords(startDateString, endDateString),
-        fetchDistanceRecords(startDateString, endDateString),
-      ]);
-
-      // Process and aggregate data
-      const steps = stepsData.reduce((sum, record) => sum + record.count, 0);
-      const activeCalories = activeCaloriesData.reduce((sum, record) => sum + record.calories, 0);
-      const totalCalories = totalCaloriesData.reduce((sum, record) => sum + record.calories, 0);
-      const distance = distanceData.reduce((sum, record) => sum + record.distance, 0) / 1000; // convert to km
-      const heartRate = heartRateData.length > 0 ? 
-        heartRateData.reduce((sum, record) => sum + record.beatsPerMinute, 0) / heartRateData.length : 0;
-      const oxygenSaturation = spo2Data.length > 0 ? 
-        spo2Data.reduce((sum, record) => sum + record.percentage, 0) / spo2Data.length : 0;
-      
-      // Calculate sleep duration in hours
-      const sleep = sleepData.reduce((sum, record) => {
-        const start = new Date(record.startTime);
-        const end = new Date(record.endTime);
-        return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      }, 0);
-
-      setHealthData({
-        steps,
-        activeCalories,
-        totalCalories,
-        distance,
-        heartRate,
-        oxygenSaturation,
-        sleep,
+      const response = await api.get('/record-summary', {
+        params: { startTime: startDateString, endTime: endDateString }
       });
 
+      if (response.data.status === 'success') {
+        setSummaryData(response.data.data);
+      }
     } catch (error) {
-      console.error('Error fetching health data:', error);
+      console.error('Error fetching health summary:', error);
     } finally {
       setLoading(false);
     }
@@ -204,7 +184,6 @@ const ChartDetailScreen = () => {
 
   return (
     <SafeAreaView style={{backgroundColor: '#F9FAFB', flex: 1}}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
@@ -266,7 +245,7 @@ const ChartDetailScreen = () => {
               <MetricSkeleton />
             </View>
           </>
-        ) : (
+        ) : summaryData && (
           <>
             <View style={styles.metricsGrid}>
               <TouchableOpacity
@@ -275,9 +254,9 @@ const ChartDetailScreen = () => {
                 <View style={[styles.metricCircle, {backgroundColor: '#EFF6FF'}]}>
                   <Icon name="footsteps-outline" size={24} color="#2563EB" />
                 </View>
-                <Text style={styles.metricValue}>{healthData.steps.toLocaleString()}</Text>
+                <Text style={styles.metricValue}>{summaryData.steps.value.toLocaleString()}</Text>
                 <Text style={styles.metricPercentage}>
-                  {calculatePercentage(healthData.steps, totals.steps)}%
+                  {summaryData.steps.percentage.toFixed(1)}%
                 </Text>
                 <Text style={styles.metricLabel}>Steps</Text>
               </TouchableOpacity>
@@ -288,9 +267,9 @@ const ChartDetailScreen = () => {
                 <View style={[styles.metricCircle, {backgroundColor: '#FEE2E2'}]}>
                   <Icon name="flame" size={24} color="#EF4444" />
                 </View>
-                <Text style={styles.metricValue}>{Math.round(healthData.activeCalories / 1000 * 100) / 100} kcal</Text>
+                <Text style={styles.metricValue}>{Math.round(summaryData.activeCalories.value)} cal</Text>
                 <Text style={styles.metricPercentage}>
-                  {calculatePercentage(healthData.activeCalories, totals.activeCalories)}%
+                  {summaryData.activeCalories.percentage.toFixed(1)}%
                 </Text>
                 <Text style={styles.metricLabel}>Active Calories</Text>
               </TouchableOpacity>
@@ -302,10 +281,10 @@ const ChartDetailScreen = () => {
                   <Icon name="moon" size={24} color="#6366F1" />
                 </View>
                 <Text style={styles.metricValue}>
-                  {Math.floor(healthData.sleep)}h {Math.round((healthData.sleep % 1) * 60)}m
+                  {Math.floor(summaryData.sleep.value)}h {Math.round((summaryData.sleep.value % 1) * 60)}m
                 </Text>
                 <Text style={styles.metricPercentage}>
-                  {calculatePercentage(healthData.sleep, totals.sleep)}%
+                  {summaryData.sleep.percentage.toFixed(1)}%
                 </Text>
                 <Text style={styles.metricLabel}>Sleep</Text>
               </TouchableOpacity>
@@ -316,9 +295,9 @@ const ChartDetailScreen = () => {
                 <View style={[styles.metricCircle, {backgroundColor: '#ECFDF5'}]}>
                   <Icon name="water-outline" size={24} color="#10B981" />
                 </View>
-                <Text style={styles.metricValue}>{Math.round(healthData.oxygenSaturation)}%</Text>
+                <Text style={styles.metricValue}>{Math.round(summaryData.oxygenSaturation.value)}%</Text>
                 <Text style={styles.metricPercentage}>
-                  {calculatePercentage(healthData.oxygenSaturation, totals.oxygenSaturation)}%
+                  {summaryData.oxygenSaturation.percentage.toFixed(1)}%
                 </Text>
                 <Text style={styles.metricLabel}>SpO2</Text>
               </TouchableOpacity>
@@ -332,11 +311,11 @@ const ChartDetailScreen = () => {
                   <View style={[styles.metricCircle, {backgroundColor: '#FFF1F0'}]}>
                     <Icon name="heart" size={24} color="#FF4D4F" />
                   </View>
-                  <Text style={styles.metricValue}>{Math.round(healthData.heartRate)}</Text>
+                  <Text style={styles.metricValue}>{Math.round(summaryData.heartRate.value)} bpm</Text>
                   <Text style={styles.metricPercentage}>
-                    {calculatePercentage(healthData.heartRate, totals.heartRate)}%
+                    {summaryData.heartRate.percentage.toFixed(1)}%
                   </Text>
-                  <Text style={styles.metricLabel}>Heart Rate (bpm)</Text>
+                  <Text style={styles.metricLabel}>Heart Rate</Text>
                 </View>
               </TouchableOpacity>
 
@@ -347,9 +326,9 @@ const ChartDetailScreen = () => {
                   <View style={[styles.metricCircle, {backgroundColor: '#F0F5FF'}]}>
                     <Icon name="walk-outline" size={24} color="#6366F1" />
                   </View>
-                  <Text style={styles.metricValue}>{healthData.distance.toFixed(1)}</Text>
+                  <Text style={styles.metricValue}>{summaryData.distance.value.toFixed(1)}</Text>
                   <Text style={styles.metricPercentage}>
-                    {calculatePercentage(healthData.distance, totals.distance)}%
+                    {summaryData.distance.percentage.toFixed(1)}%
                   </Text>
                   <Text style={styles.metricLabel}>Distance (km)</Text>
                 </View>
@@ -362,9 +341,9 @@ const ChartDetailScreen = () => {
               <View style={[styles.metricCircle, {backgroundColor: '#FFF7E6'}]}>
                 <Icon name="nutrition-outline" size={24} color="#FAAD14" />
               </View>
-              <Text style={styles.metricValue}>{Math.round(healthData.totalCalories / 1000 * 100) / 100}</Text>
+              <Text style={styles.metricValue}>{Math.round(summaryData.totalCalories.value)}</Text>
               <Text style={styles.metricPercentage}>
-                {calculatePercentage(healthData.totalCalories, totals.totalCalories)}%
+                {summaryData.totalCalories.percentage.toFixed(1)}%
               </Text>
               <Text style={styles.metricLabel}>Total Calories</Text>
             </TouchableOpacity>

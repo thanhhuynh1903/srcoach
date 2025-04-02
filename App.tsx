@@ -9,6 +9,7 @@ import { useLoginStore } from './components/utils/useLoginStore';
 import { View,ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { startSyncData } from './components/utils/utils_healthconnect';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -80,6 +81,7 @@ const App = () => {
   const { userdata, setUserData } = useLoginStore();
 
   useEffect(() => {
+
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
@@ -92,6 +94,12 @@ const App = () => {
           // Nếu token tồn tại dưới 1 ngày (24h)
           if (diff < 24 * 60 * 60 * 1000) {
             setUserData(token); // Giữ token, hoặc có thể lấy lại dữ liệu user từ API nếu cần
+
+            //4 dòng code này phải ở trên Welcome
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(endDate.getDate() - 30);
+            startSyncData(startDate.toISOString(), endDate.toISOString());
           } else {
             await AsyncStorage.removeItem('authToken');
             await AsyncStorage.removeItem('userdata');
