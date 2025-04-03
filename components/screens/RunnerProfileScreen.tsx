@@ -17,7 +17,7 @@ import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation} from '@react-navigation/native';
-
+import { useCommentStore } from '../utils/useCommentStore';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -35,12 +35,13 @@ interface Post {
   is_downvoted: boolean;
   tags: string[];
 }
-
+interface Tag {
+  tag_name: string;
+}
 const RunnerProfileScreen = () => {
   const {myPosts, getMyPosts, isLoading, deletePost} = usePostStore();
   const {profile} = useLoginStore();
   const navigation = useNavigation();
-
   // State cho modal và bài viết đã chọn
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -95,6 +96,7 @@ const RunnerProfileScreen = () => {
               if (success) {
                 // Thông báo thành công
                 Alert.alert('Success', 'Post deleted successfully');
+                await getMyPosts();
               } else {
                 // Nếu xóa thất bại, khôi phục lại danh sách
                 Alert.alert('Error', 'Failed to delete post');
@@ -122,6 +124,41 @@ const RunnerProfileScreen = () => {
         postId: selectedPost?.id,
       });
     }
+  };
+
+  const renderTags = (tags: Tag[]) => {
+    if (!tags || tags.length === 0) {
+      return null;
+    }
+    
+    // Nếu có 1-2 tags, hiển thị tất cả
+    if (tags.length <= 2) {
+      return (
+        <View style={styles.tagsContainer}>
+          {tags?.map((tag, index) => (
+           
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    // Nếu có nhiều hơn 2 tags, hiển thị 2 đầu tiên + "+n"
+    return (
+      <View style={styles.tagsContainer}>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[0]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[1]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>+{tags.length - 2}</Text>
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -298,15 +335,7 @@ const RunnerProfileScreen = () => {
                         </View>
                       </View>
 
-                      {post.tags && post.tags.length > 0 && (
-                        <View style={styles.tagsContainer}>
-                          {post.tags.map((tag, index) => (
-                            <View key={index} style={styles.tag}>
-                              <Text style={styles.tagText}>{tag}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
+                      {renderTags(post?.tags)}
                     </View>
                   </TouchableOpacity>
                 </View>
@@ -597,10 +626,9 @@ const styles = StyleSheet.create({
   tagsContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    alignItems: 'flex-start',
     alignContent: 'flex-start',
-    flexWrap: 'wrap',
-    width: '58%',
+    alignItems: 'flex-start',
+    width: '56%',
   },
   tag: {
     backgroundColor: '#f0f0f0',

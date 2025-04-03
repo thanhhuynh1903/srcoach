@@ -189,55 +189,55 @@ export const useCommentStore = create<CommentState>((set, get) => {
     },
   
   
-    updateComment: async (commentId: string, content: string) => {
+    updateComment: async (commentId: string, content: string, parentCommentId?: string) => {
       try {
         set({ isLoading: true });
-        const response = await api.put(`/api/posts-comments/${commentId}`, { content });
+        
+        // Chuẩn bị payload theo yêu cầu API
+        const payload = {
+          content,
+          ...(parentCommentId && { parentCommentId })
+        };
+        
+        // Gọi API để cập nhật bình luận
+        const response = await api.putData(`/posts-comments/${commentId}`, payload);
+        console.log('Update comment response:', response);
         
         if (response.status === 'success') {
-          // Cập nhật state sau khi sửa bình luận
-          set(state => {
-            const updateCommentInTree = (comments: Comment[]): Comment[] => {
-              return comments.map(comment => {
-                if (comment.id === commentId) {
-                  return { ...comment, content };
-                }
-                
-                if (comment.childComments && comment.childComments.length > 0) {
-                  return {
-                    ...comment,
-                    childComments: updateCommentInTree(comment.childComments)
-                  };
-                }
-                
-                return comment;
-              });
-            };
-            
-            return {
-              comments: updateCommentInTree(state.comments),
-              isLoading: false,
-              status: 'success'
-            };
+          // Lấy postId từ bình luận đã cập nhật để refresh lại danh sách
+          const postId = response.data.post_id;
+          
+          if (postId) {
+            // Cập nhật lại toàn bộ danh sách bình luận từ API
+            await get().getCommentsByPostId(postId);
+          }
+          
+          set({ 
+            isLoading: false, 
+            status: 'success',
+            currentComment: response.data // Lưu bình luận vừa cập nhật vào state
           });
-          return true;
+          
+          return response.data; // Trả về dữ liệu bình luận đã cập nhật
         } else {
           set({ 
             message: response.message || 'Failed to update comment',
             isLoading: false,
             status: 'error'
           });
-          return false;
+          return null;
         }
       } catch (error) {
+        console.error('Error updating comment:', error);
         set({ 
           message: error instanceof Error ? error.message : 'An unknown error occurred',
           isLoading: false,
           status: 'error'
         });
-        return false;
+        return null;
       }
     },
+    
     
     upvoteComment: async (commentId: string) => {
       try {
