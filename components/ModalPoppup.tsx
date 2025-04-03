@@ -1,28 +1,45 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Modal} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 
-const ModalPoppup = ({ visible, onClose, deleteComment, commentId }) => {
-    const handleDelete = () => {
-        if (commentId) {
-          deleteComment(commentId);
-        }
-        onClose();
-      };
+const ModalPoppup = ({
+  visible,
+  onClose,
+  deleteComment,
+  editComment,
+  commentId,
+}) => {
   console.log('commentId', commentId);
   
+  const handleDelete = () => {
+    if (commentId) {
+      deleteComment(commentId);
+    }
+    onClose();
+  };
+
+  const handleEdit = () => {
+    if (commentId && editComment) {
+      editComment(commentId);
+    }
+    onClose();
+  };
+
   return (
     <Modal visible={visible} transparent={true} onRequestClose={onClose}>
-      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={onClose}>
         <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.modalOption}>
-            <Icon name="create-outline" size={24} color="#333" />
+          <TouchableOpacity style={styles.modalOption} onPress={handleEdit}>
+            <Icon name="create-outline" size={24} color="#4285F4" />
             <Text style={styles.modalOptionText}>Update</Text>
           </TouchableOpacity>
           <View style={styles.modalDivider} />
           <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
             <Icon name="trash-outline" size={24} color="red" />
-            <Text style={[styles.modalOptionText, { color: 'red' }]}>Delete</Text>
+            <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.modalCancelButton} onPress={onClose}>
             <Text style={styles.modalCancelText}>Cancel</Text>

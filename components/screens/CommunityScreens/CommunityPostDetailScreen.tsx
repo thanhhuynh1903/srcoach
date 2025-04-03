@@ -30,6 +30,7 @@ const CommunityPostDetailScreen = () => {
     comments,
     isLoading: isLoadingComments,
     deleteComment,
+    updateComment,
   } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
@@ -43,13 +44,15 @@ const CommunityPostDetailScreen = () => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [selectedCommentId, setSelectedCommentId] = useState(null);
 
+  const [isEditingComment, setIsEditingComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
 
   // Tham chiếu đến input để focus
   const inputRef = useRef(null);
   console.log('currentPost', currentPost);
-  
+
   useEffect(() => {
     if (id) {
       // Tải thông tin bài viết
@@ -61,6 +64,36 @@ const CommunityPostDetailScreen = () => {
     }
   }, [id]);
 
+  const handleEditComment = async commentId => {
+    // Tìm comment cần edit trong danh sách comments
+    const findComment : any = (comments, id) => {
+      for (const comment of comments) {
+        if (comment.id === id) {
+          return comment;
+        }
+        if (comment.children && comment.children.length > 0) {
+          const found = findComment(comment.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const commentToEdit = findComment(comments, commentId);
+
+    if (commentToEdit) {
+      // Thiết lập trạng thái chỉnh sửa
+      setIsEditingComment(true);
+      setEditingCommentId(commentId);
+      setCommentText(commentToEdit.content);
+
+      // Focus vào input
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
+  };
+
   // Hàm xử lý gửi bình luận
   const handleSendComment = async () => {
     if (!commentText.trim()) return;
@@ -68,29 +101,59 @@ const CommunityPostDetailScreen = () => {
     try {
       setIsSubmittingComment(true);
 
-      const result = await createComment(id, commentText, replyingTo);
-
-      if (result) {
-        // Reset input và trạng thái reply
-        setCommentText('');
-        setReplyingTo(null);
-
-        // Cập nhật lại danh sách bình luận
-        await getCommentsByPostId(id);
-        // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
-        await getDetail(id);
-
-        await getAll();
+      // Nếu đang edit comment
+      if (isEditingComment && editingCommentId) {
+        const result = await updateComment(editingCommentId, commentText);
+        
+        if (result) {
+          // Reset trạng thái edit
+          setIsEditingComment(false);
+          setEditingCommentId(null);
+          setCommentText('');
+          
+          // Cập nhật lại danh sách bình luận
+          await getCommentsByPostId(id);
+          // Cập nhật lại thông tin bài viết
+          await getDetail(id);
+          await getAll();
+          
+          Alert.alert('Success', 'Comment updated successfully');
+        } else {
+          Alert.alert('Error', 'Failed to update comment');
+        }
       } else {
-        Alert.alert('Error', 'Failed to post comment');
+        // Nếu đang tạo comment mới hoặc reply
+        const result = await createComment(id, commentText, replyingTo);
+
+        if (result) {
+          // Reset input và trạng thái reply
+          setCommentText('');
+          setReplyingTo(null);
+
+          // Cập nhật lại danh sách bình luận
+          await getCommentsByPostId(id);
+          // Cập nhật lại thông tin bài viết
+          await getDetail(id);
+          await getAll();
+        } else {
+          Alert.alert('Error', 'Failed to post comment');
+        }
       }
     } catch (error) {
-      console.error('Error posting comment:', error);
-      Alert.alert('Error', 'An error occurred while posting your comment');
+      console.error('Error with comment:', error);
+      Alert.alert('Error', 'An error occurred while processing your comment');
     } finally {
       setIsSubmittingComment(false);
     }
   };
+  
+  // Hàm hủy chỉnh sửa comment
+  const handleCancelEdit = () => {
+    setIsEditingComment(false);
+    setEditingCommentId(null);
+    setCommentText('');
+  };
+
 
   // Hàm xử lý khi nhấn Reply trên một bình luận
   const handleReplyComment = commentId => {
@@ -203,15 +266,18 @@ const CommunityPostDetailScreen = () => {
     navigation.goBack();
   };
 
-  // Render một bình luận
+  // Trong CommunityPostDetailScreen
   const renderComment = comment => {
     return (
       <TouchableOpacity
         key={comment.id}
         style={styles.commentContainer}
         onPress={() => {
-          setSelectedCommentId(comment.id);
-          setShowModal(true);
+          // Chỉ cho phép chỉnh sửa/xóa comment của chính user
+          if (comment.user_id === currentUserId) {
+            setSelectedCommentId(comment.id);
+            setShowModal(true);
+          }
         }}>
         <Image
           source={{
@@ -228,6 +294,9 @@ const CommunityPostDetailScreen = () => {
             </Text>
             <Text style={styles.commentTime}>
               {formatTimeAgo(comment.created_at)}
+              {comment.updated_at &&
+                new Date(comment.updated_at) > new Date(comment.created_at) &&
+                ' (edited)'}
             </Text>
           </View>
           <Text style={styles.commentText}>{comment.content}</Text>
@@ -261,9 +330,11 @@ const CommunityPostDetailScreen = () => {
     );
   };
 
-  const FilterComment = (comments : any) => {
-    return comments.filter(comment => comment?.is_deleted === false).length || 0
-  }
+  const FilterComment = (comments: any) => {
+    return (
+      comments.filter(comment => comment?.is_deleted === false).length || 0
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -413,7 +484,9 @@ const CommunityPostDetailScreen = () => {
               <ActivityIndicator size="small" color="#4285F4" />
             </View>
           ) : comments && comments.length > 0 ? (
-            comments.filter(comment => comment?.is_deleted === false).map(comment => renderComment(comment))
+            comments
+              .filter(comment => comment?.is_deleted === false)
+              .map(comment => renderComment(comment))
           ) : (
             <Text style={styles.noCommentsText}>
               No comments yet. Be the first to comment!
@@ -430,12 +503,27 @@ const CommunityPostDetailScreen = () => {
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder={replyingTo ? 'Write a reply...' : 'Type your message...'}
+          placeholder={
+            isEditingComment
+              ? 'Edit your comment...'
+              : replyingTo
+              ? 'Write a reply...'
+              : 'Type your message...'
+          }
           placeholderTextColor="#64748B"
           value={commentText}
           onChangeText={setCommentText}
           multiline
         />
+
+        {isEditingComment && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelEdit}>
+            <Icon name="close" size={20} color="#A1A1AA" />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[
             styles.sendButton,
@@ -447,7 +535,7 @@ const CommunityPostDetailScreen = () => {
             <ActivityIndicator size="small" color="#4285F4" />
           ) : (
             <Icon
-              name="send"
+              name={isEditingComment ? 'checkmark' : 'send'}
               size={20}
               color={commentText.trim() ? '#4285F4' : '#A1A1AA'}
             />
@@ -521,6 +609,7 @@ const CommunityPostDetailScreen = () => {
         visible={showModal}
         onClose={() => setShowModal(false)}
         deleteComment={handleDeleteComment}
+        editComment={handleEditComment}
         commentId={selectedCommentId}
       />
     </SafeAreaView>
@@ -528,6 +617,10 @@ const CommunityPostDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  cancelButton: {
+    padding: 8,
+    marginRight: 4,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

@@ -205,7 +205,8 @@ export const useCommentStore = create<CommentState>((set, get) => {
         
         if (response.status === 'success') {
           // Lấy postId từ bình luận đã cập nhật để refresh lại danh sách
-          const postId = response.data.post_id;
+          const postId = response.data.post_id; 
+          console.log('postId', postId);
           
           if (postId) {
             // Cập nhật lại toàn bộ danh sách bình luận từ API
