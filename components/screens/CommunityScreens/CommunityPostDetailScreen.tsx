@@ -22,7 +22,7 @@ import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, isLoading, deletePost} = usePostStore();
+  const {getDetail, currentPost, getAll, deletePost} = usePostStore();
   const {profile} = useLoginStore();
   const {
     createComment,
@@ -79,6 +79,8 @@ const CommunityPostDetailScreen = () => {
         await getCommentsByPostId(id);
         // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
         await getDetail(id);
+
+        await getAll();
       } else {
         Alert.alert('Error', 'Failed to post comment');
       }
@@ -175,7 +177,8 @@ const CommunityPostDetailScreen = () => {
 
       if (success) {
         // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
-        await getDetail(id);
+        await getCommentsByPostId(id);
+        await getAll();
         Alert.alert('Success', 'Comment deleted successfully');
       } else {
         Alert.alert('Error', 'Failed to delete comment');
@@ -257,6 +260,10 @@ const CommunityPostDetailScreen = () => {
       </TouchableOpacity>
     );
   };
+
+  const FilterComment = (comments : any) => {
+    return comments.filter(comment => comment?.is_deleted === false).length || 0
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -373,7 +380,7 @@ const CommunityPostDetailScreen = () => {
               <TouchableOpacity style={styles.commentButton}>
                 <Icon name="chatbubble-outline" size={20} color="#666" />
                 <Text style={styles.commentCount}>
-                  {currentPost?.comment_count}
+                  {FilterComment(comments)}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -392,7 +399,7 @@ const CommunityPostDetailScreen = () => {
         <View style={styles.commentsSection}>
           <View style={styles.commentsSectionHeader}>
             <Text style={styles.commentsSectionTitle}>
-              Comments ({currentPost?.comment_count || 0})
+              Comments ({FilterComment(comments)})
             </Text>
             <TouchableOpacity style={styles.sortButton}>
               <Text style={styles.sortButtonText}>Sort by: Best</Text>

@@ -75,8 +75,8 @@ const CommunityScreen = () => {
 
   // Cập nhật localPosts khi posts từ store thay đổi
   useEffect(() => {
-    console.log('posts', posts.length);
-    console.log('localPosts', localPosts.length);
+    console.log('posts ', posts);
+    console.log('localPosts : ', localPosts);
 
     if (posts && posts.length > 0) {
       setLocalPosts(posts);
