@@ -157,6 +157,8 @@ const CommunityPostDetailScreen = () => {
 
   // Hàm xử lý khi nhấn Reply trên một bình luận
   const handleReplyComment = commentId => {
+    console.log('commentId', commentId);
+    
     setReplyingTo(commentId);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -268,6 +270,8 @@ const CommunityPostDetailScreen = () => {
 
   // Trong CommunityPostDetailScreen
   const renderComment = comment => {
+    console.log('comment', comment);
+    
     return (
       <TouchableOpacity
         key={comment.id}
@@ -318,9 +322,9 @@ const CommunityPostDetailScreen = () => {
           </View>
 
           {/* Render các bình luận con (nếu có) */}
-          {comment.children && comment.children.length > 0 && (
+          {comment.other_PostComment && comment.other_PostComment.length > 0 && (
             <View style={styles.repliesContainer}>
-              {comment.children.map(childComment =>
+              {comment.other_PostComment.map(childComment =>
                 renderComment(childComment),
               )}
             </View>
