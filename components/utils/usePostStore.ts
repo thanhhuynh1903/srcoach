@@ -347,10 +347,6 @@ export const usePostStore = create<PostState>((set, get) => ({
         queryParams.append('title', params.title);
       }
 
-      if (params.tagName) {
-        queryParams.append('tagName', params.tagName);
-      }
-
       if (params.pageSize) {
         queryParams.append('pageSize', params.pageSize.toString());
       }
@@ -360,7 +356,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       }
 
       const queryString = queryParams.toString();
-      const endpoint = `/posts${queryString ? `?${queryString}` : ''}`;
+      const endpoint = `/posts/filter${queryString ? `?${queryString}` : ''}`;
 
       const response = await api.fetchData<ApiResponse<Post[]>>(endpoint);
       console.log('Response:', response);

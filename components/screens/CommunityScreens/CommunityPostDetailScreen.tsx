@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -11,34 +11,157 @@ import {
   TextInput,
   Modal,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
 import {usePostStore} from '../../utils/usePostStore';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
+import {useCommentStore} from '../../utils/useCommentStore';
+import ModalPoppup from '../../ModalPoppup';
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, isLoading, deletePost} = usePostStore();
+  const {getDetail, currentPost, getAll, deletePost} = usePostStore();
   const {profile} = useLoginStore();
+  const {
+    createComment,
+    getCommentsByPostId,
+    comments,
+    isLoading: isLoadingComments,
+    deleteComment,
+    updateComment,
+  } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
   const id = route.params?.id;
-  
+  const [showModal, setShowModal] = useState(false);
+
   // State cho modal
   const [modalVisible, setModalVisible] = useState(false);
-  
+  const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [selectedCommentId, setSelectedCommentId] = useState(null);
+
+  const [isEditingComment, setIsEditingComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
   // Lấy currentUserId từ profile
-  const currentUserId = profile?.id;
-  console.log('currentUserId', currentUserId);
-  
+  const currentUserId = useMemo(() => profile?.id, [profile]);
+
+  // Tham chiếu đến input để focus
+  const inputRef = useRef(null);
+  console.log('currentPost', currentPost);
+
   useEffect(() => {
     if (id) {
+      // Tải thông tin bài viết
       getDetail(id);
+      // Tải bình luận
+      getCommentsByPostId(id);
     } else {
       console.error('No post ID provided');
     }
   }, [id]);
+
+  const handleEditComment = async commentId => {
+    // Tìm comment cần edit trong danh sách comments
+    const findComment : any = (comments, id) => {
+      for (const comment of comments) {
+        if (comment.id === id) {
+          return comment;
+        }
+        if (comment.children && comment.children.length > 0) {
+          const found = findComment(comment.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const commentToEdit = findComment(comments, commentId);
+
+    if (commentToEdit) {
+      // Thiết lập trạng thái chỉnh sửa
+      setIsEditingComment(true);
+      setEditingCommentId(commentId);
+      setCommentText(commentToEdit.content);
+
+      // Focus vào input
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
+  };
+
+  // Hàm xử lý gửi bình luận
+  const handleSendComment = async () => {
+    if (!commentText.trim()) return;
+
+    try {
+      setIsSubmittingComment(true);
+
+      // Nếu đang edit comment
+      if (isEditingComment && editingCommentId) {
+        const result = await updateComment(editingCommentId, commentText);
+        
+        if (result) {
+          // Reset trạng thái edit
+          setIsEditingComment(false);
+          setEditingCommentId(null);
+          setCommentText('');
+          
+          // Cập nhật lại danh sách bình luận
+          await getCommentsByPostId(id);
+          // Cập nhật lại thông tin bài viết
+          await getDetail(id);
+          await getAll();
+          
+          Alert.alert('Success', 'Comment updated successfully');
+        } else {
+          Alert.alert('Error', 'Failed to update comment');
+        }
+      } else {
+        // Nếu đang tạo comment mới hoặc reply
+        const result = await createComment(id, commentText, replyingTo);
+
+        if (result) {
+          // Reset input và trạng thái reply
+          setCommentText('');
+          setReplyingTo(null);
+
+          // Cập nhật lại danh sách bình luận
+          await getCommentsByPostId(id);
+          // Cập nhật lại thông tin bài viết
+          await getDetail(id);
+          await getAll();
+        } else {
+          Alert.alert('Error', 'Failed to post comment');
+        }
+      }
+    } catch (error) {
+      console.error('Error with comment:', error);
+      Alert.alert('Error', 'An error occurred while processing your comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+  
+  // Hàm hủy chỉnh sửa comment
+  const handleCancelEdit = () => {
+    setIsEditingComment(false);
+    setEditingCommentId(null);
+    setCommentText('');
+  };
+
+
+  // Hàm xử lý khi nhấn Reply trên một bình luận
+  const handleReplyComment = commentId => {
+    setReplyingTo(commentId);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
 
   const formatTimeAgo = dateString => {
     const now = new Date();
@@ -77,18 +200,18 @@ const CommunityPostDetailScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const postId = currentPost.id;
+              const postId = currentPost?.id;
               console.log('Deleting post with id:', postId);
-              
+
               setModalVisible(false);
-              
+
               // Gọi API xóa bài viết
               const success = await deletePost(postId);
-              
+
               if (success) {
                 // Thông báo thành công và quay lại màn hình trước
                 Alert.alert('Success', 'Post deleted successfully', [
-                  {text: 'OK', onPress: () => navigation.goBack()}
+                  {text: 'OK', onPress: () => navigation.goBack()},
                 ]);
               } else {
                 // Nếu xóa thất bại
@@ -101,7 +224,7 @@ const CommunityPostDetailScreen = () => {
           },
         },
       ],
-      {cancelable: true}
+      {cancelable: true},
     );
   };
 
@@ -109,6 +232,24 @@ const CommunityPostDetailScreen = () => {
   const handleUpdate = () => {
     setModalVisible(false);
     navigation.navigate('CommunityUpdatePostScreen', {postId: currentPost.id});
+  };
+
+  const handleDeleteComment = async commentId => {
+    try {
+      const success = await deleteComment(commentId);
+
+      if (success) {
+        // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
+        await getCommentsByPostId(id);
+        await getAll();
+        Alert.alert('Success', 'Comment deleted successfully');
+      } else {
+        Alert.alert('Error', 'Failed to delete comment');
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      Alert.alert('Error', 'An error occurred while deleting the comment');
+    }
   };
 
   // Xử lý lưu nháp bài viết
@@ -125,35 +266,75 @@ const CommunityPostDetailScreen = () => {
     navigation.goBack();
   };
 
-  const postCommentMap = currentPost?.postComment?.map((comment, index) => (
-    <View key={comment.id} style={styles.commentContainer}>
-      <Image
-        source={{ uri: 'https://randomuser.me/api/portraits/women/32.jpg' }}
-        style={styles.commentAvatar}
-      />
-      <View style={styles.commentContent}>
-        <View style={styles.commentHeader}>
-          <Text style={styles.commentUserName}>{comment.user.username}</Text>
-          <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
-        </View>
-        <Text style={styles.commentText}>{comment.content}</Text>
-        <View style={styles.commentActions}>
-          <View style={styles.commentVotes}>
-            <TouchableOpacity>
-              <Icon name="arrow-up" size={16} color="#4285F4" />
-            </TouchableOpacity>
-            <Text style={styles.commentVoteCount}>0</Text>
-            <TouchableOpacity>
-              <Icon name="arrow-down" size={16} color="#666" />
+  // Trong CommunityPostDetailScreen
+  const renderComment = comment => {
+    return (
+      <TouchableOpacity
+        key={comment.id}
+        style={styles.commentContainer}
+        onPress={() => {
+          // Chỉ cho phép chỉnh sửa/xóa comment của chính user
+          if (comment.user_id === currentUserId) {
+            setSelectedCommentId(comment.id);
+            setShowModal(true);
+          }
+        }}>
+        <Image
+          source={{
+            uri:
+              comment.user?.avatar ||
+              'https://randomuser.me/api/portraits/women/32.jpg',
+          }}
+          style={styles.commentAvatar}
+        />
+        <View style={styles.commentContent}>
+          <View style={styles.commentHeader}>
+            <Text style={styles.commentUserName}>
+              {comment.User?.username || comment.user?.username}
+            </Text>
+            <Text style={styles.commentTime}>
+              {formatTimeAgo(comment.created_at)}
+              {comment.updated_at &&
+                new Date(comment.updated_at) > new Date(comment.created_at) &&
+                ' (edited)'}
+            </Text>
+          </View>
+          <Text style={styles.commentText}>{comment.content}</Text>
+          <View style={styles.commentActions}>
+            <View style={styles.commentVotes}>
+              <TouchableOpacity>
+                <Icon name="arrow-up" size={16} color="#4285F4" />
+              </TouchableOpacity>
+              <Text style={styles.commentVoteCount}>
+                {comment.upvote_count || 0}
+              </Text>
+              <TouchableOpacity>
+                <Icon name="arrow-down" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
+              <Text style={styles.replyButton}>Reply</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity>
-            <Text style={styles.replyButton}>Reply</Text>
-          </TouchableOpacity>
+
+          {/* Render các bình luận con (nếu có) */}
+          {comment.children && comment.children.length > 0 && (
+            <View style={styles.repliesContainer}>
+              {comment.children.map(childComment =>
+                renderComment(childComment),
+              )}
+            </View>
+          )}
         </View>
-      </View>
-    </View>
-  ));
+      </TouchableOpacity>
+    );
+  };
+
+  const FilterComment = (comments: any) => {
+    return (
+      comments.filter(comment => comment?.is_deleted === false).length || 0
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -171,7 +352,11 @@ const CommunityPostDetailScreen = () => {
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
             <Image
-              source={{uri: 'https://randomuser.me/api/portraits/men/32.jpg'}}
+              source={{
+                uri:
+                  currentPost?.user?.avatar ||
+                  'https://randomuser.me/api/portraits/men/32.jpg',
+              }}
               style={styles.avatar}
             />
             <View style={styles.userTextInfo}>
@@ -256,14 +441,18 @@ const CommunityPostDetailScreen = () => {
               </TouchableOpacity>
               <Text style={styles.voteCount}>{currentPost?.upvote_count}</Text>
               <TouchableOpacity style={styles.voteButton}>
-                <Icon name="arrow-down" size={20} color="#666" />  
+                <Icon name="arrow-down" size={20} color="#666" />
               </TouchableOpacity>
-              <Text style={styles.voteCount}>{currentPost?.downvote_count}</Text>
+              <Text style={styles.voteCount}>
+                {currentPost?.downvote_count}
+              </Text>
             </View>
             <View style={styles.engagementMiddle}>
               <TouchableOpacity style={styles.commentButton}>
                 <Icon name="chatbubble-outline" size={20} color="#666" />
-                <Text style={styles.commentCount}>{currentPost?.comment_count}</Text>
+                <Text style={styles.commentCount}>
+                  {FilterComment(comments)}
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.engagementRight}>
@@ -280,7 +469,9 @@ const CommunityPostDetailScreen = () => {
         {/* Comments section */}
         <View style={styles.commentsSection}>
           <View style={styles.commentsSectionHeader}>
-            <Text style={styles.commentsSectionTitle}>Comments ({currentPost?.comment_count})</Text>
+            <Text style={styles.commentsSectionTitle}>
+              Comments ({FilterComment(comments)})
+            </Text>
             <TouchableOpacity style={styles.sortButton}>
               <Text style={styles.sortButtonText}>Sort by: Best</Text>
               <Icon name="chevron-down" size={16} color="#666" />
@@ -288,20 +479,67 @@ const CommunityPostDetailScreen = () => {
           </View>
 
           {/* Comments */}
-          {postCommentMap}
+          {isLoadingComments ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#4285F4" />
+            </View>
+          ) : comments && comments.length > 0 ? (
+            comments
+              .filter(comment => comment?.is_deleted === false)
+              .map(comment => renderComment(comment))
+          ) : (
+            <Text style={styles.noCommentsText}>
+              No comments yet. Be the first to comment!
+            </Text>
+          )}
         </View>
       </ScrollView>
+
+      {/* Input container cho bình luận */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
           <Icon name="person-circle-outline" size={32} color="#64748B" />
         </TouchableOpacity>
         <TextInput
+          ref={inputRef}
           style={styles.input}
-          placeholder="Type your message..."
+          placeholder={
+            isEditingComment
+              ? 'Edit your comment...'
+              : replyingTo
+              ? 'Write a reply...'
+              : 'Type your message...'
+          }
           placeholderTextColor="#64748B"
+          value={commentText}
+          onChangeText={setCommentText}
+          multiline
         />
-        <TouchableOpacity style={[styles.sendButton]}>
-          <Icon name="send" size={20} color={'#A1A1AA'} />
+
+        {isEditingComment && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelEdit}>
+            <Icon name="close" size={20} color="#A1A1AA" />
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={[
+            styles.sendButton,
+            commentText.trim() ? styles.activeSendButton : null,
+          ]}
+          onPress={handleSendComment}
+          disabled={!commentText.trim() || isSubmittingComment}>
+          {isSubmittingComment ? (
+            <ActivityIndicator size="small" color="#4285F4" />
+          ) : (
+            <Icon
+              name={isEditingComment ? 'checkmark' : 'send'}
+              size={20}
+              color={commentText.trim() ? '#4285F4' : '#A1A1AA'}
+            />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -316,38 +554,48 @@ const CommunityPostDetailScreen = () => {
           activeOpacity={1}
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
-            {currentPost && currentPost.user.id === currentUserId ? (
+            {currentPost && currentPost?.user?.id === currentUserId ? (
               <>
-                <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleUpdate}>
                   <Icon name="create-outline" size={24} color="#4285F4" />
                   <Text style={styles.modalOptionText}>Update</Text>
                 </TouchableOpacity>
-                
+
                 <View style={styles.modalDivider} />
-                
-                <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
+
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleDelete}>
                   <Icon name="trash-outline" size={24} color="red" />
-                  <Text style={[styles.modalOptionText, {color: 'red'}]}>Delete</Text>
+                  <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                    Delete
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <TouchableOpacity style={styles.modalOption} onPress={handleSaveDraft}>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleSaveDraft}>
                   <Icon name="bookmark-outline" size={24} color="#4285F4" />
                   <Text style={styles.modalOptionText}>Save draft</Text>
                 </TouchableOpacity>
-                
+
                 <View style={styles.modalDivider} />
-                
-                <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
+
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleHide}>
                   <Icon name="eye-off-outline" size={24} color="#666" />
                   <Text style={styles.modalOptionText}>Hide</Text>
                 </TouchableOpacity>
               </>
             )}
-            
+
             <View style={styles.modalDivider} />
-            
+
             <TouchableOpacity
               style={styles.modalCancelButton}
               onPress={() => setModalVisible(false)}>
@@ -356,14 +604,30 @@ const CommunityPostDetailScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <ModalPoppup
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        deleteComment={handleDeleteComment}
+        editComment={handleEditComment}
+        commentId={selectedCommentId}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  cancelButton: {
+    padding: 8,
+    marginRight: 4,
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -548,6 +812,7 @@ const styles = StyleSheet.create({
   commentsSection: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 20,
   },
   commentsSectionHeader: {
     flexDirection: 'row',
@@ -622,21 +887,12 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
-  replyContainer: {
-    flexDirection: 'row',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f5f5f5',
-  },
-  replyAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  replyContent: {
-    flex: 1,
+  repliesContainer: {
     marginLeft: 10,
+    marginTop: 12,
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: '#e0e0e0',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -697,6 +953,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#4285F4',
+  },
+  replyingToContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#f0f2f5',
+    borderRadius: 8,
+    marginBottom: 5,
+    width: '100%',
+  },
+  replyingToText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+  activeSendButton: {
+    backgroundColor: '#EEF2FF',
+  },
+  noCommentsText: {
+    textAlign: 'center',
+    color: '#64748B',
+    marginVertical: 20,
+    fontStyle: 'italic',
   },
 });
 
