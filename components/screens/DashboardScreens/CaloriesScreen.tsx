@@ -468,13 +468,13 @@ const CaloriesScreen = () => {
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Active Calories</Text>
               <Text style={styles.summaryValue}>
-                {formatNumber(stats.active / 1000)} kcal
+                {formatNumber(stats.active)} cal
               </Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Total Calories</Text>
               <Text style={styles.summaryValue}>
-                {formatNumber(stats.total / 1000)} kcal
+                {formatNumber(stats.total)} cal
               </Text>
             </View>
           </View>
@@ -566,21 +566,21 @@ const CaloriesScreen = () => {
               <View style={styles.statsItem}>
                 <Text style={styles.statsLabel}>Average Daily</Text>
                 <Text style={styles.statsValue}>
-                  {formatNumber(stats.average / 1000)} kcal
+                  {formatNumber(stats.average)} cal
                 </Text>
               </View>
 
               <View style={styles.statsItem}>
                 <Text style={styles.statsLabel}>Max Hourly</Text>
                 <Text style={styles.statsValue}>
-                  {formatNumber(stats.max / 1000)} kcal
+                  {formatNumber(stats.max)} cal
                 </Text>
               </View>
 
               <View style={styles.statsItem}>
                 <Text style={styles.statsLabel}>Min Hourly</Text>
                 <Text style={styles.statsValue}>
-                  {formatNumber(stats.min / 1000)} kcal
+                  {formatNumber(stats.min)} cal
                 </Text>
               </View>
 
@@ -635,7 +635,7 @@ const CaloriesScreen = () => {
                           {items[0].date}
                         </Text>
                         <Text style={styles.pointerLabelValue}>
-                          {formatNumber(items[0].value)} kcal
+                          {formatNumber(items[0].value)} cal
                         </Text>
                       </View>
                     ),
@@ -679,7 +679,7 @@ const CaloriesScreen = () => {
           </Text>
           <Text style={styles.pointDetailsText}>
             <Text style={styles.pointDetailsLabel}>Calories: </Text>
-            {formatNumber(selectedPoint.value)} kcal
+            {formatNumber(selectedPoint.value)} cal
           </Text>
         </Animated.View>
       )}

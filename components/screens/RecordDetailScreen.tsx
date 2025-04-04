@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useMemo, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -14,174 +14,99 @@ import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import {hp, wp} from '../helpers/common';
 import MapView, {Polyline, Marker} from 'react-native-maps';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import {
-  useFocusEffect,
-  useNavigation,
-  useRoute,
-} from '@react-navigation/native';
-import {
-  initializeHealthConnect,
-  fetchStepRecords,
-  fetchDistanceRecords,
-  fetchHeartRateRecords,
-  fetchActiveCaloriesRecords,
-  ExerciseRouteRecord,
-  calculateTotalSteps,
-  calculateTotalDistance,
-  calculateTotalCalories,
-  fetchExerciseRoute,
-  StepRecord,
-  DistanceRecord,
-  HeartRateRecord,
-  ActiveCaloriesRecord,
   fetchExerciseSessionByRecordId,
+  ExerciseSession,
 } from '../utils/utils_healthconnect';
 import {getNameFromExerciseType} from '../contants/exerciseType';
-import {format, parseISO, differenceInMinutes, differenceInSeconds} from 'date-fns';
+import {
+  format,
+  parseISO,
+  differenceInMinutes,
+  differenceInSeconds,
+} from 'date-fns';
+import {theme} from '../contants/theme';
 
 const {width} = Dimensions.get('window');
 
 const RecordDetailScreen = () => {
   const route = useRoute();
-  const {id, clientRecordId} = route.params;
+  const {id} = route.params as {id: string};
 
-  const [session, setSession] = useState(null);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [stepRecords, setStepRecords] = useState<StepRecord[]>([]);
-  const [distanceRecords, setDistanceRecords] = useState<DistanceRecord[]>([]);
-  const [heartRateRecords, setHeartRateRecords] = useState<HeartRateRecord[]>([]);
-  const [caloriesRecords, setCaloriesRecords] = useState<ActiveCaloriesRecord[]>([]);
-  const [exerciseRoutes, setExerciseRoutes] = useState<ExerciseRouteRecord[]>([]);
-  const [loading, setLoading] = useState({
-    session: true,
-    routes: false,
-    metrics: false,
-    all: true
-  });
-  const [routeError, setRouteError] = useState<string | null>(null);
-  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
-  const [sessionEndTime, setSessionEndTime] = useState<string | null>(null);
-
-  const loadAllData = async () => {
-    try {
-      setLoading(prev => ({...prev, all: true}));
-      
-      // Load session first
-      await loadSession();
-      
-      // Then load routes and metrics in parallel
-      await Promise.all([
-        loadRoutes(),
-        loadMetrics()
-      ]);
-    } catch (error) {
-      console.error('Error loading all data:', error);
-    } finally {
-      setLoading(prev => ({...prev, all: false}));
-    }
-  };
+  const [session, setSession] = useState<ExerciseSession | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const loadSession = async () => {
     try {
-      setLoading(prev => ({...prev, session: true}));
-      
-      const isInitialized = await initializeHealthConnect();
-      if (!isInitialized) {
-        return;
-      }
-
-      const session = await fetchExerciseSessionByRecordId(id);
-      
-      if (session?.startTime && session?.endTime) {
-        setSessionStartTime(session.startTime);
-        setSessionEndTime(session.endTime);
-      }
+      setLoading(true);
+      const sessionData = await fetchExerciseSessionByRecordId(id);
+      setSession(sessionData);
     } catch (error) {
       console.error('Error loading session:', error);
     } finally {
-      setLoading(prev => ({...prev, session: false}));
-    }
-  };
-
-  const loadRoutes = async () => {
-    try {
-      if (!sessionStartTime || !sessionEndTime) return;
-      
-      setLoading(prev => ({...prev, routes: true}));
-      setRouteError(null);
-      
-      const routes = await fetchExerciseRoute(id);
-      
-      if (routes && routes.length > 0) {
-        setExerciseRoutes(routes);
-        
-        const timestamps = routes.map(route => new Date(route.time).getTime());
-        const minTime = new Date(Math.min(...timestamps)).toISOString();
-        const maxTime = new Date(Math.max(...timestamps)).toISOString();
-        
-        setSessionStartTime(prev => {
-          const routeStart = new Date(minTime);
-          const sessionStart = new Date(prev || session?.startTime);
-          return routeStart < sessionStart ? minTime : prev;
-        });
-        
-        setSessionEndTime(prev => {
-          const routeEnd = new Date(maxTime);
-          const sessionEnd = new Date(prev || session?.endTime);
-          return routeEnd > sessionEnd ? maxTime : prev;
-        });
-      } else {
-        setRouteError('No route data available for this session');
-      }
-    } catch (error) {
-      console.error('Error fetching routes:', error);
-      setRouteError('Failed to load route data');
-    } finally {
-      setLoading(prev => ({...prev, routes: false}));
-    }
-  };
-
-  const loadMetrics = async () => {
-    try {
-      if (!sessionStartTime || !sessionEndTime) return;
-      
-      setLoading(prev => ({...prev, metrics: true}));
-      
-      const [steps, distance, heartRate, calories] = await Promise.all([
-        fetchStepRecords(sessionStartTime, sessionEndTime),
-        fetchDistanceRecords(sessionStartTime, sessionEndTime),
-        fetchHeartRateRecords(sessionStartTime, sessionEndTime),
-        fetchActiveCaloriesRecords(sessionStartTime, sessionEndTime),
-      ]);
-
-      setStepRecords(steps);
-      setDistanceRecords(distance);
-      setHeartRateRecords(heartRate);
-      setCaloriesRecords(calories);
-    } catch (error) {
-      console.error('Error reading health data:', error);
-    } finally {
-      setLoading(prev => ({...prev, metrics: false}));
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAllData();
-  }, [id, clientRecordId]);
+    loadSession();
+  }, [id]);
+
+  const calculateDuration = () => {
+    if (!session?.startTime || !session?.endTime) return 'N/A';
+
+    const start = parseISO(session.startTime);
+    const end = parseISO(session.endTime);
+    const minutes = differenceInMinutes(end, start);
+    const seconds = differenceInSeconds(end, start) % 60;
+
+    return `${minutes} min ${seconds} sec`;
+  };
+
+  const prepareHeartRateData = () => {
+    if (!session?.heartRate?.records || session.heartRate.records.length === 0)
+      return [];
+
+    const sortedRecords = [...session.heartRate.records].sort(
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
+    );
+
+    const sampleInterval = Math.max(1, Math.floor(sortedRecords.length / 10));
+    return sortedRecords
+      .filter((_, index) => index % sampleInterval === 0)
+      .map(record => ({
+        value: record.value,
+        label: format(parseISO(record.time), 'HH:mm'),
+        labelTextStyle: {color: 'gray', width: 60},
+      }));
+  };
+
+  const routeCoordinates = useMemo(() => {
+    return (
+      session?.routes?.map(route => ({
+        latitude: route.latitude,
+        longitude: route.longitude,
+      })) || []
+    );
+  }, [session?.routes]);
+
+  const startCoordinate = routeCoordinates[0];
+  const endCoordinate = routeCoordinates[routeCoordinates.length - 1];
 
   const getMapRegion = () => {
-    if (exerciseRoutes.length === 0) {
+    if (routeCoordinates.length === 0) {
       return {
-        latitude: currentLocation?.latitude || 37.78825,
-        longitude: currentLocation?.longitude || -122.4324,
+        latitude: 37.78825,
+        longitude: -122.4324,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       };
     }
 
-    const latitudes = exerciseRoutes.map(p => p.latitude);
-    const longitudes = exerciseRoutes.map(p => p.longitude);
-    
+    const latitudes = routeCoordinates.map(p => p.latitude);
+    const longitudes = routeCoordinates.map(p => p.longitude);
+
     const minLat = Math.min(...latitudes);
     const maxLat = Math.max(...latitudes);
     const minLng = Math.min(...longitudes);
@@ -199,104 +124,34 @@ const RecordDetailScreen = () => {
     };
   };
 
-  const calculateDuration = () => {
-    if (!sessionStartTime || !sessionEndTime) return 'N/A';
-    
-    const start = parseISO(sessionStartTime);
-    const end = parseISO(sessionEndTime);
-    const minutes = differenceInMinutes(end, start);
-    const seconds = differenceInSeconds(end, start) % 60;
-
-    return `${minutes} min ${seconds} sec`;
-  };
-
-  const calculateAveragePace = () => {
-    if (!sessionStartTime || !sessionEndTime) return 'N/A';
-    
-    const totalDistanceKm = calculateTotalDistance(distanceRecords) / 1000;
-    const duration = differenceInMinutes(parseISO(sessionEndTime), parseISO(sessionStartTime));
-    
-    if (totalDistanceKm <= 0 || duration <= 0) return 'N/A';
-    
-    const pace = duration / totalDistanceKm;
-    const paceMinutes = Math.floor(pace);
-    const paceSeconds = Math.round((pace - paceMinutes) * 60);
-    
-    return `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')} min/km`;
-  };
-
-  const prepareHeartRateData = () => {
-    if (heartRateRecords.length === 0) return [];
-
-    const sortedRecords = [...heartRateRecords].sort(
-      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-    );
-
-    const sampleInterval = Math.max(1, Math.floor(sortedRecords.length / 10));
-    return sortedRecords
-      .filter((_, index) => index % sampleInterval === 0)
-      .map(record => ({
-        value: record.beatsPerMinute,
-        label: format(parseISO(record.startTime), 'HH:mm'),
-        labelTextStyle: {color: 'gray', width: 60},
-      }));
-  };
-
-  const heartRateStats = useMemo(() => {
-    if (heartRateRecords.length === 0) {
-      return {
-        min: 0,
-        avg: 0,
-        max: 0,
-      };
-    }
-
-    const values = heartRateRecords.map(r => r.beatsPerMinute);
-    return {
-      min: Math.min(...values),
-      max: Math.max(...values),
-      avg: values.reduce((sum, val) => sum + val, 0) / values.length,
-    };
-  }, [heartRateRecords]);
-
-  const routeCoordinates = useMemo(() => {
-    return exerciseRoutes.map(route => ({
-      latitude: route.latitude,
-      longitude: route.longitude,
-    }));
-  }, [exerciseRoutes]);
-
-  const startCoordinate = routeCoordinates[0];
-  const endCoordinate = routeCoordinates[routeCoordinates.length - 1];
-
   const navigate = useNavigation();
-  
+
   return (
     <ScreenWrapper bg={'#f9fafb'}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigate.goBack()}
-        >
+          onPress={() => navigate.goBack()}>
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Session Details</Text>
       </View>
-      
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {loading.all ? (
-          <ActivityIndicator size="large" color="#1E3A8A" style={styles.loadingIndicator} />
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#1E3A8A"
+            style={styles.loadingIndicator}
+          />
         ) : (
           <>
             <Text style={styles.title}>
-              {getNameFromExerciseType(session?.exerciseType)}
+              {getNameFromExerciseType(session?.exerciseType || 0)}
             </Text>
-            {sessionStartTime && (
+            {session?.startTime && (
               <Text style={styles.dateTime}>
-                {format(parseISO(sessionStartTime), 'EEEE, MMMM d, yyyy')}
+                {format(parseISO(session.startTime), 'EEEE, MMMM d, yyyy')}
               </Text>
             )}
 
@@ -305,43 +160,41 @@ const RecordDetailScreen = () => {
               <View style={styles.metricCard}>
                 <Icon name="walk-sharp" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Distance</Text>
-                {loading.metrics ? (
-                  <ActivityIndicator size="small" color="#1E3A8A" />
-                ) : (
-                  <Text style={styles.metricValue}>
-                    {(calculateTotalDistance(distanceRecords)).toFixed(2)} km
-                  </Text>
-                )}
+                <Text style={styles.metricValue}>
+                  {session?.totalDistance
+                    ? (session.totalDistance / 1000).toFixed(2) + ' km'
+                    : 'N/A'}
+                </Text>
               </View>
-              
+
               <View style={styles.metricCard}>
                 <Icon name="time-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Duration</Text>
                 <Text style={styles.metricValue}>{calculateDuration()}</Text>
               </View>
-              
+
               <View style={styles.metricCard}>
                 <Icon name="flame-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Calories</Text>
-                {loading.metrics ? (
-                  <ActivityIndicator size="small" color="#1E3A8A" />
-                ) : (
-                  <Text style={styles.metricValue}>
-                    {(calculateTotalCalories(caloriesRecords) / 1000).toFixed(0)} kcal
-                  </Text>
-                )}
+                <Text style={styles.metricValue}>
+                  {session?.totalCalories
+                    ? session.totalCalories.toFixed(2) + ' cal'
+                    : 'N/A'}
+                </Text>
               </View>
-              
+
               <View style={styles.metricCard}>
                 <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Avg. Pace</Text>
-                {loading.metrics ? (
-                  <ActivityIndicator size="small" color="#1E3A8A" />
-                ) : (
-                  <Text style={styles.metricValue}>
-                    {calculateAveragePace()}
-                  </Text>
-                )}
+                <Text style={styles.metricValue}>
+                  {session?.avgPace
+                    ? `${Math.floor(session.avgPace)}:${Math.round(
+                        (session.avgPace - Math.floor(session.avgPace)) * 60,
+                      )
+                        .toString()
+                        .padStart(2, '0')} min/km`
+                    : 'N/A'}
+                </Text>
               </View>
             </View>
 
@@ -350,52 +203,61 @@ const RecordDetailScreen = () => {
               <View style={styles.sectionHeader}>
                 <Icon name="heart" size={20} color="#1E3A8A" />
                 <Text style={styles.sectionTitle}>Heart Rate</Text>
-                {loading.metrics && <ActivityIndicator size="small" color="#1E3A8A" />}
               </View>
-              
-              {heartRateRecords.length > 0 ? (
+
+              {session?.heartRate ? (
                 <>
                   <View style={styles.heartRateStats}>
                     <View>
                       <Text style={styles.heartRateLabel}>Min</Text>
                       <Text style={styles.heartRateValue}>
-                        {heartRateStats.min.toFixed(0)} BPM
+                        {session.heartRate.min} BPM
                       </Text>
                     </View>
                     <View>
                       <Text style={styles.heartRateLabel}>Average</Text>
                       <Text style={styles.heartRateValue}>
-                        {heartRateStats.avg.toFixed(0)} BPM
+                        {session.heartRate.avg} BPM
                       </Text>
                     </View>
                     <View>
                       <Text style={styles.heartRateLabel}>Max</Text>
                       <Text style={styles.heartRateValue}>
-                        {heartRateStats.max.toFixed(0)} BPM
+                        {session.heartRate.max} BPM
                       </Text>
                     </View>
                   </View>
-                  
-                  <View style={styles.chartContainer}>
-                    <LineChart
-                      data={prepareHeartRateData()}
-                      height={150}
-                      width={wp(85)}
-                      spacing={60}
-                      color="#1E3A8A"
-                      thickness={3}
-                      curved
-                      yAxisOffset={20}
-                      noOfSections={4}
-                      maxValue={heartRateStats.max + 20}
-                      initialSpacing={10}
-                      yAxisLabelWidth={40}
-                      xAxisLabelTextStyle={{width: 60}}
-                    />
-                  </View>
+
+                  {session.heartRate.records?.length > 0 && (
+                    <View style={styles.chartContainer}>
+                      <LineChart
+                        data={prepareHeartRateData()}
+                        height={150}
+                        width={wp(70)}
+                        spacing={60}
+                        color={theme.colors.primaryDark}
+                        thickness={3}
+                        curved
+                        areaChart
+                        yAxisOffset={20}
+                        noOfSections={4}
+                        maxValue={session.heartRate.max + 20}
+                        initialSpacing={20}
+                        endSpacing={20}
+
+                        yAxisLabelWidth={40}
+                        xAxisLabelTextStyle={{width: 60}}
+                        startFillColor="#387199"
+                        endFillColor="#d9f6ff"
+                        adjustToWidth
+                      />
+                    </View>
+                  )}
                 </>
               ) : (
-                <Text style={styles.noDataText}>No heart rate data available</Text>
+                <Text style={styles.noDataText}>
+                  No heart rate data available
+                </Text>
               )}
             </View>
 
@@ -404,22 +266,10 @@ const RecordDetailScreen = () => {
               <View style={styles.sectionHeader}>
                 <Icon name="location-outline" size={20} color="#1E3A8A" />
                 <Text style={styles.sectionTitle}>Route Map</Text>
-                {loading.routes && <ActivityIndicator size="small" color="#1E3A8A" />}
-                {routeError && (
-                  <TouchableOpacity 
-                    onPress={loadRoutes} 
-                    style={{marginLeft: 'auto'}}
-                  >
-                    <Text style={{color: '#1E3A8A'}}>Retry</Text>
-                  </TouchableOpacity>
-                )}
               </View>
 
-              {routeError ? (
-                <View style={styles.errorContainer}>
-                  <Icon name="warning-outline" size={24} color="#FF5252" />
-                  <Text style={styles.errorText}>{routeError}</Text>
-                </View>
+              {routeCoordinates.length === 0 ? (
+                <Text style={styles.noDataText}>No route data available</Text>
               ) : (
                 <View style={{borderRadius: 16, overflow: 'hidden'}}>
                   <MapView
@@ -428,60 +278,51 @@ const RecordDetailScreen = () => {
                     region={getMapRegion()}
                     scrollEnabled={true}
                     zoomEnabled={true}
-                    loadingEnabled={true}
-                  >
-                    {routeCoordinates.length > 0 && (
-                      <>
-                        <Polyline 
-                          coordinates={routeCoordinates} 
-                          strokeColor="#1E3A8A"
-                          strokeWidth={4}
-                        />
-                        {startCoordinate && (
-                          <Marker coordinate={startCoordinate} title="Start">
-                            <View style={styles.markerStart}>
-                              <Icon name="play" size={16} color="#FFFFFF" />
-                            </View>
-                          </Marker>
-                        )}
-                        {endCoordinate && (
-                          <Marker coordinate={endCoordinate} title="End">
-                            <View style={styles.markerEnd}>
-                              <Icon name="flag" size={16} color="#FFFFFF" />
-                            </View>
-                          </Marker>
-                        )}
-                      </>
+                    loadingEnabled={true}>
+                    <Polyline
+                      coordinates={routeCoordinates}
+                      strokeColor="#1E3A8A"
+                      strokeWidth={4}
+                    />
+                    {startCoordinate && (
+                      <Marker coordinate={startCoordinate} title="Start">
+                        <View style={styles.markerStart}>
+                          <Icon name="play" size={16} color="#FFFFFF" />
+                        </View>
+                      </Marker>
+                    )}
+                    {endCoordinate && (
+                      <Marker coordinate={endCoordinate} title="End">
+                        <View style={styles.markerEnd}>
+                          <Icon name="flag" size={16} color="#FFFFFF" />
+                        </View>
+                      </Marker>
                     )}
                   </MapView>
                 </View>
               )}
-              
+
               <View style={styles.mapStats}>
                 <View style={styles.mapStat}>
                   <Icon name="walk-outline" size={20} color="#22C55E" />
                   <View>
                     <Text style={styles.mapStatLabel}>Distance</Text>
-                    {loading.metrics ? (
-                      <ActivityIndicator size="small" color="#22C55E" />
-                    ) : (
-                      <Text style={styles.mapStatValue}>
-                        {(calculateTotalDistance(distanceRecords)).toFixed(2)} km
-                      </Text>
-                    )}
+                    <Text style={styles.mapStatValue}>
+                      {session?.totalDistance
+                        ? (session.totalDistance / 1000).toFixed(2) + ' km'
+                        : 'N/A'}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.mapStat}>
                   <Icon name="footsteps-outline" size={20} color="#22C55E" />
                   <View>
                     <Text style={styles.mapStatLabel}>Steps</Text>
-                    {loading.metrics ? (
-                      <ActivityIndicator size="small" color="#22C55E" />
-                    ) : (
-                      <Text style={styles.mapStatValue}>
-                        {calculateTotalSteps(stepRecords).toLocaleString()}
-                      </Text>
-                    )}
+                    <Text style={styles.mapStatValue}>
+                      {session?.totalSteps
+                        ? session.totalSteps.toLocaleString()
+                        : 'N/A'}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -489,16 +330,16 @@ const RecordDetailScreen = () => {
 
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => navigate.navigate('RiskWarningScreen' as never)}
-            >
+              onPress={() => navigate.navigate('RiskWarningScreen' as never)}>
               <Icon name="document-text-outline" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>Risk Analysis</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => {/* Implement share functionality */}}
-            >
+              onPress={() => {
+                /* Implement share functionality */
+              }}>
               <Icon name="share-outline" size={20} color="#1E3A8A" />
               <Text style={styles.secondaryButtonText}>Share Session</Text>
             </TouchableOpacity>

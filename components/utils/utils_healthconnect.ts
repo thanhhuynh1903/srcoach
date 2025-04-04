@@ -22,15 +22,28 @@ api.interceptors.request.use(async config => {
 });
 
 export interface ExerciseSession {
-  exerciseType: number;
+  id: string;
+  exerciseType: ExerciseType;
   clientRecordId: string;
   dataOrigin: string;
   startTime: string;
   endTime: string;
-  id: string;
   routes?: ExerciseRouteRecord[];
+  avgPace?: number;
+  durationMinutes?: number;
+  heartRate?: {
+    avg: number;
+    min: number;
+    max: number;
+    records: {
+      time: string;
+      value: number;
+    }
+  };
+  totalDistance?: number;
+  totalCalories?: number;
+  totalSteps?: number;
 }
-
 
 export interface StepRecord {
   count: number;
@@ -107,10 +120,7 @@ export interface RestingHeartRateRecord {
 export const initializeHealthConnect = async (): Promise<boolean> => {
   try {
     const isInitialized = await initialize();
-    if (!isInitialized) {
-      console.log('Health Connect initialization failed');
-      return false;
-    }
+    if (!isInitialized) return false;
 
     const grantedPermissions = await requestPermission([
       {accessType: 'read', recordType: 'Steps'},
@@ -132,68 +142,198 @@ export const initializeHealthConnect = async (): Promise<boolean> => {
   }
 };
 
-// Helper function to sync data to backend
-const syncToBackend = async (endpoint: string, data: any) => {
+export const startSyncData = async (startTime: string, endTime: string): Promise<boolean> => {
   try {
-    if (!data) return;
-    await api.post(endpoint, data);
-    console.log(`Successfully synced data to ${endpoint}`);
+    const isInitialized = await initializeHealthConnect();
+    if (!isInitialized) return false;
+
+    await Promise.all([
+      syncStepRecords(startTime, endTime),
+      syncDistanceRecords(startTime, endTime),
+      syncHeartRateRecords(startTime, endTime),
+      syncActiveCaloriesRecords(startTime, endTime),
+      syncTotalCaloriesRecords(startTime, endTime),
+      syncExerciseSessionRecords(startTime, endTime),
+      syncOxygenSaturationRecords(startTime, endTime),
+      syncSleepRecords(startTime, endTime),
+      syncRestingHeartRateRecords(startTime, endTime)
+    ]);
+
+    return true;
   } catch (error) {
-    console.error(`Error syncing to ${endpoint}:`, error);
+    console.error('Error during data sync:', error);
+    return false;
   }
 };
 
-const syncExerciseSessionToBackend = async (session: ExerciseSession) => {
-  try {
-    // First create the session
-    const sessionResponse = await api.post('/record-exercise-session', {
-      exercise_type: session.exerciseType,
-      record_id: session.id,
-      data_origin: session.dataOrigin,
-      start_time: session.startTime,
-      end_time: session.endTime,
-      client_record_id: session.clientRecordId,
-      routes: []
-    });
+const syncStepRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('Steps', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
 
-    return sessionResponse.data;
-  } catch (error) {
-    console.error('Error syncing exercise session:', error);
-    throw error;
-  }
+  const records = healthData.records.map(record => ({
+    count: record.count,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    id: record.metadata?.id || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+  }));
+
+  if (records.length > 0) await api.post('/record-steps', records);
 };
 
-export const fetchStepRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<StepRecord[]> => {
-  try {
-    const healthData = await readRecords('Steps', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
+const syncDistanceRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('Distance', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
 
-    const records = healthData.records.map(record => ({
-      count: record.count,
-      startTime: record.startTime,
-      endTime: record.endTime,
+  const records = healthData.records.map(record => ({
+    distance: record.distance.inMeters,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    id: record.metadata?.id || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+  }));
+
+  if (records.length > 0) await api.post('/record-distance', records);
+};
+
+const syncHeartRateRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('HeartRate', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
+
+  const records = healthData.records.flatMap(record =>
+    record.samples.map(sample => ({
+      beatsPerMinute: sample.beatsPerMinute,
+      time: sample.time,
+      startTime: sample.time,
+      endTime: sample.time,
       id: record.metadata?.id || '',
       dataOrigin: record.metadata?.dataOrigin || '',
-    }));
+    }))
+  );
 
-    try {
-      await syncToBackend('/record-steps', records);
-    } catch (error) {
-      console.error('Error syncing step records:', error);
-    }
+  if (records.length > 0) await api.post('/record-heart-rate', records);
+};
 
-    const response = await api.get('/record-steps', {
-      params: { startTime, endTime },
-    });
+const syncActiveCaloriesRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('ActiveCaloriesBurned', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
 
+  const records = healthData.records.map(record => ({
+    calories: record.energy.inCalories,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    id: record.metadata?.id || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+  }));
+
+  if (records.length > 0) await api.post('/record-active-calories', records);
+};
+
+const syncTotalCaloriesRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('TotalCaloriesBurned', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
+
+  const records = healthData.records.map(record => ({
+    calories: record.energy.inCalories,
+    startTime: record.startTime,
+    endTime: record.endTime,
+    id: record.metadata?.id || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+  }));
+
+  if (records.length > 0) await api.post('/record-total-calories', records);
+};
+
+const syncExerciseSessionRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('ExerciseSession', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
+
+  const sessions = healthData.records.map(record => ({
+    id: record.metadata?.id || '',
+    exerciseType: record.exerciseType,
+    clientRecordId: record.metadata?.clientRecordId || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+    startTime: record.startTime,
+    endTime: record.endTime,
+    routes: []
+  }));
+
+  if (sessions.length > 0) {
+    await Promise.all(sessions.map(session => 
+      api.post('/record-exercise-session', {
+        exercise_type: session.exerciseType,
+        record_id: session.id,
+        data_origin: session.dataOrigin,
+        start_time: session.startTime,
+        end_time: session.endTime,
+        client_record_id: session.clientRecordId,
+        routes: []
+      })
+    ));
+  }
+};
+
+const syncOxygenSaturationRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('OxygenSaturation', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
+
+  const records = healthData.records.map(record => ({
+    id: record.metadata?.id || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+    percentage: record.percentage,
+    time: record.time,
+    startTime: record.time,
+    endTime: record.time,
+  }));
+
+  if (records.length > 0) await api.post('/record-oxygen-saturation', records);
+};
+
+const syncSleepRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('SleepSession', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
+
+  const records = healthData.records.flatMap(record => 
+    record.stages.map(stage => ({
+      id: record.metadata?.id || '',
+      dataOrigin: record.metadata?.dataOrigin || '',
+      stage: stage.stage,
+      startTime: stage.startTime,
+      endTime: stage.endTime,
+    }))
+  );
+
+  if (records.length > 0) await api.post('/record-sleep-session', records);
+};
+
+const syncRestingHeartRateRecords = async (startTime: string, endTime: string) => {
+  const healthData = await readRecords('RestingHeartRate', {
+    timeRangeFilter: { operator: 'between', startTime, endTime },
+  });
+
+  const records = healthData.records.map(record => ({
+    beatsPerMinute: record.beatsPerMinute,
+    time: record.time,
+    startTime: startTime,
+    endTime: endTime,
+    id: record.metadata?.id || '',
+    dataOrigin: record.metadata?.dataOrigin || '',
+  }));
+
+  if (records.length > 0) await api.post('/record-resting-heart-rate', records);
+};
+
+export const fetchStepRecords = async (startTime: string, endTime: string): Promise<StepRecord[]> => {
+  try {
+    const response = await api.get('/record-steps', { params: { startTime, endTime } });
     return response.data.data.map((record: any) => ({
       count: record.count,
       startTime: record.start_time,
@@ -202,93 +342,31 @@ export const fetchStepRecords = async (
       dataOrigin: record.data_origin,
     }));
   } catch (error) {
-    console.error('Error with step records:', error);
+    console.error('Error fetching step records:', error);
     return [];
   }
 };
 
-export const fetchDistanceRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<DistanceRecord[]> => {
+export const fetchDistanceRecords = async (startTime: string, endTime: string): Promise<DistanceRecord[]> => {
   try {
-    const healthData = await readRecords('Distance', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.map(record => ({
-      distance: record.distance.inMeters,
-      startTime: record.startTime,
-      endTime: record.endTime,
-      id: record.metadata?.id || '',
-      dataOrigin: record.metadata?.dataOrigin || '',
-    }));
-
-    try {
-      await syncToBackend('/record-distance', records);
-    } catch (error) {
-      console.error('Error syncing distance records:', error);
-    }
-
-    const response = await api.get('/record-distance', {
-      params: { startTime, endTime },
-    });
-
-    const finalData = response.data.data.map((record: any) => ({
+    const response = await api.get('/record-distance', { params: { startTime, endTime } });
+    return response.data.data.map((record: any) => ({
       distance: record.distance,
       startTime: record.start_time,
       endTime: record.end_time,
       id: record.record_id || record.id,
       dataOrigin: record.data_origin,
     }));
-    
-    return finalData
   } catch (error) {
-    console.error('Error with distance records:', error);
+    console.error('Error fetching distance records:', error);
     return [];
   }
 };
 
-export const fetchHeartRateRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<HeartRateRecord[]> => {
-  console.log(startTime)
+export const fetchHeartRateRecords = async (startTime: string, endTime: string): Promise<HeartRateRecord[]> => {
   try {
-    const healthData = await readRecords('HeartRate', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.flatMap(record =>
-      record.samples.map(sample => ({
-        beatsPerMinute: sample.beatsPerMinute,
-        time: sample.time,
-        startTime: sample.time,
-        endTime: sample.time,
-        id: record.metadata?.id || '',
-        dataOrigin: record.metadata?.dataOrigin || '',
-      }))
-    );
-
-    try {
-      await syncToBackend('/record-heart-rate', records);
-    } catch (error) {
-      console.error('Error syncing heart rate records:', error);
-    }
-
-    const response = await api.get('/record-heart-rate', {
-      params: { startTime, endTime },
-    });
-
-    const finalData = response.data.data.map((record: any) => ({
+    const response = await api.get('/record-heart-rate', { params: { startTime, endTime } });
+    return response.data.data.map((record: any) => ({
       beatsPerMinute: record.beats_per_minute,
       time: record.time || record.start_time,
       startTime: record.start_time,
@@ -296,45 +374,15 @@ export const fetchHeartRateRecords = async (
       id: record.record_id || record.id,
       dataOrigin: record.data_origin,
     }));
-
-    return finalData
   } catch (error) {
-    console.error('Error with heart rate records:', error);
+    console.error('Error fetching heart rate records:', error);
     return [];
   }
 };
 
-export const fetchActiveCaloriesRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<ActiveCaloriesRecord[]> => {
+export const fetchActiveCaloriesRecords = async (startTime: string, endTime: string): Promise<ActiveCaloriesRecord[]> => {
   try {
-    const healthData = await readRecords('ActiveCaloriesBurned', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.map(record => ({
-      calories: record.energy.inCalories,
-      startTime: record.startTime,
-      endTime: record.endTime,
-      id: record.metadata?.id || '',
-      dataOrigin: record.metadata?.dataOrigin || '',
-    }));
-
-    try {
-      await syncToBackend('/record-active-calories', records);
-    } catch (error) {
-      console.error('Error syncing active calories records:', error);
-    }
-
-    const response = await api.get('/record-active-calories', {
-      params: { startTime, endTime },
-    });
-
+    const response = await api.get('/record-active-calories', { params: { startTime, endTime } });
     return response.data.data.map((record: any) => ({
       calories: record.calories,
       startTime: record.start_time,
@@ -343,42 +391,14 @@ export const fetchActiveCaloriesRecords = async (
       dataOrigin: record.data_origin,
     }));
   } catch (error) {
-    console.error('Error with active calories records:', error);
+    console.error('Error fetching active calories records:', error);
     return [];
   }
 };
 
-export const fetchTotalCaloriesRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<TotalCaloriesRecord[]> => {
+export const fetchTotalCaloriesRecords = async (startTime: string, endTime: string): Promise<TotalCaloriesRecord[]> => {
   try {
-    const healthData = await readRecords('TotalCaloriesBurned', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.map(record => ({
-      calories: record.energy.inCalories,
-      startTime: record.startTime,
-      endTime: record.endTime,
-      id: record.metadata?.id || '',
-      dataOrigin: record.metadata?.dataOrigin || '',
-    }));
-
-    try {
-      await syncToBackend('/record-total-calories', records);
-    } catch (error) {
-      console.error('Error syncing total calories records:', error);
-    }
-
-    const response = await api.get('/record-total-calories', {
-      params: { startTime, endTime },
-    });
-
+    const response = await api.get('/record-total-calories', { params: { startTime, endTime } });
     return response.data.data.map((record: any) => ({
       calories: record.calories,
       startTime: record.start_time,
@@ -387,46 +407,14 @@ export const fetchTotalCaloriesRecords = async (
       dataOrigin: record.data_origin,
     }));
   } catch (error) {
-    console.error('Error with total calories records:', error);
+    console.error('Error fetching total calories records:', error);
     return [];
   }
 };
 
-export const fetchExerciseSessionRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<ExerciseSession[]> => {
+export const fetchExerciseSessionRecords = async (startTime: string, endTime: string): Promise<ExerciseSession[]> => {
   try {
-
-    const healthData = await readRecords('ExerciseSession', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    // Process basic session data without routes
-    const sessions = healthData.records.map(record => ({
-      id: record.metadata?.id || '',
-      exerciseType: record.exerciseType,
-      clientRecordId: record.metadata?.clientRecordId || '',
-      dataOrigin: record.metadata?.dataOrigin || '',
-      startTime: record.startTime,
-      endTime: record.endTime,
-      routes: []
-    }));
-
-    // Sync basic session data to backend
-    await Promise.all(sessions.map(session => 
-      syncExerciseSessionToBackend(session).catch(console.error)
-    ));
-
-    // Get the final data from backend
-    const response = await api.get('/record-exercise-session', {
-      params: { startTime, endTime },
-    });
-
+    const response = await api.get('/record-exercise-session', { params: { startTime, endTime } });
     return response.data.data.map((session: any) => ({
       id: session.record_id || session.id,
       exerciseType: session.exercise_type,
@@ -434,20 +422,37 @@ export const fetchExerciseSessionRecords = async (
       dataOrigin: session.data_origin,
       startTime: session.start_time,
       endTime: session.end_time,
+      total_distance: session.total_distance,
+      duration_minutes: session.duration_minutes,
+      total_steps: session.total_steps,
       routes: []
     }));
-
-    // return []
   } catch (error) {
-    console.error('Error with exercise sessions:', error);
+    console.error('Error fetching exercise sessions:', error);
     return [];
   }
 };
 
-export const fetchExerciseSessionByRecordId = async (
-  recordId: string,
-): Promise<ExerciseSession | null> => {
+export const fetchExerciseSessionByRecordId = async (recordId: string): Promise<ExerciseSession | null> => {
   try {
+    let routes: any = [];
+    
+    const exercise = await readRecord("ExerciseSession", recordId);
+    if (exercise.exerciseRoute?.type == "CONSENT_REQUIRED") {
+      const { route } = await requestExerciseRoute(recordId);
+      routes = route || [];
+    } else {
+      routes = exercise.exerciseRoute?.route || [];
+    }
+
+    await api.post(`/record-exercise-session/${recordId}/routes`, {
+      routes: routes.map((route: any) => ({
+        time: route.time,
+        latitude: route.latitude,
+        longitude: route.longitude
+      })),
+    });
+
     const response = await api.get(`/record-exercise-session/record-id/${recordId}`);
     if (response.data.status === 'success') {
       const session = response.data.data;
@@ -458,112 +463,25 @@ export const fetchExerciseSessionByRecordId = async (
         dataOrigin: session.data_origin,
         startTime: session.start_time,
         endTime: session.end_time,
-        routes: session.routes || [],
+        routes: session.routes,
+        avgPace: session.avg_pace,
+        durationMinutes: session.duration_minutes,
+        heartRate: session.heart_rate,
+        totalDistance: session.total_distance,
+        totalCalories: session.total_calories,
+        totalSteps: session.total_steps
       };
     }
     return null;
   } catch (error) {
-    console.error('Error fetching exercise session by record ID:', error);
+    console.error('Error fetching exercise session:', error);
     return null;
   }
 };
 
-
-// In utils_healthconnect.ts - update the fetchExerciseRoute function
-export const fetchExerciseRoute = async (
-  sessionId: string, // This should be the normal record ID (id)
-): Promise<ExerciseRouteRecord[] | null> => {
+export const fetchOxygenSaturationRecords = async (startTime: string, endTime: string): Promise<OxygenSaturationRecord[]> => {
   try {
-    // First try to get from backend using the session ID
-    try {
-      const response = await api.get(`/record-exercise-session/${sessionId}/routes`);
-      if (response.data.data?.length > 0) {
-        return response.data.data.map((route: any) => ({
-          time: route.time,
-          latitude: route.latitude,
-          longitude: route.longitude
-        }));
-      }
-    } catch (error) {
-      console.log('No routes found in backend, fetching from Health Connect');
-    }
-
-    console.log("Condition passed")
-
-    // If not found in backend, try Health Connect
-    const isInitialized = await initializeHealthConnect();
-    if (!isInitialized) {
-      console.log('Health Connect not initialized');
-      return null;
-    }
-
-    const granted = await requestPermission([
-      {accessType: 'read', recordType: 'ExerciseSession'}
-    ]);
-    
-    if (!granted) {
-      console.log('Permission denied for ExerciseRoute');
-      return null;
-    }
-
-    const routeData = await requestExerciseRoute(sessionId);
-
-    const routes = routeData.map(point => ({
-      time: point.time,
-      latitude: point.latitude,
-      longitude: point.longitude,
-    }));
-
-    // Save routes to backend if we have routes
-    if (routes.length > 0) {
-      try {
-        await api.post(`/record-exercise-session/${sessionId}/routes`, { routes });
-        console.log('Successfully saved routes to backend');
-      } catch (error) {
-        console.error('Error saving routes to backend:', error);
-      }
-    }
-
-    // Return the newly fetched routes
-    return routes;
-  } catch (error) {
-    console.error('Error fetching exercise route:', error);
-    return null;
-  }
-};
-
-export const fetchOxygenSaturationRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<OxygenSaturationRecord[]> => {
-  try {
-    const healthData = await readRecords('OxygenSaturation', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.map(record => ({
-      id: record.metadata?.id || '',
-      dataOrigin: record.metadata?.dataOrigin || '',
-      percentage: record.percentage,
-      time: record.time,
-      startTime: record.time,
-      endTime: record.time,
-    }));
-
-    try {
-      await syncToBackend('/record-oxygen-saturation', records);
-    } catch (error) {
-      console.error('Error syncing oxygen saturation records:', error);
-    }
-
-    const response = await api.get('/record-oxygen-saturation', {
-      params: { startTime, endTime },
-    });
-
+    const response = await api.get('/record-oxygen-saturation', { params: { startTime, endTime } });
     return response.data.data.map((record: any) => ({
       id: record.record_id || record.id,
       dataOrigin: record.data_origin,
@@ -573,105 +491,46 @@ export const fetchOxygenSaturationRecords = async (
       endTime: record.end_time || record.start_time,
     }));
   } catch (error) {
-    console.error('Error with oxygen saturation records:', error);
+    console.error('Error fetching oxygen records:', error);
     return [];
   }
 };
 
-export const fetchSleepRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<SleepSessionRecord[]> => {
+export const fetchSleepRecords = async (startTime: string, endTime: string): Promise<SleepSessionRecord[]> => {
   try {
-    const healthData = await readRecords('SleepSession', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.flatMap(record => {
-      return record.stages.map(stage => ({
-        id: record.metadata?.id || '',
-        dataOrigin: record.metadata?.dataOrigin || '',
-        stage: stage.stage,
-        startTime: stage.startTime,
-        endTime: stage.endTime,
-      }));
-    });
-
-    await syncToBackend('/record-sleep-session', records);
-
-    const response = await api.get('/record-sleep-session', {
-      params: {startTime, endTime},
-    });
-
-    return response.data.data.map(record => {
-      return {
-        id: record.record_id,
-        startTime: record.start_time,
-        endTime: record.end_time,
-        stage: record.stage,
-        dataOrigin: record.data_origin,
-      }
-    });
-  } catch (error) {
-    console.error('Error with sleep records:', error);
-    return [];
-  }
-};
-
-export const fetchRestingHeartRateRecords = async (
-  startTime: string,
-  endTime: string,
-): Promise<RestingHeartRateRecord[]> => {
-  try {
-    const healthData = await readRecords('RestingHeartRate', {
-      timeRangeFilter: {
-        operator: 'between',
-        startTime,
-        endTime,
-      },
-    });
-
-    const records = healthData.records.map(record => ({
-      beatsPerMinute: record.beatsPerMinute,
-      time: record.time,
-      startTime: startTime,
-      endTime: endTime,
-      id: record.metadata?.id || '',
-      dataOrigin: record.metadata?.dataOrigin || '',
+    const response = await api.get('/record-sleep-session', { params: {startTime, endTime} });
+    return response.data.data.map(record => ({
+      id: record.record_id,
+      startTime: record.start_time,
+      endTime: record.end_time,
+      stage: record.stage,
+      dataOrigin: record.data_origin,
+      sleepScore: record.sleep_score,
+      avgHeartRate: record.avg_heart_rate,
+      avgBreathing: record.avg_breathing,
+      avgSpO2: record.avg_spo2
     }));
+  } catch (error) {
+    console.error('Error fetching sleep records:', error);
+    return [];
+  }
+};
 
-    await syncToBackend('/record-resting-heart-rate', records);
-
-    const response = await api.get('/record-resting-heart-rate', {
-      params: {startTime, endTime},
-    });
+export const fetchRestingHeartRateRecords = async (startTime: string, endTime: string): Promise<RestingHeartRateRecord[]> => {
+  try {
+    const response = await api.get('/record-resting-heart-rate', { params: {startTime, endTime} });
     return response.data.data;
   } catch (error) {
-    console.error('Error with resting heart rate records:', error);
+    console.error('Error fetching resting heart rate:', error);
     return [];
   }
 };
 
-export const calculateTotalSteps = (steps: StepRecord[]): number => {
-  return steps.reduce((total, record) => total + record.count, 0);
-};
+export const calculateTotalSteps = (steps: StepRecord[]): number => 
+  steps.reduce((total, record) => total + record.count, 0);
 
-export const calculateTotalDistance = (
-  distanceRecords: DistanceRecord[],
-): number => {
-  const meters = distanceRecords.reduce(
-    (total, record) => total + record.distance,
-    0,
-  );
-  return meters / 1000;
-};
+export const calculateTotalDistance = (distanceRecords: DistanceRecord[]): number => 
+  distanceRecords.reduce((total, record) => total + record.distance, 0) / 1000;
 
-export const calculateTotalCalories = (
-  caloriesRecords: ActiveCaloriesRecord[] | TotalCaloriesRecord[],
-): number => {
-  return caloriesRecords.reduce((total, record) => total + record.calories, 0);
-};
+export const calculateTotalCalories = (caloriesRecords: ActiveCaloriesRecord[] | TotalCaloriesRecord[]): number => 
+  caloriesRecords.reduce((total, record) => total + record.calories, 0);

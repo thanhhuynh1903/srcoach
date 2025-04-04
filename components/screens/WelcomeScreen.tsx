@@ -1,6 +1,7 @@
 import React, {useEffect} from 'react';
 import {StyleSheet, View, Text, Image} from 'react-native'
 import {useNavigation} from '@react-navigation/native';
+import { startSyncData } from '../utils/utils_healthconnect';
 
 const WelcomeScreen = () => {
   const navigation = useNavigation();
