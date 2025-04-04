@@ -19,6 +19,9 @@ import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
 import { useNavigation } from '@react-navigation/native';
 import { useLoginStore } from '../utils/useLoginStore';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
+
 interface Tag {
   tag_name: string;
 }
@@ -48,15 +51,9 @@ const SearchResultsScreen = ({}) => {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const navigate = useNavigation();
   const {searchPost, searchResults, searchLoading, searchError, likePost} = usePostStore();
-  const [localSearchResults, setLocalSearchResults] = useState<SearchResult[]>([]);
 
   const {profile} = useLoginStore();
 
-  useEffect(() => {
-    if (searchResults && searchResults.length > 0) {
-      setLocalSearchResults(searchResults);
-    }
-  }, [searchResults]);
   // Sample data for experts
   const experts = [
     {
@@ -107,11 +104,16 @@ const SearchResultsScreen = ({}) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  useEffect(() => {
-    if (debouncedQuery) {
-      searchPost({title: debouncedQuery});
-    }
-  }, [debouncedQuery, searchPost]);
+  useFocusEffect(
+    React.useCallback(() => {
+      // Nếu có debouncedQuery, thực hiện tìm kiếm lại khi màn hình được focus
+      if (debouncedQuery) {
+        searchPost({title: debouncedQuery});
+      }
+      return () => {};
+    }, [debouncedQuery, searchPost])
+  );
+
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -169,32 +171,15 @@ const SearchResultsScreen = ({}) => {
     console.log('postId', postId);
     console.log('isLike', isLike);
     
-    // Cập nhật UI ngay lập tức (optimistic update)
-    setLocalSearchResults(prevResults => 
-      prevResults.map(post => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            is_upvoted: isLike,
-            upvote_count: isLike 
-              ? post.is_upvoted ? post.upvote_count : post.upvote_count + 1
-              : post.is_upvoted ? post.upvote_count - 1 : post.upvote_count
-          };
-        }
-        return post;
-      })
-    );
-
+    // Không cần cập nhật localSearchResults nữa vì đã xử lý trong store
+    // Chỉ cần gọi likePost
     try {
       await likePost(postId, isLike);
     } catch (error) {
       console.error('Error liking post:', error);
-      setLocalSearchResults(searchResults || []);
       Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
     }
   };
-
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -260,8 +245,8 @@ const SearchResultsScreen = ({}) => {
                 {activeTab === 'All' && (
                   <Text style={styles.sectionTitle}>Post lists</Text>
                 )}
-                {localSearchResults.length > 0 ? (
-                  localSearchResults.map(post => (
+                {searchResults && searchResults.length > 0 ? (
+                  searchResults.map(post => (
                     console.log('post', post),
                     <TouchableOpacity key={post.id} style={styles.postCard} onPress={() => navigate.navigate('CommunityPostDetailScreen', {id: post.id})}>
                       <View style={styles.postHeader}>

@@ -388,15 +388,10 @@ export const usePostStore = create<PostState>((set, get) => ({
 
   likePost: async (postId: string, isLike: boolean) => {
     try {
-      // Gọi API để like/unlike bài viết
-      const response = await api.postData(
-        `/posts-votes/post/${postId}`,
-        { isLike: isLike }
-      );
-  
-      if (response && response.status === 'success') {
-        // Cập nhật lại danh sách bài viết sau khi like/unlike thành công
-        const updatedPosts = get().posts.map(post => {
+      // Optimistic update - cập nhật UI trước khi API hoàn thành
+      set(state => {
+        // Cập nhật posts
+        const updatedPosts = state.posts?.map(post => {
           if (post.id === postId) {
             return {
               ...post,
@@ -409,30 +404,69 @@ export const usePostStore = create<PostState>((set, get) => ({
           return post;
         });
   
-        set({
+        // Cập nhật searchResults
+        const updatedSearchResults = state.searchResults?.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              is_upvoted: isLike,
+              upvote_count: isLike 
+                ? post.is_upvoted ? post.upvote_count : post.upvote_count + 1 
+                : post.is_upvoted ? post.upvote_count - 1 : post.upvote_count
+            };
+          }
+          return post;
+        });
+  
+        // Cập nhật currentPost nếu đang xem chi tiết
+        const updatedCurrentPost = state.currentPost && state.currentPost.id === postId
+          ? {
+              ...state.currentPost,
+              is_upvoted: isLike,
+              upvote_count: isLike 
+                ? state.currentPost.is_upvoted ? state.currentPost.upvote_count : state.currentPost.upvote_count + 1
+                : state.currentPost.is_upvoted ? state.currentPost.upvote_count - 1 : state.currentPost.upvote_count
+            }
+          : state.currentPost;
+  
+        return {
           posts: updatedPosts,
+          searchResults: updatedSearchResults,
+          currentPost: updatedCurrentPost,
+          status: 'loading'
+        };
+      });
+  
+      // Gọi API
+      const response = await api.postData(
+        `/posts-votes/post/${postId}`,
+        { isLike: isLike }
+      );
+  
+      if (response && response.status === 'success') {
+        set({
           status: 'success',
           message: isLike ? 'Đã thích bài viết' : 'Đã bỏ thích bài viết'
         });
-        
         return true;
       } else {
+        // Rollback nếu API thất bại (có thể thêm logic rollback ở đây)
         set({
           status: 'error',
           message: response?.message || 'Không thể thực hiện thao tác'
         });
-        
         return false;
       }
     } catch (error: any) {
       console.error('Error liking post:', error);
+      // Rollback nếu có lỗi (có thể thêm logic rollback ở đây)
       set({
         status: 'error',
         message: error.message || 'Đã xảy ra lỗi khi thích bài viết'
       });
       return false;
     }
-  },
+  },  
 
   clearCurrent: () => set({currentPost: null}),
 }));
