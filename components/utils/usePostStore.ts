@@ -40,6 +40,7 @@ interface PostState {
   getAll: () => Promise<void>;
   getDetail: (id: string) => Promise<void>;
   deletePost: (id: string) => Promise<boolean>;
+  likePost: (id: string, isLiked: boolean) => Promise<boolean>;
   clearCurrent: () => void;
   getMyPosts: () => Promise<void>;
   createPost: (postData: {
@@ -59,6 +60,7 @@ interface PostState {
 
   searchResults: Post[];
   searchLoading: boolean;
+
   searchError: string | null;
   searchPost: (params: {
     title?: string;
@@ -162,7 +164,6 @@ export const usePostStore = create<PostState>((set, get) => ({
     try {
       // Chuẩn bị FormData từ dữ liệu bài viết
       const formData = new FormData();
-      console.log('postData', postData);
 
       formData.append('title', postData.title);
       formData.append('content', postData.content);
@@ -191,7 +192,6 @@ export const usePostStore = create<PostState>((set, get) => ({
           formData.append(`images`, imageFile);
         });
       }
-      console.log('formData', formData);
 
       // Gọi API để tạo bài viết
       await api.postData('/posts/create', formData);
@@ -206,19 +206,19 @@ export const usePostStore = create<PostState>((set, get) => ({
   },
   updatePost: async (id, postData) => {
     set({isLoading: true, status: null});
-  
+
     try {
       const formData = new FormData();
-  
+
       // Append basic fields
       formData.append('title', postData.title);
       formData.append('content', postData.content);
-  
+
       // Handle tags array
       postData.tags.forEach((tag, index) => {
         formData.append(`tags[${index}]`, tag);
       });
-  
+
       // Handle exercise session record ID
       if (postData.exerciseSessionRecordId) {
         formData.append(
@@ -226,7 +226,7 @@ export const usePostStore = create<PostState>((set, get) => ({
           postData.exerciseSessionRecordId,
         );
       }
-  
+
       // Handle images (new uploads)
       if (postData.images && postData.images.length > 0) {
         postData.images.forEach((image, index) => {
@@ -238,34 +238,35 @@ export const usePostStore = create<PostState>((set, get) => ({
               name: image.fileName || `image-${index}.jpg`,
             };
             console.log('imageFiles', imageFile);
-            
+
             formData.append(`images`, imageFile);
           }
         });
       }
       console.log('formData', formData);
-      
+
       // Make PUT request
       const response = await api.putData(`/posts/${id}`, formData);
       console.log('response', response);
-      
+
       // Update local state
       if (response && response.status === 'success') {
         // Cập nhật bài viết trong danh sách posts
-        const updatedPosts = get().posts.map(post => 
-          post.id === id ? { ...post, ...response.data } : post
+        const updatedPosts = get().posts.map(post =>
+          post.id === id ? {...post, ...response.data} : post,
         );
-        
+
         // Cập nhật bài viết trong danh sách myPosts
-        const updatedMyPosts = get().myPosts.map(post => 
-          post.id === id ? { ...post, ...response.data } : post
+        const updatedMyPosts = get().myPosts.map(post =>
+          post.id === id ? {...post, ...response.data} : post,
         );
-        
+
         // Cập nhật currentPost nếu đang xem bài viết này
-        const updatedCurrentPost = get().currentPost?.id === id 
-          ? { ...get().currentPost, ...response.data } 
-          : get().currentPost;
-  
+        const updatedCurrentPost =
+          get().currentPost?.id === id
+            ? {...get().currentPost, ...response.data}
+            : get().currentPost;
+
         set({
           posts: updatedPosts,
           myPosts: updatedMyPosts,
@@ -290,7 +291,6 @@ export const usePostStore = create<PostState>((set, get) => ({
       throw error;
     }
   },
-  
 
   deletePost: async (id: string) => {
     set({isLoading: true, status: null});
@@ -385,5 +385,88 @@ export const usePostStore = create<PostState>((set, get) => ({
       });
     }
   },
+
+  likePost: async (postId: string, isLike: boolean) => {
+    try {
+      // Optimistic update - cập nhật UI trước khi API hoàn thành
+      set(state => {
+        // Cập nhật posts
+        const updatedPosts = state.posts?.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              is_upvoted: isLike,
+              upvote_count: isLike 
+                ? post.is_upvoted ? post.upvote_count : post.upvote_count + 1 
+                : post.is_upvoted ? post.upvote_count - 1 : post.upvote_count
+            };
+          }
+          return post;
+        });
+  
+        // Cập nhật searchResults
+        const updatedSearchResults = state.searchResults?.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              is_upvoted: isLike,
+              upvote_count: isLike 
+                ? post.is_upvoted ? post.upvote_count : post.upvote_count + 1 
+                : post.is_upvoted ? post.upvote_count - 1 : post.upvote_count
+            };
+          }
+          return post;
+        });
+  
+        // Cập nhật currentPost nếu đang xem chi tiết
+        const updatedCurrentPost = state.currentPost && state.currentPost.id === postId
+          ? {
+              ...state.currentPost,
+              is_upvoted: isLike,
+              upvote_count: isLike 
+                ? state.currentPost.is_upvoted ? state.currentPost.upvote_count : state.currentPost.upvote_count + 1
+                : state.currentPost.is_upvoted ? state.currentPost.upvote_count - 1 : state.currentPost.upvote_count
+            }
+          : state.currentPost;
+  
+        return {
+          posts: updatedPosts,
+          searchResults: updatedSearchResults,
+          currentPost: updatedCurrentPost,
+          status: 'loading'
+        };
+      });
+  
+      // Gọi API
+      const response = await api.postData(
+        `/posts-votes/post/${postId}`,
+        { isLike: isLike }
+      );
+  
+      if (response && response.status === 'success') {
+        set({
+          status: 'success',
+          message: isLike ? 'Đã thích bài viết' : 'Đã bỏ thích bài viết'
+        });
+        return true;
+      } else {
+        // Rollback nếu API thất bại (có thể thêm logic rollback ở đây)
+        set({
+          status: 'error',
+          message: response?.message || 'Không thể thực hiện thao tác'
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Error liking post:', error);
+      // Rollback nếu có lỗi (có thể thêm logic rollback ở đây)
+      set({
+        status: 'error',
+        message: error.message || 'Đã xảy ra lỗi khi thích bài viết'
+      });
+      return false;
+    }
+  },  
+
   clearCurrent: () => set({currentPost: null}),
 }));

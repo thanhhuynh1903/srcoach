@@ -17,7 +17,7 @@ import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation} from '@react-navigation/native';
-import { useCommentStore } from '../utils/useCommentStore';
+import {useCommentStore} from '../utils/useCommentStore';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -39,7 +39,7 @@ interface Tag {
   tag_name: string;
 }
 const RunnerProfileScreen = () => {
-  const {myPosts, getMyPosts, isLoading, deletePost} = usePostStore();
+  const {myPosts, getMyPosts, isLoading, deletePost, likePost} = usePostStore();
   const {profile} = useLoginStore();
   const navigation = useNavigation();
   // State cho modal và bài viết đã chọn
@@ -65,6 +65,46 @@ const RunnerProfileScreen = () => {
 
     setSelectedPost(post);
     setModalVisible(true);
+  };
+
+  const handleLikePost = async (postId: string, isLike: boolean) => {
+    if (!profile) {
+      // Kiểm tra người dùng đã đăng nhập chưa
+      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bài viết', [
+        {text: 'Đóng', style: 'cancel'},
+      ]);
+      return;
+    }
+
+    // Cập nhật UI ngay lập tức (optimistic update)
+    setLocalPosts(prevPosts =>
+      prevPosts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            is_upvoted: isLike,
+            upvote_count: isLike
+              ? post.is_upvoted
+                ? post.upvote_count
+                : post.upvote_count + 1
+              : post.is_upvoted
+              ? post.upvote_count - 1
+              : post.upvote_count,
+          };
+        }
+        return post;
+      }),
+    );
+
+    try {
+      // Gọi API để like/unlike bài viết
+      await likePost(postId, isLike);
+      // Không cần làm gì thêm vì đã cập nhật UI trước đó
+    } catch (error) {
+      console.error('Error liking post:', error);
+      // Nếu có lỗi, khôi phục lại trạng thái từ store
+      setLocalPosts(myPosts || []);
+    }
   };
 
   // Xử lý xóa bài viết
@@ -130,13 +170,12 @@ const RunnerProfileScreen = () => {
     if (!tags || tags.length === 0) {
       return null;
     }
-    
+
     // Nếu có 1-2 tags, hiển thị tất cả
-    if (tags.length <= 2) {
+    if (tags.length <= 4) {
       return (
         <View style={styles.tagsContainer}>
           {tags?.map((tag, index) => (
-           
             <View key={index} style={styles.tag}>
               <Text style={styles.tagText}>{tag}</Text>
             </View>
@@ -155,7 +194,13 @@ const RunnerProfileScreen = () => {
           <Text style={styles.tagText}>{tags[1]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>+{tags.length - 2}</Text>
+          <Text style={styles.tagText}>{tags[2]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[3]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>+{tags.length - 4}</Text>
         </View>
       </View>
     );
@@ -313,13 +358,22 @@ const RunnerProfileScreen = () => {
                     {/* Engagement */}
                     <View style={styles.postEngagement}>
                       <View style={styles.engagementItem}>
-                        <Icon name="heart-outline" size={20} color="#0F2B5B" />
+                        {/* Thêm chức năng like vào đây */}
+                        <TouchableOpacity
+                          onPress={() =>
+                            handleLikePost(post.id, !post.is_upvoted)
+                          }>
+                          <Icon
+                            name={post.is_upvoted ? 'heart' : 'heart-outline'}
+                            size={20}
+                            color={post.is_upvoted ? '#4285F4' : '#64748B'}
+                          />
+                        </TouchableOpacity>
                         <Text style={styles.engagementText}>
                           {post.upvote_count || 0}
                         </Text>
                       </View>
                       <View style={styles.engagementItem}>
-                      
                         <View style={styles.engagementItemRight}>
                           <Icon
                             name="chatbubble-outline"

@@ -12,22 +12,47 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
+import { useNavigation } from '@react-navigation/native';
+import { useLoginStore } from '../utils/useLoginStore';
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
 
 interface Tag {
   tag_name: string;
 }
+type SearchResult = {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  is_upvoted: boolean;
+  upvote_count: number;
+  comment_count: number;
+  images?: string[];
+  tags?: string[];
+  user?: {
+    username: string;
+    avatar?: string;
+  };
+  User?: {
+    avatar?: string;
+  };
+};
+
 const SearchResultsScreen = ({}) => {
   // In a real app, you would get the query from route.params
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const navigate = useNavigation();
+  const {searchPost, searchResults, searchLoading, searchError, likePost} = usePostStore();
 
-  const {searchPost, searchResults, searchLoading, searchError} =
-    usePostStore();
+  const {profile} = useLoginStore();
 
   // Sample data for experts
   const experts = [
@@ -79,11 +104,16 @@ const SearchResultsScreen = ({}) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  useEffect(() => {
-    if (debouncedQuery) {
-      searchPost({title: debouncedQuery});
-    }
-  }, [debouncedQuery, searchPost]);
+  useFocusEffect(
+    React.useCallback(() => {
+      // Nếu có debouncedQuery, thực hiện tìm kiếm lại khi màn hình được focus
+      if (debouncedQuery) {
+        searchPost({title: debouncedQuery});
+      }
+      return () => {};
+    }, [debouncedQuery, searchPost])
+  );
+
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -97,7 +127,7 @@ const SearchResultsScreen = ({}) => {
     console.log('tags', tags);
 
     // Nếu có 1-2 tags, hiển thị tất cả
-    if (tags.length <= 2) {
+    if (tags.length <= 4) {
       return (
         <View style={styles.tagsContainer}>
           {tags.map((tag, index) => (
@@ -119,11 +149,38 @@ const SearchResultsScreen = ({}) => {
           <Text style={styles.tagText}>{tags[1]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>+{tags.length - 2}</Text>
+          <Text style={styles.tagText}>{tags[2]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[3]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>+{tags.length - 4}</Text>
         </View>
       </View>
     );
   };
+
+  const handleLikePost = async (postId: string, isLike: boolean) => {
+    if (!profile) {
+      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bài viết', [
+        {text: 'Đóng', style: 'cancel'},
+      ]);
+      return;
+    }
+    console.log('postId', postId);
+    console.log('isLike', isLike);
+    
+    // Không cần cập nhật localSearchResults nữa vì đã xử lý trong store
+    // Chỉ cần gọi likePost
+    try {
+      await likePost(postId, isLike);
+    } catch (error) {
+      console.error('Error liking post:', error);
+      Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -174,7 +231,7 @@ const SearchResultsScreen = ({}) => {
         {searchLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#0F2B5B" />
-            <Text style={styles.loadingText}>Đang tìm kiếm...</Text>
+            <Text style={styles.loadingText}>Searching...</Text>
           </View>
         ) : searchError ? (
           <View style={styles.errorContainer}>
@@ -186,23 +243,24 @@ const SearchResultsScreen = ({}) => {
             {(activeTab === 'Posts' || activeTab === 'All') && (
               <>
                 {activeTab === 'All' && (
-                  <Text style={styles.sectionTitle}>Bài viết</Text>
+                  <Text style={styles.sectionTitle}>Post lists</Text>
                 )}
-                {searchResults.length > 0 ? (
+                {searchResults && searchResults.length > 0 ? (
                   searchResults.map(post => (
-                    <TouchableOpacity key={post.id} style={styles.postCard}>
+                    console.log('post', post),
+                    <TouchableOpacity key={post.id} style={styles.postCard} onPress={() => navigate.navigate('CommunityPostDetailScreen', {id: post.id})}>
                       <View style={styles.postHeader}>
                         <Image
                           source={{
                             uri:
-                              post.User?.avatar ||
+                              post.user?.avatar ||
                               'https://randomuser.me/api/portraits/women/32.jpg',
                           }}
                           style={styles.authorImage}
                         />
                         <View>
                           <Text style={styles.authorName}>
-                            {post.User?.username || 'Người dùng'}
+                            {post?.user?.username || 'Người dùng'}
                           </Text>
                           <Text style={styles.postTime}>
                             {new Date(post.created_at).toLocaleDateString(
@@ -226,16 +284,19 @@ const SearchResultsScreen = ({}) => {
                       )}
                       <View style={styles.postStats}>
                         <View style={styles.postStats}>
-                          <View style={styles.statItem}>
+                        <TouchableOpacity 
+                            style={styles.statItem}
+                            onPress={() => handleLikePost(post.id, !post.is_upvoted)}
+                          >
                             <Icon
-                              name="heart-outline"
+                              name={post?.is_upvoted ? "heart" : "heart-outline"}
                               size={18}
-                              color={post.is_upvoted ? '#3B82F6' : '#000'}
+                              color={post?.is_upvoted ? '#3B82F6' : '#000'}
                             />
                             <Text style={styles.statText}>
-                              {post.upvote_count}
+                              {post?.upvote_count}
                             </Text>
-                          </View>
+                          </TouchableOpacity>
                           <View style={[styles.statItem, {marginLeft: 16}]}>
                             <Icon
                               name="chatbubble-outline"
@@ -268,7 +329,7 @@ const SearchResultsScreen = ({}) => {
             {(activeTab === 'Experts' || activeTab === 'All') && (
               <>
                 {activeTab === 'All' && (
-                  <Text style={styles.sectionTitle}>Chuyên gia</Text>
+                  <Text style={styles.sectionTitle}>Expert</Text>
                 )}
                 {experts.map(expert => (
                   <TouchableOpacity key={expert.id} style={styles.expertCard}>
@@ -298,7 +359,7 @@ const SearchResultsScreen = ({}) => {
                       </View>
                     </View>
                     <TouchableOpacity style={styles.followButton}>
-                      <Text style={styles.followButtonText}>Theo dõi</Text>
+                      <Text style={styles.followButtonText}>Follow</Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
                 ))}
