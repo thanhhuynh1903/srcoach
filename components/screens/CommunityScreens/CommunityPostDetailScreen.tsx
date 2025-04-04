@@ -21,8 +21,45 @@ import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
 
+
+interface User {
+  id: string;
+  username: string;
+  user_level: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+// Interface cho Tag
+interface Tag {
+  tag_name: string;
+}
+
+// Interface cho Post từ API
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string | null;
+  exercise_session_record_id: string | null;
+  User: User;
+  postTags: Tag[];
+  PostVote: any[];
+  PostComment: any[];
+  images: string[];
+  upvote_count: number;
+  downvote_count: number;
+  comment_count: number;
+  is_upvoted: boolean;
+  is_downvoted: boolean;
+}
+
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, getAll, deletePost} = usePostStore();
+  const {getDetail, currentPost, getAll, deletePost, likePost} = usePostStore();
+  const [localPost, setLocalPost] = useState<Post[]>([]);
   const {profile} = useLoginStore();
   const {
     createComment,
@@ -66,7 +103,7 @@ const CommunityPostDetailScreen = () => {
 
   const handleEditComment = async commentId => {
     // Tìm comment cần edit trong danh sách comments
-    const findComment : any = (comments, id) => {
+    const findComment: any = (comments, id) => {
       for (const comment of comments) {
         if (comment.id === id) {
           return comment;
@@ -104,19 +141,19 @@ const CommunityPostDetailScreen = () => {
       // Nếu đang edit comment
       if (isEditingComment && editingCommentId) {
         const result = await updateComment(editingCommentId, commentText);
-        
+
         if (result) {
           // Reset trạng thái edit
           setIsEditingComment(false);
           setEditingCommentId(null);
           setCommentText('');
-          
+
           // Cập nhật lại danh sách bình luận
           await getCommentsByPostId(id);
           // Cập nhật lại thông tin bài viết
           await getDetail(id);
           await getAll();
-          
+
           Alert.alert('Success', 'Comment updated successfully');
         } else {
           Alert.alert('Error', 'Failed to update comment');
@@ -146,7 +183,7 @@ const CommunityPostDetailScreen = () => {
       setIsSubmittingComment(false);
     }
   };
-  
+
   // Hàm hủy chỉnh sửa comment
   const handleCancelEdit = () => {
     setIsEditingComment(false);
@@ -154,11 +191,9 @@ const CommunityPostDetailScreen = () => {
     setCommentText('');
   };
 
-
   // Hàm xử lý khi nhấn Reply trên một bình luận
-  const handleReplyComment = commentId => {
-    console.log('commentId', commentId);
-    
+  const handleReplyComment = (commentId: string) => {
+
     setReplyingTo(commentId);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -208,7 +243,7 @@ const CommunityPostDetailScreen = () => {
               setModalVisible(false);
 
               // Gọi API xóa bài viết
-              const success = await deletePost(postId);
+              const success = await deletePost(postId ?? '');
 
               if (success) {
                 // Thông báo thành công và quay lại màn hình trước
@@ -236,7 +271,7 @@ const CommunityPostDetailScreen = () => {
     navigation.navigate('CommunityUpdatePostScreen', {postId: currentPost.id});
   };
 
-  const handleDeleteComment = async commentId => {
+  const handleDeleteComment = async (commentId: string) => {
     try {
       const success = await deleteComment(commentId);
 
@@ -269,9 +304,9 @@ const CommunityPostDetailScreen = () => {
   };
 
   // Trong CommunityPostDetailScreen
-  const renderComment = comment => {
+  const renderComment = (comment: any) => {
     console.log('comment', comment);
-    
+
     return (
       <TouchableOpacity
         key={comment.id}
@@ -313,23 +348,22 @@ const CommunityPostDetailScreen = () => {
                 {comment.upvote_count || 0}
               </Text>
             </View>
-            {!comment.parent_comment_id && ( 
-            <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
-              <Text style={styles.replyButton}>Reply</Text>
-            </TouchableOpacity>
+            {!comment.parent_comment_id && (
+              <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
+                <Text style={styles.replyButton}>Reply</Text>
+              </TouchableOpacity>
             )}
           </View>
 
           {/* Render các bình luận con (nếu có) */}
-          {comment.other_PostComment && comment.other_PostComment.length > 0 && (
-            <View style={styles.repliesContainer}>
-              {comment.other_PostComment
-                .filter(childComment => !childComment.is_deleted)
-                .map(childComment =>
-                  renderComment(childComment),
-                )}
-            </View>
-          )}
+          {comment.other_PostComment &&
+            comment.other_PostComment.length > 0 && (
+              <View style={styles.repliesContainer}>
+                {comment.other_PostComment
+                  .filter((childComment: any) => !childComment.is_deleted)
+                  .map((childComment: any) => renderComment(childComment))}
+              </View>
+            )}
         </View>
       </TouchableOpacity>
     );
@@ -342,11 +376,57 @@ const CommunityPostDetailScreen = () => {
       // Nếu có other_PostComment, cộng thêm số comment không bị xóa
       if (Array.isArray(comment.other_PostComment)) {
         count += comment.other_PostComment.filter(
-          (c: any) => !c?.is_deleted
+          (c: any) => !c?.is_deleted,
         ).length;
       }
       return total + count;
     }, 0);
+  };
+
+  useEffect(() => {
+    if (currentPost) {
+      setLocalPost(currentPost);
+    }
+  }, [currentPost]);
+
+  const handleLikePost = async (id: string, isLike: boolean) => {
+    if (!profile) {
+      // Kiểm tra người dùng đã đăng nhập chưa
+      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bài viết', [
+        {text: 'Đóng', style: 'cancel'},
+      ]);
+      return;
+    }
+  
+    try {
+      // Cập nhật UI ngay lập tức (optimistic update)
+      // Lưu trạng thái cũ để khôi phục nếu API thất bại
+      const oldPostState = { ...currentPost };
+      
+      // Cập nhật trạng thái hiện tại của bài viết
+      const updatedPost = {
+        ...currentPost,
+        is_upvoted: isLike,
+        upvote_count: isLike 
+          ? currentPost?.is_upvoted ? currentPost.upvote_count : currentPost!.upvote_count + 1
+          : currentPost?.is_upvoted ? currentPost.upvote_count - 1 : currentPost?.upvote_count
+      };
+      
+      // Cập nhật currentPost trong store
+      usePostStore.setState({ currentPost: updatedPost });
+      
+      // Gọi API để like/unlike bài viết
+      const success = await likePost(id, isLike);
+      
+      if (!success) {
+        // Nếu API thất bại, khôi phục lại trạng thái cũ
+        usePostStore.setState({ currentPost: oldPostState });
+        Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+      Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
+    }
   };
   
 
@@ -365,19 +445,19 @@ const CommunityPostDetailScreen = () => {
         {/* User info section */}
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
-            <Image
+          <Image
               source={{
                 uri:
-                  currentPost?.user?.avatar ||
+                  localPost?.user?.avatar ||
                   'https://randomuser.me/api/portraits/men/32.jpg',
               }}
               style={styles.avatar}
             />
             <View style={styles.userTextInfo}>
-              <Text style={styles.userName}>{currentPost?.user?.username}</Text>
+              <Text style={styles.userName}>{localPost?.user?.username}</Text>
               <View style={styles.postMetaInfo}>
                 <Text style={styles.postTime}>
-                  {formatTimeAgo(currentPost?.created_at)}
+                  {formatTimeAgo(localPost?.created_at)}
                 </Text>
                 <Text style={styles.postTime}> • </Text>
                 <Icon name="location-outline" size={14} color="#666" />
@@ -392,13 +472,13 @@ const CommunityPostDetailScreen = () => {
 
         {/* Post content */}
         <View style={styles.postContent}>
-          <Text style={styles.postTitle}>{currentPost?.title}</Text>
-          <Text style={styles.postDescription}>{currentPost?.content}</Text>
+          <Text style={styles.postTitle}>{localPost?.title}</Text>
+          <Text style={styles.postDescription}>{localPost?.content}</Text>
 
           {/* Run photo */}
-          {currentPost?.images && currentPost.images.length > 0 && (
+          {localPost?.images && localPost.images.length > 0 && (
             <Image
-              source={{uri: currentPost?.images[0]}}
+              source={{uri: localPost?.images[0]}}
               style={styles.runPhoto}
               resizeMode="cover"
             />
@@ -450,20 +530,27 @@ const CommunityPostDetailScreen = () => {
           {/* Post engagement */}
           <View style={styles.engagementContainer}>
             <View style={styles.engagementLeft}>
-              <TouchableOpacity style={styles.voteButton}>
-                <Icon name="heart-outline" size={20} color="#4285F4" />
+              <TouchableOpacity
+                style={styles.voteButton}
+                onPress={() =>
+                  handleLikePost(localPost?.id, !localPost?.is_upvoted)
+                }>
+                <Icon
+                  name={localPost?.is_upvoted ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={localPost?.is_upvoted ? '#4285F4' : '#666'}
+                />
               </TouchableOpacity>
-              <Text style={styles.voteCount}>{currentPost?.upvote_count}</Text>
-             
-            
-            <View style={styles.engagementMiddle}>
-              <TouchableOpacity style={styles.commentButton}>
-                <Icon name="chatbubble-outline" size={20} color="#666" />
-                <Text style={styles.commentCount}>
-                  {FilterComment(comments)}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <Text style={styles.voteCount}>{localPost?.upvote_count}</Text>
+
+              <View style={styles.engagementMiddle}>
+                <TouchableOpacity style={styles.commentButton}>
+                  <Icon name="chatbubble-outline" size={20} color="#666" />
+                  <Text style={styles.commentCount}>
+                    {FilterComment(comments)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.engagementRight}>
               <TouchableOpacity style={styles.actionButton}>

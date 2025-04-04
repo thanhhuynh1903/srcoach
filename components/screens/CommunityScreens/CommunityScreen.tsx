@@ -64,7 +64,8 @@ interface Post {
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const {isLoading, status, getAll, clearCurrent, deletePost} = usePostStore();
+  const {isLoading, status, getAll, clearCurrent, deletePost, likePost} =
+    usePostStore();
   const posts = usePostStore(state => state.posts);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -237,7 +238,9 @@ const CommunityScreen = () => {
   const handleUpdate = () => {
     setModalVisible(false);
     if (selectedPost) {
-      navigation.navigate('CommunityUpdatePostScreen', {postId: selectedPost.id});
+      navigation.navigate('CommunityUpdatePostScreen', {
+        postId: selectedPost.id,
+      });
     }
   };
 
@@ -248,7 +251,7 @@ const CommunityScreen = () => {
     }
 
     // Nếu có 1-2 tags, hiển thị tất cả
-    if (tags.length <= 2) {
+    if (tags.length <= 4) {
       return (
         <View style={styles.tagsContainer}>
           {tags.map((tag, index) => (
@@ -270,7 +273,13 @@ const CommunityScreen = () => {
           <Text style={styles.tagText}>{tags[1].tag_name}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>+{tags.length - 2}</Text>
+          <Text style={styles.tagText}>{tags[2].tag_name}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[3].tag_name}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>+{tags.length - 4}</Text>
         </View>
       </View>
     );
@@ -280,7 +289,7 @@ const CommunityScreen = () => {
     <TouchableOpacity
       style={styles.postItem}
       onPress={() =>
-        navigation.navigate('CommunityPostDetailScreen' , {id: item.id})
+        navigation.navigate('CommunityPostDetailScreen', {id: item.id})
       }>
       <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
         <View style={styles.postHeader}>
@@ -308,11 +317,13 @@ const CommunityScreen = () => {
         />
       )}
       <View style={styles.postActions}>
-        <TouchableOpacity style={styles.postActionButton}>
+        <TouchableOpacity
+          style={styles.postActionButton}
+          onPress={() => handleLikePost(item.id, !item.is_upvoted)}>
           <Icon
-            name="heart-outline"
+            name={item.is_upvoted ? 'heart' : 'heart-outline'}
             size={20}
-            color={item.is_upvoted ? theme.colors.primary : undefined}
+            color={item.is_upvoted ? theme.colors.primary : '#666'}
           />
           <Text style={styles.postActionText}>{item.upvote_count}</Text>
         </TouchableOpacity>
@@ -369,6 +380,41 @@ const CommunityScreen = () => {
         scrollEnabled={false}
       />
     );
+  };
+
+  const handleLikePost = async (id: string, isLike: boolean) => {
+    if (!profile) {
+      // Kiểm tra người dùng đã đăng nhập chưa
+      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bài viết', [
+        {text: 'Đóng', style: 'cancel'},
+      ]);
+      return;
+    }
+
+    // Gọi API để like/unlike bài viết
+    const success = await likePost(id, isLike);
+
+    if (success) {
+      // Cập nhật localPosts nếu API thành công
+      const updatedLocalPosts = localPosts.map(post => {
+        if (post.id === id) {
+          return {
+            ...post,
+            is_upvoted: isLike,
+            upvote_count: isLike
+              ? post.is_upvoted
+                ? post.upvote_count
+                : post.upvote_count + 1
+              : post.is_upvoted
+              ? post.upvote_count - 1
+              : post.upvote_count,
+          };
+        }
+        return post;
+      });
+
+      setLocalPosts(updatedLocalPosts);
+    }
   };
 
   return (
@@ -440,7 +486,11 @@ const CommunityScreen = () => {
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.modalOption}>
-                <Icon name="bookmark-outline" size={24}  color={theme.colors.primary} />
+                <Icon
+                  name="bookmark-outline"
+                  size={24}
+                  color={theme.colors.primary}
+                />
                 <Text style={styles.modalOptionText}>Save draft</Text>
               </TouchableOpacity>
             )}
