@@ -307,26 +307,27 @@ const CommunityPostDetailScreen = () => {
           <View style={styles.commentActions}>
             <View style={styles.commentVotes}>
               <TouchableOpacity>
-                <Icon name="arrow-up" size={16} color="#4285F4" />
+                <Icon name="heart-outline" size={16} color="#4285F4" />
               </TouchableOpacity>
               <Text style={styles.commentVoteCount}>
                 {comment.upvote_count || 0}
               </Text>
-              <TouchableOpacity>
-                <Icon name="arrow-down" size={16} color="#666" />
-              </TouchableOpacity>
             </View>
+            {!comment.parent_comment_id && ( 
             <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
               <Text style={styles.replyButton}>Reply</Text>
             </TouchableOpacity>
+            )}
           </View>
 
           {/* Render các bình luận con (nếu có) */}
           {comment.other_PostComment && comment.other_PostComment.length > 0 && (
             <View style={styles.repliesContainer}>
-              {comment.other_PostComment.map(childComment =>
-                renderComment(childComment),
-              )}
+              {comment.other_PostComment
+                .filter(childComment => !childComment.is_deleted)
+                .map(childComment =>
+                  renderComment(childComment),
+                )}
             </View>
           )}
         </View>
@@ -334,11 +335,20 @@ const CommunityPostDetailScreen = () => {
     );
   };
 
-  const FilterComment = (comments: any) => {
-    return (
-      comments.filter(comment => comment?.is_deleted === false).length || 0
-    );
+  const FilterComment = (comments: any[]): number => {
+    return comments.reduce((total, comment) => {
+      // Nếu comment chính không bị xóa, tăng 1
+      let count = !comment?.is_deleted ? 1 : 0;
+      // Nếu có other_PostComment, cộng thêm số comment không bị xóa
+      if (Array.isArray(comment.other_PostComment)) {
+        count += comment.other_PostComment.filter(
+          (c: any) => !c?.is_deleted
+        ).length;
+      }
+      return total + count;
+    }, 0);
   };
+  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -441,16 +451,11 @@ const CommunityPostDetailScreen = () => {
           <View style={styles.engagementContainer}>
             <View style={styles.engagementLeft}>
               <TouchableOpacity style={styles.voteButton}>
-                <Icon name="arrow-up" size={20} color="#4285F4" />
+                <Icon name="heart-outline" size={20} color="#4285F4" />
               </TouchableOpacity>
               <Text style={styles.voteCount}>{currentPost?.upvote_count}</Text>
-              <TouchableOpacity style={styles.voteButton}>
-                <Icon name="arrow-down" size={20} color="#666" />
-              </TouchableOpacity>
-              <Text style={styles.voteCount}>
-                {currentPost?.downvote_count}
-              </Text>
-            </View>
+             
+            
             <View style={styles.engagementMiddle}>
               <TouchableOpacity style={styles.commentButton}>
                 <Icon name="chatbubble-outline" size={20} color="#666" />
@@ -458,6 +463,7 @@ const CommunityPostDetailScreen = () => {
                   {FilterComment(comments)}
                 </Text>
               </TouchableOpacity>
+            </View>
             </View>
             <View style={styles.engagementRight}>
               <TouchableOpacity style={styles.actionButton}>
@@ -793,6 +799,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   engagementMiddle: {
+    marginLeft: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },

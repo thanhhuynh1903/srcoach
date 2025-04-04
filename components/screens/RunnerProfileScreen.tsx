@@ -313,16 +313,13 @@ const RunnerProfileScreen = () => {
                     {/* Engagement */}
                     <View style={styles.postEngagement}>
                       <View style={styles.engagementItem}>
-                        <Icon name="arrow-up" size={20} color="#0F2B5B" />
+                        <Icon name="heart-outline" size={20} color="#0F2B5B" />
                         <Text style={styles.engagementText}>
                           {post.upvote_count || 0}
                         </Text>
                       </View>
                       <View style={styles.engagementItem}>
-                        <Icon name="arrow-down" size={20} color="#64748B" />
-                        <Text style={styles.engagementText}>
-                          {post.downvote_count || 0}
-                        </Text>
+                      
                         <View style={styles.engagementItemRight}>
                           <Icon
                             name="chatbubble-outline"
