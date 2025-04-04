@@ -4,9 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Icon from '@react-native-vector-icons/ionicons';
 import Toast from 'react-native-toast-message';
-import { homeStackScreens,tabScreens,stackScreens } from './components/routes/routes';
+import { homeStackScreens, tabScreens, stackScreens } from './components/routes/routes';
 import { useLoginStore } from './components/utils/useLoginStore';
-import { View,ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { startSyncData } from './components/utils/utils_healthconnect';
@@ -18,7 +18,7 @@ const HomeStack = createNativeStackNavigator();
 const HomeStackScreen = () => {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-      {homeStackScreens.map((screen : any) => (
+      {homeStackScreens.map((screen: any) => (
         <HomeStack.Screen
           key={screen.name}
           name={screen.name}
@@ -57,7 +57,7 @@ const HomeTabs = () => {
             default:
               iconName = 'help-circle';
           }
-          return <Icon name={iconName as never}  size={size} color={color} />;
+          return <Icon name={iconName as never} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#100077',
         tabBarInactiveTintColor: 'gray',
@@ -65,7 +65,7 @@ const HomeTabs = () => {
       })}
     >
       <Tab.Screen name="Home" component={HomeStackScreen} />
-      {tabScreens.slice(1).map((screen : any) => (
+      {tabScreens.slice(1).map((screen: any) => (
         <Tab.Screen
           key={screen.name}
           name={screen.name}
@@ -78,31 +78,42 @@ const HomeTabs = () => {
 
 const App = () => {
   const [loading, setLoading] = useState(true);
-  const { userdata, setUserData } = useLoginStore();
+  const { userdata, setUserData, fetchUserProfile, profile } = useLoginStore();
 
   useEffect(() => {
-
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
         const tokenTimestamp = await AsyncStorage.getItem('authTokenTimestamp');
+        
         if (token && tokenTimestamp) {
           const loginTime = new Date(parseInt(tokenTimestamp, 10));
           const now = new Date();
           // Kiểm tra khoảng cách giữa thời điểm hiện tại và thời điểm đăng nhập
           const diff = now.getTime() - loginTime.getTime();
+          
           // Nếu token tồn tại dưới 1 ngày (24h)
           if (diff < 24 * 60 * 60 * 1000) {
-            setUserData(token); // Giữ token, hoặc có thể lấy lại dữ liệu user từ API nếu cần
-
-            //4 dòng code này phải ở trên Welcome
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setDate(endDate.getDate() - 30);
-            startSyncData(startDate.toISOString(), endDate.toISOString());
+            setUserData(token); // Lưu token vào state
+            
+            // Gọi API /me để lấy thông tin người dùng
+            const profileSuccess = await fetchUserProfile();
+            
+            if (profileSuccess) {
+              // Nếu lấy thông tin thành công, đồng bộ dữ liệu sức khỏe
+              const endDate = new Date();
+              const startDate = new Date();
+              startDate.setDate(endDate.getDate() - 30);
+              startSyncData(startDate.toISOString(), endDate.toISOString());
+            } else {
+              // Nếu lấy thông tin thất bại, xóa token
+              await AsyncStorage.removeItem('authToken');
+              await AsyncStorage.removeItem('authTokenTimestamp');
+              setUserData(null);
+            }
           } else {
+            // Token đã hết hạn
             await AsyncStorage.removeItem('authToken');
-            await AsyncStorage.removeItem('userdata');
             await AsyncStorage.removeItem('authTokenTimestamp');
             setUserData(null);
           }
@@ -111,13 +122,13 @@ const App = () => {
         }
       } catch (error) {
         console.error('Error checking login status:', error);
+        setUserData(null);
       }
       setLoading(false);
     };
 
     checkLoginStatus();
   }, []);
-
 
   if (loading) {
     return (
@@ -126,11 +137,12 @@ const App = () => {
       </View>
     );
   }
+
   return (
     <>
       <NavigationContainer>
         <Stack.Navigator initialRouteName={userdata ? 'HomeTabs' : 'WelcomeScreen'}>
-          {stackScreens.map((screen : any) => (
+          {stackScreens.map((screen: any) => (
             <Stack.Screen
               key={screen.name}
               name={screen.name}

@@ -48,10 +48,6 @@ const HomeScreen = (props: any) => {
       await loadToken();
     };
     loadUserToken();
-    
-    console.log('authTokenTimestamp at', AsyncStorage.getItem('authTokenTimestamp'),
-    );
-    console.log('userdata at', AsyncStorage.getItem('userdata'));
 
     opacity.value = withTiming(1, {duration: 1000});
     return () => {

@@ -82,6 +82,8 @@ const LoginScreen: React.FC<{
     setLoading(true);
     try {
       await login(email, password);
+      console.log('status after logout', status);
+      
       if (status === 'success') {
         // Đợi cho quá trình lưu token hoàn tất
         await loadToken();

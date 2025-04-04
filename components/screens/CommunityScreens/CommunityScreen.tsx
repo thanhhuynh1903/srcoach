@@ -310,20 +310,13 @@ const CommunityScreen = () => {
       <View style={styles.postActions}>
         <TouchableOpacity style={styles.postActionButton}>
           <Icon
-            name="arrow-up-outline"
+            name="heart-outline"
             size={20}
             color={item.is_upvoted ? theme.colors.primary : undefined}
           />
           <Text style={styles.postActionText}>{item.upvote_count}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.postActionButton}>
-          <Icon
-            name="arrow-down-outline"
-            size={20}
-            color={item.is_downvoted ? theme.colors.primary : undefined}
-          />
-          <Text style={styles.postActionText}>{item.downvote_count}</Text>
-        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.postActionButton}
           onPress={() =>

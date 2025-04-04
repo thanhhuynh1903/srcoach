@@ -14,6 +14,7 @@ interface LoginState {
   clearAll: () => Promise<void>;
   verifyCode: (email: string,code: string) => Promise<void>;
   ResendCode: (email:string) => Promise<void>;
+  fetchUserProfile: () => Promise<boolean>; 
   setUserData: (data: any) => void;
 
 }
@@ -27,6 +28,53 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   apiStatus: '',
   message: '',
   setUserData: (data: any) => set({ userdata: data }),
+
+  fetchUserProfile: async () => {
+    try {
+      set({ isLoading: true });
+      const token = await AsyncStorage.getItem('authToken');
+      
+      if (!token) {
+        set({ profile: null });
+        return false;
+      }
+      
+      const response = await axios.get(`${MASTER_URL}/users/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('User profile response:', response.data);
+      
+      if (response.data.status === 'success') {
+        // Lưu thông tin người dùng vào store
+        set({ 
+          profile: response.data.data,
+          status: response.data.status,
+          message: response.data.message 
+        });
+        return true;
+      } else {
+        set({ 
+          message: response.data.message || 'Không thể lấy thông tin người dùng',
+          status: response.data.status || 'error'
+        });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Error fetching user profile:', error);
+      set({
+        message: error.response?.data?.message || 'Không thể lấy thông tin người dùng',
+        status: 'error'
+      });
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   login: async (email: string, password: string) => {
     try {
       const response = await axios.post(
@@ -49,15 +97,16 @@ export const useLoginStore = create<LoginState>((set, get) => ({
         });
         return;
       }
-      const { accessToken, user } = response?.data?.data;
+      const { accessToken } = response?.data?.data;
       await AsyncStorage.setItem('authToken', accessToken);
-      await AsyncStorage.setItem('userdata', JSON.stringify(user));
       await AsyncStorage.setItem('authTokenTimestamp', Date.now().toString());
-
-      console.log('User data:', user);
       console.log('Token when login:', accessToken);
-
-      set({userdata : user, profile: response?.data?.data?.user ,status: response?.data?.status, message : response?.data?.message});
+      const profileSuccess = await get().fetchUserProfile();
+      
+      if (!profileSuccess) {
+        console.error('Failed to fetch user profile after login');
+      }
+      set({userdata : accessToken,status: response?.data?.status, message : response?.data?.message});
     } catch (error: any) {
       set({
         message: error.response?.data?.message || 'Đăng nhập thất bại',
@@ -121,7 +170,6 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   clear: () => set({userdata: null, status: '', message: ''}),
   clearAll: async () => {
     await AsyncStorage.removeItem('authToken');
-    await AsyncStorage.removeItem('userdata');
     await AsyncStorage.removeItem('authTokenTimestamp');
     set({userdata: null, profile: null ,status: '', message: ''});
   },

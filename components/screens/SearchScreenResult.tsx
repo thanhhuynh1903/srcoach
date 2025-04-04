@@ -17,6 +17,9 @@ import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
 
+interface Tag {
+  tag_name: string;
+}
 const SearchResultsScreen = ({}) => {
   // In a real app, you would get the query from route.params
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,34 +28,6 @@ const SearchResultsScreen = ({}) => {
 
   const {searchPost, searchResults, searchLoading, searchError} =
     usePostStore();
-
-  // Sample data for posts
-  const posts = [
-    {
-      id: 1,
-      author: 'Sarah Johnson',
-      authorImage: 'https://randomuser.me/api/portraits/women/32.jpg',
-      title: 'Essential UI/UX Design Tips for 2023',
-      excerpt:
-        'Learn the latest trends and techniques in UI/UX design that will help your products stand out...',
-      likes: 245,
-      comments: 37,
-      time: '2 hours ago',
-      tags: ['UI/UX', 'Design', 'Tips'],
-    },
-    {
-      id: 2,
-      author: 'Michael Chen',
-      authorImage: 'https://randomuser.me/api/portraits/men/44.jpg',
-      title: 'How to Create User-Centered Design Systems',
-      excerpt:
-        'A comprehensive guide to building design systems that prioritize user experience and accessibility...',
-      likes: 189,
-      comments: 24,
-      time: '5 hours ago',
-      tags: ['Design Systems', 'UX', 'Accessibility'],
-    },
-  ];
 
   // Sample data for experts
   const experts = [
@@ -115,7 +90,40 @@ const SearchResultsScreen = ({}) => {
       searchPost({title: searchQuery});
     }
   };
+  const renderTags = (tags: Tag[]) => {
+    if (!tags || tags.length === 0) {
+      return null;
+    }
+    console.log('tags', tags);
 
+    // Nếu có 1-2 tags, hiển thị tất cả
+    if (tags.length <= 2) {
+      return (
+        <View style={styles.tagsContainer}>
+          {tags.map((tag, index) => (
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      );
+    }
+
+    // Nếu có nhiều hơn 2 tags, hiển thị 2 đầu tiên + "+n"
+    return (
+      <View style={styles.tagsContainer}>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[0]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>{tags[1]}</Text>
+        </View>
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>+{tags.length - 2}</Text>
+        </View>
+      </View>
+    );
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -216,45 +224,32 @@ const SearchResultsScreen = ({}) => {
                           resizeMode="cover"
                         />
                       )}
-                      <View style={styles.tagsContainer}>
-                        {post?.tags?.map(tag => (
-                          <View key={tag} style={styles.tagChip}>
-                            <Text style={styles.tagText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
                       <View style={styles.postStats}>
-                        <View style={styles.statItem}>
-                          <Icon
-                            name="arrow-up-outline"
-                            size={18}
-                            color={post.is_upvoted ? '#3B82F6' : '#000'}
-                          />
-                          <Text style={styles.statText}>
-                            {post.upvote_count}
-                          </Text>
+                        <View style={styles.postStats}>
+                          <View style={styles.statItem}>
+                            <Icon
+                              name="heart-outline"
+                              size={18}
+                              color={post.is_upvoted ? '#3B82F6' : '#000'}
+                            />
+                            <Text style={styles.statText}>
+                              {post.upvote_count}
+                            </Text>
+                          </View>
+                          <View style={[styles.statItem, {marginLeft: 16}]}>
+                            <Icon
+                              name="chatbubble-outline"
+                              size={18}
+                              color="#000"
+                            />
+                            <Text style={styles.statText}>
+                              {post.comment_count}
+                            </Text>
+                          </View>
                         </View>
-                        <View style={styles.statItem}>
-                          <Icon
-                            name="arrow-down-outline"
-                            size={18}
-                            color={post.is_downvoted ? '#EF4444' : '#000'}
-                          />
-                          <Text style={styles.statText}>
-                            {post.downvote_count}
-                          </Text>
-                        </View>
-                        <View style={styles.statItem}>
-                          <Icon
-                            name="chatbubble-outline"
-                            size={18}
-                            color="#000"
-                          />
-                          <Text style={styles.statText}>
-                            {post.comment_count}
-                          </Text>
-                        </View>
+                        {renderTags(post.tags)}
                       </View>
+                      {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
                     </TouchableOpacity>
                   ))
                 ) : (
@@ -426,23 +421,24 @@ const styles = StyleSheet.create({
   },
   tagsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    alignContent: 'flex-start',
+    alignItems: 'flex-start',
+    width: '56%',
+    marginLeft:16,
   },
-  tagChip: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
+  tag: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     marginRight: 8,
+    marginTop: 5,
   },
-  tagText: {
-    fontSize: 14,
-    color: '#64748B',
-  },
+  tagText: {fontSize: 12, color: '#666'},
   postStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
+    justifyContent: 'flex-start',
   },
   statItem: {
     flexDirection: 'row',
