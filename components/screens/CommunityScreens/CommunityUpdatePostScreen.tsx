@@ -162,7 +162,7 @@ const CommunityPostUpdateScreen: React.FC<
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
-
+      
       await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),

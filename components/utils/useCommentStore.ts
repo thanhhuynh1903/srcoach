@@ -40,7 +40,7 @@ interface CommentState {
   deleteComment: (commentId: string) => Promise<boolean>;
   
   // Cập nhật bình luận
-  updateComment: (commentId: string, content: string) => Promise<boolean>;
+  updateComment: (commentId: string, content: string, parentCommentId?: string) => Promise<boolean>;
   
   // Vote bình luận
   upvoteComment: (commentId: string) => Promise<boolean>;
@@ -190,6 +190,8 @@ export const useCommentStore = create<CommentState>((set, get) => {
   
   
     updateComment: async (commentId: string, content: string, parentCommentId?: string) => {
+      console.log('parentCommentId', parentCommentId);
+      
       try {
         set({ isLoading: true });
         

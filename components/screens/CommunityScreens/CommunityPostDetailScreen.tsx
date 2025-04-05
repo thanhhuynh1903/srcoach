@@ -20,6 +20,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
+import { set } from 'date-fns';
 
 
 interface User {
@@ -83,6 +84,8 @@ const CommunityPostDetailScreen = () => {
 
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingParentCommentId, setEditingParentCommentId] = useState<string | null>(null);
+
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
 
@@ -102,19 +105,19 @@ const CommunityPostDetailScreen = () => {
   }, [id]);
 
   const handleEditComment = async commentId => {
+    setCommentText('');
     // Tìm comment cần edit trong danh sách comments
-    const findComment: any = (comments, id) => {
+    const findComment = (comments: any[], targetId: string): any => {
       for (const comment of comments) {
-        if (comment.id === id) {
-          return comment;
-        }
-        if (comment.children && comment.children.length > 0) {
-          const found = findComment(comment.children, id);
+        if (comment.id === targetId) return comment;
+        if (comment.other_PostComment?.length) {
+          const found = findComment(comment.other_PostComment, targetId);
           if (found) return found;
         }
       }
       return null;
     };
+  
 
     const commentToEdit = findComment(comments, commentId);
 
@@ -122,6 +125,7 @@ const CommunityPostDetailScreen = () => {
       // Thiết lập trạng thái chỉnh sửa
       setIsEditingComment(true);
       setEditingCommentId(commentId);
+      setEditingParentCommentId(commentToEdit.parent_comment_id || null); // Capture parent ID
       setCommentText(commentToEdit.content);
 
       // Focus vào input
@@ -140,7 +144,7 @@ const CommunityPostDetailScreen = () => {
 
       // Nếu đang edit comment
       if (isEditingComment && editingCommentId) {
-        const result = await updateComment(editingCommentId, commentText);
+        const result = await updateComment(editingCommentId, commentText, );
 
         if (result) {
           // Reset trạng thái edit
@@ -166,6 +170,7 @@ const CommunityPostDetailScreen = () => {
           // Reset input và trạng thái reply
           setCommentText('');
           setReplyingTo(null);
+          setEditingParentCommentId(null); // Clear parent ID
 
           // Cập nhật lại danh sách bình luận
           await getCommentsByPostId(id);
