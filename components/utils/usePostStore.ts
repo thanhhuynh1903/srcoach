@@ -479,7 +479,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       });
       return false;
     }
-  },  
+  },
 
   clearCurrent: () => set({currentPost: null}),
 }));

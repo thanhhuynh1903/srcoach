@@ -240,79 +240,8 @@ export const useCommentStore = create<CommentState>((set, get) => {
         return null;
       }
     },
-    
-    likeComment: async (commentId: string, isCurrentlyLiked: boolean) => {
-      try {
-        // Gọi API like comment - không cần truyền payload
-        const response = await api.postData(`/posts-votes/comment/${commentId}/like`);
-        
-        if (response.status === 200 && response.data.status === "success") {
-          // Lấy trạng thái like mới từ response
-          const newLikeStatus = response.data.data.is_like;
-          
-          // Cập nhật state comments trong store
-          const { comments } = get();
-          
-          // Hàm đệ quy để cập nhật comment trong cây comments
-          const updateCommentInTree = (comments) => {
-            return comments.map(comment => {
-              if (comment.id === commentId) {
-                // Tính toán upvote_count dựa trên trạng thái cũ và mới
-                let newUpvoteCount = comment.upvote_count || 0;
-                
-                // Nếu trạng thái thay đổi từ không like -> like
-                if (newLikeStatus && !isCurrentlyLiked) {
-                  newUpvoteCount += 1;
-                } 
-                // Nếu trạng thái thay đổi từ like -> không like
-                else if (!newLikeStatus && isCurrentlyLiked) {
-                  newUpvoteCount = Math.max(0, newUpvoteCount - 1);
-                }
-                
-                return {
-                  ...comment,
-                  is_upvoted: newLikeStatus,
-                  upvote_count: newUpvoteCount
-                };
-              }
-              
-              // Đệ quy cập nhật các comment con
-              if (comment.other_PostComment && comment.other_PostComment.length > 0) {
-                return {
-                  ...comment,
-                  other_PostComment: updateCommentInTree(comment.other_PostComment)
-                };
-              }
-              
-              return comment;
-            });
-          };
-          
-          // Cập nhật state
-          set({ 
-            comments: updateCommentInTree([...comments]),
-          });
-          
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.error('Error liking comment:', error);
-        return false;
-      }
-    },
-    
-    // Thêm action để reset state comments
-    resetComments: () => {
-      set({
-        comments: [],
-        isLoading: false,
-        status: 'idle',
-        error: null
-      });
-    },
-  
-    clearComments: () => {
+ 
+     clearComments: () => {
       set({
         comments: [],
         currentComment: null,
