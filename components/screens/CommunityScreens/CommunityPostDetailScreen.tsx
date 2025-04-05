@@ -20,8 +20,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
-import { set } from 'date-fns';
-
+import {set} from 'date-fns';
 
 interface User {
   id: string;
@@ -69,6 +68,7 @@ const CommunityPostDetailScreen = () => {
     isLoading: isLoadingComments,
     deleteComment,
     updateComment,
+    likeComment,
   } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
@@ -84,7 +84,9 @@ const CommunityPostDetailScreen = () => {
 
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
-  const [editingParentCommentId, setEditingParentCommentId] = useState<string | null>(null);
+  const [editingParentCommentId, setEditingParentCommentId] = useState<
+    string | null
+  >(null);
 
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
@@ -117,7 +119,6 @@ const CommunityPostDetailScreen = () => {
       }
       return null;
     };
-  
 
     const commentToEdit = findComment(comments, commentId);
 
@@ -135,6 +136,73 @@ const CommunityPostDetailScreen = () => {
     }
   };
 
+  const handleLikeComment = async (
+    commentId: string,
+    isCurrentlyLiked: boolean,
+  ) => {
+    if (!profile) {
+      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bình luận', [
+        {text: 'Đóng', style: 'cancel'},
+      ]);
+      return;
+    }
+
+    try {
+      // Trạng thái mới là ngược lại với trạng thái hiện tại
+      const newLikeState = !isCurrentlyLiked;
+
+      // Optimistic update - cập nhật UI ngay lập tức
+      const updateCommentInTree = comments => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            // Cập nhật cả is_upvote và is_upvoted để đảm bảo nhất quán
+            const newUpvoteCount = newLikeState
+              ? (comment.upvote_count || 0) + 1
+              : Math.max(0, (comment.upvote_count || 0) - 1);
+
+            return {
+              ...comment,
+              is_upvote: newLikeState,
+              is_upvoted: newLikeState,
+              upvote_count: newUpvoteCount,
+            };
+          }
+
+          // Đệ quy cập nhật các comment con
+          if (
+            comment.other_PostComment &&
+            comment.other_PostComment.length > 0
+          ) {
+            return {
+              ...comment,
+              other_PostComment: updateCommentInTree(comment.other_PostComment),
+            };
+          }
+
+          return comment;
+        });
+      };
+
+      // Cập nhật state comments trong store với optimistic update
+      const updatedComments = updateCommentInTree([...comments]);
+      useCommentStore.setState({comments: updatedComments});
+
+      // Gọi API để like/unlike bình luận - truyền trạng thái mới
+      const success = await likeComment(commentId, newLikeState);
+
+      if (!success) {
+        // Nếu API thất bại, khôi phục lại danh sách comments ban đầu
+        await getCommentsByPostId(id);
+        Alert.alert('Lỗi', 'Không thể thích bình luận. Vui lòng thử lại sau.');
+      }
+    } catch (error) {
+      console.error('Error liking comment:', error);
+      // Khôi phục lại danh sách comments ban đầu nếu có lỗi
+      await getCommentsByPostId(id);
+      Alert.alert('Lỗi', 'Không thể thích bình luận. Vui lòng thử lại sau.');
+    }
+  };
+
   // Hàm xử lý gửi bình luận
   const handleSendComment = async () => {
     if (!commentText.trim()) return;
@@ -144,7 +212,7 @@ const CommunityPostDetailScreen = () => {
 
       // Nếu đang edit comment
       if (isEditingComment && editingCommentId) {
-        const result = await updateComment(editingCommentId, commentText, );
+        const result = await updateComment(editingCommentId, commentText);
 
         if (result) {
           // Reset trạng thái edit
@@ -198,7 +266,6 @@ const CommunityPostDetailScreen = () => {
 
   // Hàm xử lý khi nhấn Reply trên một bình luận
   const handleReplyComment = (commentId: string) => {
-
     setReplyingTo(commentId);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -311,7 +378,6 @@ const CommunityPostDetailScreen = () => {
   // Trong CommunityPostDetailScreen
   const renderComment = (comment: any) => {
     console.log('comment', comment);
-
     return (
       <TouchableOpacity
         key={comment.id}
@@ -346,12 +412,34 @@ const CommunityPostDetailScreen = () => {
           <Text style={styles.commentText}>{comment.content}</Text>
           <View style={styles.commentActions}>
             <View style={styles.commentVotes}>
-              <TouchableOpacity>
-                <Icon name="heart-outline" size={16} color="#4285F4" />
+              <TouchableOpacity
+                onPress={() =>
+                  handleLikeComment(
+                    comment.id,
+                    comment.is_upvote || comment.is_upvoted,
+                  )
+                }
+                style={styles.likeButton}>
+                <Icon
+                  name={
+                    comment.is_upvote || comment.is_upvoted
+                      ? 'heart'
+                      : 'heart-outline'
+                  }
+                  size={16}
+                  color={
+                    comment.is_upvote || comment.is_upvoted ? '#4285F4' : '#666'
+                  }
+                />
+                <Text
+                  style={[
+                    styles.commentVoteCount,
+                    (comment.is_upvote || comment.is_upvoted) &&
+                      styles.commentVoteCountActive,
+                  ]}>
+                  {comment.upvote_count || 0}
+                </Text>
               </TouchableOpacity>
-              <Text style={styles.commentVoteCount}>
-                {comment.upvote_count || 0}
-              </Text>
             </View>
             {!comment.parent_comment_id && (
               <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
@@ -402,30 +490,34 @@ const CommunityPostDetailScreen = () => {
       ]);
       return;
     }
-  
+
     try {
       // Cập nhật UI ngay lập tức (optimistic update)
       // Lưu trạng thái cũ để khôi phục nếu API thất bại
-      const oldPostState = { ...currentPost };
-      
+      const oldPostState = {...currentPost};
+
       // Cập nhật trạng thái hiện tại của bài viết
       const updatedPost = {
         ...currentPost,
         is_upvoted: isLike,
-        upvote_count: isLike 
-          ? currentPost?.is_upvoted ? currentPost.upvote_count : currentPost!.upvote_count + 1
-          : currentPost?.is_upvoted ? currentPost.upvote_count - 1 : currentPost?.upvote_count
+        upvote_count: isLike
+          ? currentPost?.is_upvoted
+            ? currentPost.upvote_count
+            : currentPost!.upvote_count + 1
+          : currentPost?.is_upvoted
+          ? currentPost.upvote_count - 1
+          : currentPost?.upvote_count,
       };
-      
+
       // Cập nhật currentPost trong store
-      usePostStore.setState({ currentPost: updatedPost });
-      
+      usePostStore.setState({currentPost: updatedPost});
+
       // Gọi API để like/unlike bài viết
       const success = await likePost(id, isLike);
-      
+
       if (!success) {
         // Nếu API thất bại, khôi phục lại trạng thái cũ
-        usePostStore.setState({ currentPost: oldPostState });
+        usePostStore.setState({currentPost: oldPostState});
         Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
       }
     } catch (error) {
@@ -433,7 +525,6 @@ const CommunityPostDetailScreen = () => {
       Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
     }
   };
-  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -450,7 +541,7 @@ const CommunityPostDetailScreen = () => {
         {/* User info section */}
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
-          <Image
+            <Image
               source={{
                 uri:
                   localPost?.user?.avatar ||
@@ -1081,6 +1172,14 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginVertical: 20,
     fontStyle: 'italic',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  commentVoteCountActive: {
+    color: '#4285F4',
   },
 });
 
