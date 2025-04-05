@@ -45,6 +45,7 @@ import PasswordRecoveryCodeScreen from '../screens/AuthenciationScreens/Password
 import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordRecoveryNewScreen';
 import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
 import RunnerProfileScreen from '../screens/RunnerProfileScreen';
+import LeaderBoardScreen from '../screens/LeaderBoardScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -78,6 +79,7 @@ export const stackScreens = [
   { name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen },
   { name: 'AddScheduleScreen', component: AddScheduleScreen },
   { name : 'RunnerProfileScreen'  , component: RunnerProfileScreen},
+  { name : 'LeaderBoardScreen'  , component: LeaderBoardScreen},
   //Authenciation Screens
   { name: "PasswordRecoveryScreen", component: PasswordRecoveryScreen },
   { name: "PasswordRecoveryCodeScreen", component: PasswordRecoveryCodeScreen},

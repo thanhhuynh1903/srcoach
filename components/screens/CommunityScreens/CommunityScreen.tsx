@@ -434,6 +434,13 @@ const CommunityScreen = () => {
               color={theme.colors.primary}
             />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
+            <Icon
+              name="nuclear-outline"
+              size={24}
+              color={theme.colors.primary}
+            />
+          </TouchableOpacity>
         </View>
       </View>
       <ScrollView style={styles.scrollContainer}>

@@ -70,8 +70,6 @@ const CommunityPostUpdateScreen: React.FC<
   // Cập nhật state từ dữ liệu bài viết hiện tại
   useEffect(() => {
     console.log('currentPost', currentPost);
-    console.log('existingImages', existingImages);
-    console.log('selectedImages', selectedImages);
 
     if (currentPost) {
       setTitle(currentPost.title || '');
@@ -80,12 +78,7 @@ const CommunityPostUpdateScreen: React.FC<
       // Xử lý tags
       if (currentPost.tags && currentPost.tags.length > 0) {
         setTags(currentPost.tags.join(', ') || '');
-
-        // Tạo chuỗi hiển thị tags
-        const tagsArray = [...currentPost.tags];
-        if (tagsArray.length > 0) {
-          setDisplayTags(tagsArray);
-        }
+        setDisplayTags([...currentPost.tags]);
       } else {
         setTags('');
         setDisplayTags([]);
@@ -95,8 +88,13 @@ const CommunityPostUpdateScreen: React.FC<
 
       // Lưu trữ ảnh hiện có
       if (currentPost.images && currentPost.images.length > 0) {
-        setExistingImages(currentPost.images);
+        setExistingImages([...currentPost.images]);
+      } else {
+        setExistingImages([]);
       }
+
+      // Reset ảnh mới được chọn khi tải bài viết mới
+      setSelectedImages([]);
 
       setInitialLoading(false);
     }
@@ -162,12 +160,14 @@ const CommunityPostUpdateScreen: React.FC<
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
-      
+
+      const combinedImages = [...existingImages, ...selectedImages];
+
       await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray,
-        images: [...existingImages, ...selectedImages],
+        images: combinedImages,
         exerciseSessionRecordId: runRecord,
       });
 
@@ -201,6 +201,7 @@ const CommunityPostUpdateScreen: React.FC<
     const updatedImages = [...existingImages];
     updatedImages.splice(index, 1);
     setExistingImages(updatedImages);
+    console.log('Ảnh hiện có sau khi xóa:', updatedImages);
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -247,7 +248,7 @@ const CommunityPostUpdateScreen: React.FC<
           </View>
 
           {/* Existing Images */}
-          {currentPost?.images && currentPost?.images?.length > 0 && (
+          {existingImages.length > 0 && (
             <View style={styles.formGroup}>
               <Text style={styles.label}>Current images</Text>
               <ScrollView
@@ -256,13 +257,7 @@ const CommunityPostUpdateScreen: React.FC<
                 style={styles.imagesContainer}>
                 {existingImages.map((imageUrl, index) => (
                   <View key={`existing-${index}`} style={styles.imageContainer}>
-                    <Image
-                      source={{uri: imageUrl}}
-                      style={[
-                        styles.image,
-                        selectedImages.length > 0 && styles.dimmedImage,
-                      ]}
-                    />
+                    <Image source={{uri: imageUrl}} style={styles.image} />
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => handleRemoveExistingImage(index)}>

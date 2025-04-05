@@ -15,6 +15,8 @@ interface Comment {
   parent_comment_id: string | null;
   is_upvote: boolean;
   is_downvote: boolean;
+  is_upvoted: boolean; // Sửa tên thuộc tính để phù hợp với API
+  is_downvoted: boolean; // Sửa tên thuộc tính để phù hợp với API
   upvote_count: number;
   downvote_count: number;
   created_at: string;
@@ -42,9 +44,7 @@ interface CommentState {
   // Cập nhật bình luận
   updateComment: (commentId: string, content: string, parentCommentId?: string) => Promise<boolean>;
   
-  // Vote bình luận
-  upvoteComment: (commentId: string) => Promise<boolean>;
-  downvoteComment: (commentId: string) => Promise<boolean>;
+  likeComment: (commentId: string, isLike: boolean) => Promise<boolean>;
   
   // Xóa state hiện tại
   clearComments: () => void;
@@ -241,119 +241,77 @@ export const useCommentStore = create<CommentState>((set, get) => {
       }
     },
     
-    
-    upvoteComment: async (commentId: string) => {
+    likeComment: async (commentId: string, isCurrentlyLiked: boolean) => {
       try {
-        set({ isLoading: true });
-        const response = await api.post(`/api/posts-comments/${commentId}/upvote`);
+        // Gọi API like comment - không cần truyền payload
+        const response = await api.postData(`/posts-votes/comment/${commentId}/like`);
         
-        if (response.status === 'success') {
-          // Cập nhật state sau khi upvote
-          set(state => {
-            const updateVoteInTree = (comments: Comment[]): Comment[] => {
-              return comments.map(comment => {
-                if (comment.id === commentId) {
-                  return { 
-                    ...comment, 
-                    is_upvote: !comment.is_upvote,
-                    is_downvote: comment.is_upvote ? comment.is_downvote : false,
-                    upvote_count: comment.is_upvote ? comment.upvote_count - 1 : comment.upvote_count + 1,
-                    downvote_count: comment.is_upvote && comment.is_downvote ? comment.downvote_count - 1 : comment.downvote_count
-                  };
+        if (response.status === 200 && response.data.status === "success") {
+          // Lấy trạng thái like mới từ response
+          const newLikeStatus = response.data.data.is_like;
+          
+          // Cập nhật state comments trong store
+          const { comments } = get();
+          
+          // Hàm đệ quy để cập nhật comment trong cây comments
+          const updateCommentInTree = (comments) => {
+            return comments.map(comment => {
+              if (comment.id === commentId) {
+                // Tính toán upvote_count dựa trên trạng thái cũ và mới
+                let newUpvoteCount = comment.upvote_count || 0;
+                
+                // Nếu trạng thái thay đổi từ không like -> like
+                if (newLikeStatus && !isCurrentlyLiked) {
+                  newUpvoteCount += 1;
+                } 
+                // Nếu trạng thái thay đổi từ like -> không like
+                else if (!newLikeStatus && isCurrentlyLiked) {
+                  newUpvoteCount = Math.max(0, newUpvoteCount - 1);
                 }
                 
-                if (comment.childComments && comment.childComments.length > 0) {
-                  return {
-                    ...comment,
-                    childComments: updateVoteInTree(comment.childComments)
-                  };
-                }
-                
-                return comment;
-              });
-            };
-            
-            return {
-              comments: updateVoteInTree(state.comments),
-              isLoading: false,
-              status: 'success'
-            };
-          });
-          return true;
-        } else {
+                return {
+                  ...comment,
+                  is_upvoted: newLikeStatus,
+                  upvote_count: newUpvoteCount
+                };
+              }
+              
+              // Đệ quy cập nhật các comment con
+              if (comment.other_PostComment && comment.other_PostComment.length > 0) {
+                return {
+                  ...comment,
+                  other_PostComment: updateCommentInTree(comment.other_PostComment)
+                };
+              }
+              
+              return comment;
+            });
+          };
+          
+          // Cập nhật state
           set({ 
-            message: response.message || 'Failed to upvote comment',
-            isLoading: false,
-            status: 'error'
+            comments: updateCommentInTree([...comments]),
           });
-          return false;
+          
+          return true;
         }
+        return false;
       } catch (error) {
-        set({ 
-          message: error instanceof Error ? error.message : 'An unknown error occurred',
-          isLoading: false,
-          status: 'error'
-        });
+        console.error('Error liking comment:', error);
         return false;
       }
     },
     
-    downvoteComment: async (commentId: string) => {
-      try {
-        set({ isLoading: true });
-        const response = await api.post(`/api/posts-comments/${commentId}/downvote`);
-        
-        if (response.status === 'success') {
-          // Cập nhật state sau khi downvote
-          set(state => {
-            const updateVoteInTree = (comments: Comment[]): Comment[] => {
-              return comments.map(comment => {
-                if (comment.id === commentId) {
-                  return { 
-                    ...comment, 
-                    is_downvote: !comment.is_downvote,
-                    is_upvote: comment.is_downvote ? comment.is_upvote : false,
-                    downvote_count: comment.is_downvote ? comment.downvote_count - 1 : comment.downvote_count + 1,
-                    upvote_count: comment.is_downvote && comment.is_upvote ? comment.upvote_count - 1 : comment.upvote_count
-                  };
-                }
-                
-                if (comment.childComments && comment.childComments.length > 0) {
-                  return {
-                    ...comment,
-                    childComments: updateVoteInTree(comment.childComments)
-                  };
-                }
-                
-                return comment;
-              });
-            };
-            
-            return {
-              comments: updateVoteInTree(state.comments),
-              isLoading: false,
-              status: 'success'
-            };
-          });
-          return true;
-        } else {
-          set({ 
-            message: response.message || 'Failed to downvote comment',
-            isLoading: false,
-            status: 'error'
-          });
-          return false;
-        }
-      } catch (error) {
-        set({ 
-          message: error instanceof Error ? error.message : 'An unknown error occurred',
-          isLoading: false,
-          status: 'error'
-        });
-        return false;
-      }
+    // Thêm action để reset state comments
+    resetComments: () => {
+      set({
+        comments: [],
+        isLoading: false,
+        status: 'idle',
+        error: null
+      });
     },
-    
+  
     clearComments: () => {
       set({
         comments: [],
