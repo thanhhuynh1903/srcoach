@@ -17,9 +17,9 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
-import { useNavigation } from '@react-navigation/native';
-import { useLoginStore } from '../utils/useLoginStore';
-import { useFocusEffect } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
+import {useLoginStore} from '../utils/useLoginStore';
+import {useFocusEffect} from '@react-navigation/native';
 import React from 'react';
 
 interface Tag {
@@ -50,7 +50,8 @@ const SearchResultsScreen = ({}) => {
   const [activeTab, setActiveTab] = useState('All');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const navigate = useNavigation();
-  const {searchPost, searchResults, searchLoading, searchError, likePost} = usePostStore();
+  const {searchPost, searchResults, searchLoading, searchError, likePost} =
+    usePostStore();
 
   const {profile} = useLoginStore();
 
@@ -111,9 +112,8 @@ const SearchResultsScreen = ({}) => {
         searchPost({title: debouncedQuery});
       }
       return () => {};
-    }, [debouncedQuery, searchPost])
+    }, [debouncedQuery, searchPost]),
   );
-
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -170,7 +170,7 @@ const SearchResultsScreen = ({}) => {
     }
     console.log('postId', postId);
     console.log('isLike', isLike);
-    
+
     // Không cần cập nhật localSearchResults nữa vì đã xử lý trong store
     // Chỉ cần gọi likePost
     try {
@@ -246,73 +246,102 @@ const SearchResultsScreen = ({}) => {
                   <Text style={styles.sectionTitle}>Post lists</Text>
                 )}
                 {searchResults && searchResults.length > 0 ? (
-                  searchResults.map(post => (
-                    console.log('post', post),
-                    <TouchableOpacity key={post.id} style={styles.postCard} onPress={() => navigate.navigate('CommunityPostDetailScreen', {id: post.id})}>
-                      <View style={styles.postHeader}>
-                        <Image
-                          source={{
-                            uri:
-                              post.user?.avatar ||
-                              'https://randomuser.me/api/portraits/women/32.jpg',
-                          }}
-                          style={styles.authorImage}
-                        />
-                        <View>
-                          <Text style={styles.authorName}>
-                            {post?.user?.username || 'Người dùng'}
-                          </Text>
-                          <Text style={styles.postTime}>
-                            {new Date(post.created_at).toLocaleDateString(
-                              'vi-VN',
-                            )}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.postTitle}>{post.title}</Text>
-                      <Text style={styles.postExcerpt}>
-                        {post.content.length > 150
-                          ? post.content.substring(0, 150) + '...'
-                          : post.content}
-                      </Text>
-                      {post.images && post.images.length > 0 && (
-                        <Image
-                          source={{uri: post.images[0]}}
-                          style={styles.postImage}
-                          resizeMode="cover"
-                        />
-                      )}
-                      <View style={styles.postStats}>
-                        <View style={styles.postStats}>
-                        <TouchableOpacity 
-                            style={styles.statItem}
-                            onPress={() => handleLikePost(post.id, !post.is_upvoted)}
-                          >
-                            <Icon
-                              name={post?.is_upvoted ? "heart" : "heart-outline"}
-                              size={18}
-                              color={post?.is_upvoted ? '#3B82F6' : '#000'}
+                  searchResults.map(
+                    post => (
+                      console.log('post', post),
+                      (
+                        <TouchableOpacity
+                          key={post.id}
+                          style={styles.postCard}
+                          onPress={() =>
+                            navigate.navigate('CommunityPostDetailScreen', {
+                              id: post.id,
+                            })
+                          }>
+                          <View style={styles.postHeader}>
+                            <Image
+                              source={{
+                                uri:
+                                  post.user?.avatar ||
+                                  'https://randomuser.me/api/portraits/women/32.jpg',
+                              }}
+                              style={styles.authorImage}
                             />
-                            <Text style={styles.statText}>
-                              {post?.upvote_count}
-                            </Text>
-                          </TouchableOpacity>
-                          <View style={[styles.statItem, {marginLeft: 16}]}>
-                            <Icon
-                              name="chatbubble-outline"
-                              size={18}
-                              color="#000"
-                            />
-                            <Text style={styles.statText}>
-                              {post.comment_count}
-                            </Text>
+                            <View>
+                              <Text style={styles.authorName}>
+                                {post?.user?.username || 'Người dùng'}
+                              </Text>
+                              <Text style={styles.postTime}>
+                                {new Date(post.created_at).toLocaleDateString(
+                                  'vi-VN',
+                                )}
+                              </Text>
+                            </View>
                           </View>
-                        </View>
-                        {renderTags(post.tags)}
-                      </View>
-                      {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
-                    </TouchableOpacity>
-                  ))
+                          <Text style={styles.postTitle}>{post.title}</Text>
+                          <Text style={styles.postExcerpt}>
+                            {post.content.length > 150
+                              ? post.content.substring(0, 150) + '...'
+                              : post.content}
+                          </Text>
+                          {post.images && post.images.length > 0 && (
+                            <View style={styles.postImageContainer}>
+                              <Image
+                                source={{uri: post.images[0]}}
+                                style={styles.postImage}
+                                resizeMode="cover"
+                              />
+                              {post.images.length > 1 && (
+                                <View style={styles.remainingImagesIndicator}>
+                                  <Icon
+                                    name="images-outline"
+                                    size={14}
+                                    color="#FFFFFF"
+                                    style={styles.imageIcon}
+                                  />
+                                  <Text style={styles.remainingImagesText}>
+                                    +{post.images.length - 1}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+                          <View style={styles.postStats}>
+                            <View style={styles.postStats}>
+                              <TouchableOpacity
+                                style={styles.statItem}
+                                onPress={() =>
+                                  handleLikePost(post.id, !post.is_upvoted)
+                                }>
+                                <Icon
+                                  name={
+                                    post?.is_upvoted ? 'heart' : 'heart-outline'
+                                  }
+                                  size={18}
+                                  color={post?.is_upvoted ? '#3B82F6' : '#000'}
+                                />
+                                <Text style={styles.statText}>
+                                  {post?.upvote_count}
+                                </Text>
+                              </TouchableOpacity>
+                              <View style={[styles.statItem, {marginLeft: 16}]}>
+                                <Icon
+                                  name="chatbubble-outline"
+                                  size={18}
+                                  color="#000"
+                                />
+                                <Text style={styles.statText}>
+                                  {post.comment_count}
+                                </Text>
+                              </View>
+                            </View>
+                            {renderTags(post.tags)}
+                          </View>
+                          {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
+                        </TouchableOpacity>
+                      )
+                    ),
+                  )
                 ) : (
                   <View style={styles.emptyContainer}>
                     <Icon name="search-outline" size={40} color="#94A3B8" />
@@ -486,7 +515,7 @@ const styles = StyleSheet.create({
     alignContent: 'flex-start',
     alignItems: 'flex-start',
     width: '56%',
-    marginLeft:16,
+    marginLeft: 16,
   },
   tag: {
     backgroundColor: '#f0f0f0',
@@ -597,6 +626,39 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
+  postImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginVertical: 8,
+  },
+  remainingImagesIndicator: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  imageIcon: {
+    marginRight: 4,
+  },
+  remainingImagesText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+
 });
 
 export default SearchResultsScreen;

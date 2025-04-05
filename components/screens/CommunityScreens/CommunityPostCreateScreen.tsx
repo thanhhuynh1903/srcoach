@@ -174,6 +174,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           {/* Images */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Image</Text>
+            <Text style={{ fontSize: 12, color: '#666',marginBottom: 8 }}>Note: First picture will be displayed on the post</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
               <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage}>
                 <Icon name="add" size={24} color="#999" />
