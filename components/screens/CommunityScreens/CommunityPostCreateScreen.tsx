@@ -222,12 +222,12 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
             <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
           </TouchableOpacity>
 
-          {/* Error message */}
+          {/* Error message
           {status !== "success" && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{message}</Text>
             </View>
-          )}
+          )} */}
 
           {/* Spacer for bottom padding */}
           <View style={styles.bottomSpacer} />

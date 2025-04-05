@@ -54,8 +54,9 @@ interface PostState {
     title: string;
     content: string;
     tags: string[];
-    exerciseSessionRecordId?: string;
+    oldImageUrls?: string[];
     images?: any[];
+    exerciseSessionRecordId?: string;
   }) => Promise<void>;
 
   searchResults: Post[];
@@ -214,10 +215,14 @@ export const usePostStore = create<PostState>((set, get) => ({
       formData.append('title', postData.title);
       formData.append('content', postData.content);
   
-      // Handle tags array
-      postData.tags.forEach((tag, index) => {
-        formData.append(`tags[${index}]`, tag);
-      });
+      // Handle tags array - có thể gửi dưới dạng string JSON hoặc array
+      if (postData.tags && postData.tags.length > 0) {
+        // Phương án 1: Gửi dưới dạng tags[] (array)
+        postData.tags.forEach((tag, index) => {
+          formData.append(`tags[${index}]`, tag);
+        });
+        
+      }
   
       // Handle exercise session record ID
       if (postData.exerciseSessionRecordId) {
@@ -228,17 +233,19 @@ export const usePostStore = create<PostState>((set, get) => ({
       }
   
       // Tách ảnh cũ và ảnh mới
-      const existingImages = postData.images.filter(img => typeof img === 'string');
+      const existingImages = postData.oldImageUrls.filter(img => typeof img === 'string');
       const newImages = postData.images.filter(img => img.uri);
-  
-      // Nếu có ảnh mới, thêm cả ảnh mới và ảnh cũ vào FormData
-      if (newImages.length > 0) {
-        // Thêm ảnh cũ vào FormData
-        existingImages.forEach((imageUrl) => {
-          formData.append(`images`, imageUrl);
+      console.log('existingImages', existingImages);
+      
+      // Thêm ảnh cũ vào oldImageUrls[] (không phải images)
+      if (existingImages.length > 0) {
+        existingImages.forEach((imageUrl, index) => {
+          formData.append(`oldImageUrls[${index}]`, imageUrl);
         });
+      }
   
-        // Thêm ảnh mới vào FormData
+      // Thêm ảnh mới vào images[]
+      if (newImages.length > 0) {
         newImages.forEach((image, index) => {
           const imageFile = {
             uri: image.uri,
@@ -246,12 +253,6 @@ export const usePostStore = create<PostState>((set, get) => ({
             name: image.fileName || `image-${index}.jpg`,
           };
           formData.append(`images`, imageFile);
-        });
-      } 
-      // Nếu không có ảnh mới, chỉ thêm ảnh cũ vào FormData
-      else if (existingImages.length > 0) {
-        existingImages.forEach((imageUrl) => {
-          formData.append(`images`, imageUrl);
         });
       }
   

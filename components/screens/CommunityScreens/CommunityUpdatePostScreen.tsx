@@ -161,13 +161,18 @@ const CommunityPostUpdateScreen: React.FC<
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
 
-      const combinedImages = [...existingImages, ...selectedImages];
-
+      // Tách riêng ảnh cũ và ảnh mới theo yêu cầu API
+      const oldImageUrls = existingImages; // Mảng chứa các URL ảnh cũ muốn giữ lại
+      const newImages = selectedImages; // Mảng chứa file ảnh mới upload lên
+      console.log('oldImageUrls', oldImageUrls);
+      console.log('newImages', newImages);
+      
       await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray,
-        images: combinedImages,
+        oldImageUrls: oldImageUrls, // Truyền riêng ảnh cũ
+        images: newImages, // Chỉ truyền ảnh mới
         exerciseSessionRecordId: runRecord,
       });
 
@@ -184,6 +189,7 @@ const CommunityPostUpdateScreen: React.FC<
       Alert.alert('Lỗi', error.message || 'Không thể cập nhật bài viết');
     }
   };
+
 
   const isUpdateButtonEnabled = title.trim() !== '' && content.trim() !== '';
 

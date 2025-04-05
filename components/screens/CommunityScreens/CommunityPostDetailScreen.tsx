@@ -10,6 +10,7 @@ import {
   StatusBar,
   TextInput,
   Modal,
+  FlatList,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -20,8 +21,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
-import {set} from 'date-fns';
-
+import {Dimensions} from 'react-native';
 interface User {
   id: string;
   username: string;
@@ -53,6 +53,7 @@ interface Post {
   upvote_count: number;
   downvote_count: number;
   comment_count: number;
+  is_upvote: boolean;
   is_upvoted: boolean;
   is_downvoted: boolean;
 }
@@ -87,6 +88,9 @@ const CommunityPostDetailScreen = () => {
   const [editingParentCommentId, setEditingParentCommentId] = useState<
     string | null
   >(null);
+
+  const [zoomModalVisible, setZoomModalVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
@@ -572,13 +576,132 @@ const CommunityPostDetailScreen = () => {
           <Text style={styles.postDescription}>{localPost?.content}</Text>
 
           {/* Run photo */}
-          {localPost?.images && localPost.images.length > 0 && (
-            <Image
-              source={{uri: localPost?.images[0]}}
-              style={styles.runPhoto}
-              resizeMode="cover"
-            />
+          {localPost?.images && localPost?.images.length > 0 && (
+            <>
+              {localPost.images.length > 2 ? (
+                <View style={{marginBottom: 16}}>
+                  {/* First image shown larger */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedImageIndex(0);
+                      setZoomModalVisible(true);
+                    }}
+                    style={{marginBottom: 8}}>
+                    <Image
+                      source={{uri: localPost.images[0]}}
+                      style={[styles.runPhoto, {height: 180}]} // Slightly smaller than full runPhoto
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+
+                  {/* Remaining images in horizontal scroll */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    scrollEnabled={false}                    
+                    contentContainerStyle={{paddingHorizontal: 2}}>
+                    {localPost.images.slice(1).map((imageUri, index) => (
+                      <TouchableOpacity
+                        key={index + 1}
+                        onPress={() => {
+                          setSelectedImageIndex(index + 1);
+                          setZoomModalVisible(true);
+                        }}
+                        style={{marginRight: 8}}>
+                        <Image
+                          source={{uri: imageUri}}
+                          style={styles.postImagev2}
+                          resizeMode="cover"
+                        />
+
+                        {/* Show count on last visible image if there are many */}
+                        {localPost.images.length > 3 && index === 2 && (
+                          <View
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              backgroundColor: 'rgba(0,0,0,0.5)',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              borderRadius: 8,
+                            }}>
+                            <Text
+                              style={{
+                                color: 'white',
+                                fontSize: 18,
+                                fontWeight: 'bold',
+                              }}>
+                              +{localPost.images.length - 4}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : localPost.images.length === 2 ? (
+                // For exactly 2 images, show them side by side
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    marginBottom: 16,
+                    height: 180,
+                    gap: 8,
+                  }}>
+                  <TouchableOpacity
+                    style={{flex: 1}}
+                    onPress={() => {
+                      setSelectedImageIndex(0);
+                      setZoomModalVisible(true);
+                    }}>
+                    <Image
+                      source={{uri: localPost.images[0]}}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 12,
+                      }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{flex: 1}}
+                    onPress={() => {
+                      setSelectedImageIndex(1);
+                      setZoomModalVisible(true);
+                    }}>
+                    <Image
+                      source={{uri: localPost.images[1]}}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 12,
+                      }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // For a single image
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedImageIndex(0);
+                    setZoomModalVisible(true);
+                  }}
+                  style={{marginBottom: 16}}>
+                  <Image
+                    source={{uri: localPost.images[0]}}
+                    style={styles.runPhoto}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              )}
+            </>
           )}
+
           {/* Run map */}
           <View style={styles.mapContainer}>
             <View style={styles.mapTitleContainer}>
@@ -798,6 +921,41 @@ const CommunityPostDetailScreen = () => {
         </TouchableOpacity>
       </Modal>
 
+      <Modal
+        visible={zoomModalVisible}
+        transparent={true}
+        onRequestClose={() => setZoomModalVisible(false)}>
+        <View style={styles.zoomModalContainer}>
+          <FlatList
+            data={localPost?.images || []}
+            horizontal
+            pagingEnabled
+            initialScrollIndex={selectedImageIndex}
+            keyExtractor={(_, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={styles.zoomScrollView}
+                maximumZoomScale={3}
+                minimumZoomScale={1}
+                contentContainerStyle={styles.zoomContentContainer}>
+                <Image
+                  source={{uri: item}}
+                  style={styles.zoomImage}
+                  resizeMode="contain"
+                />
+              </ScrollView>
+            )}
+            // Giúp FlatList scroll đúng vị trí đã chọn khi modal mở
+            onScrollToIndexFailed={() => {}}
+          />
+          <TouchableOpacity
+            style={styles.zoomModalCloseButton}
+            onPress={() => setZoomModalVisible(false)}>
+            <Icon name="close" size={30} color="white" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <ModalPoppup
         visible={showModal}
         onClose={() => setShowModal(false)}
@@ -894,7 +1052,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 12,
-    marginBottom: 16,
   },
   mapContainer: {
     marginBottom: 16,
@@ -1180,6 +1337,42 @@ const styles = StyleSheet.create({
   },
   commentVoteCountActive: {
     color: '#4285F4',
+  },
+  postImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  postImagev2: {
+    width: 113,
+    height: 113,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  zoomModalContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomScrollView: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  zoomContentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  zoomModalCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
   },
 });
 
