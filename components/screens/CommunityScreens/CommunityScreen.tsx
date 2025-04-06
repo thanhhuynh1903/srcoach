@@ -310,11 +310,26 @@ const CommunityScreen = () => {
       {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
       <Text style={styles.postText}>{item.content}</Text>
       {item.images && item.images.length > 0 && (
-        <Image
-          source={{uri: item.images[0]}}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
+        <View style={styles.postImageContainer}>
+          <Image
+            source={{uri: item.images[0]}}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+          {item.images.length > 1 && (
+            <View style={styles.remainingImagesIndicator}>
+              <Icon
+                name="images-outline"
+                size={14}
+                color="#FFFFFF"
+                style={styles.imageIcon}
+              />
+              <Text style={styles.remainingImagesText}>
+                +{item.images.length - 1}
+              </Text>
+            </View>
+          )}
+        </View>
       )}
       <View style={styles.postActions}>
         <TouchableOpacity
@@ -430,6 +445,15 @@ const CommunityScreen = () => {
           <TouchableOpacity style={styles.iconButton}>
             <Icon
               name="notifications-outline"
+              size={24}
+              color={theme.colors.primary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
+            <Icon
+              name="nuclear-outline"
               size={24}
               color={theme.colors.primary}
             />
@@ -602,13 +626,43 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginVertical: 5,
   },
-  postText: {marginVertical: 10},
-  postImage: {
+  postImageContainer: {
+    position: 'relative',
     width: '100%',
     height: 200,
-    borderRadius: 10,
-    marginBottom: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginVertical: 8,
   },
+  postImage: {
+    width: '100%',
+    height: '100%',
+  },
+  remainingImagesIndicator: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  imageIcon: {
+    marginRight: 4,
+  },
+  remainingImagesText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  postText: {marginVertical: 10},
   postActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

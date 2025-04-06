@@ -347,14 +347,28 @@ const RunnerProfileScreen = () => {
                         <Text style={styles.runStatText}>4'45"/km</Text>
                       </View>
                     </View>
-
                     {post.images && post.images.length > 0 && (
-                      <Image
-                        source={{uri: post.images[0]}}
-                        style={styles.postImage}
-                      />
+                      <View style={styles.postImageContainer}>
+                        <Image
+                          source={{uri: post.images[0]}}
+                          style={styles.postImage}
+                          resizeMode="cover"
+                        />
+                        {post.images.length > 1 && (
+                          <View style={styles.remainingImagesIndicator}>
+                            <Icon
+                              name="images-outline"
+                              size={14}
+                              color="#FFFFFF"
+                              style={styles.imageIcon}
+                            />
+                            <Text style={styles.remainingImagesText}>
+                              +{post.images.length - 1}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     )}
-
                     {/* Engagement */}
                     <View style={styles.postEngagement}>
                       <View style={styles.engagementItem}>
@@ -690,4 +704,36 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   tagText: {fontSize: 12, color: '#666'},
+  postImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginVertical: 8,
+  },
+  remainingImagesIndicator: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  imageIcon: {
+    marginRight: 4,
+  },
+  remainingImagesText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 12,
+  },
 });

@@ -10,6 +10,7 @@ import {
   StatusBar,
   TextInput,
   Modal,
+  FlatList,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -20,8 +21,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
-
-
+import {Dimensions} from 'react-native';
 interface User {
   id: string;
   username: string;
@@ -53,6 +53,7 @@ interface Post {
   upvote_count: number;
   downvote_count: number;
   comment_count: number;
+  is_upvote: boolean;
   is_upvoted: boolean;
   is_downvoted: boolean;
 }
@@ -68,6 +69,7 @@ const CommunityPostDetailScreen = () => {
     isLoading: isLoadingComments,
     deleteComment,
     updateComment,
+    likeComment,
   } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
@@ -83,6 +85,13 @@ const CommunityPostDetailScreen = () => {
 
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingParentCommentId, setEditingParentCommentId] = useState<
+    string | null
+  >(null);
+
+  const [zoomModalVisible, setZoomModalVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
 
@@ -102,14 +111,13 @@ const CommunityPostDetailScreen = () => {
   }, [id]);
 
   const handleEditComment = async commentId => {
+    setCommentText('');
     // Tìm comment cần edit trong danh sách comments
-    const findComment: any = (comments, id) => {
+    const findComment = (comments: any[], targetId: string): any => {
       for (const comment of comments) {
-        if (comment.id === id) {
-          return comment;
-        }
-        if (comment.children && comment.children.length > 0) {
-          const found = findComment(comment.children, id);
+        if (comment.id === targetId) return comment;
+        if (comment.other_PostComment?.length) {
+          const found = findComment(comment.other_PostComment, targetId);
           if (found) return found;
         }
       }
@@ -122,12 +130,80 @@ const CommunityPostDetailScreen = () => {
       // Thiết lập trạng thái chỉnh sửa
       setIsEditingComment(true);
       setEditingCommentId(commentId);
+      setEditingParentCommentId(commentToEdit.parent_comment_id || null); // Capture parent ID
       setCommentText(commentToEdit.content);
 
       // Focus vào input
       if (inputRef.current) {
         inputRef.current.focus();
       }
+    }
+  };
+
+  const handleLikeComment = async (
+    commentId: string,
+    isCurrentlyLiked: boolean,
+  ) => {
+    if (!profile) {
+      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bình luận', [
+        {text: 'Đóng', style: 'cancel'},
+      ]);
+      return;
+    }
+
+    try {
+      // Trạng thái mới là ngược lại với trạng thái hiện tại
+      const newLikeState = !isCurrentlyLiked;
+
+      // Optimistic update - cập nhật UI ngay lập tức
+      const updateCommentInTree = comments => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            // Cập nhật cả is_upvote và is_upvoted để đảm bảo nhất quán
+            const newUpvoteCount = newLikeState
+              ? (comment.upvote_count || 0) + 1
+              : Math.max(0, (comment.upvote_count || 0) - 1);
+
+            return {
+              ...comment,
+              is_upvote: newLikeState,
+              is_upvoted: newLikeState,
+              upvote_count: newUpvoteCount,
+            };
+          }
+
+          // Đệ quy cập nhật các comment con
+          if (
+            comment.other_PostComment &&
+            comment.other_PostComment.length > 0
+          ) {
+            return {
+              ...comment,
+              other_PostComment: updateCommentInTree(comment.other_PostComment),
+            };
+          }
+
+          return comment;
+        });
+      };
+
+      // Cập nhật state comments trong store với optimistic update
+      const updatedComments = updateCommentInTree([...comments]);
+      useCommentStore.setState({comments: updatedComments});
+
+      // Gọi API để like/unlike bình luận - truyền trạng thái mới
+      const success = await likeComment(commentId, newLikeState);
+
+      if (!success) {
+        // Nếu API thất bại, khôi phục lại danh sách comments ban đầu
+        await getCommentsByPostId(id);
+        Alert.alert('Lỗi', 'Không thể thích bình luận. Vui lòng thử lại sau.');
+      }
+    } catch (error) {
+      console.error('Error liking comment:', error);
+      // Khôi phục lại danh sách comments ban đầu nếu có lỗi
+      await getCommentsByPostId(id);
+      Alert.alert('Lỗi', 'Không thể thích bình luận. Vui lòng thử lại sau.');
     }
   };
 
@@ -166,6 +242,7 @@ const CommunityPostDetailScreen = () => {
           // Reset input và trạng thái reply
           setCommentText('');
           setReplyingTo(null);
+          setEditingParentCommentId(null); // Clear parent ID
 
           // Cập nhật lại danh sách bình luận
           await getCommentsByPostId(id);
@@ -193,7 +270,6 @@ const CommunityPostDetailScreen = () => {
 
   // Hàm xử lý khi nhấn Reply trên một bình luận
   const handleReplyComment = (commentId: string) => {
-
     setReplyingTo(commentId);
     if (inputRef.current) {
       inputRef.current.focus();
@@ -306,7 +382,6 @@ const CommunityPostDetailScreen = () => {
   // Trong CommunityPostDetailScreen
   const renderComment = (comment: any) => {
     console.log('comment', comment);
-
     return (
       <TouchableOpacity
         key={comment.id}
@@ -341,12 +416,34 @@ const CommunityPostDetailScreen = () => {
           <Text style={styles.commentText}>{comment.content}</Text>
           <View style={styles.commentActions}>
             <View style={styles.commentVotes}>
-              <TouchableOpacity>
-                <Icon name="heart-outline" size={16} color="#4285F4" />
+              <TouchableOpacity
+                onPress={() =>
+                  handleLikeComment(
+                    comment.id,
+                    comment.is_upvote || comment.is_upvoted,
+                  )
+                }
+                style={styles.likeButton}>
+                <Icon
+                  name={
+                    comment.is_upvote || comment.is_upvoted
+                      ? 'heart'
+                      : 'heart-outline'
+                  }
+                  size={16}
+                  color={
+                    comment.is_upvote || comment.is_upvoted ? '#4285F4' : '#666'
+                  }
+                />
+                <Text
+                  style={[
+                    styles.commentVoteCount,
+                    (comment.is_upvote || comment.is_upvoted) &&
+                      styles.commentVoteCountActive,
+                  ]}>
+                  {comment.upvote_count || 0}
+                </Text>
               </TouchableOpacity>
-              <Text style={styles.commentVoteCount}>
-                {comment.upvote_count || 0}
-              </Text>
             </View>
             {!comment.parent_comment_id && (
               <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
@@ -397,30 +494,34 @@ const CommunityPostDetailScreen = () => {
       ]);
       return;
     }
-  
+
     try {
       // Cập nhật UI ngay lập tức (optimistic update)
       // Lưu trạng thái cũ để khôi phục nếu API thất bại
-      const oldPostState = { ...currentPost };
-      
+      const oldPostState = {...currentPost};
+
       // Cập nhật trạng thái hiện tại của bài viết
       const updatedPost = {
         ...currentPost,
         is_upvoted: isLike,
-        upvote_count: isLike 
-          ? currentPost?.is_upvoted ? currentPost.upvote_count : currentPost!.upvote_count + 1
-          : currentPost?.is_upvoted ? currentPost.upvote_count - 1 : currentPost?.upvote_count
+        upvote_count: isLike
+          ? currentPost?.is_upvoted
+            ? currentPost.upvote_count
+            : currentPost!.upvote_count + 1
+          : currentPost?.is_upvoted
+          ? currentPost.upvote_count - 1
+          : currentPost?.upvote_count,
       };
-      
+
       // Cập nhật currentPost trong store
-      usePostStore.setState({ currentPost: updatedPost });
-      
+      usePostStore.setState({currentPost: updatedPost});
+
       // Gọi API để like/unlike bài viết
       const success = await likePost(id, isLike);
-      
+
       if (!success) {
         // Nếu API thất bại, khôi phục lại trạng thái cũ
-        usePostStore.setState({ currentPost: oldPostState });
+        usePostStore.setState({currentPost: oldPostState});
         Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
       }
     } catch (error) {
@@ -428,7 +529,6 @@ const CommunityPostDetailScreen = () => {
       Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
     }
   };
-  
 
   return (
     <SafeAreaView style={styles.container}>
@@ -445,7 +545,7 @@ const CommunityPostDetailScreen = () => {
         {/* User info section */}
         <View style={styles.userInfoContainer}>
           <View style={styles.userInfo}>
-          <Image
+            <Image
               source={{
                 uri:
                   localPost?.user?.avatar ||
@@ -476,13 +576,132 @@ const CommunityPostDetailScreen = () => {
           <Text style={styles.postDescription}>{localPost?.content}</Text>
 
           {/* Run photo */}
-          {localPost?.images && localPost.images.length > 0 && (
-            <Image
-              source={{uri: localPost?.images[0]}}
-              style={styles.runPhoto}
-              resizeMode="cover"
-            />
+          {localPost?.images && localPost?.images.length > 0 && (
+            <>
+              {localPost.images.length > 2 ? (
+                <View style={{marginBottom: 16}}>
+                  {/* First image shown larger */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedImageIndex(0);
+                      setZoomModalVisible(true);
+                    }}
+                    style={{marginBottom: 8}}>
+                    <Image
+                      source={{uri: localPost.images[0]}}
+                      style={[styles.runPhoto, {height: 180}]} // Slightly smaller than full runPhoto
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+
+                  {/* Remaining images in horizontal scroll */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    scrollEnabled={false}                    
+                    contentContainerStyle={{paddingHorizontal: 2}}>
+                    {localPost.images.slice(1).map((imageUri, index) => (
+                      <TouchableOpacity
+                        key={index + 1}
+                        onPress={() => {
+                          setSelectedImageIndex(index + 1);
+                          setZoomModalVisible(true);
+                        }}
+                        style={{marginRight: 8}}>
+                        <Image
+                          source={{uri: imageUri}}
+                          style={styles.postImagev2}
+                          resizeMode="cover"
+                        />
+
+                        {/* Show count on last visible image if there are many */}
+                        {localPost.images.length > 3 && index === 2 && (
+                          <View
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              backgroundColor: 'rgba(0,0,0,0.5)',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              borderRadius: 8,
+                            }}>
+                            <Text
+                              style={{
+                                color: 'white',
+                                fontSize: 18,
+                                fontWeight: 'bold',
+                              }}>
+                              +{localPost.images.length - 4}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : localPost.images.length === 2 ? (
+                // For exactly 2 images, show them side by side
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    marginBottom: 16,
+                    height: 180,
+                    gap: 8,
+                  }}>
+                  <TouchableOpacity
+                    style={{flex: 1}}
+                    onPress={() => {
+                      setSelectedImageIndex(0);
+                      setZoomModalVisible(true);
+                    }}>
+                    <Image
+                      source={{uri: localPost.images[0]}}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 12,
+                      }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{flex: 1}}
+                    onPress={() => {
+                      setSelectedImageIndex(1);
+                      setZoomModalVisible(true);
+                    }}>
+                    <Image
+                      source={{uri: localPost.images[1]}}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 12,
+                      }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                // For a single image
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedImageIndex(0);
+                    setZoomModalVisible(true);
+                  }}
+                  style={{marginBottom: 16}}>
+                  <Image
+                    source={{uri: localPost.images[0]}}
+                    style={styles.runPhoto}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              )}
+            </>
           )}
+
           {/* Run map */}
           <View style={styles.mapContainer}>
             <View style={styles.mapTitleContainer}>
@@ -702,6 +921,41 @@ const CommunityPostDetailScreen = () => {
         </TouchableOpacity>
       </Modal>
 
+      <Modal
+        visible={zoomModalVisible}
+        transparent={true}
+        onRequestClose={() => setZoomModalVisible(false)}>
+        <View style={styles.zoomModalContainer}>
+          <FlatList
+            data={localPost?.images || []}
+            horizontal
+            pagingEnabled
+            initialScrollIndex={selectedImageIndex}
+            keyExtractor={(_, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={styles.zoomScrollView}
+                maximumZoomScale={3}
+                minimumZoomScale={1}
+                contentContainerStyle={styles.zoomContentContainer}>
+                <Image
+                  source={{uri: item}}
+                  style={styles.zoomImage}
+                  resizeMode="contain"
+                />
+              </ScrollView>
+            )}
+            // Giúp FlatList scroll đúng vị trí đã chọn khi modal mở
+            onScrollToIndexFailed={() => {}}
+          />
+          <TouchableOpacity
+            style={styles.zoomModalCloseButton}
+            onPress={() => setZoomModalVisible(false)}>
+            <Icon name="close" size={30} color="white" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <ModalPoppup
         visible={showModal}
         onClose={() => setShowModal(false)}
@@ -798,7 +1052,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 12,
-    marginBottom: 16,
   },
   mapContainer: {
     marginBottom: 16,
@@ -1076,6 +1329,50 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginVertical: 20,
     fontStyle: 'italic',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  commentVoteCountActive: {
+    color: '#4285F4',
+  },
+  postImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  postImagev2: {
+    width: 113,
+    height: 113,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  zoomModalContainer: {
+    flex: 1,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomScrollView: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  zoomContentContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  zoomModalCloseButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
   },
 });
 

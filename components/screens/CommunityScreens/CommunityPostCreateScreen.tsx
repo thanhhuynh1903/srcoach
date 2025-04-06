@@ -174,6 +174,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           {/* Images */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Image</Text>
+            <Text style={{ fontSize: 12, color: '#666',marginBottom: 8 }}>Note: First picture will be displayed on the post</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
               <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage}>
                 <Icon name="add" size={24} color="#999" />
@@ -222,12 +223,12 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
             <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
           </TouchableOpacity>
 
-          {/* Error message */}
+          {/* Error message
           {status !== "success" && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{message}</Text>
             </View>
-          )}
+          )} */}
 
           {/* Spacer for bottom padding */}
           <View style={styles.bottomSpacer} />

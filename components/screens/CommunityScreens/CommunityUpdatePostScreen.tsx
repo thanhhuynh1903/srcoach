@@ -70,8 +70,6 @@ const CommunityPostUpdateScreen: React.FC<
   // Cập nhật state từ dữ liệu bài viết hiện tại
   useEffect(() => {
     console.log('currentPost', currentPost);
-    console.log('existingImages', existingImages);
-    console.log('selectedImages', selectedImages);
 
     if (currentPost) {
       setTitle(currentPost.title || '');
@@ -80,12 +78,7 @@ const CommunityPostUpdateScreen: React.FC<
       // Xử lý tags
       if (currentPost.tags && currentPost.tags.length > 0) {
         setTags(currentPost.tags.join(', ') || '');
-
-        // Tạo chuỗi hiển thị tags
-        const tagsArray = [...currentPost.tags];
-        if (tagsArray.length > 0) {
-          setDisplayTags(tagsArray);
-        }
+        setDisplayTags([...currentPost.tags]);
       } else {
         setTags('');
         setDisplayTags([]);
@@ -95,8 +88,13 @@ const CommunityPostUpdateScreen: React.FC<
 
       // Lưu trữ ảnh hiện có
       if (currentPost.images && currentPost.images.length > 0) {
-        setExistingImages(currentPost.images);
+        setExistingImages([...currentPost.images]);
+      } else {
+        setExistingImages([]);
       }
+
+      // Reset ảnh mới được chọn khi tải bài viết mới
+      setSelectedImages([]);
 
       setInitialLoading(false);
     }
@@ -163,11 +161,18 @@ const CommunityPostUpdateScreen: React.FC<
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
 
+      // Tách riêng ảnh cũ và ảnh mới theo yêu cầu API
+      const oldImageUrls = existingImages; // Mảng chứa các URL ảnh cũ muốn giữ lại
+      const newImages = selectedImages; // Mảng chứa file ảnh mới upload lên
+      console.log('oldImageUrls', oldImageUrls);
+      console.log('newImages', newImages);
+      
       await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray,
-        images: [...existingImages, ...selectedImages],
+        oldImageUrls: oldImageUrls, // Truyền riêng ảnh cũ
+        images: newImages, // Chỉ truyền ảnh mới
         exerciseSessionRecordId: runRecord,
       });
 
@@ -185,6 +190,7 @@ const CommunityPostUpdateScreen: React.FC<
     }
   };
 
+
   const isUpdateButtonEnabled = title.trim() !== '' && content.trim() !== '';
 
   // Hiển thị trạng thái đang tải ban đầu
@@ -201,6 +207,7 @@ const CommunityPostUpdateScreen: React.FC<
     const updatedImages = [...existingImages];
     updatedImages.splice(index, 1);
     setExistingImages(updatedImages);
+    console.log('Ảnh hiện có sau khi xóa:', updatedImages);
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -247,7 +254,7 @@ const CommunityPostUpdateScreen: React.FC<
           </View>
 
           {/* Existing Images */}
-          {currentPost?.images && currentPost?.images?.length > 0 && (
+          {existingImages.length > 0 && (
             <View style={styles.formGroup}>
               <Text style={styles.label}>Current images</Text>
               <ScrollView
@@ -256,13 +263,7 @@ const CommunityPostUpdateScreen: React.FC<
                 style={styles.imagesContainer}>
                 {existingImages.map((imageUrl, index) => (
                   <View key={`existing-${index}`} style={styles.imageContainer}>
-                    <Image
-                      source={{uri: imageUrl}}
-                      style={[
-                        styles.image,
-                        selectedImages.length > 0 && styles.dimmedImage,
-                      ]}
-                    />
+                    <Image source={{uri: imageUrl}} style={styles.image} />
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => handleRemoveExistingImage(index)}>

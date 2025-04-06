@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
-import { useLoginStore } from './utils/useLoginStore';
+import {useLoginStore} from './utils/useLoginStore';
 const HomeHeader = () => {
-  const { profile } = useLoginStore();
+  const {profile} = useLoginStore();
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
     day: '2-digit',
@@ -28,13 +28,22 @@ const HomeHeader = () => {
       {/* Date and Notification */}
       <View style={styles.topBar}>
         <Text style={styles.dateText}>{currentDate}</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}>
-          <Icon name="notifications-outline" size={20} color="#fff" />
+        <View style={{flexDirection: 'row', gap: 16}}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('ManageNotificationsScreen' as never)
+          }>
+          <Icon name="notifications-outline" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
+          <Icon name="nuclear-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+        </View>
       </View>
 
       {/* User Profile */}
-      <TouchableOpacity style={styles.profileSection}>
+      <TouchableOpacity style={styles.profileSection} onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
         <View style={styles.profileLeft}>
           <Image
             source={{
@@ -46,7 +55,11 @@ const HomeHeader = () => {
             <Text style={styles.greeting}>Hi, {profile?.username}! 👋</Text>
             <View style={styles.membershipContainer}>
               <Icon name="star" size={12} color="#FFD700" />
-              <Text style={styles.membershipText}>{profile?.roles[0].charAt(0).toUpperCase() + profile?.roles[0].slice(1)} Member</Text>
+              <Text style={styles.membershipText}>
+                {profile?.roles[0].charAt(0).toUpperCase() +
+                  profile?.roles[0].slice(1)}{' '}
+                Member
+              </Text>
             </View>
           </View>
         </View>

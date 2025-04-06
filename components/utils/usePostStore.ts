@@ -54,8 +54,9 @@ interface PostState {
     title: string;
     content: string;
     tags: string[];
-    exerciseSessionRecordId?: string;
+    oldImageUrls?: string[];
     images?: any[];
+    exerciseSessionRecordId?: string;
   }) => Promise<void>;
 
   searchResults: Post[];
@@ -205,20 +206,24 @@ export const usePostStore = create<PostState>((set, get) => ({
     }
   },
   updatePost: async (id, postData) => {
-    set({isLoading: true, status: null});
-
+    set({ isLoading: true, status: null });
+  
     try {
       const formData = new FormData();
-
+  
       // Append basic fields
       formData.append('title', postData.title);
       formData.append('content', postData.content);
-
-      // Handle tags array
-      postData.tags.forEach((tag, index) => {
-        formData.append(`tags[${index}]`, tag);
-      });
-
+  
+      // Handle tags array - có thể gửi dưới dạng string JSON hoặc array
+      if (postData.tags && postData.tags.length > 0) {
+        // Phương án 1: Gửi dưới dạng tags[] (array)
+        postData.tags.forEach((tag, index) => {
+          formData.append(`tags[${index}]`, tag);
+        });
+        
+      }
+  
       // Handle exercise session record ID
       if (postData.exerciseSessionRecordId) {
         formData.append(
@@ -226,47 +231,55 @@ export const usePostStore = create<PostState>((set, get) => ({
           postData.exerciseSessionRecordId,
         );
       }
-
-      // Handle images (new uploads)
-      if (postData.images && postData.images.length > 0) {
-        postData.images.forEach((image, index) => {
-          // Check if it's a new image (has uri property)
-          if (image.uri) {
-            const imageFile = {
-              uri: image.uri,
-              type: image.type || 'image/jpeg',
-              name: image.fileName || `image-${index}.jpg`,
-            };
-            console.log('imageFiles', imageFile);
-
-            formData.append(`images`, imageFile);
-          }
+  
+      // Tách ảnh cũ và ảnh mới
+      const existingImages = postData.oldImageUrls.filter(img => typeof img === 'string');
+      const newImages = postData.images.filter(img => img.uri);
+      console.log('existingImages', existingImages);
+      
+      // Thêm ảnh cũ vào oldImageUrls[] (không phải images)
+      if (existingImages.length > 0) {
+        existingImages.forEach((imageUrl, index) => {
+          formData.append(`oldImageUrls[${index}]`, imageUrl);
         });
       }
+  
+      // Thêm ảnh mới vào images[]
+      if (newImages.length > 0) {
+        newImages.forEach((image, index) => {
+          const imageFile = {
+            uri: image.uri,
+            type: image.type || 'image/jpeg',
+            name: image.fileName || `image-${index}.jpg`,
+          };
+          formData.append(`images`, imageFile);
+        });
+      }
+  
       console.log('formData', formData);
-
+  
       // Make PUT request
       const response = await api.putData(`/posts/${id}`, formData);
       console.log('response', response);
-
+  
       // Update local state
       if (response && response.status === 'success') {
         // Cập nhật bài viết trong danh sách posts
         const updatedPosts = get().posts.map(post =>
-          post.id === id ? {...post, ...response.data} : post,
+          post.id === id ? { ...post, ...response.data } : post,
         );
-
+  
         // Cập nhật bài viết trong danh sách myPosts
         const updatedMyPosts = get().myPosts.map(post =>
-          post.id === id ? {...post, ...response.data} : post,
+          post.id === id ? { ...post, ...response.data } : post,
         );
-
+  
         // Cập nhật currentPost nếu đang xem bài viết này
         const updatedCurrentPost =
           get().currentPost?.id === id
-            ? {...get().currentPost, ...response.data}
+            ? { ...get().currentPost, ...response.data }
             : get().currentPost;
-
+  
         set({
           posts: updatedPosts,
           myPosts: updatedMyPosts,
@@ -291,6 +304,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       throw error;
     }
   },
+  
 
   deletePost: async (id: string) => {
     set({isLoading: true, status: null});
@@ -466,7 +480,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       });
       return false;
     }
-  },  
+  },
 
   clearCurrent: () => set({currentPost: null}),
 }));
