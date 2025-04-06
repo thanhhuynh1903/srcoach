@@ -51,7 +51,7 @@ const LoginScreen: React.FC<{
     console.log('status', status);
 
     if (status === 'success') {
-      showToast('success', message, 'Welcome to back!');
+      showToast('success', message, 'Welcome to home!');
       navigation.navigate('HomeTabs');
       clear();
     } else if (status === 'wait') {
