@@ -6,9 +6,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import RecordScreen from '../screens/RecordScreen';
 import SearchResultsScreen from '../screens/SearchScreenResult';
 // import ExercisesScreen from '../screens/ExercisesScreen';
-import ExpertChatScreen from '../screens/ExpertChatScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import SearchScreen from '../screens/SearchScreen';
 import ErrorScreen from '../screens/ErrorScreen';
 import ManageNotification from '../screens/ManageNotification';
 import DevicesScreen from '../screens/DevicesScreen';
@@ -18,7 +16,6 @@ import SleepScreen from '../screens/DashboardScreens/SleepScreen';
 import HeartRateScreen from '../screens/DashboardScreens/HeartRateScreen';
 import RecordDetailScreen from '../screens/RecordDetailScreen';
 import ChartDetailScreen from '../screens/ChartDetailScreen';
-import ChatboxScreen from '../screens/ChatboxScreen';
 import SetGoalsScreen from '../screens/SetGoalsScreen';
 import GoalListScreen from '../screens/GoalListScreen';
 import ScheduleScreen from '../screens/ScheduleScreen';
@@ -46,6 +43,12 @@ import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordR
 import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
 import RunnerProfileScreen from '../screens/RunnerProfileScreen';
 import LeaderBoardScreen from '../screens/LeaderBoardScreen';
+import ExpertChatSearchScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatSearchScreen';
+import ExpertChatInvitationScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationScreen';
+import ExpertChatInvitationSuccessScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationSuccessScreen';
+import ExpertChatInvitationFailedScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationFailedScreen';
+import ExpertChatScreen from '../screens/ExpertChatScreens/ExpertChatScreen';
+import ExpertChatboxScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatboxScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -64,7 +67,7 @@ export const stackScreens = [
   { name: 'HeartRateScreen', component: HeartRateScreen },
   { name: 'RecordDetailScreen', component: RecordDetailScreen },
   { name: 'ChartDetailScreen', component: ChartDetailScreen },
-  { name: 'ChatboxScreen', component: ChatboxScreen },
+  { name: 'ExpertChatboxScreen', component: ExpertChatboxScreen },
   { name: 'SetGoalsScreen', component: SetGoalsScreen },
   { name: 'GoalListScreen', component: GoalListScreen },
   { name: 'ScheduleScreen', component: ScheduleScreen },
@@ -91,6 +94,12 @@ export const stackScreens = [
   { name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen },
   { name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen },
   { name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen },
+
+  //Expert Chat Screens
+  { name: 'ExpertChatSearchScreen', component: ExpertChatSearchScreen },
+  { name: 'ExpertChatInvitationScreen', component: ExpertChatInvitationScreen },
+  { name: 'ExpertChatInvitationSuccessScreen', component: ExpertChatInvitationSuccessScreen },
+  { name: "ExpertChatInvitationFailedScreen", component: ExpertChatInvitationFailedScreen},
 
   // About Screens
   { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },

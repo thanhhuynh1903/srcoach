@@ -51,7 +51,7 @@ interface SummaryData {
 }
 
 const api = axios.create({
-  baseURL: 'https://xavia.pro/api',
+  baseURL: 'http://192.168.1.11:5000/api',
 });
 
 api.interceptors.request.use(async config => {

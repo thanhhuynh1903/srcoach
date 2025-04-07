@@ -8,9 +8,10 @@ import {
   requestPermission,
 } from 'react-native-health-connect';
 import { ExerciseType, getNameFromExerciseType } from '../contants/exerciseType';
+import { MASTER_URL } from './zustandfetchAPI';
 
 const api = axios.create({
-  baseURL: 'https://xavia.pro/api',
+  baseURL: MASTER_URL,
 });
 
 api.interceptors.request.use(async config => {
