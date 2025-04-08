@@ -130,8 +130,7 @@ const RecordDetailScreen = () => {
     <ScreenWrapper bg={'#f9fafb'}>
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigate.goBack()}>
+          style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Session Details</Text>

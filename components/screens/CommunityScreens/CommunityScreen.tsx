@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import {useNavigation} from '@react-navigation/native';
 import {usePostStore} from '../../utils/usePostStore';
 import {useLoginStore} from '../../utils/useLoginStore';
+import {useFocusEffect} from '@react-navigation/native';
 
 // Interface cho dữ liệu tin tức
 interface NewsItem {
@@ -67,8 +69,10 @@ const CommunityScreen = () => {
   const {isLoading, status, getAll, clearCurrent, deletePost, likePost} =
     usePostStore();
   const posts = usePostStore(state => state.posts);
+
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const {profile} = useLoginStore();
   // Lấy currentUserId từ profile
@@ -285,6 +289,27 @@ const CommunityScreen = () => {
     );
   };
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    getAll()
+      .then(() => {
+        setRefreshing(false);
+      })
+      .catch(() => {
+        setRefreshing(false);
+      });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const focusHandler = () => {
+        onRefresh();
+      };
+      return () => {
+      };
+    }, [onRefresh]),
+  );
+
   const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity
       style={styles.postItem}
@@ -358,7 +383,7 @@ const CommunityScreen = () => {
   );
 
   const renderPostsContent = () => {
-    if (isLoading && localPosts.length === 0) {
+    if (isLoading && localPosts.length === 0 || refreshing) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -460,7 +485,16 @@ const CommunityScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView
+        style={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#1E3A8A']}
+            tintColor="#1E3A8A"
+          />
+        }>
         <View style={styles.searchContainer}>
           <Image
             source={require('../../assets/logo.png')}

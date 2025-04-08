@@ -113,6 +113,8 @@ export default function RecordScreen() {
       }
 
       const data = await fetchExerciseSessionRecords(startDate, endDate);
+      console.log('Fetched exercise sessions:', data);
+      
       setExerciseSessions(data);
     } catch (error) {
       console.error('Error reading health data:', error);

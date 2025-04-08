@@ -47,8 +47,8 @@ interface PostState {
     title: string;
     content: string;
     tags: string[];
-    images: any[];
     exerciseSessionRecordId?: string;
+    images: any[];
   }) => Promise<void>;
   updatePost: (id: string, postData: {
     title: string;
@@ -161,7 +161,8 @@ export const usePostStore = create<PostState>((set, get) => ({
   },
   createPost: async postData => {
     set({isLoading: true, status: null});
-
+    console.log('postData', postData);
+    
     try {
       // Chuẩn bị FormData từ dữ liệu bài viết
       const formData = new FormData();
@@ -178,7 +179,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       if (postData.exerciseSessionRecordId) {
         formData.append(
           'exerciseSessionRecordId',
-          postData.exerciseSessionRecordId,
+          postData?.exerciseSessionRecordId?.id,
         );
       }
 

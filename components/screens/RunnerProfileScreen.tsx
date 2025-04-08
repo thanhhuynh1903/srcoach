@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
 import {usePostStore} from '../utils/usePostStore';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
 import {useCommentStore} from '../utils/useCommentStore';
 // Interface cho Post từ API
 interface Post {
@@ -46,7 +48,7 @@ const RunnerProfileScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
-
+  const [refreshing, setRefreshing] = useState(false);
   // Cập nhật localPosts khi myPosts từ store thay đổi
   useEffect(() => {
     if (myPosts && myPosts.length > 0) {
@@ -59,6 +61,24 @@ const RunnerProfileScreen = () => {
     getMyPosts();
   }, [getMyPosts]);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    getMyPosts()
+      .then(() => {
+        setRefreshing(false);
+      })
+      .catch(() => {
+        setRefreshing(false);
+      });
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const focusHandler = () => {
+        onRefresh();
+      };
+      return () => {};
+    }, [onRefresh]),
+  );
   // Xử lý khi nhấn nút "More"
   const handleMorePress = (post: Post) => {
     console.log('post', post);
@@ -215,15 +235,31 @@ const RunnerProfileScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() =>
+            navigation.navigate('CommunityCreatePostScreen' as never)
+          }>
+          <Icon name="create-outline" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
 
-      {isLoading && localPosts.length === 0 ? (
+      {isLoading && localPosts.length === 0 || refreshing ? (
         // Nếu đang tải dữ liệu thì hiển thị loading
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <ActivityIndicator size="large" color="#000" />
         </View>
       ) : (
-        <ScrollView style={styles.scrollView}>
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#1E3A8A']}
+              tintColor="#1E3A8A"
+            />
+          }>
           {/* Profile Section */}
           <View style={styles.profileSection}>
             <Image
@@ -460,6 +496,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,

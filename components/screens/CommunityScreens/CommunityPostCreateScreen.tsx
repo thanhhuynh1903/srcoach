@@ -19,6 +19,8 @@ import BackButton from '../../BackButton';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { usePostStore } from '../../utils/usePostStore';
 import { useNavigation } from '@react-navigation/native';
+import type { ExerciseRecord } from './RecordSelectionModal';
+import RecordSelectionButton from './RecordSelectionButton';
 
 interface CommunityPostCreateScreenProps {
   onPost?: (postData: PostData) => void;
@@ -40,9 +42,9 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   const [content, setContent] = useState('');
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [tags, setTags] = useState('');
-  const [runRecord, setRunRecord] = useState(null);
-  
-  const { createPost, isLoading, status,message,getAll } = usePostStore();
+  const [runRecord, setRunRecord] = useState<ExerciseRecord | null>(null);
+
+  const { createPost, isLoading, status,message,getAll,getMyPosts } = usePostStore();
 
   const handleAddImage = () => {
     const options = {
@@ -72,6 +74,10 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
     setSelectedImages(updatedImages);
   };
 
+  const handleSelectRecord = (record: ExerciseRecord) => {
+    setRunRecord(record)
+    
+  }
   const handlePost = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert('Enter more info', 'Please enter both title and content');
@@ -79,6 +85,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
     }
 
     try {
+      console.log("Selected exercise record:", runRecord?.id)
       // Nếu có onPost callback (từ props), sử dụng nó
       if (onPost) {
         const postData: PostData = {
@@ -86,7 +93,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           content: content.trim(),
           images: selectedImages.map(img => img.uri),
           tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-          runRecord: runRecord || null
+          runRecord: runRecord ? runRecord.id : null,
         };
         onPost(postData);
         return;
@@ -100,15 +107,16 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray || [],
+        exerciseSessionRecordId: runRecord ? runRecord.id : null,
         images: selectedImages || [],
-        exerciseSessionRecordId: runRecord || null,
       });
       console.log('status', usePostStore.getState().status);
       // Thành công, quay lại màn hình trước đó
       Alert.alert('Success', 'Create post successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
-      getAll();
+      await getAll();
+      await getMyPosts();
     } catch (error: any) {
       console.error('Error creating post:', error);
       Alert.alert('Error', error.message || 'Cannot create post');
@@ -132,7 +140,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity>
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create post</Text>
@@ -210,26 +218,14 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           </View>
 
           {/* Run Record */}
-          <TouchableOpacity 
-            style={styles.runRecordButton}
-            onPress={() => {
-              // Điều hướng đến màn hình chọn exercise record
-              // navigation.navigate('SelectExerciseRecordScreen');
-              Alert.alert('Sắp ra mắt', 'Tính năng này sẽ sớm được phát hành');
-            }}
-          >
-            <Icon name="fitness-outline" size={20} color="#666" />
-            <Text style={styles.runRecordText}>Select run record</Text>
-            <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
-          </TouchableOpacity>
-
-          {/* Error message
-          {status !== "success" && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{message}</Text>
-            </View>
-          )} */}
-
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Exercise Record</Text>
+            <RecordSelectionButton
+              onSelectRecord={handleSelectRecord}
+              selectedRecord={runRecord}
+              buttonStyle={styles.runRecordButton}
+            />
+          </View>
           {/* Spacer for bottom padding */}
           <View style={styles.bottomSpacer} />
         </ScrollView>
