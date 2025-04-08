@@ -24,7 +24,12 @@ const ExpertChatScreen = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Expert Chat</Text>
+        <View style={styles.headerTitle}>
+          <Text style={styles.title}>Expert Chat</Text>
+          {profile?.roles.includes('expert') && (
+            <Text style={styles.expertText}>Expert</Text>
+          )}
+        </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
             <Icon
@@ -55,6 +60,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  expertText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: theme.colors.primaryDark,
+    backgroundColor: '#cadbff',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   title: {
     fontSize: 24,

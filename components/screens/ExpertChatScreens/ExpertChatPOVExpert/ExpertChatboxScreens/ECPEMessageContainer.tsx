@@ -34,7 +34,7 @@ interface ECMessageContainerProps {
   onSaveRecommendation?: (id: string) => void;
 }
 
-const ECMessageContainer: React.FC<ECMessageContainerProps> = ({
+const ECPEMessageContainer: React.FC<ECMessageContainerProps> = ({
   isLoading,
   messages = [],
   recommendationMessages = [],
@@ -154,11 +154,6 @@ const ECMessageContainer: React.FC<ECMessageContainerProps> = ({
                 <Text style={styles.recommendationTime}>
                   {formatTime(recommendation.created_at)}
                 </Text>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={() => onSaveRecommendation?.(recommendation.id)}>
-                  <Text style={styles.saveButtonText}>Save recommendation</Text>
-                </TouchableOpacity>
               </View>
             </View>
           );
@@ -261,4 +256,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ECMessageContainer;
+export default ECPEMessageContainer;

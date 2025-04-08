@@ -17,20 +17,25 @@ import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../../BackButton';
 import ChatAPI from '../../../utils/useChatAPI';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
-import ECInfo from './ExpertChatboxScreens/ECInfo';
-import ECNotes from './ExpertChatboxScreens/ECNotes';
-import ECProfile from './ExpertChatboxScreens/ECProfile';
-import ECMessageContainer from './ExpertChatboxScreens/ECMessageContainer';
+import ECInfo from './ExpertChatboxScreens/ECPEInfo';
+import ECNotes from './ExpertChatboxScreens/ECPENotes';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {theme} from '../../../contants/theme';
-import {capitalizeFirstLetter} from '../../../utils/utils_format';
+import useChatExpertAPI from '../../../utils/useChatExpertAPI';
+import ECPEScheduleModal from './ExpertChatboxScreens/ECPEScheduleModal';
+import ECPERecommendationModal from './ExpertChatboxScreens/ECPERecommendationModal';
+import ECPEMessageContainer from './ExpertChatboxScreens/ECPEMessageContainer';
 
-const ExpertChatboxScreen = () => {
-  const [newMessage, setNewMessage] = useState('');
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileData, setProfileData] = useState({
+export default function ECPEChatbox() {
+  const [newMessage, setNewMessage] = useState<any>('');
+  const [showInfoModal, setShowInfoModal] = useState<any>(false);
+  const [showNotesModal, setShowNotesModal] = useState<any>(false);
+  const [showProfileModal, setShowProfileModal] = useState<any>(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
+  const [isSubmittingRecommendation, setIsSubmittingRecommendation] =
+    useState(false);
+  const [profileData, setProfileData] = useState<any>({
     height: '',
     weight: '',
     age: '',
@@ -38,20 +43,16 @@ const ExpertChatboxScreen = () => {
     goal: '',
     weeklyDistance: '',
   });
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(
-    null,
-  );
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [recommendationMessages, setRecommendationMessages] =
-    useState<any>(null);
-  const [profile, setProfile] = useState<ChatProfile | null>(null);
-  const [recommendations, setRecommendations] = useState<ChatRecommendation[]>(
-    [],
-  );
+  const [isLoadingProfile, setIsLoadingProfile] = useState<any>(false);
+  const [isLoading, setIsLoading] = useState<any>(false);
+  const [error, setError] = useState<any>(null);
+  const [message, setMessage] = useState<any>(null);
+  const [recommendationMessages, setRecommendationMessages] = useState<any>(null);
+  const [currentSession, setCurrentSession] = useState<any>(null);
+  const [messages, setMessages] = useState<any>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any>([]);
+  const {getChatProfile, createRecommendation} = useChatExpertAPI();
 
   const scrollViewRef = useRef<ScrollView>(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -60,12 +61,19 @@ const ExpertChatboxScreen = () => {
 
   const route = useRoute();
   const navigation = useNavigation();
-  const {sessionId, participant2Id} = route.params as {
+  const {sessionId, participant2Id, initialMessage} = route.params as {
     sessionId?: string;
     participant2Id?: string;
+    initialMessage?: string;
   };
 
   const otherParticipant = currentSession?.other_participant;
+
+  useEffect(() => {
+    if (initialMessage) {
+      setNewMessage(initialMessage);
+    }
+  }, [initialMessage]);
 
   // Helper function to handle API responses
   const handleApiResponse = <T,>(
@@ -73,7 +81,7 @@ const ExpertChatboxScreen = () => {
     onSuccess: (data: T) => void,
     errorMessage: string,
   ) => {
-    if (response.status) {
+    if (response.status == 'success') {
       if (response.data) {
         onSuccess(response.data);
       }
@@ -98,7 +106,6 @@ const ExpertChatboxScreen = () => {
           'Failed to load chat session',
         );
       } else if (participant2Id) {
-        // If we have participant2Id but no sessionId, create/get a session
         const response = await ChatAPI.createOrGetChat(participant2Id);
         handleApiResponse(
           response,
@@ -124,8 +131,8 @@ const ExpertChatboxScreen = () => {
       handleApiResponse(
         response,
         data => {
-          setMessages(data.messages);
-          setRecommendationMessages(data.recommendations);
+          setMessages(data.messages || []);
+          setRecommendationMessages(data.recommendations || []);
         },
         'Failed to load messages',
       );
@@ -156,7 +163,7 @@ const ExpertChatboxScreen = () => {
   // Get profile for the current session
   const getProfile = async (chatSessionId: string) => {
     try {
-      const response = await ChatAPI.getProfile(chatSessionId);
+      const response = await getChatProfile(chatSessionId);
       handleApiResponse(
         response,
         data => setProfile(data),
@@ -164,36 +171,6 @@ const ExpertChatboxScreen = () => {
       );
     } catch (err) {
       setError('An unexpected error occurred');
-    }
-  };
-
-  // Update profile for the current session
-  const updateProfile = async (
-    chatSessionId: string,
-    profileData: {
-      height?: number;
-      weight?: number;
-      age?: number;
-      runningLevel?: string;
-      goal?: string;
-      weeklyDistance?: number;
-    },
-  ) => {
-    setIsLoadingProfile(true);
-    try {
-      const response = await ChatAPI.updateProfile(chatSessionId, profileData);
-      handleApiResponse(
-        response,
-        data => {
-          setProfile(data);
-          setMessage('Profile updated successfully');
-        },
-        'Failed to update profile',
-      );
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setIsLoadingProfile(false);
     }
   };
 
@@ -253,6 +230,10 @@ const ExpertChatboxScreen = () => {
 
     sendMessage(currentSession.id, newMessage);
     setNewMessage('');
+  };
+
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
   const toggleInfoModal = () => {
@@ -324,6 +305,42 @@ const ExpertChatboxScreen = () => {
       Alert.alert('Success', 'Conversation archived successfully');
     } catch (error) {
       Alert.alert('Error', 'Failed to archive conversation');
+    }
+  };
+
+  const handleTemplateSelect = (template: string) => {
+    setNewMessage(template);
+    setShowNotesModal(false);
+  };
+
+  const handleGenerateSchedule = () => {
+    setShowNotesModal(false);
+    setShowScheduleModal(true);
+  };
+
+  const handleGenerateRecommendation = () => {
+    setShowNotesModal(false);
+    setShowRecommendationModal(true);
+  };
+
+  const handleSubmitSchedule = async () => {
+    // Implement schedule generation logic here
+    setShowScheduleModal(false);
+    Alert.alert('Success', 'Training schedule generated successfully');
+  };
+
+  const handleSubmitRecommendation = async (message: string) => {
+    try {
+      setIsSubmittingRecommendation(true);
+      if (!currentSession?.id) return;
+
+      await createRecommendation(currentSession.id, message);
+      setShowRecommendationModal(false);
+      Alert.alert('Success', 'Recommendation created successfully');
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to create recommendation');
+    } finally {
+      setIsSubmittingRecommendation(false);
     }
   };
 
@@ -441,7 +458,7 @@ const ExpertChatboxScreen = () => {
           </ContentLoader>
         </View>
       ) : (
-        <ECMessageContainer
+        <ECPEMessageContainer
           isLoading={isLoading}
           messages={messages || []}
           recommendationMessages={recommendationMessages || []}
@@ -491,50 +508,29 @@ const ExpertChatboxScreen = () => {
       <ECNotes
         showNotesModal={showNotesModal}
         toggleNotesModal={toggleNotesModal}
-        toggleProfileModal={toggleProfileModal}
         notesSlideAnim={notesSlideAnim}
+        onTemplateSelect={handleTemplateSelect}
+        onGenerateSchedule={handleGenerateSchedule}
+        onGenerateRecommendation={handleGenerateRecommendation}
       />
 
-      {/* Profile Modal */}
-      <ECProfile
-        showProfileModal={showProfileModal}
-        toggleProfileModal={toggleProfileModal}
-        profileSlideAnim={profileSlideAnim}
-        onSubmit={async data => {
-          setIsLoadingProfile(true);
-          try {
-            const numericData = {
-              height: data.height ? parseFloat(data.height) : undefined,
-              weight: data.weight ? parseFloat(data.weight) : undefined,
-              age: data.age ? parseInt(data.age, 10) : undefined,
-              runningLevel: data.runningLevel,
-              goal: data.goal,
-              weeklyDistance: data.weeklyDistance
-                ? parseFloat(data.weeklyDistance)
-                : undefined,
-            };
+      {/* Schedule Generation Modal */}
+      <ECPEScheduleModal
+        visible={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        onSubmit={handleSubmitSchedule}
+      />
 
-            if (currentSession?.id) {
-              await updateProfile(currentSession.id, numericData);
-            }
-          } catch (err) {
-            console.error('Error updating profile:', err);
-          } finally {
-            setIsLoadingProfile(false);
-          }
-        }}
-        initialProfileData={{
-          height: profile?.height?.toString() || '',
-          weight: profile?.weight?.toString() || '',
-          age: profile?.age?.toString() || '',
-          runningLevel: profile?.runningLevel || '',
-          goal: profile?.goal || '',
-          weeklyDistance: profile?.weeklyDistance?.toString() || '',
-        }}
+      {/* Recommendation Modal */}
+      <ECPERecommendationModal
+        visible={showRecommendationModal}
+        onClose={() => setShowRecommendationModal(false)}
+        onSubmit={handleSubmitRecommendation}
+        isLoading={isSubmittingRecommendation}
       />
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -879,5 +875,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-export default ExpertChatboxScreen;

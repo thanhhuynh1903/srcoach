@@ -12,6 +12,7 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {useLoginStore} from './utils/useLoginStore';
+
 const HomeHeader = () => {
   const {profile} = useLoginStore();
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -21,6 +22,21 @@ const HomeHeader = () => {
     year: 'numeric',
   });
   const navigation = useNavigation();
+
+  // Check user roles
+  const isExpert = profile?.roles?.includes('expert');
+  const isRunner = profile?.roles?.includes('runner') && !isExpert;
+
+  // Capitalize first letter of role
+  const getRoleText = () => {
+    if (isExpert) return 'Expert';
+    if (isRunner) return 'Runner';
+    return (
+      profile?.roles[0]?.charAt(0)?.toUpperCase() +
+        profile?.roles[0]?.slice(1) || 'Member'
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -29,21 +45,23 @@ const HomeHeader = () => {
       <View style={styles.topBar}>
         <Text style={styles.dateText}>{currentDate}</Text>
         <View style={{flexDirection: 'row', gap: 16}}>
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('ManageNotificationsScreen' as never)
-          }>
-          <Icon name="notifications-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
-          <Icon name="nuclear-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('ManageNotificationsScreen' as never)
+            }>
+            <Icon name="notifications-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
+            <Icon name="nuclear-outline" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* User Profile */}
-      <TouchableOpacity style={styles.profileSection} onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
+      <TouchableOpacity
+        style={styles.profileSection}
+        onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
         <View style={styles.profileLeft}>
           <Image
             source={{
@@ -53,13 +71,33 @@ const HomeHeader = () => {
           />
           <View style={styles.userInfo}>
             <Text style={styles.greeting}>Hi, {profile?.username}! 👋</Text>
-            <View style={styles.membershipContainer}>
-              <Icon name="star" size={12} color="#FFD700" />
-              <Text style={styles.membershipText}>
-                {profile?.roles[0].charAt(0).toUpperCase() +
-                  profile?.roles[0].slice(1)}{' '}
-                Member
+            <View
+              style={[
+                styles.membershipContainer,
+                isExpert && styles.expertContainer,
+                isRunner && styles.runnerContainer,
+              ]}>
+              <Icon
+                name={isExpert ? 'trophy' : 'star'}
+                size={12}
+                color={isExpert ? '#FFD700' : isRunner ? '#10B981' : '#FFD700'}
+              />
+              <Text
+                style={[
+                  styles.membershipText,
+                  isExpert && styles.expertText,
+                  isRunner && styles.runnerText,
+                ]}>
+                {getRoleText()} {isExpert ? 'Member' : ''}
               </Text>
+              {isRunner && (
+                <Icon
+                  name="footsteps"
+                  size={12}
+                  color="#10B981"
+                  style={{marginLeft: 4}}
+                />
+              )}
             </View>
           </View>
         </View>
@@ -128,10 +166,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(107, 114, 128, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  expertContainer: {
+    backgroundColor: 'rgba(234, 179, 8, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  runnerContainer: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   membershipText: {
     color: '#9CA3AF',
     fontSize: 12,
+    fontWeight: '500',
+  },
+  expertText: {
+    color: '#FBBF24',
+  },
+  runnerText: {
+    color: '#10B981',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -146,7 +206,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#9CA3AF',
     fontSize: 14,
-    padding: 0, // Remove default padding
+    padding: 0,
   },
 });
 

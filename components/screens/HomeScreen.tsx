@@ -31,6 +31,8 @@ import {wp} from '../helpers/common';
 import {initializeHealthConnect} from '../utils/utils_healthconnect';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import axios from 'axios';
+import { MASTER_URL } from '../utils/zustandfetchAPI';
+import { useLoginStore } from '../utils/useLoginStore';
 
 type TimeRange = 'day' | 'week' | 'month' | 'year';
 
@@ -66,7 +68,7 @@ interface SummaryData {
 }
 
 const api = axios.create({
-  baseURL: 'http://192.168.1.11:5000/api',
+  baseURL: MASTER_URL,
 });
 
 api.interceptors.request.use(async config => {
@@ -86,6 +88,7 @@ const HomeScreen = () => {
   const [timeRange, setTimeRange] = useState<TimeRange>('day');
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const {profile} = useLoginStore();
 
   useEffect(() => {
     const loadUserToken = async () => {

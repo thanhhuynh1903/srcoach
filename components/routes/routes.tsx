@@ -49,6 +49,7 @@ import ExpertChatInvitationSuccessScreen from '../screens/ExpertChatScreens/Expe
 import ExpertChatInvitationFailedScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationFailedScreen';
 import ExpertChatScreen from '../screens/ExpertChatScreens/ExpertChatScreen';
 import ExpertChatboxScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatboxScreen';
+import ECPEChatbox from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEChatbox';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -100,6 +101,7 @@ export const stackScreens = [
   { name: 'ExpertChatInvitationScreen', component: ExpertChatInvitationScreen },
   { name: 'ExpertChatInvitationSuccessScreen', component: ExpertChatInvitationSuccessScreen },
   { name: "ExpertChatInvitationFailedScreen", component: ExpertChatInvitationFailedScreen},
+  { name: "ECPEChatboxScreen", component: ECPEChatbox},
 
   // About Screens
   { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },
