@@ -5,15 +5,14 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import RecordScreen from '../screens/RecordScreen';
 import SearchResultsScreen from '../screens/SearchScreenResult';
-// import ExercisesScreen from '../screens/ExercisesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ErrorScreen from '../screens/ErrorScreen';
 import ManageNotification from '../screens/ManageNotification';
 import DevicesScreen from '../screens/DevicesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import SPo2Screen from '../screens/DashboardScreens/SPo2Screen';
-import SleepScreen from '../screens/DashboardScreens/SleepScreen';
-import HeartRateScreen from '../screens/DashboardScreens/HeartRateScreen';
+import SPo2Screen from '../screens/DashboardScreens/RecordSPo2Screen';
+import SleepScreen from '../screens/DashboardScreens/RecordSleepScreen';
+import HeartRateScreen from '../screens/DashboardScreens/RecordHeartRateScreen';
 import RecordDetailScreen from '../screens/RecordDetailScreen';
 import ChartDetailScreen from '../screens/ChartDetailScreen';
 import SetGoalsScreen from '../screens/SetGoalsScreen';
@@ -23,7 +22,7 @@ import RateScheduleScreen from '../screens/RateScheduleScreen';
 import RiskWarningListScreen from '../screens/RiskWarningListScreen';
 import RiskWarningScreen from '../screens/RiskWarningScreen';
 import DeviceNotificationScreen from '../screens/DeviceNotificationScreen';
-import CaloriesScreen from '../screens/DashboardScreens/CaloriesScreen';
+import CaloriesScreen from '../screens/DashboardScreens/RecordCaloriesScreen';
 import VerifyScreen from '../screens/VerifyScreen';
 import GenerateScheduleScreen from '../screens/GenerateScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
@@ -50,6 +49,8 @@ import ExpertChatInvitationFailedScreen from '../screens/ExpertChatScreens/Exper
 import ExpertChatScreen from '../screens/ExpertChatScreens/ExpertChatScreen';
 import ExpertChatboxScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatboxScreen';
 import ECPEChatbox from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEChatbox';
+import RecordStepsScreen from '../screens/DashboardScreens/RecordStepsScreen';
+import RecordDistanceScreen from '../screens/DashboardScreens/RecordDistanceScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -64,6 +65,7 @@ export const stackScreens = [
   { name: 'DevicesScreen', component: DevicesScreen },
   { name: 'EditProfileScreen', component: EditProfileScreen },
   { name: 'SPo2Screen', component: SPo2Screen },
+  { name: "DistanceScreen", component: RecordDistanceScreen},
   { name: 'SleepScreen', component: SleepScreen },
   { name: 'HeartRateScreen', component: HeartRateScreen },
   { name: 'RecordDetailScreen', component: RecordDetailScreen },
@@ -77,6 +79,7 @@ export const stackScreens = [
   { name: 'SearchScreen', component: SearchResultsScreen },
   { name: 'SearchResultsScreen', component: SearchResultsScreen },
   { name: 'DeviceNotificationsScreen', component: DeviceNotificationScreen },
+  { name: 'StepsScreen', component: RecordStepsScreen},
   { name: 'CaloriesScreen', component: CaloriesScreen },
   { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
   { name: 'CalendarScreen', component: CalendarScreen },
