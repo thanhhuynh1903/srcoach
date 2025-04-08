@@ -226,7 +226,6 @@ const SleepScreen = () => {
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
-        return;
       }
 
       let startDate = new Date(currentDate);
