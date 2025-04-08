@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   Image,
   View,
@@ -9,17 +9,17 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { wp, hp } from '../helpers/common';
+import {wp, hp} from '../helpers/common';
 import BackButton from '../BackButton';
-import { theme } from '../contants/theme';
+import {theme} from '../contants/theme';
 import Input from '../Input';
 import Icon from '@react-native-vector-icons/ionicons';
 import ButtonModify from '../Button';
-import { useRegisterStore } from '../utils/useRegisterStore';
-import { Picker } from '@react-native-picker/picker';
-import { Calendar } from 'react-native-calendars';
+import {useRegisterStore} from '../utils/useRegisterStore';
+import {Picker} from '@react-native-picker/picker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
-const SignUpScreen = ({ navigation }: { navigation: any }) => {
+const SignUpScreen = ({navigation}: {navigation: any}) => {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
@@ -27,9 +27,9 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordCf, setPasswordCf] = useState('');
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
-  const { dataUser, status, message, register, clear } = useRegisterStore();
+  const {dataUser, status, message, register, clear} = useRegisterStore();
   const [loading, setLoading] = useState(false);
 
   // Hàm validate đầu vào
@@ -72,6 +72,23 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
     clear();
   }, [navigation]);
 
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
+
+  // Xử lý khi xác nhận chọn ngày
+  const handleConfirm = date => {
+    // Format date to yyyy-mm-dd
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    setDob(`${year}-${month}-${day}`);
+    hideDatePicker();
+  };
   // Handle registration
   const handleRegister = async () => {
     if (!validateInputs()) return;
@@ -105,9 +122,9 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
   }, [status, dataUser, navigation, clear]);
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: 'white' }}>
+    <ScrollView style={{flex: 1, backgroundColor: 'white'}}>
       <View style={styles.container}>
-        <View style={{ marginTop: 16 }}>
+        <View style={{marginTop: 16}}>
           <BackButton size={26} />
         </View>
         <View>
@@ -137,37 +154,62 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
               keyboardType="default"
             />
             <View style={styles.genderPickerContainer}>
+              <View style={styles.pickerIconContainer}>
+                <Icon
+                  name="people-outline"
+                  size={20}
+                  color="#666"
+                  style={styles.pickerIcon}
+                />
+              </View>
               <Picker
                 selectedValue={gender}
                 onValueChange={itemValue => setGender(itemValue)}
-                style={styles.genderPicker}>
-                <Picker.Item label="Select Gender" value="" />
-                <Picker.Item label="Male" value="Male" />
-                <Picker.Item label="Female" value="Female" />
-                <Picker.Item label="Other" value="Other" />
+                style={styles.genderPicker}
+                dropdownIconColor={theme.colors.primary}>
+                <Picker.Item
+                  label="Gender"
+                  value=""
+                  style={{fontSize: 14, color: '#999'}}
+                />
+                <Picker.Item label="Male" value="Male" style={{fontSize: 14}} />
+                <Picker.Item
+                  label="Female"
+                  value="Female"
+                  style={{fontSize: 14}}
+                />
+                <Picker.Item
+                  label="Other"
+                  value="Other"
+                  style={{fontSize: 14}}
+                />
               </Picker>
             </View>
           </View>
-          <TouchableOpacity onPress={() => setShowCalendar(!showCalendar)}>
+          <TouchableOpacity onPress={showDatePicker}>
             <Input
               icon={<Icon name="calendar-outline" size={24} color="black" />}
               placeholder="Date of birth (yyyy-mm-dd)"
               value={dob}
               editable={false}
-
             />
           </TouchableOpacity>
-          {showCalendar && (
-            <Calendar
-              onDayPress={day => {
-                setDob(day.dateString);
-                setShowCalendar(false);
-              }}
-              markedDates={{
-                [dob]: { selected: true, selectedColor: theme.colors.primary },
-              }}
-            />
-          )}
+
+          <DateTimePickerModal
+            isVisible={isDatePickerVisible}
+            mode="date"
+            onConfirm={handleConfirm}
+            onCancel={hideDatePicker}
+            maximumDate={new Date()} // Không cho phép chọn ngày trong tương lai
+            minimumDate={new Date(1900, 0, 1)} // Giới hạn năm tối thiểu là 1900
+            // Các tùy chọn UI cho iOS
+            display="spinner"
+            // Các tùy chọn ngôn ngữ
+            confirmTextIOS="Xác nhận"
+            cancelTextIOS="Hủy"
+            headerTextIOS="Chọn ngày sinh"
+          />
+
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
             placeholder="Enter your Email"
@@ -194,7 +236,7 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
             <Text
               style={[
                 styles.messageText,
-                { color: status === 'error' ? 'red' : 'green' },
+                {color: status === 'error' ? 'red' : 'green'},
               ]}>
               {message}
             </Text>
@@ -210,11 +252,13 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
             By signing up, you agree to read{' '}
           </Text>
           <Text style={styles.termsTextSub}>
-            <TouchableOpacity onPress={() => navigation.navigate('TermsOfServiceScreen')}>
-              <Text style={styles.link}>Terms of Service{' '}</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('TermsOfServiceScreen')}>
+              <Text style={styles.link}>Terms of Service </Text>
             </TouchableOpacity>
             and{' '}
-            <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicyScreen')}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PrivacyPolicyScreen')}>
               <Text style={styles.link}>Privacy Policy</Text>
             </TouchableOpacity>
           </Text>
@@ -243,14 +287,14 @@ const SignUpScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, gap: 30, paddingHorizontal: wp(5) },
-  welcomeText: { fontSize: hp(4), fontWeight: 'bold', color: theme.colors.text },
+  container: {flex: 1, gap: 30, paddingHorizontal: wp(5)},
+  welcomeText: {fontSize: hp(4), fontWeight: 'bold', color: theme.colors.text},
   welcomesubText: {
     fontSize: hp(2.4),
     fontWeight: '500',
     color: theme.colors.text,
   },
-  form: { gap: 15 },
+  form: {gap: 15},
   formHeaderText: {
     fontSize: hp(1.5),
     color: theme.colors.textLight,
@@ -260,18 +304,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   nameInput: {
-    width: '65%',
+    width: '60%',
   },
   genderPickerContainer: {
-    width: '32%',
+    width: '38%',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#E0E0E0',
     borderRadius: 8,
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pickerIconContainer: {
+    paddingLeft: 8,
+    paddingRight: 2,
+  },
+  pickerIcon: {
+    marginRight: 0,
   },
   genderPicker: {
     height: 50,
-    width: '100%',
+    width: '80%',
+    color: theme.colors.text,
+    fontSize: 14,
   },
   messageText: {
     textAlign: 'center',
@@ -306,10 +368,10 @@ const styles = StyleSheet.create({
   link: {
     color: '#0B2341',
     fontWeight: 'bold',
-    transform: [{ translateY: 5 }],
+    transform: [{translateY: 5}],
   },
-  iconImage: { width: 20, height: 20 },
-  orText: { color: '#666', marginBottom: 10, textAlign: 'center' },
+  iconImage: {width: 20, height: 20},
+  orText: {color: '#666', marginBottom: 10, textAlign: 'center'},
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -325,7 +387,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: 5,
   },
-  socialText: { marginLeft: 8, fontSize: 14, fontWeight: '500' },
+  socialText: {marginLeft: 8, fontSize: 14, fontWeight: '500'},
 });
 
 export default SignUpScreen;

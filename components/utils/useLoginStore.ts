@@ -89,11 +89,11 @@ export const useLoginStore = create<LoginState>((set, get) => ({
 
       console.log("Identified")
 
-      console.log('response', response.data);
-      if (response.data.status === 'error') {
+      console.log('response', response);
+      if (response?.status === 201 ||  response?.data?.status === 'error') {
         set({
-          status: response.data.status,
-          message: response.data.message,
+          status: response?.data?.status,
+          message: response?.data?.message,
         });
         return;
       }

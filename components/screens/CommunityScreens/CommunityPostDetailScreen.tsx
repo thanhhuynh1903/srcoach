@@ -22,6 +22,7 @@ import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
 import {Dimensions} from 'react-native';
+
 interface User {
   id: string;
   username: string;
@@ -59,7 +60,7 @@ interface Post {
 }
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, getAll, deletePost, likePost} = usePostStore();
+  const {getDetail, currentPost, getAll, deletePost, likePost,getMyPosts} = usePostStore();
   const [localPost, setLocalPost] = useState<Post[]>([]);
   const {profile} = useLoginStore();
   const {
@@ -229,7 +230,7 @@ const CommunityPostDetailScreen = () => {
           // Cập nhật lại thông tin bài viết
           await getDetail(id);
           await getAll();
-
+          await getMyPosts();
           Alert.alert('Success', 'Comment updated successfully');
         } else {
           Alert.alert('Error', 'Failed to update comment');
@@ -249,6 +250,8 @@ const CommunityPostDetailScreen = () => {
           // Cập nhật lại thông tin bài viết
           await getDetail(id);
           await getAll();
+          await getMyPosts();
+
         } else {
           Alert.alert('Error', 'Failed to post comment');
         }
@@ -420,7 +423,7 @@ const CommunityPostDetailScreen = () => {
                 onPress={() =>
                   handleLikeComment(
                     comment.id,
-                    comment.is_upvote || comment.is_upvoted,
+                    comment.is_upvote,
                   )
                 }
                 style={styles.likeButton}>
