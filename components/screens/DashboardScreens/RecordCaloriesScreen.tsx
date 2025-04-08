@@ -208,7 +208,6 @@ const CaloriesScreen = () => {
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
         setIsLoading(false);
-        return;
       }
 
       let startDate = new Date(currentDate);

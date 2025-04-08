@@ -17,6 +17,7 @@ export const theme = {
       "linear-gradient(159deg, rgba(30,144,255,1) 0%, rgba(153,186,221,1) 100%)",
   },
   fonts: {
+    regular: "400",
     medium: "500",
     semibold: "600",
     bold: "bold",

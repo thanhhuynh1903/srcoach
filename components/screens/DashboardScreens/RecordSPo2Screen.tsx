@@ -8,6 +8,7 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
@@ -35,6 +36,7 @@ const SPo2Screen = () => {
   const [selectedPoint, setSelectedPoint] = useState<ChartPointDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const fetchHealthData = async () => {
     try {
@@ -43,7 +45,6 @@ const SPo2Screen = () => {
       const isInitialized = await initializeHealthConnect();
       if (!isInitialized) {
         console.log('Health Connect initialization failed');
-        return;
       }
 
       let startDate = new Date(currentDate);
@@ -77,7 +78,13 @@ const SPo2Screen = () => {
       setHasData(false);
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
+  };
+
+  const handleSyncPress = () => {
+    setIsSyncing(true);
+    fetchHealthData();
   };
 
   const changeView = (view: 'day' | 'week' | 'month' | 'year') => {
@@ -247,6 +254,17 @@ const SPo2Screen = () => {
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>SPO2</Text>
+        <TouchableOpacity 
+          style={styles.syncButton} 
+          onPress={handleSyncPress}
+          disabled={isSyncing}
+        >
+          {isSyncing ? (
+            <ActivityIndicator size="small" color="#3B82F6" />
+          ) : (
+            <Icon name="sync" size={24} color="#3B82F6" />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* View Toggle */}
@@ -417,17 +435,38 @@ const SPo2Screen = () => {
               <Text style={styles.statTime}>{stats.lowest.time}</Text>
             </View>
           </View>
+
+          {/* About SpO2 */}
+          <View style={styles.infoContainer}>
+            <Text style={styles.sectionTitle}>About SPO2</Text>
+            
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>What is SPO2?</Text>
+              <Text style={styles.infoText}>
+                SPO2 measures the oxygen saturation level in your blood, indicating how well oxygen is being transported to parts of your body.
+              </Text>
+            </View>
+            
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>Normal Range</Text>
+              <Text style={styles.infoText}>
+                A normal SPO2 level is typically between 95% and 100%. Levels below 90% are considered low and may require medical attention.
+              </Text>
+            </View>
+            
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>Factors Affecting SPO2</Text>
+              <Text style={styles.infoText}>
+                • Altitude{"\n"}
+                • Lung conditions{"\n"}
+                • Cardiovascular health{"\n"}
+                • Physical activity level{"\n"}
+                • Sleep quality
+              </Text>
+            </View>
+          </View>
         </ScrollView>
       )}
-
-      {/* About SpO2 */}
-      <View style={styles.aboutContainer}>
-        <Text style={styles.aboutTitle}>About SPO2</Text>
-        <Text style={styles.aboutText}>
-          SPO2 measures the oxygen saturation level in your blood. A normal SPO2
-          level is typically between 95% and 100%.
-        </Text>
-      </View>
 
       {/* Point Detail Modal */}
       <Modal
@@ -482,6 +521,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
+    flex: 1,
+    textAlign: 'center',
+  },
+  syncButton: {
+    marginLeft: 'auto',
+    padding: 4,
   },
   viewToggleContainer: {
     flexDirection: 'row',
@@ -589,6 +634,7 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 24,
   },
   statItem: {
     paddingVertical: 12,
@@ -615,19 +661,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
   },
-  aboutContainer: {
-    padding: 16,
+  infoContainer: {
     marginBottom: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
   },
-  aboutTitle: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 16,
+  },
+  infoCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  infoTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#3B82F6',
     marginBottom: 8,
   },
-  aboutText: {
-    fontSize: 17,
+  infoText: {
+    fontSize: 14,
     color: '#64748B',
     lineHeight: 20,
   },

@@ -8,9 +8,10 @@ import {
   requestPermission,
 } from 'react-native-health-connect';
 import { ExerciseType, getNameFromExerciseType } from '../contants/exerciseType';
+import { MASTER_URL } from './zustandfetchAPI';
 
 const api = axios.create({
-  baseURL: 'https://xavia.pro/api',
+  baseURL: MASTER_URL,
 });
 
 api.interceptors.request.use(async config => {
@@ -197,6 +198,7 @@ const syncDistanceRecords = async (startTime: string, endTime: string) => {
 
   if (records.length > 0) await api.post('/record-distance', records);
 };
+
 
 const syncHeartRateRecords = async (startTime: string, endTime: string) => {
   const healthData = await readRecords('HeartRate', {
