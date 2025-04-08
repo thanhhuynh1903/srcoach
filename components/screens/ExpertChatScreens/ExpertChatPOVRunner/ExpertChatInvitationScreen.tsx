@@ -81,6 +81,8 @@ const ExpertChatInvitationScreen = () => {
     if (!expert?.user_level) return '#607D8B';
 
     switch (expert.user_level) {
+      case 'Unknown':
+        return '#607D8B';
       case 'Beginner':
         return '#4CAF50';
       case 'Intermediate':

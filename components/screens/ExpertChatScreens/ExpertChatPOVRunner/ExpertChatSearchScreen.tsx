@@ -29,7 +29,7 @@ const ExpertItem: React.FC<ExpertItemProps> = ({expert, onPress}) => {
   // Capitalize first letter of user_level
   const formattedUserLevel = expert.user_level
     ? expert.user_level.charAt(0).toUpperCase() + expert.user_level.slice(1)
-    : 'Beginner';
+    : 'Unknown';
 
   return (
     <TouchableOpacity style={styles.expertItem} onPress={onPress}>

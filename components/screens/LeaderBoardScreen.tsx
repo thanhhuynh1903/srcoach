@@ -271,7 +271,7 @@ const LeaderBoardScreen = ({navigation}) => {
               </View>
               <View style={styles.levelBadge}>
                 <Text style={styles.levelText}>
-                  {capitalizeFirstLetter(pointsData?.level) || 'Beginner'}
+                  {capitalizeFirstLetter(pointsData?.level) || 'Unknown'}
                 </Text>
               </View>
             </View>

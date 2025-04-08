@@ -438,14 +438,14 @@ const useUserStore = create<UserState>(set => ({
           error: response?.message || 'Failed to fetch user points',
           isLoading: false,
         });
-        return {points: 0, user_level: 'Beginner'};
+        return {points: 0, user_level: 'Unknown'};
       }
     } catch (error: any) {
       set({
         error: error.message || 'Failed to fetch user points',
         isLoading: false,
       });
-      return {points: 0, user_level: 'Beginner'};
+      return {points: 0, user_level: 'Unknown'};
     }
   },
 
