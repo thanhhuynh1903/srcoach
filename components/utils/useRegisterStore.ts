@@ -19,7 +19,7 @@ interface RegisterState {
   verifyCode: (email: string, code: string) => Promise<void>;
   ResendCode: (email: string) => Promise<void>;
 }
-const MASTER_URL = "http://172.16.22.202:5000/api";
+const MASTER_URL = "https://xavia.pro/api";
 
 export const useRegisterStore = create<RegisterState>((set, get) => ({
   dataUser: null,
