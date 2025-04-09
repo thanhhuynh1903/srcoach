@@ -27,16 +27,38 @@ import {
   differenceInSeconds,
 } from 'date-fns';
 import {theme} from '../contants/theme';
+import { useLoginStore } from '../utils/useLoginStore';
+import { RouteProp } from '@react-navigation/native';
 
-const {width} = Dimensions.get('window');
+type RiskWarningScreenParams = {
+  userActivity: {
+    age: number;
+    gender: string;
+    heart_rate_min: number;
+    heart_rate_max: number;
+    heart_rate_avg: number;
+    avg_pace: number;
+    calories: number;
+    distance: number;
+    steps: number;
+    activity_name: string;
+  };
+};
 
+type RootStackParamList = {
+  RecordDetailScreen: {id: string};
+  RiskWarningScreen: RiskWarningScreenParams;
+};
 const RecordDetailScreen = () => {
   const route = useRoute();
   const {id} = route.params as {id: string};
-
+  const { profile } = useLoginStore();
   const [session, setSession] = useState<ExerciseSession | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const currentYear = new Date().getFullYear();
+  const birthYear = new Date(profile.birth_date).getFullYear();
+  const age = currentYear - birthYear;
+  
   const loadSession = async () => {
     try {
       setLoading(true);
@@ -329,7 +351,22 @@ const RecordDetailScreen = () => {
 
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => navigate.navigate('RiskWarningScreen' as never)}>
+              onPress={() => navigate.navigate('RiskWarningScreen', {
+                params: {
+                  userActivity: {
+                    "age": age,
+                    "gender": profile.gender,
+                    "heart_rate_min": session.heartRate.min,
+                    "heart_rate_max": session.heartRate.avg,
+                    "heart_rate_avg": session.heartRate?.max,
+                    "avg_pace": parseFloat(session?.avgPace),
+                    "calories": parseFloat(session.totalCalories.toFixed(2)),
+                    "distance": parseFloat((session.totalDistance / 1000).toFixed(2)),
+                    "steps": parseInt(session.totalSteps),
+                    "activity_name": `${getNameFromExerciseType(session?.exerciseType || 0)}`
+                  }
+                }
+              })} >              
               <Icon name="document-text-outline" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>Risk Analysis</Text>
             </TouchableOpacity>

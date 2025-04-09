@@ -104,6 +104,8 @@ const useApiStore = create<ApiState>((set) => ({
       
       // Kiểm tra nếu payload là FormData
       if (payload instanceof FormData) {
+        console.log('1');
+        
         headers = { 'Content-Type': 'multipart/form-data' };
       } else {
         headers = { 'Content-Type': 'application/json' };

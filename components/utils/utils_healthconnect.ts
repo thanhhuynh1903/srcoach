@@ -480,6 +480,31 @@ export const fetchExerciseSessionRecords = async (
     return [];
   }
 };
+export const fetchExerciseSessionRecordsbyIdOnly = async (
+  startTime: string,
+  endTime: string,
+): Promise<ExerciseSession[]> => {
+  try {
+    const response = await api.get('/record-exercise-session', {
+      params: {startTime, endTime},
+    });
+    return response.data.data.map((session: any) => ({
+      id: session.id,
+      exerciseType: session.exercise_type,
+      clientRecordId: session.client_record_id,
+      dataOrigin: session.data_origin,
+      startTime: session.start_time,
+      endTime: session.end_time,
+      total_distance: session.total_distance,
+      duration_minutes: session.duration_minutes,
+      total_steps: session.total_steps,
+      routes: [],
+    }));
+  } catch (error) {
+    console.error('Error fetching exercise sessions:', error);
+    return [];
+  }
+};
 
 export const fetchExerciseSessionByRecordId = async (
   recordId: string,

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { TouchableOpacity, Text, StyleSheet, Alert, View } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
 import RecordSelectionModal, { type ExerciseRecord } from "./RecordSelectionModal"
-import { fetchExerciseSessionRecords,initializeHealthConnect } from "../../utils/utils_healthconnect"
+import { fetchExerciseSessionRecordsbyIdOnly,initializeHealthConnect } from "../../utils/utils_healthconnect"
 import { format, parseISO } from "date-fns"
 
 interface RecordSelectionButtonProps {
@@ -35,7 +35,7 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
   
       const startDate = new Date("2025-01-01T00:00:00.000Z").toISOString()
       const endDate = new Date().toISOString()
-      const data = await fetchExerciseSessionRecords(startDate, endDate);
+      const data = await fetchExerciseSessionRecordsbyIdOnly(startDate, endDate);
   
       // Map ExerciseSession objects to ExerciseRecord objects
       const records: ExerciseRecord[] = data.map(session => ({
@@ -48,7 +48,8 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
         total_distance: session.totalDistance,
         total_steps: session.totalSteps,
       }));
-  
+      console.log("Fetched exercise records:", records);
+      
       return records;
     } catch (error) {
       console.error("Error fetching exercise records:", error)

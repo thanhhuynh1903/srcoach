@@ -85,7 +85,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
     }
 
     try {
-      console.log("Selected exercise record:", runRecord?.id)
+      console.log("Selected exercise record:", runRecord)
       // Nếu có onPost callback (từ props), sử dụng nó
       if (onPost) {
         const postData: PostData = {

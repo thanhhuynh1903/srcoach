@@ -50,14 +50,17 @@ interface PostState {
     exerciseSessionRecordId?: string;
     images: any[];
   }) => Promise<void>;
-  updatePost: (id: string, postData: {
-    title: string;
-    content: string;
-    tags: string[];
-    oldImageUrls?: string[];
-    images?: any[];
-    exerciseSessionRecordId?: string;
-  }) => Promise<void>;
+  updatePost: (
+    id: string,
+    postData: {
+      title: string;
+      content: string;
+      tags: string[];
+      oldImageUrls?: string[];
+      images?: any[];
+      exerciseSessionRecordId?: string;
+    },
+  ) => Promise<void>;
 
   searchResults: Post[];
   searchLoading: boolean;
@@ -162,7 +165,7 @@ export const usePostStore = create<PostState>((set, get) => ({
   createPost: async postData => {
     set({isLoading: true, status: null});
     console.log('postData', postData);
-    
+
     try {
       // Chuẩn bị FormData từ dữ liệu bài viết
       const formData = new FormData();
@@ -176,12 +179,10 @@ export const usePostStore = create<PostState>((set, get) => ({
       });
 
       // Thêm exerciseSessionRecordId nếu có
-      if (postData.exerciseSessionRecordId) {
-        formData.append(
-          'exerciseSessionRecordId',
-          postData?.exerciseSessionRecordId?.id,
-        );
-      }
+      formData.append(
+        'exercise_session_record_id',
+        postData?.exerciseSessionRecordId,
+      );
 
       // Thêm images
       if (postData.images && postData.images.length > 0) {
@@ -207,24 +208,23 @@ export const usePostStore = create<PostState>((set, get) => ({
     }
   },
   updatePost: async (id, postData) => {
-    set({ isLoading: true, status: null });
-  
+    set({isLoading: true, status: null});
+
     try {
       const formData = new FormData();
-  
+
       // Append basic fields
       formData.append('title', postData.title);
       formData.append('content', postData.content);
-  
+
       // Handle tags array - có thể gửi dưới dạng string JSON hoặc array
       if (postData.tags && postData.tags.length > 0) {
         // Phương án 1: Gửi dưới dạng tags[] (array)
         postData.tags.forEach((tag, index) => {
           formData.append(`tags[${index}]`, tag);
         });
-        
       }
-  
+
       // Handle exercise session record ID
       if (postData.exerciseSessionRecordId) {
         formData.append(
@@ -232,19 +232,21 @@ export const usePostStore = create<PostState>((set, get) => ({
           postData.exerciseSessionRecordId,
         );
       }
-  
+
       // Tách ảnh cũ và ảnh mới
-      const existingImages = postData.oldImageUrls.filter(img => typeof img === 'string');
+      const existingImages = postData.oldImageUrls.filter(
+        img => typeof img === 'string',
+      );
       const newImages = postData.images.filter(img => img.uri);
       console.log('existingImages', existingImages);
-      
+
       // Thêm ảnh cũ vào oldImageUrls[] (không phải images)
       if (existingImages.length > 0) {
         existingImages.forEach((imageUrl, index) => {
           formData.append(`oldImageUrls[${index}]`, imageUrl);
         });
       }
-  
+
       // Thêm ảnh mới vào images[]
       if (newImages.length > 0) {
         newImages.forEach((image, index) => {
@@ -256,31 +258,31 @@ export const usePostStore = create<PostState>((set, get) => ({
           formData.append(`images`, imageFile);
         });
       }
-  
+
       console.log('formData', formData);
-  
+
       // Make PUT request
       const response = await api.putData(`/posts/${id}`, formData);
       console.log('response', response);
-  
+
       // Update local state
       if (response && response.status === 'success') {
         // Cập nhật bài viết trong danh sách posts
         const updatedPosts = get().posts.map(post =>
-          post.id === id ? { ...post, ...response.data } : post,
+          post.id === id ? {...post, ...response.data} : post,
         );
-  
+
         // Cập nhật bài viết trong danh sách myPosts
         const updatedMyPosts = get().myPosts.map(post =>
-          post.id === id ? { ...post, ...response.data } : post,
+          post.id === id ? {...post, ...response.data} : post,
         );
-  
+
         // Cập nhật currentPost nếu đang xem bài viết này
         const updatedCurrentPost =
           get().currentPost?.id === id
-            ? { ...get().currentPost, ...response.data }
+            ? {...get().currentPost, ...response.data}
             : get().currentPost;
-  
+
         set({
           posts: updatedPosts,
           myPosts: updatedMyPosts,
@@ -305,7 +307,6 @@ export const usePostStore = create<PostState>((set, get) => ({
       throw error;
     }
   },
-  
 
   deletePost: async (id: string) => {
     set({isLoading: true, status: null});
@@ -411,64 +412,76 @@ export const usePostStore = create<PostState>((set, get) => ({
             return {
               ...post,
               is_upvoted: isLike,
-              upvote_count: isLike 
-                ? post.is_upvoted ? post.upvote_count : post.upvote_count + 1 
-                : post.is_upvoted ? post.upvote_count - 1 : post.upvote_count
+              upvote_count: isLike
+                ? post.is_upvoted
+                  ? post.upvote_count
+                  : post.upvote_count + 1
+                : post.is_upvoted
+                ? post.upvote_count - 1
+                : post.upvote_count,
             };
           }
           return post;
         });
-  
+
         // Cập nhật searchResults
         const updatedSearchResults = state.searchResults?.map(post => {
           if (post.id === postId) {
             return {
               ...post,
               is_upvoted: isLike,
-              upvote_count: isLike 
-                ? post.is_upvoted ? post.upvote_count : post.upvote_count + 1 
-                : post.is_upvoted ? post.upvote_count - 1 : post.upvote_count
+              upvote_count: isLike
+                ? post.is_upvoted
+                  ? post.upvote_count
+                  : post.upvote_count + 1
+                : post.is_upvoted
+                ? post.upvote_count - 1
+                : post.upvote_count,
             };
           }
           return post;
         });
-  
+
         // Cập nhật currentPost nếu đang xem chi tiết
-        const updatedCurrentPost = state.currentPost && state.currentPost.id === postId
-          ? {
-              ...state.currentPost,
-              is_upvoted: isLike,
-              upvote_count: isLike 
-                ? state.currentPost.is_upvoted ? state.currentPost.upvote_count : state.currentPost.upvote_count + 1
-                : state.currentPost.is_upvoted ? state.currentPost.upvote_count - 1 : state.currentPost.upvote_count
-            }
-          : state.currentPost;
-  
+        const updatedCurrentPost =
+          state.currentPost && state.currentPost.id === postId
+            ? {
+                ...state.currentPost,
+                is_upvoted: isLike,
+                upvote_count: isLike
+                  ? state.currentPost.is_upvoted
+                    ? state.currentPost.upvote_count
+                    : state.currentPost.upvote_count + 1
+                  : state.currentPost.is_upvoted
+                  ? state.currentPost.upvote_count - 1
+                  : state.currentPost.upvote_count,
+              }
+            : state.currentPost;
+
         return {
           posts: updatedPosts,
           searchResults: updatedSearchResults,
           currentPost: updatedCurrentPost,
-          status: 'loading'
+          status: 'loading',
         };
       });
-  
+
       // Gọi API
-      const response = await api.postData(
-        `/posts-votes/post/${postId}`,
-        { isLike: isLike }
-      );
-  
+      const response = await api.postData(`/posts-votes/post/${postId}`, {
+        isLike: isLike,
+      });
+
       if (response && response.status === 'success') {
         set({
           status: 'success',
-          message: isLike ? 'Đã thích bài viết' : 'Đã bỏ thích bài viết'
+          message: isLike ? 'Đã thích bài viết' : 'Đã bỏ thích bài viết',
         });
         return true;
       } else {
         // Rollback nếu API thất bại (có thể thêm logic rollback ở đây)
         set({
           status: 'error',
-          message: response?.message || 'Không thể thực hiện thao tác'
+          message: response?.message || 'Không thể thực hiện thao tác',
         });
         return false;
       }
@@ -477,7 +490,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       // Rollback nếu có lỗi (có thể thêm logic rollback ở đây)
       set({
         status: 'error',
-        message: error.message || 'Đã xảy ra lỗi khi thích bài viết'
+        message: error.message || 'Đã xảy ra lỗi khi thích bài viết',
       });
       return false;
     }

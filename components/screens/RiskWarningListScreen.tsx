@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import { useNavigation } from '@react-navigation/native';
 
-const filters = ['All', 'High Risk', 'Medium Risk', 'Low'];
+const filters = ['All', 'High Risk', 'Medium Risk', 'Low Risk'];
 
 const riskItems = [
   {
@@ -62,6 +62,23 @@ const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
+  
+  // Lọc danh sách theo bộ lọc đang hoạt động và từ khóa tìm kiếm
+  const filteredRiskItems = useMemo(() => {
+    // Lọc theo từ khóa tìm kiếm trước
+    let filtered = riskItems.filter(item => 
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    // Sau đó lọc theo loại rủi ro
+    if (activeFilter !== 'All') {
+      filtered = filtered.filter(item => item.riskLevel === activeFilter);
+    }
+    
+    return filtered;
+  }, [activeFilter, searchQuery]);
+  
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -85,10 +102,20 @@ const RiskWarningListScreen = () => {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        {searchQuery ? (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Icon name="close-circle" size={20} color="#64748B" />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Filters */}
-      <View style={styles.filtersContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.filtersScrollView}
+        contentContainerStyle={styles.filtersContainer}
+      >
         {filters.map(filter => (
           <TouchableOpacity
             key={filter}
@@ -106,13 +133,17 @@ const RiskWarningListScreen = () => {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Risk List */}
       <ScrollView style={styles.riskList}>
-        <View>
-          {riskItems.map(item => (
-            <TouchableOpacity key={item.id} style={styles.riskItem} onPress={() => {navigation.navigate('RiskWarningScreen' as never)}}>
+        {filteredRiskItems.length > 0 ? (
+          filteredRiskItems.map(item => (
+            <TouchableOpacity 
+              key={item.id} 
+              style={styles.riskItem} 
+              onPress={() => {navigation.navigate('RiskWarningScreen' as never)}}
+            >
               <View style={styles.riskHeader}>
                 <Text style={styles.riskTitle}>{item.title}</Text>
                 <View
@@ -148,8 +179,16 @@ const RiskWarningListScreen = () => {
                 </View>
               </View>
             </TouchableOpacity>
-          ))}
-        </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Icon name="search-outline" size={48} color="#CBD5E1" />
+            <Text style={styles.emptyStateTitle}>No results found</Text>
+            <Text style={styles.emptyStateDescription}>
+              Try adjusting your search or filter to find what you're looking for
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -180,6 +219,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
+    backgroundColor: '#F8FAFC',
     gap: 8,
   },
   searchInput: {
@@ -188,18 +228,21 @@ const styles = StyleSheet.create({
     color: '#000000',
     padding: 0,
   },
+  filtersScrollView: {
+    maxHeight: 40,
+  },
   filtersContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 12,
     marginBottom: 16,
-    height: 40,
+    flexDirection: 'row',
   },
   filterTab: {
     backgroundColor: '#F8FAFC',
     borderRadius: 20,
     justifyContent: 'center',
     paddingHorizontal: 16,
+    height: 36,
   },
   filterTabActive: {
     backgroundColor: '#2563EB',
@@ -286,6 +329,25 @@ const styles = StyleSheet.create({
   completedStatus: {
     fontSize: 14,
     color: '#64748B',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

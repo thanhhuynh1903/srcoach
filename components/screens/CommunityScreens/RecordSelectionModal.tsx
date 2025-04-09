@@ -49,6 +49,7 @@ const RecordSelectionModal: React.FC<RecordSelectionModalProps> = ({
       setLoading(true)
       setError(null)
       const data = await fetchRecords()
+  
       setRecords(data)
     } catch (error) {
       console.error("Error loading exercise records:", error)
