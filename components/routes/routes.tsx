@@ -51,6 +51,11 @@ import ExpertChatboxScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunne
 import ECPEChatbox from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEChatbox';
 import RecordStepsScreen from '../screens/DashboardScreens/RecordStepsScreen';
 import RecordDistanceScreen from '../screens/DashboardScreens/RecordDistanceScreen';
+import UserCertificatesIntroScreen from '../screens/SettingsAboutScreens/UserCertificatesScreens/UserCertificatesIntroScreen';
+import UserCertificatesLegalScreen from '../screens/SettingsAboutScreens/UserCertificatesScreens/UserCertificatesLegalScreen';
+import UserCertificatesSubmitScreen from '../screens/SettingsAboutScreens/UserCertificatesScreens/UserCertificatesSubmitScreen';
+import UserCertificatesSuccessScreen from '../screens/SettingsAboutScreens/UserCertificatesScreens/UserCertificatesSuccessScreen';
+import UserCertificatesAlreadyExistsScreen from '../screens/SettingsAboutScreens/UserCertificatesScreens/UserCertificatesAlreadyExistsScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -109,6 +114,13 @@ export const stackScreens = [
   // About Screens
   { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },
   { name: 'TermsOfServiceScreen', component: TermsOfServiceScreen },
+
+  // Settings - Become Expert (Certificates)
+  { name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen },
+  { name: 'UserCertificatesLegalScreen', component: UserCertificatesLegalScreen },
+  { name: 'UserCertificatesSubmitScreen', component: UserCertificatesSubmitScreen},
+  { name: 'UserCertificatesSuccessScreen', component: UserCertificatesSuccessScreen},
+  { name: 'UserCertificatesAlreadyExistsScreen', component: UserCertificatesAlreadyExistsScreen},
 ];
 
 // Cấu hình cho Tab Navigator

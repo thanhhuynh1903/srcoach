@@ -22,47 +22,62 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearAll, clear, profile} = useLoginStore();
 
   async function logout() {
-    try {
-      const currentUser = auth().currentUser;
-
-      if (currentUser) {
-        const isGoogleUser = currentUser.providerData.some(
-          provider => provider.providerId === 'google.com',
-        );
-
-        if (isGoogleUser) {
-          // Sign out from Google if needed
-          await GoogleSignin.revokeAccess();
-          await GoogleSignin.signOut();
-        }
-
-        // Sign out from Firebase for both email/password and Google
-        await auth().signOut();
-      }
-
-      // Clear token from AsyncStorage
-      await AsyncStorage.removeItem('authToken');
-      // If you have a clearToken function from your store, call it here.
-      await clear();
-      await clearToken();
-      await clearAll();
-
-      // Navigate to Login after all operations have finished
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{name: 'LoginScreen'}],
-        }),
-      );
-      Alert.alert('Logged Out', 'You have been successfully logged out.');
-    } catch (error: any) {
-      console.error('Logout Error:', error);
-      Alert.alert(
-        'Logout Failed',
-        error.message || 'Unable to log out. Please try again.',
-      );
-    }
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            const currentUser = auth().currentUser;
+            if (currentUser) {
+              const isGoogleUser = currentUser.providerData.some(
+                provider => provider.providerId === 'google.com',
+              );
+              if (isGoogleUser) {
+                await GoogleSignin.revokeAccess();
+                await GoogleSignin.signOut();
+              }
+              await auth().signOut();
+            }
+            await AsyncStorage.removeItem('authToken');
+            await clear();
+            await clearToken();
+            await clearAll();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{name: 'LoginScreen'}],
+              }),
+            );
+          },
+        },
+      ],
+      {cancelable: true},
+    );
   }
+
+  const handleBecomeExpert = () => {
+    Alert.alert(
+      'Become an Expert',
+      'This process requires submission of legal documents for verification. Are you ready to proceed?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Continue',
+          onPress: () => navigation.navigate('UserCertificatesIntroScreen'),
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -110,6 +125,24 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
                 <Icon name="chevron-forward" size={20} color="#888" />
               </TouchableOpacity>
             ))}
+
+            <TouchableOpacity
+              style={styles.expertItem}
+              onPress={handleBecomeExpert}>
+              <View style={styles.iconContainer}>
+                <Icon name="ribbon-outline" size={24} color="#FFA500" />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.expertTitle}>Become an Expert</Text>
+                <Text style={styles.expertSubtitle}>
+                  Requires legal documents for verification
+                </Text>
+              </View>
+              <View style={styles.legalBadge}>
+                <Text style={styles.legalBadgeText}>LEGAL</Text>
+              </View>
+              <Icon name="chevron-forward" size={20} color="#888" />
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.logoutItem} onPress={logout}>
               <View style={styles.iconContainer}>
@@ -179,7 +212,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   scrollContainer: {
-    paddingBottom: 80, // Added padding to account for bottom tab
+    paddingBottom: 80,
   },
   container: {
     flex: 1,
@@ -232,6 +265,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
+  expertItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#ffffff',
+    marginVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 0,
+  },
   iconContainer: {
     width: 40,
     alignItems: 'center',
@@ -246,9 +290,20 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 3,
   },
+  expertTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFA500',
+    marginBottom: 3,
+  },
   menuSubtitle: {
     fontSize: 13,
     color: '#888',
+  },
+  expertSubtitle: {
+    fontSize: 13,
+    color: '#FFA500',
+    fontWeight: '500',
   },
   logoutItem: {
     flexDirection: 'row',
@@ -261,6 +316,18 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontWeight: '600',
     marginBottom: 3,
+  },
+  legalBadge: {
+    backgroundColor: '#FFA500',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: 10,
+  },
+  legalBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 
