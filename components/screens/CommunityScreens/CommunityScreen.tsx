@@ -147,9 +147,9 @@ const CommunityScreen = () => {
           newsItem: item,
         })
       }>
-      <View style={styles.newsImageContainer}>
+      {/* <View style={styles.newsImageContainer}>
         <View style={[styles.newsImage, styles.newsImagePlaceholder]} />
-      </View>
+      </View> */}
       <View style={styles.newsContent}>
         <Text style={styles.newsTitle}>{item.title}</Text>
         <Text style={styles.newsDescription} numberOfLines={2}>
@@ -467,7 +467,7 @@ const CommunityScreen = () => {
             onPress={() => navigation.navigate('SearchScreen' as never)}>
             <Icon name="search" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}>
             <Icon
               name="notifications-outline"
               size={24}
@@ -508,14 +508,14 @@ const CommunityScreen = () => {
             <Text style={{color: '#999'}}>Create posts</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.sectionTitle}>Official News</Text>
+        {/* <Text style={styles.sectionTitle}>Official News</Text>
         <FlatList
           data={news}
           renderItem={renderNewsItem}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={item => item.id}
-        />
+        /> */}
         <Text style={styles.sectionTitle}>Community Posts</Text>
         {renderPostsContent()}
       </ScrollView>

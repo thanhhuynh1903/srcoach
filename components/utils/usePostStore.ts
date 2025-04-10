@@ -177,10 +177,10 @@ export const usePostStore = create<PostState>((set, get) => ({
       postData.tags.forEach((tag, index) => {
         formData.append(`tags[${index}]`, tag);
       });
-
+      
       // Thêm exerciseSessionRecordId nếu có
       formData.append(
-        'exercise_session_record_id',
+        'exerciseSessionRecordId',
         postData?.exerciseSessionRecordId,
       );
 
@@ -227,10 +227,8 @@ export const usePostStore = create<PostState>((set, get) => ({
 
       // Handle exercise session record ID
       if (postData.exerciseSessionRecordId) {
-        formData.append(
-          'exerciseSessionRecordId',
-          postData.exerciseSessionRecordId,
-        );
+        console.log('postData.exerciseSessionRecordId', postData.exerciseSessionRecordId);
+        formData.append('exerciseSessionRecordId',postData?.exerciseSessionRecordId);
       }
 
       // Tách ảnh cũ và ảnh mới
