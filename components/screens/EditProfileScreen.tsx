@@ -53,7 +53,7 @@ interface PhoneCode {
 }
 
 const EditProfileScreen = ({navigation}) => {
-  const {profile, clearAll, clear} = useLoginStore();
+  const {fetchUserProfile, profile, clearAll, clear} = useLoginStore();
   const {clearToken} = useAuthStore();
   const [formData, setFormData] = useState<Partial<ProfileData>>({
     username: '',
@@ -114,30 +114,6 @@ const EditProfileScreen = ({navigation}) => {
     setShowPhoneCodeModal(false);
   };
 
-  const logout = async () => {
-    const currentUser = auth().currentUser;
-    if (currentUser) {
-      const isGoogleUser = currentUser.providerData.some(
-        provider => provider.providerId === 'google.com',
-      );
-      if (isGoogleUser) {
-        await GoogleSignin.revokeAccess();
-        await GoogleSignin.signOut();
-      }
-      await auth().signOut();
-    }
-    await AsyncStorage.removeItem('authToken');
-    await clear();
-    await clearToken();
-    await clearAll();
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{name: 'LoginScreen'}],
-      }),
-    );
-  };
-
   const handleSubmit = async () => {
     if (showPasswordFields && password !== confirmPassword) {
       Toast.show({
@@ -172,8 +148,9 @@ const EditProfileScreen = ({navigation}) => {
         text2: 'Profile updated successfully',
       });
 
-      // Log out after successful update
-      await logout();
+      // Refresh profile data and navigate back
+      await fetchUserProfile();
+      navigation.goBack();
     } catch (error) {
       console.error('Error updating profile:', error);
       Toast.show({

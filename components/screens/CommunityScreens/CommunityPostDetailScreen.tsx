@@ -22,6 +22,7 @@ import {useLoginStore} from '../../utils/useLoginStore';
 import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
 import {Dimensions} from 'react-native';
+import CommunityPostDetailMap from './CommunityPostDetailMap';
 
 interface User {
   id: string;
@@ -705,20 +706,8 @@ const CommunityPostDetailScreen = () => {
             </>
           )}
 
-          {/* Run map */}
-          <View style={styles.mapContainer}>
-            <View style={styles.mapTitleContainer}>
-              <Icon name="trending-up" size={16} color="#4285F4" />
-              <Text style={styles.mapTitle}>Morning Route</Text>
-            </View>
-            <Image
-              source={{
-                uri: 'https://maps.googleapis.com/maps/api/staticmap?center=40.7831,-73.9712&zoom=14&size=600x300&maptype=roadmap&path=color:0x4285F4|weight:3|40.7831,-73.9712|40.7735,-73.9675|40.7685,-73.9751&key=YOUR_API_KEY',
-              }}
-              style={styles.mapImage}
-              resizeMode="cover"
-            />
-          </View>
+         <CommunityPostDetailMap exerciseSessionRecordId={localPost?.exercise_session_record_id} />
+
           {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
             <View style={styles.tagsContainer}>
               <Text style={{fontSize: 16, fontWeight: 'bold', marginRight: 5}}>
@@ -731,23 +720,6 @@ const CommunityPostDetailScreen = () => {
               ))}
             </View>
           )}
-          {/* Run stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>8.2 km</Text>
-              <Text style={styles.statLabel}>Distance</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>45:23</Text>
-              <Text style={styles.statLabel}>Duration</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>154 bpm</Text>
-              <Text style={styles.statLabel}>Avg Heart Rate</Text>
-            </View>
-          </View>
 
           {/* Post engagement */}
           <View style={styles.engagementContainer}>
