@@ -216,7 +216,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           style={styles.continueButton}
           onPress={() => navigation.navigate('UserCertificatesLegalScreen')}>
           <LinearGradient
-            colors={[theme.colors.primaryDark, theme.colors.primary]}
+            colors={[theme.colors.primaryDark, theme.colors.primaryDark]}
             style={styles.gradientButton}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 0}}>

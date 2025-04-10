@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
 import useUserCertificatesStore from '../../../utils/useUserCertificatesStore';
 import { useNavigation } from '@react-navigation/native';
@@ -29,28 +30,34 @@ const UserCertificatesAlreadyExistsScreen = () => {
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [confirmedResubmit, setConfirmedResubmit] = useState(false);
 
-  useEffect(() => {
-    const checkCertificates = async () => {
-      try {
-        await getSelfCertificates();
-        setAnalyzing(false);
-        
-        if (certificates.length === 0) {
-          navigation.replace('UserCertificatesSubmitScreen');
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkCertificates = async () => {
+        try {
+          await getSelfCertificates();
+          setAnalyzing(false);
+          
+          if (certificates.length === 0) {
+            navigation.replace('UserCertificatesSubmitScreen');
+          }
+        } catch (error) {
+          setAnalyzing(false);
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Failed to check certificates status',
+            visibilityTime: 4000,
+          });
         }
-      } catch (error) {
-        setAnalyzing(false);
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to check certificates status',
-          visibilityTime: 4000,
-        });
-      }
-    };
+      };
 
-    checkCertificates();
-  }, []);
+      checkCertificates();
+
+      return () => {
+        // Cleanup if needed
+      };
+    }, [certificates.length])
+  );
 
   const handleResubmit = () => {
     setShowResubmitModal(true);
@@ -156,7 +163,7 @@ const UserCertificatesAlreadyExistsScreen = () => {
         <View style={styles.statusContainer}>
           <Icon name="time" size={30} color={theme.colors.warning} />
           <Text style={styles.statusTitle}>Application Submitted</Text>
-          <Text style={styles.statusText}>
+          <Text style={styles.statusSubText}>
             Your expert application is under review. Normal processing time takes between 3-5 business days.
           </Text>
         </View>
@@ -176,7 +183,7 @@ const UserCertificatesAlreadyExistsScreen = () => {
                   </Text>
                 )}
               </View>
-              <View style={styles.statusContainer}>
+              <View style={styles.statusBadge}>
                 <View 
                   style={[
                     styles.statusChip,
@@ -314,7 +321,7 @@ const styles = StyleSheet.create({
   analyzingText: {
     marginTop: 20,
     fontSize: 18,
-    color: theme.colors.text,
+    color: theme.colors.textDark,
   },
   scrollContent: {
     padding: 20,
@@ -335,15 +342,21 @@ const styles = StyleSheet.create({
   statusTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     marginTop: 10,
     marginBottom: 5,
   },
-  statusText: {
+  statusSubText: {
     fontSize: 14,
-    color: theme.colors.gray,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
   documentsContainer: {
     marginBottom: 30,
@@ -351,7 +364,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     marginBottom: 15,
     paddingHorizontal: 5,
   },
@@ -376,13 +389,16 @@ const styles = StyleSheet.create({
   documentName: {
     fontSize: 16,
     fontWeight: '500',
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     marginBottom: 5,
     textTransform: 'capitalize',
   },
   documentDescription: {
     fontSize: 14,
-    color: theme.colors.gray,
+    color: theme.colors.textSecondary,
+  },
+  statusBadge: {
+    marginLeft: 10,
   },
   statusChip: {
     paddingHorizontal: 12,
@@ -391,12 +407,6 @@ const styles = StyleSheet.create({
     minWidth: 80,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  statusText: {
-    color: 'white',
-    fontWeight: '500',
-    fontSize: 12,
-    textTransform: 'capitalize',
   },
   resubmitButton: {
     borderRadius: 10,
@@ -436,12 +446,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     marginLeft: 10,
   },
   modalText: {
     fontSize: 14,
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -461,7 +471,7 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     fontSize: 14,
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     flex: 1,
   },
   modalButtons: {
@@ -482,7 +492,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   cancelButtonText: {
-    color: theme.colors.text,
+    color: theme.colors.textDark,
     fontWeight: '600',
   },
   confirmButtonText: {

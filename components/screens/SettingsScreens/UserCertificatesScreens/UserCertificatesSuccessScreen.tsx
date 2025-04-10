@@ -28,7 +28,7 @@ const UserCertificatesSuccessScreen = () => {
   }, [secondsRemaining, navigation]);
 
   const handleBack = () => {
-    navigation.goBack();
+    navigation.navigate('HomeTabs', { screen: 'Home', params: { screen: 'HomeMain' } });
   };
 
   return (
