@@ -40,6 +40,7 @@ interface ScheduleState {
   message: string | null; // Thêm thuộc tính message để lưu thông báo từ API
   // Actions
   fetchSchedules: () => Promise<void>;
+  fetchSelfSchedules: () => Promise<void>;
   createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
   updateSchedule: (
     id: string,
@@ -76,6 +77,20 @@ const useScheduleStore = create<ScheduleState>()(
         }
       },
 
+      fetchSelfSchedules: async () => {
+        set({isLoading: true, error: null});
+        try {
+          const response = await api.fetchData(`/schedules/self`);
+          set({schedules: response.data, isLoading: false});
+        } catch (error) {
+          console.error('Lỗi khi lấy danh sách lịch tập cá nhân:', error);
+          set({
+            error: 'Không thể lấy danh sách lịch tập cá nhân. Vui lòng thử lại sau.',
+            isLoading: false,
+          });
+        }
+      },
+    
       // Tạo lịch tập mới
       createSchedule: async scheduleData => {
         set({isLoading: true, error: null, message: null});

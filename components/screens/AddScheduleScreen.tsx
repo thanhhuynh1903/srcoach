@@ -16,6 +16,8 @@ import DailyGoalsSection from '../DailyGoalsScreen';
 import BackButton from '../BackButton';
 import {useNavigation} from '@react-navigation/native';
 import useScheduleStore from '../utils/useScheduleStore';
+import {Activity} from 'react-native-feather';
+import {ActivityIndicator} from 'react-native-paper';
 
 const AddScheduleScreen = () => {
   // State for form fields
@@ -25,7 +27,9 @@ const AddScheduleScreen = () => {
   const [selectedDates, setSelectedDates] = useState({});
   const [currentMonth, setCurrentMonth] = useState('');
   const [validDates, setValidDates] = useState({});
-  const {createSchedule, schedules, isLoading, message} = useScheduleStore();
+  const {createSchedule, schedules, isLoading, message,fetchSelfSchedules} = useScheduleStore();
+  const [isCreating, setIsCreating] = useState(false);
+
   // Overall goals for the schedule
   const [goals, setGoals] = useState({
     distance: 0,
@@ -52,6 +56,8 @@ const AddScheduleScreen = () => {
     }
 
     try {
+      setIsCreating(true);
+
       // Dữ liệu từ dailyGoals đã được định dạng đúng từ DailyGoalsSection
       const formData = {
         title,
@@ -65,7 +71,7 @@ const AddScheduleScreen = () => {
       const result = await createSchedule(formData);
       console.log('Create schedule result:', result);
       console.log('Schedules after creation:', message);
-
+      await fetchSelfSchedules(); // Cập nhật danh sách lịch tập sau khi tạo mới
       if (result) {
         Alert.alert('Success', 'Schedule created successfully', [
           {text: 'OK', onPress: () => navigate.goBack()},
@@ -79,6 +85,9 @@ const AddScheduleScreen = () => {
         'Lỗi',
         'Đã xảy ra lỗi khi tạo lịch tập. Vui lòng thử lại sau.',
       );
+    } finally {
+      // Kết thúc loading
+      setIsCreating(false);
     }
   };
   // Initialize with current date and set valid date range (today + 6 days)
@@ -351,29 +360,23 @@ const AddScheduleScreen = () => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            getSelectedDatesCount() === 0 ? styles.disabledButton : null,
+            getSelectedDatesCount() === 0 || isCreating
+              ? styles.disabledButton
+              : null,
           ]}
-          disabled={getSelectedDatesCount() === 0}
+          disabled={getSelectedDatesCount() === 0 || isCreating}
           onPress={handleCreateSchedule}>
-          <Text style={styles.createButtonText}>
-            Create Schedule ({getSelectedDatesCount()}{' '}
-            {getSelectedDatesCount() === 1 ? 'day' : 'days'})
-          </Text>
+          {isCreating ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.createButtonText}>
+              Create Schedule ({getSelectedDatesCount()}{' '}
+              {getSelectedDatesCount() === 1 ? 'day' : 'days'})
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
-  );
-};
-
-const GoalInput = ({icon, value, unit, onChangeValue}) => {
-  return (
-    <View style={styles.goalInputContainer}>
-      <View style={styles.goalIconContainer}>
-        <Icon name={icon} size={20} color="#0F2B5B" />
-      </View>
-      <Text style={styles.goalValue}>{value}</Text>
-      <Text style={styles.goalUnit}>{unit}</Text>
-    </View>
   );
 };
 

@@ -1,206 +1,131 @@
-import { useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar } from "react-native"
+import { useState,useEffect } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar,ActivityIndicator } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
 import EnhancedScheduleCard from "./EnhancedScheduleCard"
 import { useNavigation } from "@react-navigation/native"
 import BackButton from "../BackButton"
+import useScheduleStore from "../utils/useScheduleStore"
 // Mock component for BackButton
 
 const GenerateScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState("All")
   const navigation = useNavigation()
+  const { schedules, isLoading, error, fetchSelfSchedules } = useScheduleStore();
+  useEffect(() => {
+    fetchSelfSchedules();
+  }, []);
+  const formatScheduleData = (schedule) => {
+    if (!schedule || !schedule.ScheduleDay) return null;
+    
+    // Sắp xếp các ngày theo thứ tự tăng dần
+    const sortedDays = [...schedule.ScheduleDay].sort((a, b) => 
+      new Date(a.day).getTime() - new Date(b.day).getTime()
+    );
+    
+    // Lấy danh sách ngày để hiển thị
+    const days = sortedDays.map(day => new Date(day.day).getDate());
+    
+    // Lấy ngày bắt đầu
+    const startDate = sortedDays.length > 0 
+      ? new Date(sortedDays[0].day) 
+      : new Date();
+    
+    // Định dạng ngày bắt đầu
+    const formattedStartDate = startDate.toLocaleDateString('vi-VN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    // Tạo daySchedules cho mỗi ngày
+    const daySchedules = sortedDays.map(day => {
+      const date = new Date(day.day);
+      return {
+        day: date.getDate(),
+        workouts: day.ScheduleDetail.map(detail => {
+          const startTime = new Date(detail.start_time);
+          const endTime = new Date(detail.end_time);
+          
+          // Định dạng thời gian
+          const formattedStartTime = startTime.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          
+          const formattedEndTime = endTime.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          
+          return {
+            time: `${formattedStartTime} - ${formattedEndTime}`,
+            name: detail.description || "Buổi tập",
+            steps: detail.goal_steps || 0,
+            distance: detail.goal_distance || 0,
+            calories: detail.goal_calories || 0,
+            status: detail.status,
+            id: detail.id
+          };
+        })
+      };
+    });
+    
+    return {
+      id: schedule.id,
+      title: schedule.title,
+      description: schedule.description ,
+      startDate: formattedStartDate,
+      days: days,
+      daySchedules: daySchedules,
+      isExpertChoice: schedule.schedule_type === "EXPERT",
+      status: schedule.status
+    };
+  };
 
-  // Sample workout data for each day
-  const springFitnessDaySchedules = [
-    {
-      day: 15,
-      workouts: [
-        {
-          time: "12:00 - 14:00",
-          name: "Buổi sáng",
-          steps: 6000,
-          distance: 6.5,
-          calories: 350,
-        },
-        {
-          time: "16:00 - 18:00",
-          name: "Buổi chiều",
-          steps: 9000,
-          distance: 9.5,
-          calories: 650,
-        },
-      ],
-    },
-    {
-      day: 16,
-      workouts: [
-        {
-          time: "07:00 - 08:30",
-          name: "Chạy buổi sáng",
-          steps: 5000,
-          distance: 5.2,
-          calories: 300,
-        },
-      ],
-    },
-    {
-      day: 17,
-      workouts: [
-        {
-          time: "12:00 - 14:00",
-          name: "Buổi sáng",
-          steps: 6100,
-          distance: 6.1,
-          calories: 355,
-        },
-        {
-          time: "17:00 - 19:00",
-          name: "Buổi chiều",
-          steps: 9200,
-          distance: 8.9,
-          calories: 670,
-        },
-      ],
-    },
-    {
-      day: 18,
-      workouts: [
-        {
-          time: "06:00 - 07:30",
-          name: "Chạy buổi sáng",
-          steps: 5300,
-          distance: 5.6,
-          calories: 310,
-        },
-      ],
-    },
-    {
-      day: 19,
-      workouts: [
-        {
-          time: "12:00 - 14:00",
-          name: "Buổi sáng",
-          steps: 6500,
-          distance: 6.8,
-          calories: 370,
-        },
-        {
-          time: "16:00 - 18:00",
-          name: "Buổi chiều",
-          steps: 8900,
-          distance: 9.1,
-          calories: 630,
-        },
-      ],
-    },
-    {
-      day: 20,
-      workouts: [
-        {
-          time: "07:00 - 08:30",
-          name: "Chạy buổi sáng",
-          steps: 5300,
-          distance: 5.6,
-          calories: 310,
-        },
-      ],
-    },
-    {
-      day: 21,
-      workouts: [
-        {
-          time: "12:00 - 14:00",
-          name: "Buổi sáng",
-          steps: 6100,
-          distance: 6.3,
-          calories: 345,
-        },
-        {
-          time: "17:00 - 19:00",
-          name: "Buổi chiều",
-          steps: 9300,
-          distance: 9.7,
-          calories: 660,
-        },
-      ],
-    },
-  ]
-
-  const morningCardioDaySchedules = [
-    {
-      day: 10,
-      workouts: [
-        {
-          time: "06:00 - 07:30",
-          name: "Cardio nhẹ",
-          steps: 4500,
-          distance: 3.0,
-          calories: 280,
-        },
-      ],
-    },
-    {
-      day: 11,
-      workouts: [
-        {
-          time: "06:00 - 07:30",
-          name: "Cardio cường độ cao",
-          steps: 5200,
-          distance: 3.5,
-          calories: 320,
-        },
-      ],
-    },
-    {
-      day: 12,
-      workouts: [
-        {
-          time: "06:00 - 07:00",
-          name: "Chạy bộ",
-          steps: 4800,
-          distance: 3.2,
-          calories: 290,
-        },
-      ],
-    },
-    {
-      day: 13,
-      workouts: [
-        {
-          time: "06:00 - 07:30",
-          name: "Cardio nhẹ",
-          steps: 4500,
-          distance: 3.0,
-          calories: 280,
-        },
-      ],
-    },
-    {
-      day: 14,
-      workouts: [
-        {
-          time: "06:00 - 07:30",
-          name: "Cardio cường độ cao",
-          steps: 5200,
-          distance: 3.5,
-          calories: 320,
-        },
-      ],
-    },
-    {
-      day: 15,
-      workouts: [
-        {
-          time: "06:00 - 07:00",
-          name: "Chạy bộ",
-          steps: 4800,
-          distance: 3.2,
-          calories: 290,
-        },
-      ],
-    },
-  ]
-
+  // Hiển thị màn hình loading
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <BackButton size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Schedule</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0F2B5B" />
+          <Text style={styles.loadingText}>Loading schedules...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
+  // Hiển thị thông báo lỗi
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <BackButton size={24} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Schedule</Text>
+        </View>
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle-outline" size={60} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => fetchSelfSchedules()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -261,40 +186,51 @@ const GenerateScheduleScreen = () => {
 
       {/* Schedule Cards */}
       <ScrollView style={styles.scrollView}>
-        <EnhancedScheduleCard
-          title="Spring Fitness Challenge"
-          description="30-day comprehensive workout plan designed by fitness experts"
-          startDate="Mar 15, 2024"
-         
-          days={[15, 16, 17, 18, 19, 20, 21]}
-          selectedDay={15}
-          alarmEnabled={true}
-          isExpertChoice={true}
-          daySchedules={springFitnessDaySchedules}
-        />
-
-        <EnhancedScheduleCard
-          title="Morning Cardio Routine"
-          description="Personal cardio workout schedule for morning sessions"
-          startDate="Mar 10, 2024"
-          metrics={[
-            { icon: "walk", value: "3km" },
-            { icon: "flame", value: "300kcal" },
-            { icon: "footsteps", value: "8,000" },
-            { icon: "time", value: "13:00pm" },
-          ]}
-          days={[10, 11, 12, 13, 14, 15]}
-          selectedDay={10}
-          alarmEnabled={false}
-          isExpertChoice={false}
-          daySchedules={morningCardioDaySchedules}
-        />
+      {schedules && schedules.length > 0 ? (
+          schedules.map((schedule) => {
+            const formattedSchedule = formatScheduleData(schedule);
+            if (!formattedSchedule) return null;
+            
+            return (
+              <EnhancedScheduleCard
+                key={formattedSchedule.id}
+                id={formattedSchedule.id}
+                title={formattedSchedule.title}
+                description={formattedSchedule.description}
+                startDate={formattedSchedule.startDate}
+                days={formattedSchedule.days}
+                selectedDay={formattedSchedule.days[0] || 0}
+                alarmEnabled={false}
+                isExpertChoice={formattedSchedule.isExpertChoice}
+                daySchedules={formattedSchedule.daySchedules}
+                status={formattedSchedule.status}
+              />
+            );
+          })
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Icon name="calendar-outline" size={60} color="#94A3B8" />
+            <Text style={styles.emptyText}>Bạn chưa có lịch tập nào</Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0F172A',
+    marginTop: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
@@ -313,6 +249,42 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 12,
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#F1F5F9',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#0F172A',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#0F2B5B',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    padding: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+
   tabContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
