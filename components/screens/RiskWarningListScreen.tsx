@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import {
   View,
   Text,
@@ -7,77 +7,126 @@ import {
   TextInput,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
+import useAiRiskStore from '../utils/useAiRiskStore';
 
-const filters = ['All', 'High Risk', 'Medium Risk', 'Low Risk'];
-
-const riskItems = [
-  {
-    id: 1,
-    title: 'Production Line Safety Assessment',
-    description:
-      'Comprehensive analysis of manufacturing safety protocols and potential hazards',
-    date: 'Jan 15, 2024',
-    riskLevel: 'High Risk',
-    score: 78,
-    status: '',
-    color: '#EF4444',
-  },
-  {
-    id: 2,
-    title: 'Supply Chain Vulnerability',
-    description:
-      'Evaluation of potential disruptions and mitigation strategies in supply network',
-    date: 'Jan 14, 2024',
-    riskLevel: 'Medium Risk',
-    score: 50,
-    status: '',
-    color: '#F97316',
-  },
-  {
-    id: 3,
-    title: 'Cybersecurity Assessment',
-    description: 'Analysis of system vulnerabilities and security measures',
-    date: 'Jan 12, 2024',
-    riskLevel: 'High Risk',
-    score: '',
-    status: 'Completed',
-    color: '#EF4444',
-  },
-  {
-    id: 4,
-    title: 'Environmental Compliance',
-    description: 'Review of environmental impact and regulatory compliance',
-    date: 'Jan 10, 2024',
-    riskLevel: 'Low Risk',
-    score: 3,
-    status: '',
-    color: '#22C55E',
-  },
-];
+const filters = ['All', 'High', 'Moderate', 'Low'];
 
 const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
   
+  // Lấy state và hàm từ store
+  const {
+    healthAlerts,
+    isLoadingAlerts,
+    error,
+    fetchHealthAlerts,
+  } = useAiRiskStore();
+  
+  // Fetch dữ liệu khi component mount
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      await fetchHealthAlerts();
+    };
+    fetchAlerts();
+    
+  }, []);
+  
+  // Chuyển đổi severity thành màu sắc
+  const getSeverityColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'high':
+        return '#EF4444';
+      case 'moderate':
+        return '#F97316';
+      case 'low':
+        return '#22C55E';
+      default:
+        return '#64748B';
+    }
+  };
+  
   // Lọc danh sách theo bộ lọc đang hoạt động và từ khóa tìm kiếm
   const filteredRiskItems = useMemo(() => {
+    if (!healthAlerts || healthAlerts.length === 0) return [];
+    
     // Lọc theo từ khóa tìm kiếm trước
-    let filtered = riskItems.filter(item => 
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    let filtered = healthAlerts.filter(item => 
+      item.alert_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.AIHealthAlertType.type_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
     
-    // Sau đó lọc theo loại rủi ro
+    // Sau đó lọc theo mức độ nghiêm trọng
     if (activeFilter !== 'All') {
-      filtered = filtered.filter(item => item.riskLevel === activeFilter);
+      filtered = filtered.filter(item => item.severity === activeFilter);
     }
-    
+
     return filtered;
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, healthAlerts]);
+  
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+  
+  // Hiển thị loading
+  if (isLoadingAlerts) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity>
+            <Icon name="menu" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Risk Analysis</Text>
+          <TouchableOpacity>
+            <Icon name="plus" size={24} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563EB" />
+          <Text style={styles.loadingText}>Loading health alerts...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
+  // Hiển thị lỗi
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity>
+            <Icon name="menu" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Risk Analysis</Text>
+          <TouchableOpacity>
+            <Icon name="plus" size={24} color="#2563EB" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.emptyState}>
+          <Icon name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.emptyStateTitle}>Error</Text>
+          <Text style={styles.emptyStateDescription}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={fetchHealthAlerts}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
   
   return (
     <SafeAreaView style={styles.container}>
@@ -86,7 +135,7 @@ const RiskWarningListScreen = () => {
         <TouchableOpacity>
           <Icon name="menu" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Risk Analysis</Text>
+        <Text style={styles.headerTitle}>Health Risk Analysis</Text>
         <TouchableOpacity>
           <Icon name="plus" size={24} color="#2563EB" />
         </TouchableOpacity>
@@ -97,7 +146,7 @@ const RiskWarningListScreen = () => {
         <Icon name="search" size={20} color="#64748B" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search risk analysis"
+          placeholder="Search health alerts"
           placeholderTextColor="#64748B"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -142,20 +191,24 @@ const RiskWarningListScreen = () => {
             <TouchableOpacity 
               key={item.id} 
               style={styles.riskItem} 
-              onPress={() => {navigation.navigate('RiskWarningScreen' as never)}}
+              onPress={() => {
+                navigation.navigate('RiskWarningScreen' as never, { alertId: item.id } as never);
+              }}
             >
               <View style={styles.riskHeader}>
-                <Text style={styles.riskTitle}>{item.title}</Text>
+                <Text style={styles.riskTitle}>{item.alert_message}</Text>
                 <View
-                  style={[styles.statusDot, {backgroundColor: item.color}]}
+                  style={[styles.statusDot, {backgroundColor: getSeverityColor(item.severity)}]}
                 />
               </View>
-              <Text style={styles.riskDescription}>{item.description}</Text>
+              <Text style={styles.riskDescription}>
+                {item.AIHealthAlertType.type_name} - {item.AIHealthAlertType.description}
+              </Text>
               <View style={styles.riskFooter}>
-                <Text style={styles.date}>{item.date}</Text>
+                <Text style={styles.date}>{formatDate(item.alert_date)}</Text>
                 <View style={styles.riskStatus}>
-                  <Text style={[styles.riskLevel, {color: item.color}]}>
-                    {item.riskLevel}
+                  <Text style={[styles.riskLevel, {color: getSeverityColor(item.severity)}]}>
+                    {item.severity} Risk
                   </Text>
                   {item.score && (
                     <Text
@@ -172,9 +225,6 @@ const RiskWarningListScreen = () => {
                       ]}>
                       {item.score}/100
                     </Text>
-                  )}
-                  {item.status && (
-                    <Text style={styles.completedStatus}>{item.status}</Text>
                   )}
                 </View>
               </View>
@@ -348,6 +398,27 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748B',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 

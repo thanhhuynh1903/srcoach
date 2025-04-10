@@ -53,21 +53,28 @@ const RiskWarningScreen = () => {
   const navigation = useNavigation();
 
   const activityData = route.params?.params?.userActivity;
-  
+    const alertId = route.params?.alertId;
+
   // Sử dụng zustand store
   const { 
     assessment, 
     isLoading, 
     error, 
     evaluateActivityHealth, 
+    fetchHealthAlertDetail,
     clearAssessment 
   } = useAiRiskStore();
 
   // Gọi API đánh giá khi màn hình được tải
   useEffect(() => {
-    console.log('Activity data received:', activityData);
     if (activityData) {
+      console.log('Activity data received:', activityData);
       evaluateActivityHealth(activityData);
+    } else if (alertId) {
+      console.log('Alert ID received:', alertId);
+      fetchHealthAlertDetail(alertId);
+    } else {
+      console.error('Không có dữ liệu hoạt động hoặc ID cảnh báo');
     }
     
     // Xóa dữ liệu đánh giá khi rời khỏi màn hình
@@ -415,7 +422,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scoreValue: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#000000',
   },
