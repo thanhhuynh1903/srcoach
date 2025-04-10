@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -12,18 +12,18 @@ import {
   FlatList,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useLoginStore } from '../utils/useLoginStore';
+import {useLoginStore} from '../utils/useLoginStore';
 import axios from 'axios';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LinearGradient from 'react-native-linear-gradient';
-import { theme } from '../contants/theme';
+import {theme} from '../contants/theme';
 import phone_codes from '../contants/phone_code.json';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
-import { CommonActions } from '@react-navigation/native';
+import {CommonActions} from '@react-navigation/native';
 import useAuthStore from '../utils/useAuthStore';
-import { MASTER_URL } from '../utils/zustandfetchAPI';
+import {MASTER_URL} from '../utils/zustandfetchAPI';
 
 interface ProfileData {
   id: string;
@@ -52,9 +52,9 @@ interface PhoneCode {
   code: string;
 }
 
-const EditProfileScreen = ({ navigation }) => {
-  const { profile, clearAll, clear } = useLoginStore();
-  const { clearToken } = useAuthStore();
+const EditProfileScreen = ({navigation}) => {
+  const {profile, clearAll, clear} = useLoginStore();
+  const {clearToken} = useAuthStore();
   const [formData, setFormData] = useState<Partial<ProfileData>>({
     username: '',
     email: '',
@@ -71,7 +71,9 @@ const EditProfileScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [showPhoneCodeModal, setShowPhoneCodeModal] = useState(false);
-  const [selectedPhoneCode, setSelectedPhoneCode] = useState<PhoneCode | null>(null);
+  const [selectedPhoneCode, setSelectedPhoneCode] = useState<PhoneCode | null>(
+    null,
+  );
   const [phoneNumber, setPhoneNumber] = useState('');
 
   useEffect(() => {
@@ -89,8 +91,10 @@ const EditProfileScreen = ({ navigation }) => {
         phone_number: profile.phone_number,
       });
       setPhoneNumber(profile.phone_number || '');
-      
-      const matchingCode = phone_codes.find(code => code.dial_code === profile.phone_code);
+
+      const matchingCode = phone_codes.find(
+        code => code.dial_code === profile.phone_code,
+      );
       if (matchingCode) {
         setSelectedPhoneCode(matchingCode);
       }
@@ -153,7 +157,7 @@ const EditProfileScreen = ({ navigation }) => {
       const updateData = {
         ...formData,
         phoneNumber: phoneNumber,
-        ...(showPasswordFields && password ? { password } : {}),
+        ...(showPasswordFields && password ? {password} : {}),
       };
 
       await axios.put(`${MASTER_URL}/users`, updateData, {
@@ -185,8 +189,8 @@ const EditProfileScreen = ({ navigation }) => {
       {/* Fixed Header */}
       <LinearGradient
         colors={[theme.colors.primaryDark, theme.colors.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
         style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity
@@ -205,7 +209,9 @@ const EditProfileScreen = ({ navigation }) => {
           <View style={styles.photoContainer}>
             <View style={styles.photoWrapper}>
               <Image
-                source={{ uri: 'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg' }}
+                source={{
+                  uri: 'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg',
+                }}
                 style={styles.profilePhoto}
               />
               <TouchableOpacity style={styles.cameraButton}>
@@ -226,7 +232,7 @@ const EditProfileScreen = ({ navigation }) => {
                 placeholder="Your name"
                 placeholderTextColor="#999"
                 value={formData.name}
-                onChangeText={(text) => handleChange('name', text)}
+                onChangeText={text => handleChange('name', text)}
               />
             </View>
 
@@ -237,7 +243,7 @@ const EditProfileScreen = ({ navigation }) => {
                 placeholder="@username"
                 placeholderTextColor="#999"
                 value={formData.username}
-                onChangeText={(text) => handleChange('username', text)}
+                onChangeText={text => handleChange('username', text)}
               />
             </View>
 
@@ -249,19 +255,20 @@ const EditProfileScreen = ({ navigation }) => {
                 placeholderTextColor="#999"
                 keyboardType="email-address"
                 value={formData.email}
-                onChangeText={(text) => handleChange('email', text)}
+                onChangeText={text => handleChange('email', text)}
               />
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone Number</Text>
               <View style={styles.phoneInputContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.phoneCodeButton}
-                  onPress={() => setShowPhoneCodeModal(true)}
-                >
+                  onPress={() => setShowPhoneCodeModal(true)}>
                   <Text style={styles.phoneCodeText}>
-                    {selectedPhoneCode ? `${selectedPhoneCode.dial_code}` : '+1'}
+                    {selectedPhoneCode
+                      ? `${selectedPhoneCode.dial_code}`
+                      : '+1'}
                   </Text>
                   <Icon name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
@@ -283,7 +290,7 @@ const EditProfileScreen = ({ navigation }) => {
                 placeholder="Street address"
                 placeholderTextColor="#999"
                 value={formData.address1}
-                onChangeText={(text) => handleChange('address1', text)}
+                onChangeText={text => handleChange('address1', text)}
               />
             </View>
 
@@ -294,7 +301,7 @@ const EditProfileScreen = ({ navigation }) => {
                 placeholder="Apt, suite, etc."
                 placeholderTextColor="#999"
                 value={formData.address2}
-                onChangeText={(text) => handleChange('address2', text)}
+                onChangeText={text => handleChange('address2', text)}
               />
             </View>
 
@@ -305,7 +312,7 @@ const EditProfileScreen = ({ navigation }) => {
                 placeholder="Postal code"
                 placeholderTextColor="#999"
                 value={formData.zip_code}
-                onChangeText={(text) => handleChange('zip_code', text)}
+                onChangeText={text => handleChange('zip_code', text)}
               />
             </View>
 
@@ -365,27 +372,24 @@ const EditProfileScreen = ({ navigation }) => {
         visible={showPhoneCodeModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowPhoneCodeModal(false)}
-      >
+        onRequestClose={() => setShowPhoneCodeModal(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Country Code</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalCloseButton}
-                onPress={() => setShowPhoneCodeModal(false)}
-              >
+                onPress={() => setShowPhoneCodeModal(false)}>
                 <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
             <FlatList
               data={phone_codes}
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
+              keyExtractor={item => item.code}
+              renderItem={({item}) => (
                 <TouchableOpacity
                   style={styles.phoneCodeItem}
-                  onPress={() => handlePhoneCodeSelect(item)}
-                >
+                  onPress={() => handlePhoneCodeSelect(item)}>
                   <Text style={styles.phoneCodeItemText}>
                     {item.name} ({item.dial_code})
                   </Text>
@@ -399,14 +403,12 @@ const EditProfileScreen = ({ navigation }) => {
 
       {/* Sticky Footer with Button */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleSubmit}>
+        <TouchableOpacity style={styles.continueButton} onPress={handleSubmit}>
           <LinearGradient
             colors={[theme.colors.primaryDark, theme.colors.primaryDark]}
             style={styles.gradientButton}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}>
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 0}}>
             <Text style={styles.continueButtonText}>Save Changes</Text>
           </LinearGradient>
         </TouchableOpacity>
