@@ -183,7 +183,7 @@ const RiskWarningScreen = () => {
     },
     {
       icon: 'speedometer-outline',
-      value: activityData?.avg_pace ? activityData.avg_pace : assessment.avg_pace  || '0:00',
+      value: activityData?.avg_pace ? activityData.avg_pace : assessment.pace  || '0:00',
       unit: '/km',
       status: paceRiskFactor ? paceRiskFactor.level : 'Normal',
       color: paceRiskFactor

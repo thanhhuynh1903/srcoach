@@ -73,6 +73,7 @@ interface RiskAssessment {
   alert_message: string;
   risk_factors: RiskFactor[];
   recommendations: string[];
+  pace: number;
 }
 
 interface AiRiskState {
@@ -199,6 +200,7 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
             heart_rate_min: response.data.heart_rate_min,
             activity_name: response.data.activity_name, 
             distance : response.data.distance,
+            pace: response.data.pace,
             step: response.data.step,
             score: response.data.score,
             severity: response.data.severity,
