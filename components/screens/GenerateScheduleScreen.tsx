@@ -61,7 +61,7 @@ const GenerateScheduleScreen = () => {
           
           return {
             time: `${formattedStartTime} - ${formattedEndTime}`,
-            name: detail.description || "Buổi tập",
+            name: detail.description || "Session",
             steps: detail.goal_steps || 0,
             distance: detail.goal_distance || 0,
             calories: detail.goal_calories || 0,

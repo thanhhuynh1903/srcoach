@@ -133,6 +133,7 @@ const RiskWarningScreen = () => {
       </SafeAreaView>
     );
   }
+  
   const handleSaveResult = async () => {
     if (!activityData || !assessment) return;
     
@@ -379,7 +380,9 @@ const RiskWarningScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => navigation.goBack()}>
+              onPress={() => {
+                navigation.navigate('HomeTabs', { screen: 'Risk', params: { screen: 'HomeMain' } });
+              }}>
               <Text style={styles.deleteButtonText}>Return list of risk warning</Text>
             </TouchableOpacity>
           </View>

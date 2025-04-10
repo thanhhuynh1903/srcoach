@@ -29,14 +29,6 @@ const AddScheduleScreen = () => {
   const [validDates, setValidDates] = useState({});
   const {createSchedule, schedules, isLoading, message,fetchSelfSchedules} = useScheduleStore();
   const [isCreating, setIsCreating] = useState(false);
-
-  // Overall goals for the schedule
-  const [goals, setGoals] = useState({
-    distance: 0,
-    calories: 0,
-    steps: 0,
-  });
-
   // Daily goals for each selected date
   const [dailyGoals, setDailyGoals] = useState({});
 

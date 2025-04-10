@@ -2,8 +2,7 @@ import React, { useState, useEffect } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
 import { format } from "date-fns"
-import { vi } from "date-fns/locale"
-
+import { US } from "date-fns/locale"
 interface TrainingSession {
   description: string
   start_time: string
@@ -30,7 +29,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
   // Thời gian mặc định cho các buổi tập
   const defaultSessions = {
     morning: {
-      description: "Buổi sáng",
+      description: "Morning",
       start_time: "06:00",
       end_time: "08:00",
       goal_steps: 5000,
@@ -38,7 +37,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       goal_calories: 300
     },
     afternoon: {
-      description: "Buổi chiều",
+      description: "afternoon",
       start_time: "15:00",
       end_time: "17:00",
       goal_steps: 8000,
@@ -46,7 +45,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       goal_calories: 500
     },
     evening: {
-      description: "Buổi tối",
+      description: "evening",
       start_time: "18:00",
       end_time: "20:00",
       goal_steps: 6000,
@@ -62,7 +61,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
         day: day.day,
         details: day.details.map(session => {
           return {
-            description: session.description || "Buổi tập",
+            description: session.description || "Session",
             start_time: session.start_time,
             end_time: session.end_time,
             goal_steps: typeof session.goal_steps === 'string' ? parseInt(session.goal_steps) : session.goal_steps,
@@ -111,7 +110,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return format(date, "EEE, dd/MM", { locale: vi })
+    return format(date, "EEE, dd/MM", { locale: US })
   }
 
   const toggleDay = (date: string) => {
@@ -125,7 +124,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
     
     // Thêm buổi tập mới vào ngày với giá trị số đúng kiểu dữ liệu
     day.details.push({
-      description: "Buổi tập mới",
+      description: "New Session",
       start_time: `${date}T${defaultSessions.afternoon.start_time}:00.000Z`,
       end_time: `${date}T${defaultSessions.afternoon.end_time}:00.000Z`,
       goal_steps: Number(defaultSessions.afternoon.goal_steps),
@@ -187,8 +186,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Mục tiêu hàng ngày</Text>
-      <Text style={styles.sectionDescription}>Thiết lập mục tiêu cụ thể cho từng ngày trong lịch tập luyện</Text>
+      <Text style={styles.sectionTitle}>Daily Goals</Text>
+      <Text style={styles.sectionDescription}>Set specific goals for each day in your workout schedule</Text>
 
       <ScrollView
         style={styles.daysContainer}
@@ -210,7 +209,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                 <View>
                   <Text style={styles.dateText}>{formatDate(day.day)}</Text>
                   <Text style={styles.sessionCount}>
-                    {day.details.length} {day.details.length === 1 ? "buổi tập" : "buổi tập"}
+                    {day.details.length} {day.details.length === 1 ? "Session" : "Session"}
                   </Text>
                 </View>
               </View>
@@ -222,14 +221,14 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                 {day.details.map((session, sessionIndex) => (
                   <View key={sessionIndex} style={styles.sessionContainer}>
                     <View style={styles.sessionHeader}>
-                      <Text style={styles.sessionTitle}>Buổi tập {sessionIndex + 1}</Text>
+                      <Text style={styles.sessionTitle}>Session {sessionIndex + 1}</Text>
                       {day.details.length > 1 && (
                         <TouchableOpacity 
                           onPress={() => removeSession(dayIndex, sessionIndex)}
                           style={styles.removeButton}
                         >
                           <Icon name="trash-outline" size={16} color="#EF4444" />
-                          <Text style={styles.removeButtonText}>Xóa</Text>
+                          <Text style={styles.removeButtonText}>Delete</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -241,7 +240,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                         style={styles.textInput}
                         value={session.description}
                         onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'description', value)}
-                        placeholder="Mô tả buổi tập"
+                        placeholder="Describe your session"
                       />
                     </View>
                     

@@ -128,7 +128,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
               </View>
               <View style={styles.progressTextContainer}>
                 <Text style={styles.progressText}>
-                  {profile?.points || 0}/{profile?.points_to_next_level + profile?.points || 500} XP
+                  {profile?.points || 0}/{profile?.points_to_next_level + profile?.points || 500} Point
                 </Text>
                 <Text style={styles.nextLevelText}>
                   Next: {capitalizeFirstLetter(profile?.user_next_level || 'Beginner')}
