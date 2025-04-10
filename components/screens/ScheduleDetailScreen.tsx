@@ -9,7 +9,7 @@ const ScheduleDetailScreen = ({ navigation }) => {
 
   // Days data for the horizontal scroll
   const days = [
-    { day: "11", weekday: "Thứ" },
+    { day: "11", weekday: "Day" },
     { day: "14", weekday: "Thứ" },
     { day: "16", weekday: "Thứ" },
     { day: "18", weekday: "Thứ" },
