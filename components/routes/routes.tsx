@@ -21,15 +21,15 @@ import ScheduleScreen from '../screens/ScheduleScreen';
 import RateScheduleScreen from '../screens/RateScheduleScreen';
 import RiskWarningListScreen from '../screens/RiskWarningListScreen';
 import RiskWarningScreen from '../screens/RiskWarningScreen';
-import DeviceNotificationScreen from '../screens/DeviceNotificationScreen';
+import DeviceNotificationScreen from '../screens/SettingsScreens/DeviceNotificationScreen';
 import CaloriesScreen from '../screens/DashboardScreens/RecordCaloriesScreen';
 import VerifyScreen from '../screens/VerifyScreen';
 import GenerateScheduleScreen from '../screens/GenerateScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginScreen';
-import PrivacyPolicyScreen from '../screens/SettingsAboutScreens/PrivacyPolicyScreen';
-import TermsOfServiceScreen from '../screens/SettingsAboutScreens/TermsOfServiceScreen';
+import PrivacyPolicyScreen from '../screens/SettingsScreens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from '../screens/SettingsScreens/TermsOfServiceScreen';
 import CommunityScreen from '../screens/CommunityScreens/CommunityScreen';
 import CommunityNewsDetailScreen from '../screens/CommunityScreens/CommunityNewsDetailScreen';
 import CommunityPostDetailScreen from '../screens/CommunityScreens/CommunityPostDetailScreen';
@@ -51,6 +51,13 @@ import ExpertChatboxScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunne
 import ECPEChatbox from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEChatbox';
 import RecordStepsScreen from '../screens/DashboardScreens/RecordStepsScreen';
 import RecordDistanceScreen from '../screens/DashboardScreens/RecordDistanceScreen';
+import UserCertificatesIntroScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesIntroScreen';
+import UserCertificatesLegalScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesLegalScreen';
+import UserCertificatesSubmitScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesSubmitScreen';
+import UserCertificatesSuccessScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesSuccessScreen';
+import UserCertificatesAlreadyExistsScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesAlreadyExistsScreen';
+import UserCertificatesExpertScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesExpertsScreen';
+import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -109,6 +116,17 @@ export const stackScreens = [
   // About Screens
   { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },
   { name: 'TermsOfServiceScreen', component: TermsOfServiceScreen },
+
+  //Settings
+  { name: 'SettingsAboutScreen', component: SettingsAboutScreen },
+
+  // Settings - Become Expert (Certificates)
+  { name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen },
+  { name: 'UserCertificatesLegalScreen', component: UserCertificatesLegalScreen },
+  { name: 'UserCertificatesSubmitScreen', component: UserCertificatesSubmitScreen},
+  { name: 'UserCertificatesSuccessScreen', component: UserCertificatesSuccessScreen},
+  { name: 'UserCertificatesAlreadyExistsScreen', component: UserCertificatesAlreadyExistsScreen},
+  { name: 'UserCertificatesExpertsScreen', component: UserCertificatesExpertScreen },
 ];
 
 // Cấu hình cho Tab Navigator

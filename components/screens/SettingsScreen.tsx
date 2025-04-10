@@ -20,49 +20,74 @@ import {CommonActions} from '@react-navigation/native';
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
   const {clearAll, clear, profile} = useLoginStore();
+  const isExpert = profile?.roles?.includes('expert');
 
   async function logout() {
-    try {
-      const currentUser = auth().currentUser;
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            const currentUser = auth().currentUser;
+            if (currentUser) {
+              const isGoogleUser = currentUser.providerData.some(
+                provider => provider.providerId === 'google.com',
+              );
+              if (isGoogleUser) {
+                await GoogleSignin.revokeAccess();
+                await GoogleSignin.signOut();
+              }
+              await auth().signOut();
+            }
+            await AsyncStorage.removeItem('authToken');
+            await clear();
+            await clearToken();
+            await clearAll();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{name: 'LoginScreen'}],
+              }),
+            );
+          },
+        },
+      ],
+      {cancelable: true},
+    );
+  }
 
-      if (currentUser) {
-        const isGoogleUser = currentUser.providerData.some(
-          provider => provider.providerId === 'google.com',
-        );
-
-        if (isGoogleUser) {
-          // Sign out from Google if needed
-          await GoogleSignin.revokeAccess();
-          await GoogleSignin.signOut();
-        }
-
-        // Sign out from Firebase for both email/password and Google
-        await auth().signOut();
-      }
-
-      // Clear token from AsyncStorage
-      await AsyncStorage.removeItem('authToken');
-      // If you have a clearToken function from your store, call it here.
-      await clear();
-      await clearToken();
-      await clearAll();
-
-      // Navigate to Login after all operations have finished
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{name: 'LoginScreen'}],
-        }),
-      );
-      Alert.alert('Logged Out', 'You have been successfully logged out.');
-    } catch (error: any) {
-      console.error('Logout Error:', error);
+  const handleExpertPress = () => {
+    if (isExpert) {
+      navigation.navigate('UserCertificatesExpertsScreen');
+    } else {
       Alert.alert(
-        'Logout Failed',
-        error.message || 'Unable to log out. Please try again.',
+        'Become an Expert',
+        'This process requires submission of legal documents for verification. Are you ready to proceed?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Continue',
+            onPress: () => navigation.navigate('UserCertificatesIntroScreen'),
+          },
+        ],
       );
     }
-  }
+  };
+
+  // Capitalize first letter of user level
+  const capitalizeFirstLetter = (str: string) => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -70,22 +95,65 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}>
         <View style={styles.container}>
+          {/* Profile Header Section */}
           <View style={styles.profileSection}>
             <Image
-              source={{uri: 'https://via.placeholder.com/100'}}
+              source={{uri: `https://randomuser.me/api/portraits/men/${Math.floor(Math.random() * 100)}.jpg`}}
               style={styles.profileImage}
             />
             <Text style={styles.profileName}>{profile?.username}</Text>
-            <View style={styles.statsContainer}>
-              <Text style={styles.statText}>
-                <Text style={styles.boldText}>2,547</Text> Points
+            
+            {/* Level Badge */}
+            <View style={styles.levelContainer}>
+              <Text style={styles.levelText}>
+                {capitalizeFirstLetter(profile?.user_level || 'Newbie')}
               </Text>
-              <Text style={styles.statText}>
-                <Text style={styles.boldText}>156</Text> Posts
-              </Text>
+              {isExpert && (
+                <View style={styles.expertBadge}>
+                  <Icon name="ribbon" size={12} color="white" />
+                  <Text style={styles.expertBadgeText}>EXPERT</Text>
+                </View>
+              )}
+            </View>
+            
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill,
+                    {width: `${profile?.points_percentage || 10}%`}
+                  ]} 
+                />
+              </View>
+              <View style={styles.progressTextContainer}>
+                <Text style={styles.progressText}>
+                  {profile?.points || 0}/{profile?.points_to_next_level + profile?.points || 500} XP
+                </Text>
+                <Text style={styles.nextLevelText}>
+                  Next: {capitalizeFirstLetter(profile?.user_next_level || 'Beginner')}
+                </Text>
+              </View>
+            </View>
+            
+            {/* Stats Grid */}
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{profile?.points || 0}</Text>
+                <Text style={styles.statLabel}>Points</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{profile?.total_posts || 0}</Text>
+                <Text style={styles.statLabel}>Posts</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{profile?.total_posts_liked || 0}</Text>
+                <Text style={styles.statLabel}>Likes</Text>
+              </View>
             </View>
           </View>
 
+          {/* Menu Section */}
           <View style={styles.menuSection}>
             {menuItems.map((item, index) => (
               <TouchableOpacity
@@ -110,6 +178,43 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
                 <Icon name="chevron-forward" size={20} color="#888" />
               </TouchableOpacity>
             ))}
+
+            <TouchableOpacity
+              style={[
+                styles.expertItem,
+                isExpert && styles.expertItemActive,
+              ]}
+              onPress={handleExpertPress}>
+              <View style={styles.iconContainer}>
+                <Icon 
+                  name={isExpert ? "ribbon" : "ribbon-outline"} 
+                  size={24} 
+                  color={isExpert ? "#4CAF50" : "#FFA500"} 
+                />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={[
+                  styles.expertTitle,
+                  isExpert && styles.expertTitleActive
+                ]}>
+                  {isExpert ? 'Expert Dashboard' : 'Become an Expert'}
+                </Text>
+                <Text style={[
+                  styles.expertSubtitle,
+                  isExpert && styles.expertSubtitleActive
+                ]}>
+                  {isExpert 
+                    ? 'View your expert status and certificates' 
+                    : 'Requires legal documents for verification'}
+                </Text>
+              </View>
+              {!isExpert && (
+                <View style={styles.legalBadge}>
+                  <Text style={styles.legalBadgeText}>LEGAL</Text>
+                </View>
+              )}
+              <Icon name="chevron-forward" size={20} color="#888" />
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.logoutItem} onPress={logout}>
               <View style={styles.iconContainer}>
@@ -169,7 +274,7 @@ const menuItems = [
     title: 'About',
     subtitle: 'App information and help',
     icon: 'information-circle-outline',
-    screen: '',
+    screen: 'SettingsAboutScreen',
   },
 ];
 
@@ -179,7 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   scrollContainer: {
-    paddingBottom: 80, // Added padding to account for bottom tab
+    paddingBottom: 80,
   },
   container: {
     flex: 1,
@@ -190,37 +295,105 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     marginBottom: 30,
-    paddingBottom: 20,
+    paddingBottom: 25,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
   profileImage: {
-    width: 90,
-    height: 90,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 15,
     backgroundColor: '#e1e1e1',
     borderWidth: 3,
     borderColor: '#4A6FA5',
   },
   profileName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 5,
     color: '#333',
   },
-  statsContainer: {
+  levelContainer: {
     flexDirection: 'row',
-    gap: 25,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  levelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A6FA5',
+    backgroundColor: '#EFF3F9',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  expertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginLeft: 8,
+  },
+  expertBadgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  progressContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  progressBar: {
+    height: 8,
+    width: '100%',
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 5,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4A6FA5',
+    borderRadius: 4,
+  },
+  progressTextContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  progressText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  nextLevelText: {
+    fontSize: 13,
+    color: '#4A6FA5',
+    fontWeight: '500',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
     marginTop: 10,
   },
-  statText: {
-    fontSize: 16,
-    color: '#666',
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: 10,
   },
-  boldText: {
+  statNumber: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#4A6FA5',
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
   },
   menuSection: {
     marginTop: 10,
@@ -231,6 +404,21 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  expertItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#ffffff',
+    marginVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 0,
+  },
+  expertItemActive: {
+    backgroundColor: '#F0F8F0',
+    borderColor: '#4CAF50',
   },
   iconContainer: {
     width: 40,
@@ -246,9 +434,26 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 3,
   },
+  expertTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFA500',
+    marginBottom: 3,
+  },
+  expertTitleActive: {
+    color: '#4CAF50',
+  },
   menuSubtitle: {
     fontSize: 13,
     color: '#888',
+  },
+  expertSubtitle: {
+    fontSize: 13,
+    color: '#FFA500',
+    fontWeight: '500',
+  },
+  expertSubtitleActive: {
+    color: '#4CAF50',
   },
   logoutItem: {
     flexDirection: 'row',
@@ -261,6 +466,18 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontWeight: '600',
     marginBottom: 3,
+  },
+  legalBadge: {
+    backgroundColor: '#FFA500',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: 10,
+  },
+  legalBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
 
