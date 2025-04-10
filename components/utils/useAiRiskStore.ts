@@ -61,6 +61,12 @@ interface RiskFactor {
 }
 
 interface RiskAssessment {
+  heart_rate_avg: number;
+  heart_rate_max: number;
+  heart_rate_min: number;
+  activity_name: string;
+  distance: number;
+  step: number;
   score: number;
   severity: string;
   alert_type: string;
@@ -188,6 +194,12 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
         // Chuyển đổi dữ liệu từ API thành định dạng phù hợp với UI
         set({
           assessment: {
+            heart_rate_avg: response.data.heart_rate_avg,
+            heart_rate_max: response.data.heart_rate_max,
+            heart_rate_min: response.data.heart_rate_min,
+            activity_name: response.data.activity_name, 
+            distance : response.data.distance,
+            step: response.data.step,
             score: response.data.score,
             severity: response.data.severity,
             alert_type: response.data.alert_type,

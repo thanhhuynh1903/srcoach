@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import { PieChart } from "react-native-gifted-charts";
-import { useRoute, useNavigation } from '@react-navigation/native';
+import {PieChart} from 'react-native-gifted-charts';
+import {useRoute, useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
-const getSeverityColor = (severity) => {
+const getSeverityColor = severity => {
   switch (severity?.toLowerCase()) {
     case 'high':
       return '#EF4444'; // Đỏ
@@ -31,7 +31,7 @@ const getSeverityColor = (severity) => {
 };
 
 // Hàm lấy giá trị tiến trình dựa trên mức độ
-const getLevelProgress = (level) => {
+const getLevelProgress = level => {
   switch (level?.toLowerCase()) {
     case 'high':
       return 0.9;
@@ -47,22 +47,21 @@ const getLevelProgress = (level) => {
 
 // Hàm dịch mức độ nghiêm trọng sang tiếng Việt
 
-
 const RiskWarningScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
 
   const activityData = route.params?.params?.userActivity;
-    const alertId = route.params?.alertId;
+  const alertId = route.params?.alertId;
 
   // Sử dụng zustand store
-  const { 
-    assessment, 
-    isLoading, 
-    error, 
-    evaluateActivityHealth, 
+  const {
+    assessment,
+    isLoading,
+    error,
+    evaluateActivityHealth,
     fetchHealthAlertDetail,
-    clearAssessment 
+    clearAssessment,
   } = useAiRiskStore();
 
   // Gọi API đánh giá khi màn hình được tải
@@ -76,6 +75,7 @@ const RiskWarningScreen = () => {
     } else {
       console.error('Không có dữ liệu hoạt động hoặc ID cảnh báo');
     }
+    console.log('Assessment data:', assessment);
     
     // Xóa dữ liệu đánh giá khi rời khỏi màn hình
     return () => clearAssessment();
@@ -93,12 +93,15 @@ const RiskWarningScreen = () => {
         </View>
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={60} color="#EF4444" />
-          <Text style={styles.errorText}>An error occurred while parsing data.</Text>
+          <Text style={styles.errorText}>
+            An error occurred while parsing data.
+          </Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => activityData && evaluateActivityHealth(activityData)}
-          >
+            onPress={() =>
+              activityData && evaluateActivityHealth(activityData)
+            }>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -119,7 +122,9 @@ const RiskWarningScreen = () => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1E3A8A" />
           <Text style={styles.loadingText}>Analyzing activity data...</Text>
-          <Text style={styles.loadingSubText}>AI systems are assessing risk factors</Text>
+          <Text style={styles.loadingSubText}>
+            AI systems are assessing risk factors
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -127,7 +132,7 @@ const RiskWarningScreen = () => {
 
   // Lấy màu dựa trên mức độ nghiêm trọng
   const severityColor = getSeverityColor(assessment.severity);
-  
+
   // Tạo dữ liệu cho biểu đồ tròn
   const pieChartData = [
     {
@@ -141,41 +146,49 @@ const RiskWarningScreen = () => {
   ];
 
   // Tạo metrics từ risk_factors
-  const heartRiskFactor = assessment.risk_factors.find(f => 
-    f.name.toLowerCase().includes('nhịp tim') && 
-    !f.name.toLowerCase().includes('thấp')
+  const heartRiskFactor = assessment.risk_factors.find(
+    f =>
+      f.name.toLowerCase().includes('nhịp tim') &&
+      !f.name.toLowerCase().includes('thấp'),
   );
-  
-  const lowestHeartRiskFactor = assessment.risk_factors.find(f => 
-    f.name.toLowerCase().includes('nhịp tim') && 
-    f.name.toLowerCase().includes('thấp')
+
+  const lowestHeartRiskFactor = assessment.risk_factors.find(
+    f =>
+      f.name.toLowerCase().includes('nhịp tim') &&
+      f.name.toLowerCase().includes('thấp'),
   );
-  
-  const paceRiskFactor = assessment.risk_factors.find(f => 
-    f.name.toLowerCase().includes('pace')
+
+  const paceRiskFactor = assessment.risk_factors.find(f =>
+    f.name.toLowerCase().includes('pace'),
   );
 
   const metrics = [
     {
       icon: 'heart-outline',
-      value: activityData?.heart_rate_avg || '0',
+      value: activityData?.heart_rate_max ? activityData.heart_rate_max : assessment.heart_rate_max ,
       unit: ' BPM',
       status: heartRiskFactor ? heartRiskFactor.level : 'Normal',
-      color: heartRiskFactor ? getSeverityColor(heartRiskFactor.level) : '#22C55E',
+      color: heartRiskFactor
+        ? getSeverityColor(heartRiskFactor.level)
+        : '#22C55E',
     },
     {
       icon: 'heart-half-outline',
-      value: activityData?.heart_rate_min || '0',
+      value: activityData?.heart_rate_min ? activityData.heart_rate_min : assessment.heart_rate_min,
       unit: ' BPM',
       status: lowestHeartRiskFactor ? lowestHeartRiskFactor.level : 'Normal',
-      color: lowestHeartRiskFactor ? getSeverityColor(lowestHeartRiskFactor.level) : '#22C55E',
+      color: lowestHeartRiskFactor
+        ? getSeverityColor(lowestHeartRiskFactor.level)
+        : '#22C55E',
     },
     {
       icon: 'speedometer-outline',
-      value: activityData?.avg_pace || '0:00',
+      value: activityData?.avg_pace ? activityData.avg_pace : assessment.avg_pace  || '0:00',
       unit: '/km',
       status: paceRiskFactor ? paceRiskFactor.level : 'Normal',
-      color: paceRiskFactor ? getSeverityColor(paceRiskFactor.level) : '#22C55E',
+      color: paceRiskFactor
+        ? getSeverityColor(paceRiskFactor.level)
+        : '#22C55E',
     },
   ];
 
@@ -202,19 +215,20 @@ const RiskWarningScreen = () => {
                 return (
                   <View style={styles.centerLabel}>
                     <Text style={styles.scoreValue}>
-                      {assessment.score}<Text style={styles.scoreMax}>/100</Text>
+                      {assessment.score}
+                      <Text style={styles.scoreMax}>/100</Text>
                     </Text>
                   </View>
                 );
               }}
             />
           </View>
-          <Text style={[styles.riskLevel, { color: severityColor }]}>
-            {assessment.severity === 'Normal' ? 'Low risk' : `Risk ${assessment.severity}`}
+          <Text style={[styles.riskLevel, {color: severityColor}]}>
+            {assessment.severity === 'Normal'
+              ? 'Low risk'
+              : `Risk ${assessment.severity}`}
           </Text>
-          <Text style={styles.riskMessage}>
-            {assessment.alert_message}
-          </Text>
+          <Text style={styles.riskMessage}>{assessment.alert_message}</Text>
         </View>
 
         {/* Activity Info */}
@@ -226,13 +240,13 @@ const RiskWarningScreen = () => {
             <View style={styles.activityStat}>
               <Icon name="walk-outline" size={16} color="#64748B" />
               <Text style={styles.activityStatText}>
-                {activityData?.distance || '0'} km
+                {activityData?.distance || assessment?.distance || '0'} km
               </Text>
             </View>
             <View style={styles.activityStat}>
               <Icon name="footsteps-outline" size={16} color="#64748B" />
               <Text style={styles.activityStatText}>
-                {activityData?.steps || '0'} Steps
+                {activityData?.steps || assessment?.step ||  '0'} Steps
               </Text>
             </View>
           </View>
@@ -264,7 +278,10 @@ const RiskWarningScreen = () => {
                 <View style={styles.riskFactorHeader}>
                   <Text style={styles.riskFactorTitle}>{factor.name}</Text>
                   <Text
-                    style={[styles.riskFactorStatus, {color: getSeverityColor(factor.level)}]}>
+                    style={[
+                      styles.riskFactorStatus,
+                      {color: getSeverityColor(factor.level)},
+                    ]}>
                     {factor.level}
                   </Text>
                 </View>
@@ -290,40 +307,50 @@ const RiskWarningScreen = () => {
         {/* Recommendations */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recommendation</Text>
-          <View style={{padding: 16, gap: 8, backgroundColor: '#FFFFFF', borderRadius: 12}}>
+          <View
+            style={{
+              padding: 16,
+              gap: 8,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+            }}>
             {assessment.recommendations.map((recommendation, index) => (
               <View key={index} style={styles.recommendation}>
                 <Icon
-                  name={index % 3 === 0 ? 'speedometer-outline' : index % 3 === 1 ? 'heart-outline' : 'walk-outline'}
+                  name={
+                    index % 3 === 0
+                      ? 'speedometer-outline'
+                      : index % 3 === 1
+                      ? 'heart-outline'
+                      : 'walk-outline'
+                  }
                   size={24}
                   color="#3B82F6"
                 />
-                <Text style={styles.recommendationText}>
-                  {recommendation}
-                </Text>
+                <Text style={styles.recommendationText}>{recommendation}</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.actions}>
-          <TouchableOpacity 
-            style={styles.saveButton}
-            onPress={() => {
-              // Thêm logic lưu báo cáo ở đây
-              navigation.goBack();
-            }}
-          >
-            <Text style={styles.saveButtonText}>Save report</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.deleteButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.deleteButtonText}>Return</Text>
-          </TouchableOpacity>
-        </View>
+        {activityData && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={() => {
+                // Thêm logic lưu báo cáo ở đây
+                navigation.goBack();
+              }}>
+              <Text style={styles.saveButtonText}>Save report</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => navigation.goBack()}>
+              <Text style={styles.deleteButtonText}>Return</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -409,7 +436,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -449,7 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -482,7 +509,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },

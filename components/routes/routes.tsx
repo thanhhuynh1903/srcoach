@@ -58,6 +58,7 @@ import UserCertificatesSuccessScreen from '../screens/SettingsScreens/UserCertif
 import UserCertificatesAlreadyExistsScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesAlreadyExistsScreen';
 import UserCertificatesExpertScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesExpertsScreen';
 import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen';
+import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -89,6 +90,7 @@ export const stackScreens = [
   { name: 'StepsScreen', component: RecordStepsScreen},
   { name: 'CaloriesScreen', component: CaloriesScreen },
   { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
+  { name: 'ScheduleDetailScreen', component: ScheduleDetailScreen },
   { name: 'CalendarScreen', component: CalendarScreen },
   { name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen },
   { name: 'AddScheduleScreen', component: AddScheduleScreen },

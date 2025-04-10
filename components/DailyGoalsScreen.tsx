@@ -1,133 +1,151 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
+import { format } from "date-fns"
+import { vi } from "date-fns/locale"
 
-interface DailyGoal {
-  distance: string
-  calories: string
-  steps: string
-  sessions: {
-    morning: boolean
-    noon: boolean
-    afternoon: boolean
-    evening: boolean
-    lateNight: boolean
-  }
-  sessionTimes: {
-    morning: string
-    noon: string
-    afternoon: string
-    evening: string
-    lateNight: string
-  }
+interface TrainingSession {
+  description: string
+  start_time: string
+  end_time: string
+  goal_steps: number
+  goal_distance: number
+  goal_calories: number
+}
+
+interface DailySchedule {
+  day: string
+  details: TrainingSession[]
 }
 
 interface DailyGoalsSectionProps {
   selectedDates: Record<string, any>
-  onGoalsChange: (dailyGoals: Record<string, DailyGoal>) => void
+  onGoalsChange: (schedule: DailySchedule[]) => void
 }
 
 const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, onGoalsChange }) => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null)
-  const [dailyGoals, setDailyGoals] = useState<Record<string, DailyGoal>>({})
+  const [dailySchedule, setDailySchedule] = useState<DailySchedule[]>([])
 
-  // Thời gian mặc định cho mỗi phiên
-  const defaultSessionTimes = {
-    morning: "06:00 - 08:00",
-    noon: "11:00 - 13:00",
-    afternoon: "15:00 - 17:00",
-    evening: "18:00 - 20:00",
-    lateNight: "21:00 - 23:00",
+  // Thời gian mặc định cho các buổi tập
+  const defaultSessions = {
+    morning: {
+      description: "Buổi sáng",
+      start_time: "06:00",
+      end_time: "08:00",
+      goal_steps: 5000,
+      goal_distance: 5,
+      goal_calories: 300
+    },
+    afternoon: {
+      description: "Buổi chiều",
+      start_time: "15:00",
+      end_time: "17:00",
+      goal_steps: 8000,
+      goal_distance: 8,
+      goal_calories: 500
+    },
+    evening: {
+      description: "Buổi tối",
+      start_time: "18:00",
+      end_time: "20:00",
+      goal_steps: 6000,
+      goal_distance: 6,
+      goal_calories: 400
+    }
   }
 
-  // Khởi tạo mục tiêu cho các ngày mới được chọn
-  React.useEffect(() => {
-    const newDailyGoals = { ...dailyGoals }
-
-    // Thêm ngày mới
-    Object.keys(selectedDates).forEach((date) => {
-      if (!newDailyGoals[date]) {
-        newDailyGoals[date] = {
-          distance: "0",
-          calories: "0",
-          steps: "0",
-          sessions: {
-            morning: false,
-            noon: false,
-            afternoon: false,
-            evening: false,
-            lateNight: false,
-          },
-          sessionTimes: { ...defaultSessionTimes },
-        }
+  // Khởi tạo lịch cho các ngày được chọn
+  useEffect(() => {
+    const newSchedule: DailySchedule[] = []
+    
+    Object.keys(selectedDates).sort().forEach(date => {
+      // Kiểm tra xem ngày đã có trong lịch chưa
+      const existingDay = dailySchedule.find(item => item.day === date)
+      
+      if (existingDay) {
+        newSchedule.push(existingDay)
+      } else {
+        // Thêm ngày mới với buổi sáng mặc định
+        newSchedule.push({
+          day: date,
+          details: [{
+            ...defaultSessions.morning,
+            start_time: `${date}T${defaultSessions.morning.start_time}:00.000Z`,
+            end_time: `${date}T${defaultSessions.morning.end_time}:00.000Z`
+          }]
+        })
       }
     })
-
-    // Xóa các ngày không còn được chọn
-    Object.keys(newDailyGoals).forEach((date) => {
-      if (!selectedDates[date]) {
-        delete newDailyGoals[date]
-      }
-    })
-
-    setDailyGoals(newDailyGoals)
-    onGoalsChange(newDailyGoals)
+    
+    setDailySchedule(newSchedule)
+    onGoalsChange(newSchedule)
   }, [selectedDates])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
-  }
-
-  const updateGoal = (date: string, goalType: keyof DailyGoal, value: string) => {
-    const newDailyGoals = {
-      ...dailyGoals,
-      [date]: {
-        ...dailyGoals[date],
-        [goalType]: value,
-      },
-    }
-    setDailyGoals(newDailyGoals)
-    onGoalsChange(newDailyGoals)
-  }
-
-  const toggleSession = (date: string, session: keyof DailyGoal["sessions"]) => {
-    const newDailyGoals = {
-      ...dailyGoals,
-      [date]: {
-        ...dailyGoals[date],
-        sessions: {
-          ...dailyGoals[date].sessions,
-          [session]: !dailyGoals[date].sessions[session],
-        },
-      },
-    }
-    setDailyGoals(newDailyGoals)
-    onGoalsChange(newDailyGoals)
-  }
-
-  const updateSessionTime = (date: string, session: keyof DailyGoal["sessionTimes"], value: string) => {
-    const newDailyGoals = {
-      ...dailyGoals,
-      [date]: {
-        ...dailyGoals[date],
-        sessionTimes: {
-          ...dailyGoals[date].sessionTimes,
-          [session]: value,
-        },
-      },
-    }
-    setDailyGoals(newDailyGoals)
-    onGoalsChange(newDailyGoals)
+    return format(date, "EEE, dd/MM", { locale: vi })
   }
 
   const toggleDay = (date: string) => {
     setExpandedDay(expandedDay === date ? null : date)
   }
 
-  const getActiveSessions = (date: string) => {
-    if (!dailyGoals[date]?.sessions) return 0
-    return Object.values(dailyGoals[date].sessions).filter(Boolean).length
+  const addSession = (dayIndex: number) => {
+    const newSchedule = [...dailySchedule]
+    const day = newSchedule[dayIndex]
+    const date = day.day
+    
+    // Thêm buổi tập mới vào ngày
+    day.details.push({
+      description: "Buổi tập mới",
+      start_time: `${date}T${defaultSessions.afternoon.start_time}:00.000Z`,
+      end_time: `${date}T${defaultSessions.afternoon.end_time}:00.000Z`,
+      goal_steps: defaultSessions.afternoon.goal_steps,
+      goal_distance: defaultSessions.afternoon.goal_distance,
+      goal_calories: defaultSessions.afternoon.goal_calories
+    })
+    
+    setDailySchedule(newSchedule)
+    onGoalsChange(newSchedule)
+  }
+
+  const removeSession = (dayIndex: number, sessionIndex: number) => {
+    const newSchedule = [...dailySchedule]
+    
+    // Không cho phép xóa nếu chỉ còn 1 buổi tập
+    if (newSchedule[dayIndex].details.length <= 1) {
+      return
+    }
+    
+    newSchedule[dayIndex].details.splice(sessionIndex, 1)
+    setDailySchedule(newSchedule)
+    onGoalsChange(newSchedule)
+  }
+
+  const updateSession = (dayIndex: number, sessionIndex: number, field: keyof TrainingSession, value: any) => {
+    const newSchedule = [...dailySchedule]
+    const session = newSchedule[dayIndex].details[sessionIndex]
+    
+    if (field === 'start_time' || field === 'end_time') {
+      // Xử lý cập nhật thời gian
+      const date = newSchedule[dayIndex].day
+      const [hours, minutes] = value.split(':')
+      const timeString = `${date}T${hours}:${minutes}:00.000Z`
+      session[field] = timeString
+    } else {
+      // Xử lý các trường khác
+      session[field] = value
+    }
+    
+    setDailySchedule(newSchedule)
+    onGoalsChange(newSchedule)
+  }
+
+  // Hàm trích xuất giờ:phút từ chuỗi ISO
+  const extractTime = (isoString: string) => {
+    const date = new Date(isoString)
+    return `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
   }
 
   if (Object.keys(selectedDates).length === 0) {
@@ -136,8 +154,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Daily Goals</Text>
-      <Text style={styles.sectionDescription}>Set specific goals for each day of your schedule</Text>
+      <Text style={styles.sectionTitle}>Mục tiêu hàng ngày</Text>
+      <Text style={styles.sectionDescription}>Thiết lập mục tiêu cụ thể cho từng ngày trong lịch tập luyện</Text>
 
       <ScrollView
         style={styles.daysContainer}
@@ -145,181 +163,145 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
         showsVerticalScrollIndicator={true}
         contentContainerStyle={{ paddingBottom: 8 }}
       >
-        {Object.keys(selectedDates)
-          .sort()
-          .map((date) => (
-            <View key={date} style={styles.dayCard}>
-              <TouchableOpacity style={styles.dayHeader} onPress={() => toggleDay(date)} activeOpacity={0.7}>
-                <View style={styles.dayHeaderLeft}>
-                  <View style={styles.dateCircle}>
-                    <Text style={styles.dateNumber}>{new Date(date).getDate()}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.dateText}>{formatDate(date)}</Text>
-                    <Text style={styles.sessionCount}>
-                      {getActiveSessions(date)} {getActiveSessions(date) === 1 ? "session" : "sessions"} selected
-                    </Text>
-                  </View>
+        {dailySchedule.map((day, dayIndex) => (
+          <View key={day.day} style={styles.dayCard}>
+            <TouchableOpacity 
+              style={styles.dayHeader} 
+              onPress={() => toggleDay(day.day)} 
+              activeOpacity={0.7}
+            >
+              <View style={styles.dayHeaderLeft}>
+                <View style={styles.dateCircle}>
+                  <Text style={styles.dateNumber}>{new Date(day.day).getDate()}</Text>
                 </View>
-                <Icon name={expandedDay === date ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
-              </TouchableOpacity>
-
-              {expandedDay === date && (
-                <View style={styles.dayGoals}>
-                  {/* Sessions Selection */}
-                  <Text style={styles.sectionSubtitle}>Training Sessions</Text>
-                  
-                  <SessionToggle
-                    title="Morning"
-                    time={dailyGoals[date]?.sessionTimes.morning || defaultSessionTimes.morning}
-                    isActive={dailyGoals[date]?.sessions.morning || false}
-                    onToggle={() => toggleSession(date, "morning")}
-                    onTimeChange={(value) => updateSessionTime(date, "morning", value)}
-                  />
-                  
-                  <SessionToggle
-                    title="Noon"
-                    time={dailyGoals[date]?.sessionTimes.noon || defaultSessionTimes.noon}
-                    isActive={dailyGoals[date]?.sessions.noon || false}
-                    onToggle={() => toggleSession(date, "noon")}
-                    onTimeChange={(value) => updateSessionTime(date, "noon", value)}
-                  />
-                  
-                  <SessionToggle
-                    title="Afternoon"
-                    time={dailyGoals[date]?.sessionTimes.afternoon || defaultSessionTimes.afternoon}
-                    isActive={dailyGoals[date]?.sessions.afternoon || false}
-                    onToggle={() => toggleSession(date, "afternoon")}
-                    onTimeChange={(value) => updateSessionTime(date, "afternoon", value)}
-                  />
-                  
-                  <SessionToggle
-                    title="Evening"
-                    time={dailyGoals[date]?.sessionTimes.evening || defaultSessionTimes.evening}
-                    isActive={dailyGoals[date]?.sessions.evening || false}
-                    onToggle={() => toggleSession(date, "evening")}
-                    onTimeChange={(value) => updateSessionTime(date, "evening", value)}
-                  />
-                  
-                  <SessionToggle
-                    title="Late Night"
-                    time={dailyGoals[date]?.sessionTimes.lateNight || defaultSessionTimes.lateNight}
-                    isActive={dailyGoals[date]?.sessions.lateNight || false}
-                    onToggle={() => toggleSession(date, "lateNight")}
-                    onTimeChange={(value) => updateSessionTime(date, "lateNight", value)}
-                  />
-
-                  <View style={styles.divider} />
-
-                  {/* Goals */}
-                  <Text style={styles.sectionSubtitle}>Daily Training Goals</Text>
-
-                  <View style={styles.goalRow}>
-                    <View style={styles.goalIconContainer}>
-                      <Icon name="walk" size={16} color="#0F2B5B" />
-                    </View>
-                    <Text style={styles.goalLabel}>Distance</Text>
-                    <View style={styles.goalInputWrapper}>
-                      <TextInput
-                        style={styles.goalInput}
-                        value={dailyGoals[date]?.distance || "0"}
-                        onChangeText={(value) => updateGoal(date, "distance", value)}
-                        keyboardType="numeric"
-                      />
-                      <Text style={styles.goalUnit}>km</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.goalRow}>
-                    <View style={styles.goalIconContainer}>
-                      <Icon name="flame" size={16} color="#0F2B5B" />
-                    </View>
-                    <Text style={styles.goalLabel}>Calories</Text>
-                    <View style={styles.goalInputWrapper}>
-                      <TextInput
-                        style={styles.goalInput}
-                        value={dailyGoals[date]?.calories || "0"}
-                        onChangeText={(value) => updateGoal(date, "calories", value)}
-                        keyboardType="numeric"
-                      />
-                      <Text style={styles.goalUnit}>kcal</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.goalRow}>
-                    <View style={styles.goalIconContainer}>
-                      <Icon name="footsteps" size={16} color="#0F2B5B" />
-                    </View>
-                    <Text style={styles.goalLabel}>Steps</Text>
-                    <View style={styles.goalInputWrapper}>
-                      <TextInput
-                        style={styles.goalInput}
-                        value={dailyGoals[date]?.steps || "0"}
-                        onChangeText={(value) => updateGoal(date, "steps", value)}
-                        keyboardType="numeric"
-                      />
-                      <Text style={styles.goalUnit}>steps</Text>
-                    </View>
-                  </View>
+                <View>
+                  <Text style={styles.dateText}>{formatDate(day.day)}</Text>
+                  <Text style={styles.sessionCount}>
+                    {day.details.length} {day.details.length === 1 ? "buổi tập" : "buổi tập"}
+                  </Text>
                 </View>
-              )}
-            </View>
-          ))}
-      </ScrollView>
-    </View>
-  )
-}
-
-interface SessionToggleProps {
-  title: string
-  time: string
-  isActive: boolean
-  onToggle: () => void
-  onTimeChange: (value: string) => void
-}
-
-const SessionToggle: React.FC<SessionToggleProps> = ({ title, time, isActive, onToggle, onTimeChange }) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [timeValue, setTimeValue] = useState(time)
-
-  const handleTimeChange = (value: string) => {
-    setTimeValue(value)
-  }
-
-  const saveTimeChange = () => {
-    onTimeChange(timeValue)
-    setIsEditing(false)
-  }
-
-  return (
-    <View style={styles.sessionRow}>
-      <View style={styles.sessionInfo}>
-        <Text style={styles.sessionTitle}>{title}</Text>
-        {isEditing ? (
-          <View style={styles.timeEditContainer}>
-            <TextInput
-              style={styles.timeInput}
-              value={timeValue}
-              onChangeText={handleTimeChange}
-              onBlur={saveTimeChange}
-              autoFocus
-            />
-            <TouchableOpacity onPress={saveTimeChange} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save</Text>
+              </View>
+              <Icon name={expandedDay === day.day ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
             </TouchableOpacity>
+
+            {expandedDay === day.day && (
+              <View style={styles.dayGoals}>
+                {day.details.map((session, sessionIndex) => (
+                  <View key={sessionIndex} style={styles.sessionContainer}>
+                    <View style={styles.sessionHeader}>
+                      <Text style={styles.sessionTitle}>Buổi tập {sessionIndex + 1}</Text>
+                      {day.details.length > 1 && (
+                        <TouchableOpacity 
+                          onPress={() => removeSession(dayIndex, sessionIndex)}
+                          style={styles.removeButton}
+                        >
+                          <Icon name="trash-outline" size={16} color="#EF4444" />
+                          <Text style={styles.removeButtonText}>Xóa</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    
+                    {/* Mô tả buổi tập */}
+                    <View style={styles.inputRow}>
+                      <Text style={styles.inputLabel}>Mô tả:</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={session.description}
+                        onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'description', value)}
+                        placeholder="Mô tả buổi tập"
+                      />
+                    </View>
+                    
+                    {/* Thời gian bắt đầu và kết thúc */}
+                    <View style={styles.timeRow}>
+                      <View style={styles.timeInputContainer}>
+                        <Text style={styles.timeLabel}>Bắt đầu:</Text>
+                        <TextInput
+                          style={styles.timeInput}
+                          value={extractTime(session.start_time)}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'start_time', value)}
+                          placeholder="HH:MM"
+                        />
+                      </View>
+                      <View style={styles.timeInputContainer}>
+                        <Text style={styles.timeLabel}>Kết thúc:</Text>
+                        <TextInput
+                          style={styles.timeInput}
+                          value={extractTime(session.end_time)}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'end_time', value)}
+                          placeholder="HH:MM"
+                        />
+                      </View>
+                    </View>
+                    
+                    {/* Mục tiêu */}
+                    <Text style={styles.goalsTitle}>Mục tiêu buổi tập</Text>
+                    
+                    <View style={styles.goalRow}>
+                      <View style={styles.goalIconContainer}>
+                        <Icon name="walk" size={16} color="#0F2B5B" />
+                      </View>
+                      <Text style={styles.goalLabel}>Quãng đường</Text>
+                      <View style={styles.goalInputWrapper}>
+                        <TextInput
+                          style={styles.goalInput}
+                          value={session.goal_distance.toString()}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'goal_distance', parseFloat(value) || 0)}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.goalUnit}>km</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.goalRow}>
+                      <View style={styles.goalIconContainer}>
+                        <Icon name="flame" size={16} color="#0F2B5B" />
+                      </View>
+                      <Text style={styles.goalLabel}>Calo</Text>
+                      <View style={styles.goalInputWrapper}>
+                        <TextInput
+                          style={styles.goalInput}
+                          value={session.goal_calories.toString()}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'goal_calories', parseInt(value) || 0)}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.goalUnit}>kcal</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.goalRow}>
+                      <View style={styles.goalIconContainer}>
+                        <Icon name="footsteps" size={16} color="#0F2B5B" />
+                      </View>
+                      <Text style={styles.goalLabel}>Số bước</Text>
+                      <View style={styles.goalInputWrapper}>
+                        <TextInput
+                          style={styles.goalInput}
+                          value={session.goal_steps.toString()}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'goal_steps', parseInt(value) || 0)}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.goalUnit}>bước</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.divider} />
+                  </View>
+                ))}
+                
+                {/* Nút thêm buổi tập */}
+                <TouchableOpacity 
+                  style={styles.addButton}
+                  onPress={() => addSession(dayIndex)}
+                >
+                  <Icon name="add-circle-outline" size={16} color="#0F2B5B" />
+                  <Text style={styles.addButtonText}>Thêm buổi tập</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        ) : (
-          <TouchableOpacity onPress={() => isActive && setIsEditing(true)}>
-            <Text style={[styles.sessionTime, !isActive && styles.sessionTimeInactive]}>{time}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      <Switch
-        value={isActive}
-        onValueChange={onToggle}
-        trackColor={{ false: "#E2E8F0", true: "#BAC8FF" }}
-        thumbColor={isActive ? "#0F2B5B" : "#F1F5F9"}
-      />
+        ))}
+      </ScrollView>
     </View>
   )
 }
@@ -331,7 +313,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
     marginBottom: 8,
   },
   sectionDescription: {
@@ -339,22 +321,17 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginBottom: 16,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#0F172A",
-    marginBottom: 12,
-    marginTop: 4,
-  },
   daysContainer: {
-    maxHeight: 450, // Tăng chiều cao để hiển thị nhiều nội dung hơn
+    maxHeight: 500,
     flexGrow: 0,
   },
   dayCard: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 8,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
     marginBottom: 12,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   dayHeader: {
     flexDirection: "row",
@@ -367,9 +344,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dateCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#0F2B5B",
     alignItems: "center",
     justifyContent: "center",
@@ -378,15 +355,15 @@ const styles = StyleSheet.create({
   dateNumber: {
     color: "#FFFFFF",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 16,
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "500",
     color: "#0F172A",
   },
   sessionCount: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#64748B",
     marginTop: 2,
   },
@@ -396,61 +373,84 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
+  sessionContainer: {
+    marginBottom: 8,
+  },
+  sessionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 12,
+  },
+  sessionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  removeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  removeButtonText: {
+    fontSize: 12,
+    color: "#EF4444",
+    marginLeft: 4,
+  },
+  inputRow: {
+    marginBottom: 12,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: "#64748B",
+    marginBottom: 4,
+  },
+  textInput: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+  timeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  timeInputContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: "#64748B",
+    marginBottom: 4,
+  },
+  timeInput: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+  goalsTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#0F172A",
+    marginBottom: 12,
+    marginTop: 4,
+  },
   divider: {
     height: 1,
     backgroundColor: "#E2E8F0",
     marginVertical: 16,
-  },
-  sessionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EDF2F7",
-  },
-  sessionInfo: {
-    flex: 1,
-  },
-  sessionTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#0F172A",
-  },
-  sessionTime: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
-  },
-  sessionTimeInactive: {
-    color: "#CBD5E1",
-  },
-  timeEditContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  timeInput: {
-    fontSize: 12,
-    color: "#0F172A",
-    borderWidth: 1,
-    borderColor: "#BAC8FF",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    flex: 1,
-    marginRight: 8,
-  },
-  saveButton: {
-    backgroundColor: "#0F2B5B",
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "500",
   },
   goalRow: {
     flexDirection: "row",
@@ -458,9 +458,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   goalIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#E0E7FF",
     alignItems: "center",
     justifyContent: "center",
@@ -475,7 +475,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     paddingHorizontal: 8,
     paddingVertical: 4,
     width: 100,
@@ -493,7 +495,21 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     width: 30,
   },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E0E7FF",
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#0F2B5B",
+    marginLeft: 8,
+  },
 })
 
 export default DailyGoalsSection
-

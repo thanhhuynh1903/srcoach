@@ -76,6 +76,9 @@ export const useLoginStore = create<LoginState>((set, get) => ({
   },
 
   login: async (email: string, password: string) => {
+    console.log('Login email:', email);
+    console.log('Login password:', password);
+    
     try {
       const response = await axios.post(
         `${MASTER_URL}/users/login`,
@@ -109,7 +112,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       set({userdata : accessToken,status: response?.data?.status, message : response?.data?.message});
     } catch (error: any) {
       set({
-        message: error.response?.data?.message || 'Đăng nhập thất bại',
+        message: error.response?.data?.message || error.message || error || 'Đăng nhập thất bại',
       });
     }
   },

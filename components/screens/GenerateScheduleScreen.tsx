@@ -1,5 +1,3 @@
-'use client';
-
 import {useState} from 'react';
 import {
   View,
@@ -13,7 +11,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 interface ScheduleCardProps {
   title: string;
   description: string;
@@ -26,7 +24,7 @@ interface ScheduleCardProps {
 }
 const GenerateScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
-    const navigation = useNavigation();
+  const navigation = useNavigation();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -59,17 +57,29 @@ const GenerateScheduleScreen = () => {
 
       {/* Action Buttons */}
       <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('CalendarScreen' as never)}}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            navigation.navigate('CalendarScreen' as never);
+          }}>
           <Icon name="calendar-outline" size={24} color="#555" />
           <Text style={styles.actionButtonText}>Full{'\n'}Calendar</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('AddScheduleScreen' as never)}}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            navigation.navigate('AddScheduleScreen' as never);
+          }}>
           <Icon name="add-circle-outline" size={24} color="#555" />
           <Text style={styles.actionButtonText}>Add{'\n'}Schedule</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => {navigation.navigate('ScheduleHistoryScreen' as never)}}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => {
+            navigation.navigate('ScheduleHistoryScreen' as never);
+          }}>
           <Icon name="time-outline" size={24} color="#555" />
           <Text style={styles.actionButtonText}>History</Text>
         </TouchableOpacity>
@@ -122,6 +132,7 @@ const ScheduleCard = ({
   alarmEnabled,
   isExpertChoice,
 }: ScheduleCardProps) => {
+  const navigation = useNavigation();
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -179,7 +190,8 @@ const ScheduleCard = ({
 
       {/* Card Footer */}
       <View style={styles.cardFooter}>
-        <TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ScheduleDetailScreen' as never)}>
           <Text style={styles.viewDetailsText}>View Details</Text>
         </TouchableOpacity>
 
@@ -294,7 +306,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,
-    backgroundColor:"#F4F0FF",
+    backgroundColor: '#F4F0FF',
     fontSize: 12,
     color: '#052658',
     fontWeight: '500',
@@ -333,8 +345,8 @@ const styles = StyleSheet.create({
   },
   daysContainer: {
     flexDirection: 'row',
-    gap:15,
-    justifyContent:"center",
+    gap: 15,
+    justifyContent: 'center',
     marginBottom: 16,
   },
   dayCircle: {
