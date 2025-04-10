@@ -64,6 +64,7 @@ const RiskWarningScreen = () => {
     fetchHealthAlertDetail,
     clearAssessment,
     saveFullAiResult,
+    fetchHealthAlerts,
     message,
   } = useAiRiskStore();
 
@@ -140,6 +141,7 @@ const RiskWarningScreen = () => {
       console.log('saveFullAiResult response:', success);
       
       if (success) {
+        await fetchHealthAlerts(); 
         // Hiển thị thông báo thành công
         Alert.alert(
           "Thành công",
@@ -247,9 +249,9 @@ const RiskWarningScreen = () => {
                 return (
                   <View style={styles.centerLabel}>
                     <Text style={styles.scoreValue}>
-                      {assessment.score}
+                      {assessment.score} </Text>
                       <Text style={styles.scoreMax}>/100</Text>
-                    </Text>
+                   
                   </View>
                 );
               }}

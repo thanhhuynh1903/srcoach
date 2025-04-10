@@ -19,24 +19,19 @@ const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const navigation = useNavigation();
-  
+
   // Lấy state và hàm từ store
-  const {
-    healthAlerts,
-    isLoadingAlerts,
-    error,
-    fetchHealthAlerts,
-  } = useAiRiskStore();
-  
+  const {healthAlerts, isLoadingAlerts, error, fetchHealthAlerts} =
+    useAiRiskStore();
+
   // Fetch dữ liệu khi component mount
   useEffect(() => {
     const fetchAlerts = async () => {
       await fetchHealthAlerts();
     };
     fetchAlerts();
-    
   }, []);
-  
+
   // Chuyển đổi severity thành màu sắc
   const getSeverityColor = (severity: string) => {
     switch (severity.toLowerCase()) {
@@ -50,17 +45,20 @@ const RiskWarningListScreen = () => {
         return '#64748B';
     }
   };
-  
+
   // Lọc danh sách theo bộ lọc đang hoạt động và từ khóa tìm kiếm
   const filteredRiskItems = useMemo(() => {
     if (!healthAlerts || healthAlerts.length === 0) return [];
-    
+
     // Lọc theo từ khóa tìm kiếm trước
-    let filtered = healthAlerts.filter(item => 
-      item.alert_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.AIHealthAlertType.type_name.toLowerCase().includes(searchQuery.toLowerCase())
+    let filtered = healthAlerts.filter(
+      item =>
+        item.alert_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.AIHealthAlertType.type_name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
     );
-    
+
     // Sau đó lọc theo mức độ nghiêm trọng
     if (activeFilter !== 'All') {
       filtered = filtered.filter(item => item.severity === activeFilter);
@@ -68,17 +66,17 @@ const RiskWarningListScreen = () => {
 
     return filtered;
   }, [activeFilter, searchQuery, healthAlerts]);
-  
+
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
-  
+
   // Hiển thị loading
   if (isLoadingAlerts) {
     return (
@@ -99,7 +97,7 @@ const RiskWarningListScreen = () => {
       </SafeAreaView>
     );
   }
-  
+
   // Hiển thị lỗi
   if (error) {
     return (
@@ -117,17 +115,16 @@ const RiskWarningListScreen = () => {
           <Icon name="alert-circle-outline" size={48} color="#EF4444" />
           <Text style={styles.emptyStateTitle}>Error</Text>
           <Text style={styles.emptyStateDescription}>{error}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
-            onPress={fetchHealthAlerts}
-          >
+            onPress={fetchHealthAlerts}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
-  
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -159,12 +156,11 @@ const RiskWarningListScreen = () => {
       </View>
 
       {/* Filters */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
         style={styles.filtersScrollView}
-        contentContainerStyle={styles.filtersContainer}
-      >
+        contentContainerStyle={styles.filtersContainer}>
         {filters.map(filter => (
           <TouchableOpacity
             key={filter}
@@ -188,29 +184,39 @@ const RiskWarningListScreen = () => {
       <ScrollView style={styles.riskList}>
         {filteredRiskItems.length > 0 ? (
           filteredRiskItems.map(item => (
-            <TouchableOpacity 
-              key={item.id} 
-              style={styles.riskItem} 
+            <TouchableOpacity
+              key={item.id}
+              style={styles.riskItem}
               onPress={() => {
-                navigation.navigate('RiskWarningScreen' as never, { alertId: item.id } as never);
-              }}
-            >
+                navigation.navigate(
+                  'RiskWarningScreen' as never,
+                  {alertId: item.id} as never,
+                );
+              }}>
               <View style={styles.riskHeader}>
                 <Text style={styles.riskTitle}>{item.alert_message}</Text>
                 <View
-                  style={[styles.statusDot, {backgroundColor: getSeverityColor(item.severity)}]}
+                  style={[
+                    styles.statusDot,
+                    {backgroundColor: getSeverityColor(item.severity)},
+                  ]}
                 />
               </View>
               <Text style={styles.riskDescription}>
-                {item.AIHealthAlertType.type_name} - {item.AIHealthAlertType.description}
+                {item.AIHealthAlertType.type_name} -{' '}
+                {item.AIHealthAlertType.description}
               </Text>
               <View style={styles.riskFooter}>
                 <Text style={styles.date}>{formatDate(item.alert_date)}</Text>
                 <View style={styles.riskStatus}>
-                  <Text style={[styles.riskLevel, {color: getSeverityColor(item.severity)}]}>
+                  <Text
+                    style={[
+                      styles.riskLevel,
+                      {color: getSeverityColor(item.severity)},
+                    ]}>
                     {item.severity} Risk
                   </Text>
-                  {item.score && (
+                  {item.score !== undefined && item.score !== null && (
                     <Text
                       style={[
                         styles.score,
@@ -235,7 +241,8 @@ const RiskWarningListScreen = () => {
             <Icon name="search-outline" size={48} color="#CBD5E1" />
             <Text style={styles.emptyStateTitle}>No results found</Text>
             <Text style={styles.emptyStateDescription}>
-              Try adjusting your search or filter to find what you're looking for
+              Try adjusting your search or filter to find what you're looking
+              for
             </Text>
           </View>
         )}
