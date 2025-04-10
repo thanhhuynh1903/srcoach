@@ -13,7 +13,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 
-const filters = ['All', 'High', 'Moderate', 'Low'];
+const filters = ['All', 'High', 'Moderate', 'Normal'];
 
 const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');

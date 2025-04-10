@@ -55,6 +55,25 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
     }
   }
 
+  // Hàm kiểm tra và sửa lỗi dữ liệu trước khi gửi đi
+  const validateAndFixScheduleData = (scheduleData: DailySchedule[]): DailySchedule[] => {
+    return scheduleData.map(day => {
+      return {
+        day: day.day,
+        details: day.details.map(session => {
+          return {
+            description: session.description || "Buổi tập",
+            start_time: session.start_time,
+            end_time: session.end_time,
+            goal_steps: typeof session.goal_steps === 'string' ? parseInt(session.goal_steps) : session.goal_steps,
+            goal_distance: typeof session.goal_distance === 'string' ? parseFloat(session.goal_distance) : session.goal_distance,
+            goal_calories: typeof session.goal_calories === 'string' ? parseInt(session.goal_calories) : session.goal_calories
+          };
+        })
+      };
+    });
+  }
+
   // Khởi tạo lịch cho các ngày được chọn
   useEffect(() => {
     const newSchedule: DailySchedule[] = []
@@ -78,8 +97,16 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       }
     })
     
-    setDailySchedule(newSchedule)
-    onGoalsChange(newSchedule)
+    // Loại bỏ các ngày không còn được chọn
+    const filteredSchedule = newSchedule.filter(day => 
+      Object.keys(selectedDates).includes(day.day)
+    );
+    
+    // Kiểm tra và sửa lỗi dữ liệu
+    const validatedSchedule = validateAndFixScheduleData(filteredSchedule);
+    
+    setDailySchedule(validatedSchedule)
+    onGoalsChange(validatedSchedule)
   }, [selectedDates])
 
   const formatDate = (dateString: string) => {
@@ -96,18 +123,18 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
     const day = newSchedule[dayIndex]
     const date = day.day
     
-    // Thêm buổi tập mới vào ngày
+    // Thêm buổi tập mới vào ngày với giá trị số đúng kiểu dữ liệu
     day.details.push({
       description: "Buổi tập mới",
       start_time: `${date}T${defaultSessions.afternoon.start_time}:00.000Z`,
       end_time: `${date}T${defaultSessions.afternoon.end_time}:00.000Z`,
-      goal_steps: defaultSessions.afternoon.goal_steps,
-      goal_distance: defaultSessions.afternoon.goal_distance,
-      goal_calories: defaultSessions.afternoon.goal_calories
+      goal_steps: Number(defaultSessions.afternoon.goal_steps),
+      goal_distance: Number(defaultSessions.afternoon.goal_distance),
+      goal_calories: Number(defaultSessions.afternoon.goal_calories)
     })
     
     setDailySchedule(newSchedule)
-    onGoalsChange(newSchedule)
+    onGoalsChange(validateAndFixScheduleData(newSchedule))
   }
 
   const removeSession = (dayIndex: number, sessionIndex: number) => {
@@ -120,7 +147,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
     
     newSchedule[dayIndex].details.splice(sessionIndex, 1)
     setDailySchedule(newSchedule)
-    onGoalsChange(newSchedule)
+    onGoalsChange(validateAndFixScheduleData(newSchedule))
   }
 
   const updateSession = (dayIndex: number, sessionIndex: number, field: keyof TrainingSession, value: any) => {
@@ -133,13 +160,19 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       const [hours, minutes] = value.split(':')
       const timeString = `${date}T${hours}:${minutes}:00.000Z`
       session[field] = timeString
+    } else if (field === 'goal_steps' || field === 'goal_calories') {
+      // Đảm bảo các giá trị số nguyên được lưu dưới dạng số, không phải chuỗi
+      session[field] = parseInt(value) || 0
+    } else if (field === 'goal_distance') {
+      // Đảm bảo giá trị số thực được lưu dưới dạng số, không phải chuỗi
+      session[field] = parseFloat(value) || 0
     } else {
       // Xử lý các trường khác
       session[field] = value
     }
     
     setDailySchedule(newSchedule)
-    onGoalsChange(newSchedule)
+    onGoalsChange(validateAndFixScheduleData(newSchedule))
   }
 
   // Hàm trích xuất giờ:phút từ chuỗi ISO
@@ -203,7 +236,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                     
                     {/* Mô tả buổi tập */}
                     <View style={styles.inputRow}>
-                      <Text style={styles.inputLabel}>Mô tả:</Text>
+                      <Text style={styles.inputLabel}>Describe:</Text>
                       <TextInput
                         style={styles.textInput}
                         value={session.description}
@@ -215,7 +248,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                     {/* Thời gian bắt đầu và kết thúc */}
                     <View style={styles.timeRow}>
                       <View style={styles.timeInputContainer}>
-                        <Text style={styles.timeLabel}>Bắt đầu:</Text>
+                        <Text style={styles.timeLabel}>Start:</Text>
                         <TextInput
                           style={styles.timeInput}
                           value={extractTime(session.start_time)}
@@ -224,7 +257,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                         />
                       </View>
                       <View style={styles.timeInputContainer}>
-                        <Text style={styles.timeLabel}>Kết thúc:</Text>
+                        <Text style={styles.timeLabel}>End:</Text>
                         <TextInput
                           style={styles.timeInput}
                           value={extractTime(session.end_time)}
@@ -235,13 +268,13 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                     </View>
                     
                     {/* Mục tiêu */}
-                    <Text style={styles.goalsTitle}>Mục tiêu buổi tập</Text>
+                    <Text style={styles.goalsTitle}>Training objectives</Text>
                     
                     <View style={styles.goalRow}>
                       <View style={styles.goalIconContainer}>
                         <Icon name="walk" size={16} color="#0F2B5B" />
                       </View>
-                      <Text style={styles.goalLabel}>Quãng đường</Text>
+                      <Text style={styles.goalLabel}>Distance</Text>
                       <View style={styles.goalInputWrapper}>
                         <TextInput
                           style={styles.goalInput}
@@ -273,7 +306,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                       <View style={styles.goalIconContainer}>
                         <Icon name="footsteps" size={16} color="#0F2B5B" />
                       </View>
-                      <Text style={styles.goalLabel}>Số bước</Text>
+                      <Text style={styles.goalLabel}>Steps</Text>
                       <View style={styles.goalInputWrapper}>
                         <TextInput
                           style={styles.goalInput}
@@ -281,7 +314,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                           onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'goal_steps', parseInt(value) || 0)}
                           keyboardType="numeric"
                         />
-                        <Text style={styles.goalUnit}>bước</Text>
+                        <Text style={styles.goalUnit}>Step</Text>
                       </View>
                     </View>
                     
@@ -295,7 +328,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                   onPress={() => addSession(dayIndex)}
                 >
                   <Icon name="add-circle-outline" size={16} color="#0F2B5B" />
-                  <Text style={styles.addButtonText}>Thêm buổi tập</Text>
+                  <Text style={styles.addButtonText}>Add more session</Text>
                 </TouchableOpacity>
               </View>
             )}

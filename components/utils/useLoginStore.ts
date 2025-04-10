@@ -111,6 +111,9 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       }
       set({userdata : accessToken,status: response?.data?.status, message : response?.data?.message});
     } catch (error: any) {
+      console.log('Login error:', error);
+      console.log('Error response:', error.response?.data);
+      
       set({
         message: error.response?.data?.message || error.message || error || 'Đăng nhập thất bại',
       });

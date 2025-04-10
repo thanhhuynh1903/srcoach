@@ -85,7 +85,7 @@ interface AiRiskState {
   isLoadingAlertDetail: boolean;
   error: string | null;
   message: string | null;
-  
+  saveFullAiResult: (activityData: ActivityData) => Promise<boolean>;
   evaluateActivityHealth: (activityData: ActivityData) => Promise<void>;
   fetchHealthAlerts: () => Promise<void>;
   fetchHealthAlertDetail: (id: string) => Promise<void>;
@@ -103,6 +103,7 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
   selectedHealthAlert: null,
   isLoading: false,
   isLoadingAlerts: false,
+  isSavingResult: false,
   isLoadingAlertDetail: false,
   error: null,
   message: null,
@@ -230,7 +231,52 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
     }
   },
   
-  
+  saveFullAiResult: async (activityData) => {
+    const assessment = get().assessment;
+    if (!assessment) {
+      set({ error: 'No assessment data to save' });
+      return false;
+    }
+    console.log('Saving AI result with activity data:', activityData);
+    
+    set({ isSavingResult: true, error: null });
+    try {
+      // Chuẩn bị dữ liệu để lưu
+      const saveData = {
+        ...assessment,
+        // Đảm bảo các trường bắt buộc được thêm vào
+        distance: assessment.distance || activityData.distance,
+        step: assessment.step || activityData.steps,
+        heart_rate_max: assessment.heart_rate_max || activityData.heart_rate_max,
+        heart_rate_min: assessment.heart_rate_min || activityData.heart_rate_min,
+        pace: assessment.pace || activityData.avg_pace
+      };
+
+      const response = await api.postData('/ai/save-full-ai-result', saveData);
+      console.log('Save AI result response:', response);
+      
+      if (response?.alert?.status === 'success') {
+        set({
+          isSavingResult: false,
+          message: 'AI assessment result saved successfully'
+        });
+        return true;
+      } else {
+        set({
+          error: response?.message || 'Failed to save AI assessment result',
+          isSavingResult: false
+        });
+        return false;
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || 'Failed to save AI assessment result',
+        isSavingResult: false
+      });
+      return false;
+    }
+  },
+
 
   clearAssessment: () => set({ assessment: null }),
   clearError: () => set({ error: null }),

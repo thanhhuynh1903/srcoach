@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
@@ -15,7 +16,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
-const getSeverityColor = severity => {
+const getSeverityColor = (severity : any ) => {
   switch (severity?.toLowerCase()) {
     case 'high':
       return '#EF4444'; // Đỏ
@@ -31,7 +32,7 @@ const getSeverityColor = severity => {
 };
 
 // Hàm lấy giá trị tiến trình dựa trên mức độ
-const getLevelProgress = level => {
+const getLevelProgress = (level :  any) => {
   switch (level?.toLowerCase()) {
     case 'high':
       return 0.9;
@@ -62,6 +63,8 @@ const RiskWarningScreen = () => {
     evaluateActivityHealth,
     fetchHealthAlertDetail,
     clearAssessment,
+    saveFullAiResult,
+    message,
   } = useAiRiskStore();
 
   // Gọi API đánh giá khi màn hình được tải
@@ -129,6 +132,35 @@ const RiskWarningScreen = () => {
       </SafeAreaView>
     );
   }
+  const handleSaveResult = async () => {
+    if (!activityData || !assessment) return;
+    
+    try {
+      const success = await saveFullAiResult(activityData);
+      console.log('saveFullAiResult response:', success);
+      
+      if (success) {
+        // Hiển thị thông báo thành công
+        Alert.alert(
+          "Thành công",
+          "Đã lưu báo cáo đánh giá sức khỏe",
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert(
+          "Lỗi",
+          "Không thể lưu báo cáo. Vui lòng thử lại sau.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Lỗi",
+        "Đã xảy ra lỗi khi lưu báo cáo",
+        [{ text: "OK" }]
+      );
+    } 
+  };
 
   // Lấy màu dựa trên mức độ nghiêm trọng
   const severityColor = getSeverityColor(assessment.severity);
@@ -256,7 +288,7 @@ const RiskWarningScreen = () => {
         <View style={styles.metricsContainer}>
           {metrics.map((metric, index) => (
             <View key={index} style={styles.metricItem}>
-              <Icon name={metric.icon} size={24} color={metric.color} />
+              <Icon name={metric.icon as any} size={24} color={metric.color} />
               <Text style={styles.metricValue}>
                 {metric.value}
                 <Text style={styles.metricUnit}>{metric.unit}</Text>
@@ -339,15 +371,14 @@ const RiskWarningScreen = () => {
             <TouchableOpacity
               style={styles.saveButton}
               onPress={() => {
-                // Thêm logic lưu báo cáo ở đây
-                navigation.goBack();
+                handleSaveResult();
               }}>
               <Text style={styles.saveButtonText}>Save report</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => navigation.goBack()}>
-              <Text style={styles.deleteButtonText}>Return</Text>
+              <Text style={styles.deleteButtonText}>Return list of risk warning</Text>
             </TouchableOpacity>
           </View>
         )}
