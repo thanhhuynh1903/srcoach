@@ -8,17 +8,26 @@ import {
   StyleSheet,
   Linking,
   SafeAreaView,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import useUserCertificatesStore from '../../../utils/useUserCertificatesStore';
 import {useNavigation} from '@react-navigation/native';
 import {theme} from '../../../contants/theme';
 import LinearGradient from 'react-native-linear-gradient';
 import Toast from 'react-native-toast-message';
+import * as ImagePicker from 'react-native-image-picker';
+import { UserCertificatesAPI } from './UserCertificatesAPI';
 
 type CertificateForm = {
   certificate_type_id: string;
   description: string;
+};
+
+type ImageForm = {
+  uri: string;
+  type?: string;
+  fileName?: string;
 };
 
 const CustomCheckbox = ({value, onValueChange}) => (
@@ -33,15 +42,8 @@ const CustomCheckbox = ({value, onValueChange}) => (
 
 const UserCertificatesSubmitScreen = () => {
   const navigation = useNavigation();
-  const {
-    submitCertificates,
-    getCertificateTypes,
-    certificateTypes,
-    isLoading,
-    clearError,
-    clearMessage,
-  } = useUserCertificatesStore();
-
+  const [certificateTypes, setCertificateTypes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [forms, setForms] = useState<Record<string, CertificateForm[]>>({
     citizen_document_front: [
       {certificate_type_id: 'citizen_document_front', description: ''},
@@ -57,10 +59,27 @@ const UserCertificatesSubmitScreen = () => {
     note: [{certificate_type_id: 'note', description: ''}],
   });
 
+  const [images, setImages] = useState<Record<string, ImageForm>>({
+    citizen_document_front: null,
+    citizen_document_back: null,
+  });
+
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
-    getCertificateTypes();
+    const fetchCertificateTypes = async () => {
+      try {
+        const response = await UserCertificatesAPI.getCertificateTypes();
+        setCertificateTypes(response.data);
+      } catch (error) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error.message || 'Failed to load certificate types',
+        });
+      }
+    };
+    fetchCertificateTypes();
   }, []);
 
   const formatTypeName = (type: string) => {
@@ -107,48 +126,167 @@ const UserCertificatesSubmitScreen = () => {
     Linking.openURL('https://yourdomain.com/help/certificates');
   };
 
-  const handleSubmit = async () => {
+  const pickImage = async (type: 'citizen_document_front' | 'citizen_document_back') => {
+    try {
+      const result = await ImagePicker.launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+      });
+
+      if (result.didCancel) return;
+      if (result.errorCode) {
+        throw new Error(result.errorMessage || 'Image picker error');
+      }
+
+      const asset = result.assets?.[0];
+      if (!asset) return;
+
+      setImages(prev => ({
+        ...prev,
+        [type]: {
+          uri: asset.uri,
+          type: asset.type || 'image/jpeg',
+          fileName: asset.fileName || `document_${Date.now()}.jpg`,
+        },
+      }));
+
+      // Auto-fill description if empty
+      if (forms[type][0].description === '') {
+        handleChangeText(type, 0, `Uploaded ${formatTypeName(type)}`);
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'Failed to pick image',
+      });
+    }
+  };
+
+  const removeImage = (type: 'citizen_document_front' | 'citizen_document_back') => {
+    setImages(prev => ({...prev, [type]: null}));
+  };
+
+  const validateSubmission = () => {
+    if (!images.citizen_document_front || !images.citizen_document_back) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please upload both front and back of your ID document',
+      });
+      return false;
+    }
+
     if (!confirmed) {
       Toast.show({
         type: 'error',
         text1: 'Error',
         text2: 'Please confirm that all documents are authentic',
-        visibilityTime: 4000,
       });
-      return;
+      return false;
     }
 
-    const allCertificates = Object.values(forms).flat();
-    const certificatesToSubmit = allCertificates.filter(
-      cert =>
-        cert.certificate_type_id === 'note' || cert.description.trim() !== '',
-    );
+    return true;
+  };
 
-    if (certificatesToSubmit.length === 0) {
+  const handleSubmit = async () => {
+    if (!validateSubmission()) return;
+
+    setIsLoading(true);
+    try {
+      const allCertificates = Object.values(forms).flat();
+      const certificatesToSubmit = allCertificates.filter(
+        cert =>
+          cert.certificate_type_id === 'note' || cert.description.trim() !== '',
+      );
+
+      // Convert images to array in the order of front then back
+      const imageFiles = [
+        images.citizen_document_front,
+        images.citizen_document_back,
+      ].filter(Boolean);
+
+      const response = await UserCertificatesAPI.submitCertificates(
+        certificatesToSubmit,
+        imageFiles,
+      );
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: response.message || 'Certificates submitted successfully',
+      });
+
+      navigation.navigate('UserCertificatesSuccessScreen');
+    } catch (error) {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Please add at least one certificate',
-        visibilityTime: 4000,
+        text2: error.message || 'Failed to submit certificates',
       });
-      return;
-    }
-
-    try {
-      await submitCertificates(certificatesToSubmit);
-      // Only navigate on successful submission
-      navigation.navigate('UserCertificatesSuccessScreen');
-    } catch (error) {
-      // Error is already shown by the store via toast
     } finally {
-      clearError();
-      clearMessage();
+      setIsLoading(false);
     }
+  };
+
+  const renderImageUpload = (type: 'citizen_document_front' | 'citizen_document_back') => {
+    const image = images[type];
+    const hasImage = !!image;
+
+    return (
+      <View style={styles.imageUploadContainer}>
+        {hasImage ? (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{uri: image.uri}} style={styles.imagePreview} />
+            <TouchableOpacity
+              style={styles.removeImageButton}
+              onPress={() => removeImage(type)}>
+              <Icon name="close" size={20} color="white" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={() => pickImage(type)}>
+            <Icon
+              name="cloud-upload"
+              size={32}
+              color={theme.colors.primary}
+              style={styles.uploadIcon}
+            />
+            <Text style={styles.uploadText}>Upload {formatTypeName(type)}</Text>
+          </TouchableOpacity>
+        )}
+        <TextInput
+          style={styles.imageDescriptionInput}
+          placeholder={`Description for ${formatTypeName(type)}`}
+          value={forms[type][0].description}
+          onChangeText={text => handleChangeText(type, 0, text)}
+        />
+      </View>
+    );
   };
 
   const renderCertificateSection = (type: string, maxLinks: number = 1) => {
     const isSingle = maxLinks === 1;
     const canAddMore = forms[type].length < maxLinks;
+
+    // Special handling for citizen documents (image upload)
+    if (type === 'citizen_document_front' || type === 'citizen_document_back') {
+      return (
+        <View key={type} style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{formatTypeName(type)}</Text>
+            <TouchableOpacity
+              onPress={() => showInfoDialog(type)}
+              style={styles.infoButton}>
+              <Icon name="information-circle" size={20} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+          {renderImageUpload(type)}
+        </View>
+      );
+    }
 
     return (
       <View key={type} style={styles.section}>
@@ -240,7 +378,7 @@ const UserCertificatesSubmitScreen = () => {
           Provide all required documents to verify your expert status
         </Text>
 
-        {/* Single document sections */}
+        {/* Citizen document sections (image upload) */}
         {renderCertificateSection('citizen_document_front')}
         {renderCertificateSection('citizen_document_back')}
 
@@ -278,19 +416,24 @@ const UserCertificatesSubmitScreen = () => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!confirmed || isLoading) && styles.submitButtonDisabled,
+            (!confirmed || !images.citizen_document_front || !images.citizen_document_back || isLoading) && 
+              styles.submitButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!confirmed || isLoading}>
+          disabled={!confirmed || !images.citizen_document_front || !images.citizen_document_back || isLoading}>
           <LinearGradient
             colors={[theme.colors.primaryDark, theme.colors.primaryDark]}
             style={styles.gradientButton}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 0}}>
-            <Text style={styles.submitButtonText}>
-              {isLoading ? 'Submitting...' : 'Submit Certificates'}
-            </Text>
-            <Icon name="arrow-forward" size={20} color="white" />
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Text style={styles.submitButtonText}>Submit Certificates</Text>
+                <Icon name="arrow-forward" size={20} color="white" />
+              </>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -488,6 +631,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+  },
+  // Image upload styles
+  imageUploadContainer: {
+    marginBottom: 10,
+  },
+  uploadButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  uploadIcon: {
+    marginBottom: 8,
+  },
+  uploadText: {
+    color: theme.colors.primary,
+    fontWeight: '500',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    marginBottom: 10,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 6,
+    resizeMode: 'contain',
+    backgroundColor: '#f8f9fa',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageDescriptionInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    padding: 12,
+    backgroundColor: '#fff',
+    fontSize: 14,
+    marginTop: 10,
   },
 });
 

@@ -15,6 +15,12 @@ interface Certificate {
     type_name?: string;
     description?: string;
   };
+  Images?: {
+    id: string;
+    url: string;
+    public_id?: string;
+    created_at: string;
+  }[];
 }
 
 interface CertificateType {
@@ -39,7 +45,10 @@ interface UserCertificatesState {
   // Certificate operations
   getSelfCertificates: () => Promise<void>;
   getUserCertificates: (userId: string) => Promise<void>;
-  submitCertificates: (certificates: Omit<Certificate, 'id' | 'status' | 'created_at' | 'updated_at'>[]) => Promise<void>;
+  submitCertificates: (
+    certificates: Omit<Certificate, 'id' | 'status' | 'created_at' | 'updated_at'>[],
+    files?: any[]
+  ) => Promise<void>;
   updateCertificateStatus: (id: string, status: string) => Promise<void>;
   getCertificateTypes: () => Promise<void>;
 
@@ -124,14 +133,26 @@ const useUserCertificatesStore = create<UserCertificatesState>((set) => ({
     }
   },
 
-  submitCertificates: async (certificates) => {
+  submitCertificates: async (certificates, files = []) => {
     set({ isLoading: true, error: null });
     try {
+      const formData = new FormData();
+      
+      // Add certificates data
+      formData.append('certificates', JSON.stringify(certificates));
+      
+      // Add files
+      files.forEach((file, index) => {
+        formData.append('images', {
+          uri: file.uri,
+          type: file.type || 'image/jpeg',
+          name: file.fileName || `image_${index}.jpg`,
+        });
+      });
+
       const response = await useApiStore
         .getState()
-        .patchData<ApiResponse<Certificate[]>>('/user-certificates/submit', {
-          certificates,
-        });
+        .postData<ApiResponse<Certificate[]>>('/user-certificates/submit', formData);
 
       if (response?.status) {
         set({
