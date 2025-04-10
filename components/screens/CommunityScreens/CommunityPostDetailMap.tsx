@@ -363,7 +363,7 @@ export default function CommunityPostDetailMap({exerciseSessionRecordId}) {
             {renderStats()}
           </View>
 
-          <View style={styles.section}>{renderHeartRateChart()}</View>
+          {/* <View style={styles.section}>{renderHeartRateChart()}</View> */}
         </>
       )}
     </ScrollView>
