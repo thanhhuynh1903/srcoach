@@ -182,7 +182,7 @@ const EnhancedScheduleCard = ({
                 <View style={styles.statsContainer}>
                   {/* Steps */}
                   <View style={styles.statItem}>
-                    <Icon name="footsteps-outline" size={20} color="#4285F4" />
+                    <Icon name="footsteps-outline" size={25} color="#4285F4" />
                     <Text style={styles.statValue}>
                       {workout.steps.toLocaleString()}
                     </Text>
@@ -191,14 +191,14 @@ const EnhancedScheduleCard = ({
 
                   {/* Distance */}
                   <View style={styles.statItem}>
-                    <Icon name="map-outline" size={20} color="#4285F4" />
+                    <Icon name="map-outline" size={25} color="#4285F4" />
                     <Text style={styles.statValue}>{workout.distance} km</Text>
                     <Text style={styles.statLabel}>Distance</Text>
                   </View>
 
                   {/* Calories */}
                   <View style={styles.statItem}>
-                    <Icon name="flame-outline" size={20} color="#4285F4" />
+                    <Icon name="flame-outline" size={25} color="#4285F4" />
                     <Text style={styles.statValue}>{workout.calories}</Text>
                     <Text style={styles.statLabel}>Calories</Text>
                   </View>
@@ -367,12 +367,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
     marginLeft: 6,
   },
   sessionName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
     color: '#000',
     marginBottom: 10,
@@ -386,13 +386,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '600',
     color: '#000',
     marginTop: 4,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 14,
     color: '#666',
     marginTop: 2,
   },

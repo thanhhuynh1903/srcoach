@@ -50,6 +50,9 @@ export default function CommunityPostDetailMap({exerciseSessionRecordId}) {
   const [mapReady, setMapReady] = useState(false);
 
   const fetchExerciseData = async () => {
+    console.log('Fetching exercise data...',exerciseSessionRecordId);
+    console.log(`${MASTER_URL}/record-exercise-session/${exerciseSessionRecordId}`);
+    
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem('authToken');
@@ -61,7 +64,8 @@ export default function CommunityPostDetailMap({exerciseSessionRecordId}) {
           },
         },
       );
-
+      console.log('Exercise data fetched:', response.data.data);
+      
       setExerciseData(response.data.data);
     } catch (error) {
       console.error('Error fetching exercise data:', error);

@@ -85,20 +85,8 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
       }
 
       // Xử lý exercise record
-      if (currentPost.exercise_session_record) {
-        // Nếu có đối tượng exercise_session_record đầy đủ
-        const recordData: ExerciseRecord = {
-          id: currentPost.exercise_session_record.id,
-          clientRecordId: currentPost.exercise_session_record.client_record_id || '',
-          exerciseType: currentPost.exercise_session_record.exercise_type || 'com.google.walking',
-          startTime: currentPost.exercise_session_record.start_time || new Date().toISOString(),
-          endTime: currentPost.exercise_session_record.end_time || new Date().toISOString(),
-          duration_minutes: currentPost.exercise_session_record.duration_minutes || 0,
-          total_distance: currentPost.exercise_session_record.total_distance || 0,
-          total_steps: currentPost.exercise_session_record.total_steps || 0
-        };
-        setRunRecord(recordData);
-      } else if (currentPost.exercise_session_record_id) {
+      if (currentPost.exercise_session_record_id) {
+        console.log('currentPost', currentPost.exercise_session_record_id);
         // Nếu chỉ có ID, tạo một đối tượng tạm thời với ID
         // Lưu ý: Đây là giải pháp tạm thời, tốt nhất là nên fetch thông tin đầy đủ của record
         const tempRecord: ExerciseRecord = {
