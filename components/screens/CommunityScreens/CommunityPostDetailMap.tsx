@@ -349,6 +349,10 @@ export default function CommunityPostDetailMap({exerciseSessionRecordId}) {
       </ContentLoader>
     </View>
   );
+  
+  if (!exerciseSessionRecordId) {
+    return <View></View>;
+  }
 
   return (
     <ScrollView style={styles.container}>

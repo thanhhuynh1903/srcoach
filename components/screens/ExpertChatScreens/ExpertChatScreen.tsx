@@ -12,9 +12,11 @@ import {theme} from '../../contants/theme';
 import ECPRChatList from './ExpertChatPOVRunner/ECPRChatList';
 import {useLoginStore} from '../../utils/useLoginStore';
 import ECPEChatList from './ExpertChatPOVExpert/ECPEChatList';
+import {useNavigation} from '@react-navigation/native';
 
 const ExpertChatScreen = () => {
   const {profile} = useLoginStore();
+  const navigation = useNavigation();
 
   useEffect(() => {}, [profile]);
 
@@ -25,16 +27,25 @@ const ExpertChatScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitle}>
-          <Text style={styles.title}>Expert Chat</Text>
+          <Text style={styles.title}>Chat Rooms</Text>
           {profile?.roles.includes('expert') && (
             <Text style={styles.expertText}>Expert</Text>
           )}
         </View>
         <View style={styles.headerIcons}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('ExpertChatSearchUser')}>
+            <Icon
+              name="search-outline"
+              size={20}
+              color={theme.colors.primaryDark}
+            />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton}>
             <Icon
               name="notifications-outline"
-              size={24}
+              size={20}
               color={theme.colors.primaryDark}
             />
           </TouchableOpacity>
@@ -56,7 +67,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -64,19 +75,19 @@ const styles = StyleSheet.create({
   headerTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   expertText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     color: theme.colors.primaryDark,
     backgroundColor: '#cadbff',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 10,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1E293B',
   },
@@ -85,7 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconButton: {
-    marginLeft: 16,
+    marginLeft: 12,
   },
 });
 

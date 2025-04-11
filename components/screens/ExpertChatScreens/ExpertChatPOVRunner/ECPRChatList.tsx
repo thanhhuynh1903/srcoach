@@ -1,417 +1,434 @@
-import React, {useCallback, useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  FlatList,
   TextInput,
-  ScrollView,
-  Image,
   ActivityIndicator,
   Modal,
-  Animated,
-  Easing,
-  TouchableWithoutFeedback,
-  FlatList,
+  Pressable,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {theme} from '../../../contants/theme';
-import useChatStore from '../../../utils/useChatStore';
-import ChatAPI from '../../../utils/useChatAPI';
+import {useNavigation} from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
+import useChatsAPI from '../../../utils/useChatsAPI';
 
-const tabs = [
-  {id: 'All', label: 'All'},
-  {id: 'ACCEPTED', label: 'Active'},
-  {id: 'PENDING', label: 'Pending'},
-  {id: 'BLOCKED', label: 'Blocked'},
-  {id: 'ARCHIVED', label: 'Archived'},
-];
+type TabType = 'all' | 'current' | 'pending' | 'blocked';
+type ModalAction = 'archive' | 'block' | 'unblock';
 
-const statusColors = {
-  PENDING: '#FFC107',
-  ACCEPTED: '#4CAF50',
-  BLOCKED: '#F44336',
-  ARCHIVED: '#9E9E9E',
-};
+interface ChatSession {
+  id: string;
+  participant1_id: string;
+  participant2_id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'BLOCKED' | 'ARCHIVED' | 'REJECTED';
+  participant1?: {
+    id: string;
+    name?: string;
+    username?: string;
+    is_expert?: boolean;
+  };
+  participant2?: {
+    id: string;
+    name?: string;
+    username?: string;
+    is_expert?: boolean;
+  };
+  initiatedByYou?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
 const ECPRChatList = () => {
   const navigation = useNavigation();
-  const [isLoading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeTab, setActiveTab] = useState('All');
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [actionType, setActionType] = useState<'ARCHIVE' | 'BLOCK' | null>(null);
-  const slideAnim = useState(new Animated.Value(300))[0];
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(
+    null,
+  );
+  const [modalAction, setModalAction] = useState<ModalAction>('archive');
 
-  const fetchSessions = async () => {
+  const {
+    getSessions,
+    getPendingSessions,
+    acceptSession,
+    rejectOrArchiveSession,
+    blockUser,
+    unblockUser,
+    getBlockedUsers,
+  } = useChatsAPI();
+
+  useEffect(() => {
+    loadSessions();
+  }, [activeTab]);
+
+  const loadSessions = async () => {
     try {
       setLoading(true);
-      const res = await ChatAPI.listChatSessions(
-        activeTab === 'All' ? undefined : activeTab,
-      );
-      if (res.status && res.data) {
-        setSessions(res.data);
+      let result;
+
+      if (activeTab === 'pending') {
+        result = await getPendingSessions();
+      } else if (activeTab === 'blocked') {
+        result = await getBlockedUsers();
+        if (result.status && result.data) {
+          const blockedSessions = result.data.map(user => ({
+            id: `blocked-${user.id}`,
+            participant1_id: '',
+            participant2_id: user.id,
+            status: 'BLOCKED' as const,
+            participant2: {
+              id: user.id,
+              name: user.name,
+              username: user.username,
+            },
+            created_at: new Date().toISOString(),
+          }));
+          setSessions(blockedSessions);
+          return;
+        }
+      } else {
+        result = await getSessions();
+      }
+
+      if (result.status && result.data) {
+        let filteredSessions = result.data;
+        if (activeTab === 'current') {
+          filteredSessions = result.data.filter(
+            session => session.status === 'ACCEPTED',
+          );
+        }
+        setSessions(filteredSessions);
       }
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to load sessions',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchSessions();
-    }, [activeTab]),
-  );
-
-  const filteredSessions = sessions.filter(session => {
-    if (activeTab !== 'All' && session.status !== activeTab) {
-      return false;
+  const handleAccept = async (sessionId: string) => {
+    const result = await acceptSession(sessionId);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Session accepted',
+      });
+      loadSessions();
     }
+  };
 
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase();
-      const participantName = session.participant2?.name?.toLowerCase() || '';
-      const participantUsername = session.participant2?.username?.toLowerCase() || '';
-      const lastMessage = session.last_message?.message?.toLowerCase() || '';
-
-      return (
-        participantName.includes(searchLower) ||
-        participantUsername.includes(searchLower) ||
-        lastMessage.includes(searchLower)
-      );
+  const handleReject = async (sessionId: string) => {
+    const result = await rejectOrArchiveSession(sessionId);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Session rejected',
+      });
+      loadSessions();
     }
-
-    return true;
-  });
-
-  const capitalizeFirstLetter = (string: string) => {
-    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
-  const handleChatPress = (session: ChatSession) => {
-    if (session.status !== 'ACCEPTED') return;
+  const handleArchive = async () => {
+    if (!selectedSession) return;
 
-    useChatStore.setState({currentSession: session});
-    navigation.navigate('ExpertChatboxScreen' as never, {
-      sessionId: session.id,
-    });
+    const result = await rejectOrArchiveSession(selectedSession.id);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Session archived',
+      });
+      loadSessions();
+    }
+    setModalVisible(false);
   };
 
-  const showModal = () => {
-    setShowActionModal(true);
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+  const handleBlock = async () => {
+    if (!selectedSession) return;
+
+    const userIdToBlock =
+      selectedSession.participant1_id === selectedSession.participant2_id
+        ? selectedSession.participant2_id
+        : selectedSession.participant1_id === selectedSession.participant2_id
+        ? selectedSession.participant1_id
+        : selectedSession.initiatedByYou
+        ? selectedSession.participant2_id
+        : selectedSession.participant1_id;
+
+    const result = await blockUser(userIdToBlock);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'User blocked',
+      });
+      loadSessions();
+    }
+    setModalVisible(false);
   };
 
-  const hideModal = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 250,
-        easing: Easing.in(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setShowActionModal(false));
+  const handleUnblock = async () => {
+    if (!selectedSession) return;
+
+    const result = await unblockUser(selectedSession.participant2_id);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'User unblocked',
+      });
+      loadSessions();
+    }
+    setModalVisible(false);
   };
 
-  const handleMorePress = (session: ChatSession) => {
+  const showActionModal = (session: ChatSession, action: ModalAction) => {
     setSelectedSession(session);
-    showModal();
+    setModalAction(action);
+    setModalVisible(true);
   };
 
-  const handleAction = (type: 'ARCHIVE' | 'BLOCK') => {
-    setActionType(type);
-    hideModal();
-    setShowConfirmModal(true);
+  const getOtherUser = (session: ChatSession) => {
+    return session.initiatedByYou ? session.participant2 : session.participant1;
   };
 
-  const confirmAction = async () => {
-    if (!selectedSession || !actionType) return;
-
-    try {
-      let response;
-      if (actionType === 'BLOCK') {
-        if (selectedSession.status === 'BLOCKED') {
-          response = await ChatAPI.unblockChat(selectedSession.id);
-        } else {
-          response = await ChatAPI.blockChat(selectedSession.id);
-        }
-      } else if (actionType === 'ARCHIVE') {
-        if (selectedSession.status === 'ARCHIVED') {
-          response = await ChatAPI.unarchiveChat(selectedSession.id);
-        } else {
-          response = await ChatAPI.archiveChat(selectedSession.id);
-        }
-      }
-
-      if (response?.status) {
-        fetchSessions();
-      }
-    } catch (error) {
-      console.error('Error performing action:', error);
-    } finally {
-      setShowConfirmModal(false);
-      setSelectedSession(null);
-      setActionType(null);
-    }
-  };
-
-  const renderChatItem = ({item}: {item: ChatSession}) => {
-    const otherParticipant = item.other_participant;
-    const lastMessage = item.last_message;
-    const isActive = item.status === 'ACCEPTED' && item.status !== 'ARCHIVED';
+  const renderItem = ({item}: {item: ChatSession}) => {
+    const otherUser = getOtherUser(item);
+    const isBlocked = item.status === 'BLOCKED';
 
     return (
-      <View style={[styles.chatItem, {borderLeftWidth: 4, borderLeftColor: statusColors[item.status as keyof typeof statusColors]}]}>
+      <View
+        style={[
+          styles.sessionItem,
+          item.status === 'ACCEPTED' && styles.acceptedSession,
+          item.status === 'PENDING' && styles.pendingSession,
+          isBlocked && styles.blockedSession,
+        ]}>
         <TouchableOpacity
-          style={styles.chatContent}
-          onPress={() => handleChatPress(item)}
-          disabled={!isActive}>
-          <View style={styles.chatHeader}>
-            <Image
-              source={{
-                uri: `https://ui-avatars.com/api/?name=${otherParticipant?.name}&background=random`,
-              }}
-              style={styles.avatar}
-            />
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{otherParticipant?.name}</Text>
-              <Text style={styles.username}>@{otherParticipant?.username}</Text>
-              <Text style={styles.specialty}>
-                {otherParticipant?.user_level && capitalizeFirstLetter(otherParticipant.user_level)}
+          style={styles.sessionContent}
+          onPress={() => {
+            if (item.status === 'ACCEPTED') {
+              navigation.navigate('ECPRMessageScreen', {sessionId: item.id});
+            }
+          }}>
+          <View style={styles.avatarPlaceholder}>
+            <Icon name="person" size={24} color="#fff" />
+          </View>
+          <View style={styles.sessionInfo}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.name}>
+                {otherUser?.name || 'Unknown User'}
               </Text>
+              {otherUser?.is_expert && (
+                <View style={styles.expertBadge}>
+                  <Text style={styles.expertBadgeText}>Expert</Text>
+                </View>
+              )}
             </View>
-            <View style={[styles.statusBadge, {backgroundColor: statusColors[item.status as keyof typeof statusColors]}]}>
-              <Text style={styles.statusText}>{item.status}</Text>
-            </View>
-          </View>
-          
-          {lastMessage && (
-            <Text style={styles.lastMessage} numberOfLines={1}>
-              {lastMessage.message}
+            <Text style={styles.username}>
+              @{otherUser?.username || 'unknown'}
             </Text>
-          )}
-          
-          <View style={styles.chatFooter}>
-            <Text style={styles.chatDate}>
-              {new Date(lastMessage?.created_at || item.updated_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
-            </Text>
+            {isBlocked && <Text style={styles.blockedText}>Blocked</Text>}
           </View>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.moreButton}
-          onPress={() => handleMorePress(item)}>
-          <Icon name="ellipsis-vertical" size={20} color="#616161" />
-        </TouchableOpacity>
+
+        {item.status === 'ACCEPTED' ? (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => showActionModal(item, 'archive')}>
+            <Icon name="ellipsis-horizontal" size={20} color="#666" />
+          </TouchableOpacity>
+        ) : item.status === 'BLOCKED' ? (
+          <TouchableOpacity
+            style={styles.unblockButton}
+            onPress={() => showActionModal(item, 'unblock')}>
+            <Icon name="lock-open" size={20} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.pendingActions}>
+            {!item.initiatedByYou && (
+              <>
+                <TouchableOpacity
+                  style={styles.acceptButton}
+                  onPress={() => handleAccept(item.id)}>
+                  <Icon name="checkmark" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.rejectButton}
+                  onPress={() => showActionModal(item, 'block')}>
+                  <Icon name="close" size={20} color="#fff" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
       </View>
     );
   };
 
+  const getModalConfig = () => {
+    switch (modalAction) {
+      case 'archive':
+        return {
+          title: 'Archive Conversation',
+          text: 'Are you sure you want to archive this conversation?',
+          actionText: 'Archive',
+          action: handleArchive,
+        };
+      case 'block':
+        return {
+          title: 'Block User',
+          text: 'Are you sure you want to block this user? You will no longer receive messages from them.',
+          actionText: 'Block',
+          action: handleBlock,
+        };
+      case 'unblock':
+        return {
+          title: 'Unblock User',
+          text: 'Are you sure you want to unblock this user?',
+          actionText: 'Unblock',
+          action: handleUnblock,
+        };
+      default:
+        return {
+          title: '',
+          text: '',
+          actionText: '',
+          action: () => {},
+        };
+    }
+  };
+
+  const modalConfig = getModalConfig();
+
   return (
     <View style={styles.container}>
-      {/* Search Bar with Add Button */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#64748B" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search chats..."
-            placeholderTextColor="#64748B"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search chats..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#999"
+        />
+      </View>
+
+      <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('ExpertChatSearchScreen' as never)}>
-          <Icon name="add" size={24} color={theme.colors.primaryDark} />
+          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+          onPress={() => setActiveTab('all')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'all' && styles.activeTabText,
+            ]}>
+            All
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.tabSpacer} />
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'current' && styles.activeTab]}
+          onPress={() => setActiveTab('current')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'current' && styles.activeTabText,
+            ]}>
+            Current
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.tabSpacer} />
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+          onPress={() => setActiveTab('pending')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'pending' && styles.activeTabText,
+            ]}>
+            Pending
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.tabSpacer} />
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'blocked' && styles.activeTab]}
+          onPress={() => setActiveTab('blocked')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'blocked' && styles.activeTabText,
+            ]}>
+            Blocked
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Filter Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabContainer}>
-        {tabs.map(tab => {
-          const tabColor = tab.id === 'All' ? theme.colors.primaryDark : statusColors[tab.id as keyof typeof statusColors];
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tabButton,
-                activeTab === tab.id && styles.activeTab,
-                activeTab === tab.id && {backgroundColor: tabColor}
-              ]}
-              onPress={() => setActiveTab(tab.id)}>
-              <Text style={[
-                styles.tabText,
-                activeTab === tab.id && styles.activeTabText
-              ]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Chat List */}
-      {isLoading ? (
+      {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primaryDark} />
-        </View>
-      ) : filteredSessions.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIllustration}>
-            <Icon
-              name="chatbubbles-outline"
-              size={80}
-              color={theme.colors.primaryLight}
-            />
-          </View>
-          <Text style={styles.emptyTitle}>No chats found</Text>
-          <Text style={styles.emptySubtitle}>
-            {searchQuery
-              ? 'No results match your search'
-              : activeTab === 'All'
-              ? 'Start a new chat with an expert'
-              : `No ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()} chats`}
-          </Text>
-          {!searchQuery && activeTab === 'All' && (
-            <TouchableOpacity
-              style={styles.addButtonLarge}
-              onPress={() => navigation.navigate('ExpertChatSearchScreen' as never)}>
-              <Icon name="add" size={24} color="#FFFFFF" />
-              <Text style={styles.addButtonText}>New Chat</Text>
-            </TouchableOpacity>
-          )}
+          <ActivityIndicator size="large" color="#4B7BE5" />
         </View>
       ) : (
         <FlatList
-          data={filteredSessions}
-          renderItem={renderChatItem}
+          data={sessions}
+          renderItem={renderItem}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No chats available</Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'blocked'
+                  ? 'No blocked users'
+                  : 'No sessions found'}
+              </Text>
             </View>
           }
         />
       )}
 
-      {/* Action Modal */}
       <Modal
-        visible={showActionModal}
-        transparent
-        animationType="none"
-        onRequestClose={hideModal}>
-        <TouchableWithoutFeedback onPress={hideModal}>
-          <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]} />
-        </TouchableWithoutFeedback>
-        
-        <Animated.View 
-          style={[
-            styles.modalContent,
-            { transform: [{ translateY: slideAnim }] }
-          ]}>
-          <TouchableOpacity
-            style={styles.modalButton}
-            onPress={() => handleAction('ARCHIVE')}>
-            <Text style={styles.modalButtonText}>
-              {selectedSession?.status === 'ARCHIVED' ? 'Unarchive' : 'Archive'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.modalButton}
-            onPress={() => handleAction('BLOCK')}>
-            <Text style={styles.modalButtonText}>
-              {selectedSession?.status === 'BLOCKED' ? 'Unblock' : 'Block'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalButton, styles.cancelButton]}
-            onPress={hideModal}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </Modal>
-
-      {/* Confirmation Modal */}
-      <Modal
-        visible={showConfirmModal}
-        transparent
         animationType="fade"
-        onRequestClose={() => setShowConfirmModal(false)}>
-        <View style={styles.confirmationOverlay}>
-          <View style={styles.confirmationDialog}>
-            <Text style={styles.confirmationTitle}>
-              {actionType === 'BLOCK'
-                ? selectedSession?.status === 'BLOCKED'
-                  ? 'Unblock User?'
-                  : 'Block User?'
-                : selectedSession?.status === 'ARCHIVED'
-                ? 'Unarchive Chat?'
-                : 'Archive Chat?'}
-            </Text>
-            <Text style={styles.confirmationMessage}>
-              {actionType === 'BLOCK'
-                ? selectedSession?.status === 'BLOCKED'
-                  ? `Are you sure you want to unblock ${selectedSession?.participant2?.name}?`
-                  : `Are you sure you want to block ${selectedSession?.participant2?.name}? You won't receive messages from them.`
-                : selectedSession?.status === 'ARCHIVED'
-                ? `Are you sure you want to unarchive this chat with ${selectedSession?.participant2?.name}?`
-                : `Are you sure you want to archive this chat with ${selectedSession?.participant2?.name}?`}
-            </Text>
-            <View style={styles.confirmationButtons}>
-              <TouchableOpacity
-                style={[styles.confirmationButton, styles.cancelConfirmationButton]}
-                onPress={() => setShowConfirmModal(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmationButton, {
-                  backgroundColor: actionType === 'BLOCK' ? '#F44336' : '#9E9E9E'
-                }]}
-                onPress={confirmAction}>
-                <Text style={styles.confirmButtonText}>
-                  {actionType === 'BLOCK'
-                    ? selectedSession?.status === 'BLOCKED'
-                      ? 'Unblock'
-                      : 'Block'
-                    : selectedSession?.status === 'ARCHIVED'
-                    ? 'Unarchive'
-                    : 'Archive'}
-                </Text>
-              </TouchableOpacity>
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalText}>{modalConfig.text}</Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setModalVisible(false)}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={modalConfig.action}>
+                <Text style={styles.buttonText}>{modalConfig.actionText}</Text>
+              </Pressable>
             </View>
           </View>
         </View>
       </Modal>
+
+      <Toast />
     </View>
   );
 };
@@ -421,133 +438,159 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
-  },
   searchContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    margin: 16,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#000',
-    marginLeft: 8,
-  },
-  addButton: {
-    marginLeft: 8,
-    padding: 8,
+    height: '100%',
+    color: '#333',
   },
   tabContainer: {
-    paddingHorizontal: 10,
-    height: 48,
-    backgroundColor: '#fff',
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    alignItems: 'flex-start',
   },
-  tabButton: {
+  tabSpacer: {
+    width: 8,
+  },
+  tab: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 20,
-    marginHorizontal: 4,
-    backgroundColor: '#f0f0f0',
-    height: 35,
-    justifyContent: 'center',
+    backgroundColor: '#eee',
   },
   activeTab: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: '#4B7BE5',
   },
   tabText: {
-    fontSize: 14,
+    color: '#666',
     fontWeight: '500',
-    color: '#616161',
+    fontSize: 14,
   },
   activeTabText: {
     color: '#fff',
-    fontWeight: '600',
   },
-  listContent: {
-    padding: 10,
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
-  chatItem: {
+  sessionItem: {
     backgroundColor: '#fff',
-    padding: 15,
-    marginBottom: 10,
     borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
+    shadowRadius: 1,
   },
-  chatContent: {
+  acceptedSession: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  pendingSession: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFC107',
+  },
+  blockedSession: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+  },
+  sessionContent: {
     flex: 1,
-  },
-  chatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  avatar: {
+  avatarPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: '#4B7BE5',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
-  userInfo: {
+  sessionInfo: {
     flex: 1,
   },
-  userName: {
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  name: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
     color: '#333',
+    marginRight: 4,
+  },
+  expertBadge: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 4,
+  },
+  expertBadgeText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: 'bold',
   },
   username: {
     fontSize: 14,
-    color: '#757575',
+    color: '#666',
   },
-  specialty: {
+  blockedText: {
     fontSize: 12,
-    color: '#9E9E9E',
+    color: '#F44336',
     marginTop: 2,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
+  actionButton: {
+    padding: 8,
   },
-  statusText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  lastMessage: {
-    fontSize: 14,
-    color: '#616161',
-    marginVertical: 8,
-  },
-  chatFooter: {
+  pendingActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  chatDate: {
-    fontSize: 12,
-    color: '#9E9E9E',
+  acceptButton: {
+    backgroundColor: '#4CAF50',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  rejectButton: {
+    backgroundColor: '#F44336',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  unblockButton: {
+    backgroundColor: '#4B7BE5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -558,124 +601,53 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-  },
-  emptyIllustration: {
-    backgroundColor: '#f8f8f8',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#757575',
-    textAlign: 'center',
-    marginBottom: 20,
+    padding: 40,
   },
   emptyText: {
     fontSize: 16,
-    color: '#9E9E9E',
-  },
-  addButtonLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryDark,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  moreButton: {
-    padding: 8,
-    marginLeft: 8,
+    color: '#666',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 30,
-  },
-  modalButton: {
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  cancelButton: {
-    marginTop: 10,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    borderBottomWidth: 0,
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontWeight: 'bold',
-  },
-  confirmationOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  confirmationDialog: {
+  modalContainer: {
+    width: '80%',
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 20,
-    width: '100%',
+    alignItems: 'center',
   },
-  confirmationTitle: {
+  modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
   },
-  confirmationMessage: {
+  modalText: {
     fontSize: 16,
-    color: '#616161',
     marginBottom: 20,
+    textAlign: 'center',
   },
-  confirmationButtons: {
+  modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  confirmationButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 6,
-    marginLeft: 10,
+  modalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
   },
-  cancelConfirmationButton: {
-    backgroundColor: '#f0f0f0',
+  cancelButton: {
+    backgroundColor: '#e0e0e0',
   },
-  confirmButtonText: {
+  confirmButton: {
+    backgroundColor: '#4B7BE5',
+  },
+  buttonText: {
     color: 'white',
     fontWeight: 'bold',
   },
