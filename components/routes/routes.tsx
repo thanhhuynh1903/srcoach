@@ -42,13 +42,7 @@ import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordR
 import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
 import RunnerProfileScreen from '../screens/RunnerProfileScreen';
 import LeaderBoardScreen from '../screens/LeaderBoardScreen';
-import ExpertChatSearchScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatSearchScreen';
-import ExpertChatInvitationScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationScreen';
-import ExpertChatInvitationSuccessScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationSuccessScreen';
-import ExpertChatInvitationFailedScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatInvitationFailedScreen';
 import ExpertChatScreen from '../screens/ExpertChatScreens/ExpertChatScreen';
-import ExpertChatboxScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ExpertChatboxScreen';
-import ECPEChatbox from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEChatbox';
 import RecordStepsScreen from '../screens/DashboardScreens/RecordStepsScreen';
 import RecordDistanceScreen from '../screens/DashboardScreens/RecordDistanceScreen';
 import UserCertificatesIntroScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesIntroScreen';
@@ -59,89 +53,108 @@ import UserCertificatesAlreadyExistsScreen from '../screens/SettingsScreens/User
 import UserCertificatesExpertScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesExpertsScreen';
 import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen';
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
+import ECPRMessageScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ECPRMessageScreen';
+import ECPEMessageScreen from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEMessageScreen';
+import ExpertChatSearchUser from '../screens/ExpertChatScreens/ExpertChatSearchUser';
+import ExpertChatInvitationScreen from '../screens/ExpertChatScreens/ExpertChatInvitationScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
-  { name: 'WelcomeScreen', component: WelcomeScreen },
-  { name: 'WelcomeInfoScreen', component: WelcomeInfoScreen },
-  { name: 'LoginScreen', component: LoginScreen },
-  { name: 'RegisterScreen', component: RegisterScreen },
-  { name: 'ErrorScreen', component: ErrorScreen },
-  { name: 'VerifyScreen', component: VerifyScreen },
-  { name: 'VerifyLoginScreen', component: VerifyLoginScreen },
-  { name: 'ManageNotificationsScreen', component: ManageNotification },
-  { name: 'DevicesScreen', component: DevicesScreen },
-  { name: 'EditProfileScreen', component: EditProfileScreen },
-  { name: 'SPo2Screen', component: SPo2Screen },
-  { name: "DistanceScreen", component: RecordDistanceScreen},
-  { name: 'SleepScreen', component: SleepScreen },
-  { name: 'HeartRateScreen', component: HeartRateScreen },
-  { name: 'RecordDetailScreen', component: RecordDetailScreen },
-  { name: 'ChartDetailScreen', component: ChartDetailScreen },
-  { name: 'ExpertChatboxScreen', component: ExpertChatboxScreen },
-  { name: 'SetGoalsScreen', component: SetGoalsScreen },
-  { name: 'GoalListScreen', component: GoalListScreen },
-  { name: 'ScheduleScreen', component: ScheduleScreen },
-  { name: 'RateScheduleScreen', component: RateScheduleScreen },
-  { name: 'RiskWarningScreen', component: RiskWarningScreen },
-  { name: 'SearchScreen', component: SearchResultsScreen },
-  { name: 'SearchResultsScreen', component: SearchResultsScreen },
-  { name: 'DeviceNotificationsScreen', component: DeviceNotificationScreen },
-  { name: 'StepsScreen', component: RecordStepsScreen},
-  { name: 'CaloriesScreen', component: CaloriesScreen },
-  { name: 'GenerateScheduleScreen', component: GenerateScheduleScreen },
-  { name: 'ScheduleDetailScreen', component: ScheduleDetailScreen },
-  { name: 'CalendarScreen', component: CalendarScreen },
-  { name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen },
-  { name: 'AddScheduleScreen', component: AddScheduleScreen },
-  { name : 'RunnerProfileScreen'  , component: RunnerProfileScreen},
-  { name : 'LeaderBoardScreen'  , component: LeaderBoardScreen},
+  {name: 'WelcomeScreen', component: WelcomeScreen},
+  {name: 'WelcomeInfoScreen', component: WelcomeInfoScreen},
+  {name: 'LoginScreen', component: LoginScreen},
+  {name: 'RegisterScreen', component: RegisterScreen},
+  {name: 'ErrorScreen', component: ErrorScreen},
+  {name: 'VerifyScreen', component: VerifyScreen},
+  {name: 'VerifyLoginScreen', component: VerifyLoginScreen},
+  {name: 'ManageNotificationsScreen', component: ManageNotification},
+  {name: 'DevicesScreen', component: DevicesScreen},
+  {name: 'EditProfileScreen', component: EditProfileScreen},
+  {name: 'SPo2Screen', component: SPo2Screen},
+  {name: 'DistanceScreen', component: RecordDistanceScreen},
+  {name: 'SleepScreen', component: SleepScreen},
+  {name: 'HeartRateScreen', component: HeartRateScreen},
+  {name: 'RecordDetailScreen', component: RecordDetailScreen},
+  {name: 'ChartDetailScreen', component: ChartDetailScreen},
+  {name: 'SetGoalsScreen', component: SetGoalsScreen},
+  {name: 'GoalListScreen', component: GoalListScreen},
+  {name: 'ScheduleScreen', component: ScheduleScreen},
+  {name: 'RateScheduleScreen', component: RateScheduleScreen},
+  {name: 'RiskWarningScreen', component: RiskWarningScreen},
+  {name: 'SearchScreen', component: SearchResultsScreen},
+  {name: 'SearchResultsScreen', component: SearchResultsScreen},
+  {name: 'DeviceNotificationsScreen', component: DeviceNotificationScreen},
+  {name: 'StepsScreen', component: RecordStepsScreen},
+  {name: 'CaloriesScreen', component: CaloriesScreen},
+  {name: 'GenerateScheduleScreen', component: GenerateScheduleScreen},
+  {name: 'ScheduleDetailScreen', component: ScheduleDetailScreen},
+  {name: 'CalendarScreen', component: CalendarScreen},
+  {name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen},
+  {name: 'AddScheduleScreen', component: AddScheduleScreen},
+  {name: 'RunnerProfileScreen', component: RunnerProfileScreen},
+  {name: 'LeaderBoardScreen', component: LeaderBoardScreen},
   //Authenciation Screens
-  { name: "PasswordRecoveryScreen", component: PasswordRecoveryScreen },
-  { name: "PasswordRecoveryCodeScreen", component: PasswordRecoveryCodeScreen},
-  { name: "PasswordRecoveryNewScreen", component: PasswordRecoveryNewScreen},
-  { name: "PasswordRecoverySuccessScreen", component: PasswordRecoverySuccessScreen},
+  {name: 'PasswordRecoveryScreen', component: PasswordRecoveryScreen},
+  {name: 'PasswordRecoveryCodeScreen', component: PasswordRecoveryCodeScreen},
+  {name: 'PasswordRecoveryNewScreen', component: PasswordRecoveryNewScreen},
+  {
+    name: 'PasswordRecoverySuccessScreen',
+    component: PasswordRecoverySuccessScreen,
+  },
 
   // Community Screens
-  { name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen },
-  { name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen },
-  { name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen },
-  { name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen },
+  {name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen},
+  {name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen},
+  {name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen},
+  {name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen},
+
+  //General Chat Screens
+  { name: "ExpertChatSearchUser", component: ExpertChatSearchUser},
+  { name: "ExpertChatInvitationScreen", component: ExpertChatInvitationScreen},
 
   //Expert Chat Screens
-  { name: 'ExpertChatSearchScreen', component: ExpertChatSearchScreen },
-  { name: 'ExpertChatInvitationScreen', component: ExpertChatInvitationScreen },
-  { name: 'ExpertChatInvitationSuccessScreen', component: ExpertChatInvitationSuccessScreen },
-  { name: "ExpertChatInvitationFailedScreen", component: ExpertChatInvitationFailedScreen},
-  { name: "ECPEChatboxScreen", component: ECPEChatbox},
+  {name: 'ECPEMessageScreen', component: ECPEMessageScreen},
+
+  //Runner Chat Screens
+  {name: 'ECPRMessageScreen', component: ECPRMessageScreen},
 
   // About Screens
-  { name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen },
-  { name: 'TermsOfServiceScreen', component: TermsOfServiceScreen },
+  {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},
+  {name: 'TermsOfServiceScreen', component: TermsOfServiceScreen},
 
   //Settings
-  { name: 'SettingsAboutScreen', component: SettingsAboutScreen },
+  {name: 'SettingsAboutScreen', component: SettingsAboutScreen},
 
   // Settings - Become Expert (Certificates)
-  { name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen },
-  { name: 'UserCertificatesLegalScreen', component: UserCertificatesLegalScreen },
-  { name: 'UserCertificatesSubmitScreen', component: UserCertificatesSubmitScreen},
-  { name: 'UserCertificatesSuccessScreen', component: UserCertificatesSuccessScreen},
-  { name: 'UserCertificatesAlreadyExistsScreen', component: UserCertificatesAlreadyExistsScreen},
-  { name: 'UserCertificatesExpertsScreen', component: UserCertificatesExpertScreen },
+  {name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen},
+  {name: 'UserCertificatesLegalScreen', component: UserCertificatesLegalScreen},
+  {
+    name: 'UserCertificatesSubmitScreen',
+    component: UserCertificatesSubmitScreen,
+  },
+  {
+    name: 'UserCertificatesSuccessScreen',
+    component: UserCertificatesSuccessScreen,
+  },
+  {
+    name: 'UserCertificatesAlreadyExistsScreen',
+    component: UserCertificatesAlreadyExistsScreen,
+  },
+  {
+    name: 'UserCertificatesExpertsScreen',
+    component: UserCertificatesExpertScreen,
+  },
 ];
 
 // Cấu hình cho Tab Navigator
 export const tabScreens = [
-  { name: 'Home', component: HomeScreen },
-  { name: 'Records', component: RecordScreen },
-  { name: 'Risk', component: RiskWarningListScreen },
-  { name: 'Community', component: CommunityScreen },
-  { name: 'Chat', component: ExpertChatScreen },
-  { name: 'Settings', component: SettingsScreen },
+  {name: 'Home', component: HomeScreen},
+  {name: 'Records', component: RecordScreen},
+  {name: 'Risk', component: RiskWarningListScreen},
+  {name: 'Community', component: CommunityScreen},
+  {name: 'Chat', component: ExpertChatScreen},
+  {name: 'Settings', component: SettingsScreen},
 ];
 
 // Cấu hình cho Home Stack ( bao gồm tab navigator )
-export const homeStackScreens = [
-  { name: 'HomeMain', component: HomeScreen },
-];
+export const homeStackScreens = [{name: 'HomeMain', component: HomeScreen}];
