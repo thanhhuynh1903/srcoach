@@ -19,6 +19,8 @@ import BackButton from '../../BackButton';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {usePostStore} from '../../utils/usePostStore';
 import {useNavigation, useRoute} from '@react-navigation/native';
+import RecordSelectionButton from './RecordSelectionButton';
+import type { ExerciseRecord } from './RecordSelectionModal';
 
 interface CommunityPostUpdateScreenProps {
   route?: {
@@ -28,9 +30,7 @@ interface CommunityPostUpdateScreenProps {
   };
 }
 
-const CommunityPostUpdateScreen: React.FC<
-  CommunityPostUpdateScreenProps
-> = () => {
+const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const postId = route.params?.postId;
@@ -41,7 +41,7 @@ const CommunityPostUpdateScreen: React.FC<
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [tags, setTags] = useState('');
   const [displayTags, setDisplayTags] = useState<string[]>([]);
-  const [runRecord, setRunRecord] = useState(null);
+  const [runRecord, setRunRecord] = useState<ExerciseRecord | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
 
   const {
@@ -84,7 +84,37 @@ const CommunityPostUpdateScreen: React.FC<
         setDisplayTags([]);
       }
 
-      setRunRecord(currentPost.exercise_session_record_id || null);
+      // Xử lý exercise record
+      if (currentPost.exercise_session_record) {
+        // Nếu có đối tượng exercise_session_record đầy đủ
+        const recordData: ExerciseRecord = {
+          id: currentPost.exercise_session_record.id,
+          clientRecordId: currentPost.exercise_session_record.client_record_id || '',
+          exerciseType: currentPost.exercise_session_record.exercise_type || 'com.google.walking',
+          startTime: currentPost.exercise_session_record.start_time || new Date().toISOString(),
+          endTime: currentPost.exercise_session_record.end_time || new Date().toISOString(),
+          duration_minutes: currentPost.exercise_session_record.duration_minutes || 0,
+          total_distance: currentPost.exercise_session_record.total_distance || 0,
+          total_steps: currentPost.exercise_session_record.total_steps || 0
+        };
+        setRunRecord(recordData);
+      } else if (currentPost.exercise_session_record_id) {
+        // Nếu chỉ có ID, tạo một đối tượng tạm thời với ID
+        // Lưu ý: Đây là giải pháp tạm thời, tốt nhất là nên fetch thông tin đầy đủ của record
+        const tempRecord: ExerciseRecord = {
+          id: currentPost.exercise_session_record_id,
+          clientRecordId: '',
+          exerciseType: 'com.google.walking', // Giá trị mặc định
+          startTime: new Date().toISOString(),
+          endTime: new Date().toISOString(),
+          duration_minutes: 0,
+          total_distance: 0,
+          total_steps: 0
+        };
+        setRunRecord(tempRecord);
+      } else {
+        setRunRecord(null);
+      }
 
       // Lưu trữ ảnh hiện có
       if (currentPost.images && currentPost.images.length > 0) {
@@ -146,6 +176,17 @@ const CommunityPostUpdateScreen: React.FC<
     setSelectedImages(updatedImages);
   };
 
+  const handleRemoveExistingImage = (index: number) => {
+    const updatedImages = [...existingImages];
+    updatedImages.splice(index, 1);
+    setExistingImages(updatedImages);
+    console.log('Ảnh hiện có sau khi xóa:', updatedImages);
+  };
+
+  const handleSelectRecord = (record: ExerciseRecord) => {
+    setRunRecord(record);
+  };
+
   const handleUpdate = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert(
@@ -164,8 +205,6 @@ const CommunityPostUpdateScreen: React.FC<
       // Tách riêng ảnh cũ và ảnh mới theo yêu cầu API
       const oldImageUrls = existingImages; // Mảng chứa các URL ảnh cũ muốn giữ lại
       const newImages = selectedImages; // Mảng chứa file ảnh mới upload lên
-      console.log('oldImageUrls', oldImageUrls);
-      console.log('newImages', newImages);
       
       await updatePost(postId, {
         title: title.trim(),
@@ -173,7 +212,7 @@ const CommunityPostUpdateScreen: React.FC<
         tags: tagsArray,
         oldImageUrls: oldImageUrls, // Truyền riêng ảnh cũ
         images: newImages, // Chỉ truyền ảnh mới
-        exerciseSessionRecordId: runRecord,
+        exerciseSessionRecordId: runRecord ? runRecord.id : null, // Truyền ID của record
       });
 
       if (status !== 'error') {
@@ -190,7 +229,6 @@ const CommunityPostUpdateScreen: React.FC<
     }
   };
 
-
   const isUpdateButtonEnabled = title.trim() !== '' && content.trim() !== '';
 
   // Hiển thị trạng thái đang tải ban đầu
@@ -198,17 +236,11 @@ const CommunityPostUpdateScreen: React.FC<
     return (
       <SafeAreaView style={[styles.container, styles.loadingContainer]}>
         <ActivityIndicator size="large" color="#002366" />
-        <Text style={styles.loadingText}>Đang tải nội dung bài viết...</Text>
+        <Text style={styles.loadingText}>Loading content posts...</Text>
       </SafeAreaView>
     );
   }
 
-  const handleRemoveExistingImage = (index: number) => {
-    const updatedImages = [...existingImages];
-    updatedImages.splice(index, 1);
-    setExistingImages(updatedImages);
-    console.log('Ảnh hiện có sau khi xóa:', updatedImages);
-  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -329,23 +361,15 @@ const CommunityPostUpdateScreen: React.FC<
           </View>
 
           {/* Run Record */}
-          <TouchableOpacity
-            style={styles.runRecordButton}
-            onPress={() => {
-              Alert.alert('Sắp ra mắt', 'Tính năng này sẽ sớm được phát hành');
-            }}>
-            <Icon name="fitness-outline" size={20} color="#666" />
-            <Text style={styles.runRecordText}>
-              {runRecord ? 'Thay đổi bản ghi chạy' : 'Chọn bản ghi chạy'}
-            </Text>
-            <Icon
-              name="chevron-forward"
-              size={20}
-              color="#999"
-              style={styles.chevronIcon}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Exercise Record</Text>
+            <RecordSelectionButton
+              onSelectRecord={handleSelectRecord}
+              selectedRecord={runRecord}
+              buttonStyle={styles.runRecordButton}
             />
-          </TouchableOpacity>
-
+          </View>
+          
           {/* Error message */}
           {status === 'error' && message && (
             <View style={styles.errorContainer}>
