@@ -55,6 +55,8 @@ import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen'
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
 import ECPRMessageScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ECPRMessageScreen';
 import ECPEMessageScreen from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEMessageScreen';
+import ExpertChatSearchUser from '../screens/ExpertChatScreens/ExpertChatSearchUser';
+import ExpertChatInvitationScreen from '../screens/ExpertChatScreens/ExpertChatInvitationScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -105,6 +107,10 @@ export const stackScreens = [
   {name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen},
   {name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen},
   {name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen},
+
+  //General Chat Screens
+  { name: "ExpertChatSearchUser", component: ExpertChatSearchUser},
+  { name: "ExpertChatInvitationScreen", component: ExpertChatInvitationScreen},
 
   //Expert Chat Screens
   {name: 'ECPEMessageScreen', component: ECPEMessageScreen},

@@ -28,9 +28,10 @@ type Message = {
 type ECPRCompMessageProps = {
   item: Message;
   isCurrentUser: boolean;
+  isExpert: boolean;
 };
 
-const ECPRCompMessage = ({ item, isCurrentUser }: ECPRCompMessageProps) => {
+const ECPRCompMessage = ({ item, isCurrentUser, isExpert }: ECPRCompMessageProps) => {
   const isExpertRecommendation = item.type === 'EXPERT_RECOMMENDATION';
   const isProfile = item.type === 'PROFILE';
 
@@ -87,12 +88,31 @@ const ECPRCompMessage = ({ item, isCurrentUser }: ECPRCompMessageProps) => {
     <View
       style={[
         styles.messageContainer,
-        isCurrentUser ? styles.currentUserMessage : styles.otherUserMessage,
+        isCurrentUser 
+          ? styles.currentUserMessage 
+          : isExpert 
+            ? styles.expertUserMessage 
+            : styles.otherUserMessage,
       ]}>
-      <Text style={isCurrentUser ? styles.currentUserText : styles.otherUserText}>
+      {isExpert && !isCurrentUser && (
+        <View style={styles.expertBadge}>
+          <Icon name="ribbon" size={12} color="#FFD700" />
+          <Text style={styles.expertBadgeText}>Expert</Text>
+        </View>
+      )}
+      <Text style={
+        isCurrentUser 
+          ? styles.currentUserText 
+          : isExpert 
+            ? styles.expertUserText 
+            : styles.otherUserText
+      }>
         {item.message}
       </Text>
-      <Text style={styles.messageTime}>
+      <Text style={[
+        styles.messageTime,
+        isExpert && !isCurrentUser && { color: '#FFD700' }
+      ]}>
         {new Date(item.created_at).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
@@ -108,6 +128,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
+    position: 'relative',
   },
   currentUserMessage: {
     alignSelf: 'flex-end',
@@ -122,8 +143,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 0,
   },
+  expertUserMessage: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFF9E6',
+    borderColor: '#FFD700',
+    borderWidth: 1,
+    borderTopLeftRadius: 0,
+  },
   otherUserText: {
     color: '#333',
+  },
+  expertUserText: {
+    color: '#5D4037',
   },
   messageTime: {
     fontSize: 10,
@@ -176,6 +207,24 @@ const styles = StyleSheet.create({
   profileText: {
     color: '#1B5E20',
     marginBottom: 2,
+  },
+  expertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'absolute',
+    top: -10,
+    left: 0,
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    zIndex: 1,
+  },
+  expertBadgeText: {
+    fontSize: 10,
+    color: '#5D4037',
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
 });
 

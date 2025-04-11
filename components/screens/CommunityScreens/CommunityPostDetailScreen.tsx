@@ -706,7 +706,7 @@ const CommunityPostDetailScreen = () => {
             </>
           )}
 
-         <CommunityPostDetailMap exerciseSessionRecordId={localPost?.exercise_session_record_id} />
+         <CommunityPostDetailMap exerciseSessionRecordId={currentPost?.exercise_session_record_id} />
 
           {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
             <View style={styles.tagsContainer}>

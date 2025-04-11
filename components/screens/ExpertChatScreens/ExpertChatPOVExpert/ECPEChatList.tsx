@@ -15,7 +15,30 @@ import {useNavigation} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import useChatsAPI from '../../../utils/useChatsAPI';
 
-type TabType = 'all' | 'current' | 'pending';
+type TabType = 'all' | 'current' | 'pending' | 'blocked';
+type ModalAction = 'archive' | 'block' | 'unblock';
+
+interface ChatSession {
+  id: string;
+  participant1_id: string;
+  participant2_id: string;
+  status: 'PENDING' | 'ACCEPTED' | 'BLOCKED' | 'ARCHIVED' | 'REJECTED';
+  participant1?: {
+    id: string;
+    name?: string;
+    username?: string;
+    is_expert?: boolean;
+  };
+  participant2?: {
+    id: string;
+    name?: string;
+    username?: string;
+    is_expert?: boolean;
+  };
+  initiatedByYou?: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
 const ECPEChatList = () => {
   const navigation = useNavigation();
@@ -24,13 +47,19 @@ const ECPEChatList = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(
+    null,
+  );
+  const [modalAction, setModalAction] = useState<ModalAction>('archive');
 
   const {
     getSessions,
     getPendingSessions,
     acceptSession,
     rejectOrArchiveSession,
+    blockUser,
+    unblockUser,
+    getBlockedUsers,
   } = useChatsAPI();
 
   useEffect(() => {
@@ -44,6 +73,24 @@ const ECPEChatList = () => {
 
       if (activeTab === 'pending') {
         result = await getPendingSessions();
+      } else if (activeTab === 'blocked') {
+        result = await getBlockedUsers();
+        if (result.status && result.data) {
+          const blockedSessions = result.data.map(user => ({
+            id: `blocked-${user.id}`,
+            participant1_id: '',
+            participant2_id: user.id,
+            status: 'BLOCKED' as const,
+            participant2: {
+              id: user.id,
+              name: user.name,
+              username: user.username,
+            },
+            created_at: new Date().toISOString(),
+          }));
+          setSessions(blockedSessions);
+          return;
+        }
       } else {
         result = await getSessions();
       }
@@ -95,7 +142,7 @@ const ECPEChatList = () => {
   const handleArchive = async () => {
     if (!selectedSession) return;
 
-    const result = await rejectOrArchiveSession(selectedSession);
+    const result = await rejectOrArchiveSession(selectedSession.id);
     if (result.status) {
       Toast.show({
         type: 'success',
@@ -107,62 +154,163 @@ const ECPEChatList = () => {
     setModalVisible(false);
   };
 
-  const renderItem = ({item}: {item: ChatSession}) => (
-    <View
-      style={[
-        styles.sessionItem,
-        item.status === 'ACCEPTED' && styles.acceptedSession,
-        item.status === 'PENDING' && styles.pendingSession,
-      ]}>
-      <TouchableOpacity
-        style={styles.sessionContent}
-        onPress={() => {
-          if (item.status === 'ACCEPTED') {
-            navigation.navigate('ECPRMessageScreen', {sessionId: item.id});
-          }
-        }}>
-        <View style={styles.avatarPlaceholder}>
-          <Icon name="person" size={24} color="#fff" />
-        </View>
-        <View style={styles.sessionInfo}>
-          <Text style={styles.name}>
-            {item.participant2?.name || 'Unknown User'}
-          </Text>
-          <Text style={styles.username}>
-            @{item.participant2?.username || 'unknown'}
-          </Text>
-        </View>
-      </TouchableOpacity>
+  const handleBlock = async () => {
+    if (!selectedSession) return;
 
-      {item.status === 'ACCEPTED' ? (
+    const userIdToBlock =
+      selectedSession.participant1_id === selectedSession.participant2_id
+        ? selectedSession.participant2_id
+        : selectedSession.participant1_id === selectedSession.participant2_id
+        ? selectedSession.participant1_id
+        : selectedSession.initiatedByYou
+        ? selectedSession.participant2_id
+        : selectedSession.participant1_id;
+
+    const result = await blockUser(userIdToBlock);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'User blocked',
+      });
+      loadSessions();
+    }
+    setModalVisible(false);
+  };
+
+  const handleUnblock = async () => {
+    if (!selectedSession) return;
+
+    const result = await unblockUser(selectedSession.participant2_id);
+    if (result.status) {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'User unblocked',
+      });
+      loadSessions();
+    }
+    setModalVisible(false);
+  };
+
+  const showActionModal = (session: ChatSession, action: ModalAction) => {
+    setSelectedSession(session);
+    setModalAction(action);
+    setModalVisible(true);
+  };
+
+  const getOtherUser = (session: ChatSession) => {
+    return session.initiatedByYou ? session.participant2 : session.participant1;
+  };
+
+  const renderItem = ({item}: {item: ChatSession}) => {
+    const otherUser = getOtherUser(item);
+    const isBlocked = item.status === 'BLOCKED';
+
+    return (
+      <View
+        style={[
+          styles.sessionItem,
+          item.status === 'ACCEPTED' && styles.acceptedSession,
+          item.status === 'PENDING' && styles.pendingSession,
+          isBlocked && styles.blockedSession,
+        ]}>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={styles.sessionContent}
           onPress={() => {
-            setSelectedSession(item.id);
-            setModalVisible(true);
+            if (item.status === 'ACCEPTED') {
+              navigation.navigate('ECPEMessageScreen', {sessionId: item.id});
+            }
           }}>
-          <Icon name="ellipsis-horizontal" size={20} color="#666" />
+          <View style={styles.avatarPlaceholder}>
+            <Icon name="person" size={24} color="#fff" />
+          </View>
+          <View style={styles.sessionInfo}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.name}>
+                {otherUser?.name || 'Unknown User'}
+              </Text>
+              {otherUser?.is_expert && (
+                <View style={styles.expertBadge}>
+                  <Text style={styles.expertBadgeText}>Expert</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.username}>
+              @{otherUser?.username || 'unknown'}
+            </Text>
+            {isBlocked && <Text style={styles.blockedText}>Blocked</Text>}
+          </View>
         </TouchableOpacity>
-      ) : (
-        <View style={styles.pendingActions}>
-          {!item.initiatedByYou && (
-            <>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={() => handleAccept(item.id)}>
-                <Icon name="checkmark" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.rejectButton}
-                onPress={() => handleReject(item.id)}>
-                <Icon name="close" size={20} color="#fff" />
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
-    </View>
-  );
+
+        {item.status === 'ACCEPTED' ? (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => showActionModal(item, 'archive')}>
+            <Icon name="ellipsis-horizontal" size={20} color="#666" />
+          </TouchableOpacity>
+        ) : item.status === 'BLOCKED' ? (
+          <TouchableOpacity
+            style={styles.unblockButton}
+            onPress={() => showActionModal(item, 'unblock')}>
+            <Icon name="lock-open" size={20} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.pendingActions}>
+            {!item.initiatedByYou && (
+              <>
+                <TouchableOpacity
+                  style={styles.acceptButton}
+                  onPress={() => handleAccept(item.id)}>
+                  <Icon name="checkmark" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.rejectButton}
+                  onPress={() => showActionModal(item, 'block')}>
+                  <Icon name="close" size={20} color="#fff" />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const getModalConfig = () => {
+    switch (modalAction) {
+      case 'archive':
+        return {
+          title: 'Archive Conversation',
+          text: 'Are you sure you want to archive this conversation?',
+          actionText: 'Archive',
+          action: handleArchive,
+        };
+      case 'block':
+        return {
+          title: 'Block User',
+          text: 'Are you sure you want to block this user? You will no longer receive messages from them.',
+          actionText: 'Block',
+          action: handleBlock,
+        };
+      case 'unblock':
+        return {
+          title: 'Unblock User',
+          text: 'Are you sure you want to unblock this user?',
+          actionText: 'Unblock',
+          action: handleUnblock,
+        };
+      default:
+        return {
+          title: '',
+          text: '',
+          actionText: '',
+          action: () => {},
+        };
+    }
+  };
+
+  const modalConfig = getModalConfig();
 
   return (
     <View style={styles.container}>
@@ -189,6 +337,9 @@ const ECPEChatList = () => {
             All
           </Text>
         </TouchableOpacity>
+
+        <View style={styles.tabSpacer} />
+
         <TouchableOpacity
           style={[styles.tab, activeTab === 'current' && styles.activeTab]}
           onPress={() => setActiveTab('current')}>
@@ -200,6 +351,9 @@ const ECPEChatList = () => {
             Current
           </Text>
         </TouchableOpacity>
+
+        <View style={styles.tabSpacer} />
+
         <TouchableOpacity
           style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
           onPress={() => setActiveTab('pending')}>
@@ -209,6 +363,20 @@ const ECPEChatList = () => {
               activeTab === 'pending' && styles.activeTabText,
             ]}>
             Pending
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.tabSpacer} />
+
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'blocked' && styles.activeTab]}
+          onPress={() => setActiveTab('blocked')}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'blocked' && styles.activeTabText,
+            ]}>
+            Blocked
           </Text>
         </TouchableOpacity>
       </View>
@@ -225,13 +393,16 @@ const ECPEChatList = () => {
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No sessions found</Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'blocked'
+                  ? 'No blocked users'
+                  : 'No sessions found'}
+              </Text>
             </View>
           }
         />
       )}
 
-      {/* Archive Confirmation Modal */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -239,10 +410,8 @@ const ECPEChatList = () => {
         onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Archive Conversation</Text>
-            <Text style={styles.modalText}>
-              Are you sure you want to archive this conversation?
-            </Text>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalText}>{modalConfig.text}</Text>
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.cancelButton]}
@@ -251,8 +420,8 @@ const ECPEChatList = () => {
               </Pressable>
               <Pressable
                 style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleArchive}>
-                <Text style={styles.buttonText}>Archive</Text>
+                onPress={modalConfig.action}>
+                <Text style={styles.buttonText}>{modalConfig.actionText}</Text>
               </Pressable>
             </View>
           </View>
@@ -268,18 +437,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  header: {
-    padding: 16,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -300,13 +457,16 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     marginHorizontal: 16,
     marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  tabSpacer: {
+    width: 8,
   },
   tab: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 20,
     backgroundColor: '#eee',
   },
@@ -316,6 +476,7 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#666',
     fontWeight: '500',
+    fontSize: 14,
   },
   activeTabText: {
     color: '#fff',
@@ -345,6 +506,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#FFC107',
   },
+  blockedSession: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+  },
   sessionContent: {
     flex: 1,
     flexDirection: 'row',
@@ -362,14 +527,37 @@ const styles = StyleSheet.create({
   sessionInfo: {
     flex: 1,
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   name: {
     fontSize: 16,
     fontWeight: '500',
     color: '#333',
+    marginRight: 4,
+  },
+  expertBadge: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 4,
+  },
+  expertBadgeText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: 'bold',
   },
   username: {
     fontSize: 14,
     color: '#666',
+  },
+  blockedText: {
+    fontSize: 12,
+    color: '#F44336',
+    marginTop: 2,
   },
   actionButton: {
     padding: 8,
@@ -395,6 +583,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 8,
   },
+  unblockButton: {
+    backgroundColor: '#4B7BE5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -410,7 +607,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',

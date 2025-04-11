@@ -18,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import useChatsAPI from '../../../utils/useChatsAPI';
 import {useLoginStore} from '../../../utils/useLoginStore';
 import ECPRCompMessage from './ECPRCompMessage';
+import ECPRCompInfoModal from './ECPRCompInfoModal';
 
 const {height, width} = Dimensions.get('window');
 
@@ -106,6 +107,7 @@ const ECPRMessageScreen = () => {
     try {
       setLoading(true);
       const result = await getMessages(sessionId, user?.id || '');
+      console.log(result.data);
       if (result.status && result.data) {
         setMessages(result.data.messages);
         setSessionData({
@@ -158,7 +160,13 @@ const ECPRMessageScreen = () => {
 
   const renderMessageItem = ({item}: {item: Message}) => {
     const isCurrentUser = item.user_id === user?.id;
-    return <ECPRCompMessage item={item} isCurrentUser={isCurrentUser} />;
+    return (
+      <ECPRCompMessage
+        item={item}
+        isCurrentUser={isCurrentUser}
+        isExpert={sessionData?.participant2.is_expert}
+      />
+    );
   };
 
   if (loading || !sessionData) {
@@ -171,8 +179,11 @@ const ECPRMessageScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          sessionData.participant2.is_expert && styles.expertHeader,
+        ]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
@@ -184,7 +195,20 @@ const ECPRMessageScreen = () => {
             <Icon name="person" size={20} color="#fff" />
           </View>
           <View style={styles.userText}>
-            <Text style={styles.userName}>{sessionData.participant2.name}</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <Text style={styles.userName}>
+                {sessionData.participant2.name}
+              </Text>
+              {sessionData.participant2.is_expert && (
+                <View style={styles.expertChip}>
+                  <Icon name="star" size={12} color="#7D6608" />
+                  <Text style={styles.expertChipText}>Expert</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.userUsername}>
+              @{sessionData.participant2.username}
+            </Text>
             <View style={styles.userStats}>
               <Icon name="trophy" size={16} color="#FFD700" />
               <Text style={styles.userStatText}>
@@ -378,129 +402,13 @@ const ECPRMessageScreen = () => {
         transparent={true}
         visible={infoDrawerVisible}
         onRequestClose={() => setInfoDrawerVisible(false)}>
-        <Pressable
-          style={styles.drawerOverlay}
-          onPress={() => setInfoDrawerVisible(false)}>
-          <Pressable style={[styles.infoDrawer, {height}]}>
-            <View style={styles.drawerHeader}>
-              <Text style={styles.drawerTitle}>User Information</Text>
-              <TouchableOpacity onPress={() => setInfoDrawerVisible(false)}>
-                <Icon name="close" size={24} color="#000" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView contentContainerStyle={styles.drawerContent}>
-              <View style={styles.userProfile}>
-                <View style={styles.drawerAvatarPlaceholder}>
-                  <Icon name="person" size={48} color="#fff" />
-                </View>
-                <Text style={styles.drawerUserName}>
-                  {sessionData.participant2.name}
-                </Text>
-                <Text style={styles.drawerUserUsername}>
-                  @{sessionData.participant2.username}
-                </Text>
-
-                <View style={styles.userStatsContainer}>
-                  <View style={styles.statItem}>
-                    <Icon name="trophy" size={24} color="#FFD700" />
-                    <View>
-                      <Text style={styles.statLabel}>Rank</Text>
-                      <Text style={styles.statValue}>
-                        {sessionData.participant2.user_level}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.statItem}>
-                    <Icon name="star" size={24} color="#4B7BE5" />
-                    <View>
-                      <Text style={styles.statLabel}>Points</Text>
-                      <Text style={styles.statValue}>
-                        {sessionData.participant2.points}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {sessionData.participant2.is_expert && (
-                    <View style={styles.statItem}>
-                      <Icon name="ribbon" size={24} color="#FFC107" />
-                      <View>
-                        <Text style={styles.statLabel}>Status</Text>
-                        <Text style={styles.statValue}>Expert</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                {/* Latest Profile Section */}
-                <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>Latest Profile</Text>
-                  {lastProfile ? (
-                    <View style={styles.infoCard}>
-                      <View style={styles.infoCardHeader}>
-                        <Icon name="person-circle" size={16} color="#4CAF50" />
-                        <Text style={styles.infoCardTitle}>Profile Update</Text>
-                      </View>
-                      <View style={styles.infoCardContent}>
-                        {lastProfile.weight && (
-                          <Text style={styles.infoCardText}>
-                            Weight: {lastProfile.weight} kg
-                          </Text>
-                        )}
-                        {lastProfile.height && (
-                          <Text style={styles.infoCardText}>
-                            Height: {lastProfile.height} cm
-                          </Text>
-                        )}
-                        {lastProfile.running_level && (
-                          <Text style={styles.infoCardText}>
-                            Level: {lastProfile.running_level}
-                          </Text>
-                        )}
-                        {lastProfile.running_goal && (
-                          <Text style={styles.infoCardText}>
-                            Goal: {lastProfile.running_goal}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.noInfoText}>
-                      No profile information available
-                    </Text>
-                  )}
-                </View>
-
-                {/* Recent Recommendations Section */}
-                <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>
-                    Recent Expert Recommendation
-                  </Text>
-                  {lastRecommendation ? (
-                    <View style={styles.infoCard}>
-                      <View style={styles.infoCardHeader}>
-                        <Icon name="ribbon" size={16} color="#FFC107" />
-                        <Text style={styles.infoCardTitle}>
-                          Expert Recommendation
-                        </Text>
-                      </View>
-                      <View style={styles.infoCardContent}>
-                        <Text style={styles.infoCardText}>
-                          {lastRecommendation.message}
-                        </Text>
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.noInfoText}>
-                      No expert recommendations yet
-                    </Text>
-                  )}
-                </View>
-              </View>
-            </ScrollView>
-          </Pressable>
-        </Pressable>
+        <ECPRCompInfoModal
+          visible={infoDrawerVisible}
+          onClose={() => setInfoDrawerVisible(false)}
+          sessionData={sessionData}
+          lastProfile={lastProfile}
+          lastRecommendation={lastRecommendation}
+        />
       </Modal>
 
       <Toast />
@@ -547,6 +455,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  userUsername: {
+    fontSize: 12,
+    color: '#666',
   },
   userStats: {
     flexDirection: 'row',
@@ -809,6 +721,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  expertHeader: {
+    backgroundColor: '#FFF9E6', // Light golden background
+    borderBottomColor: '#FFD700', // Golden border
+  },
+  expertChip: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  expertChipText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#7D6608',
   },
 });
 

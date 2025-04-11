@@ -35,7 +35,7 @@ const ExpertChatScreen = () => {
         <View style={styles.headerIcons}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => navigation.navigate('ChatSessionSearchMember')}>
+            onPress={() => navigation.navigate('ExpertChatSearchUser')}>
             <Icon
               name="search-outline"
               size={20}
