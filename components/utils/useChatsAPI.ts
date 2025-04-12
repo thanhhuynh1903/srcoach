@@ -366,39 +366,75 @@ const useChatsAPI = () => {
 
   const searchUsers = async (query: string): Promise<ApiResponse<User[]>> => {
     try {
-      const response = await api.get(`/chats/search/users?query=${encodeURIComponent(query)}`);
+      const response = await api.get(
+        `/chats/search/users?query=${encodeURIComponent(query)}`,
+      );
       return response.data;
     } catch (error: any) {
-      return { 
-        status: false, 
-        message: error.response?.data?.message || 'Failed to search users', 
-        data: null 
+      return {
+        status: false,
+        message: error.response?.data?.message || 'Failed to search users',
+        data: null,
       };
     }
   };
-  
+
   const searchExperts = async (query: string): Promise<ApiResponse<User[]>> => {
     try {
-      const response = await api.get(`/chats/search/experts?query=${encodeURIComponent(query)}`);
+      const response = await api.get(
+        `/chats/search/experts?query=${encodeURIComponent(query)}`,
+      );
       return response.data;
     } catch (error: any) {
-      return { 
-        status: false, 
-        message: error.response?.data?.message || 'Failed to search experts', 
-        data: null 
+      return {
+        status: false,
+        message: error.response?.data?.message || 'Failed to search experts',
+        data: null,
       };
     }
   };
-  
+
   const searchRunners = async (query: string): Promise<ApiResponse<User[]>> => {
     try {
-      const response = await api.get(`/chats/search/runners?query=${encodeURIComponent(query)}`);
+      const response = await api.get(
+        `/chats/search/runners?query=${encodeURIComponent(query)}`,
+      );
       return response.data;
     } catch (error: any) {
-      return { 
-        status: false, 
-        message: error.response?.data?.message || 'Failed to search runners', 
-        data: null 
+      return {
+        status: false,
+        message: error.response?.data?.message || 'Failed to search runners',
+        data: null,
+      };
+    }
+  };
+
+  const getSessionInfo = async (
+    sessionId: string,
+  ): Promise<
+    ApiResponse<{
+      id: string;
+      status: 'PENDING' | 'ACCEPTED' | 'BLOCKED' | 'ARCHIVED';
+      created_at: string;
+      updated_at?: string;
+      other_user: {
+        id: string;
+        name?: string;
+        username?: string;
+        email?: string;
+        is_expert: boolean;
+      };
+      initiated_by_you: boolean;
+    }>
+  > => {
+    try {
+      const response = await api.get(`/chats/sessions/${sessionId}/info`);
+      return response.data;
+    } catch (error: any) {
+      return {
+        status: false,
+        message: error.response?.data?.message || 'Failed to get session info',
+        data: null,
       };
     }
   };
@@ -420,6 +456,7 @@ const useChatsAPI = () => {
     searchUsers,
     searchExperts,
     searchRunners,
+    getSessionInfo,
   };
 };
 
