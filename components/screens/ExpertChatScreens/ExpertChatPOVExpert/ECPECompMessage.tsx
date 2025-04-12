@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {View, Text, StyleSheet, Image} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 
 type User = {
@@ -31,19 +31,34 @@ type ECPECompMessageProps = {
   isExpert: boolean;
 };
 
-const ECPECompMessage = ({ item, isCurrentUser, isExpert }: ECPECompMessageProps) => {
+const getRandomAvatar = (seed: string) => {
+  return `https://randomuser.me/api/portraits/thumb/${
+    Math.random() > 0.5 ? 'men' : 'women'
+  }/${Math.floor(Math.random() * 50)}.jpg`;
+};
+
+const ECPECompMessage = ({
+  item,
+  isCurrentUser,
+  isExpert,
+}: ECPECompMessageProps) => {
   const isExpertRecommendation = item.type === 'EXPERT_RECOMMENDATION';
   const isProfile = item.type === 'PROFILE';
+  const avatarUri = item.User
+    ? getRandomAvatar(item.User.id)
+    : getRandomAvatar('default');
 
   if (isExpertRecommendation) {
     return (
-      <View style={[styles.messageContainer, styles.expertContainer]}>
-        <View style={styles.expertHeader}>
-          <Icon name="ribbon" size={16} color="#FFC107" />
-          <Text style={styles.expertTitle}>Expert Recommendation</Text>
+      <View style={styles.specialMessageWrapper}>
+        <View style={[styles.messageContainer, styles.expertContainer]}>
+          <View style={styles.expertHeader}>
+            <Icon name="ribbon" size={16} color="#FFC107" />
+            <Text style={styles.expertTitle}>Expert Recommendation</Text>
+          </View>
+          <Text style={styles.expertMessage}>{item.message}</Text>
         </View>
-        <Text style={styles.expertMessage}>{item.message}</Text>
-        <Text style={styles.messageTime}>
+        <Text style={styles.specialMessageTime}>
           {new Date(item.created_at).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -55,26 +70,30 @@ const ECPECompMessage = ({ item, isCurrentUser, isExpert }: ECPECompMessageProps
 
   if (isProfile) {
     return (
-      <View style={[styles.messageContainer, styles.profileContainer]}>
-        <View style={styles.profileHeader}>
-          <Icon name="person-circle" size={16} color="#4CAF50" />
-          <Text style={styles.profileTitle}>Profile Update</Text>
+      <View style={styles.specialMessageWrapper}>
+        <View style={[styles.messageContainer, styles.profileContainer]}>
+          <View style={styles.profileHeader}>
+            <Icon name="person-circle" size={16} color="#4CAF50" />
+            <Text style={styles.profileTitle}>Profile Update</Text>
+          </View>
+          <View style={styles.profileDetails}>
+            {item.weight && (
+              <Text style={styles.profileText}>Weight: {item.weight} kg</Text>
+            )}
+            {item.height && (
+              <Text style={styles.profileText}>Height: {item.height} cm</Text>
+            )}
+            {item.running_level && (
+              <Text style={styles.profileText}>
+                Level: {item.running_level}
+              </Text>
+            )}
+            {item.running_goal && (
+              <Text style={styles.profileText}>Goal: {item.running_goal}</Text>
+            )}
+          </View>
         </View>
-        <View style={styles.profileDetails}>
-          {item.weight && (
-            <Text style={styles.profileText}>Weight: {item.weight} kg</Text>
-          )}
-          {item.height && (
-            <Text style={styles.profileText}>Height: {item.height} cm</Text>
-          )}
-          {item.running_level && (
-            <Text style={styles.profileText}>Level: {item.running_level}</Text>
-          )}
-          {item.running_goal && (
-            <Text style={styles.profileText}>Goal: {item.running_goal}</Text>
-          )}
-        </View>
-        <Text style={styles.messageTime}>
+        <Text style={styles.specialMessageTime}>
           {new Date(item.created_at).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -87,64 +106,106 @@ const ECPECompMessage = ({ item, isCurrentUser, isExpert }: ECPECompMessageProps
   return (
     <View
       style={[
-        styles.messageContainer,
-        isCurrentUser 
-          ? styles.currentUserMessage 
-          : isExpert 
-            ? styles.expertUserMessage 
-            : styles.otherUserMessage,
+        styles.messageWrapper,
+        isCurrentUser ? styles.currentUserWrapper : styles.otherUserWrapper,
       ]}>
-      {isExpert && !isCurrentUser && (
-        <View style={styles.expertBadge}>
-          <Icon name="ribbon" size={12} color="#FFD700" />
-          <Text style={styles.expertBadgeText}>Expert</Text>
-        </View>
+      {!isCurrentUser && (
+        <Image
+          source={{uri: avatarUri}}
+          style={[styles.avatar, isExpert && styles.expertAvatar]}
+        />
       )}
-      <Text style={
-        isCurrentUser 
-          ? styles.currentUserText 
-          : isExpert 
-            ? styles.expertUserText 
-            : styles.otherUserText
-      }>
-        {item.message}
-      </Text>
-      <Text style={[
-        styles.messageTime,
-        isExpert && !isCurrentUser && { color: '#FFD700' }
-      ]}>
-        {new Date(item.created_at).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        })}
-      </Text>
+      <View
+        style={[
+          styles.messageContainer,
+          isCurrentUser
+            ? styles.currentUserMessage
+            : isExpert
+            ? styles.expertUserMessage
+            : styles.otherUserMessage,
+        ]}>
+        {isExpert && !isCurrentUser && (
+          <View style={styles.expertBadge}>
+            <Icon name="ribbon" size={12} color="#FFD700" />
+            <Text style={styles.expertBadgeText}>Expert</Text>
+          </View>
+        )}
+        <Text
+          style={
+            isCurrentUser
+              ? styles.currentUserText
+              : isExpert
+              ? styles.expertUserText
+              : styles.otherUserText
+          }>
+          {item.message}
+        </Text>
+        <Text
+          style={[
+            styles.messageTime,
+            isExpert && !isCurrentUser && {color: '#FFD700'},
+          ]}>
+          {new Date(item.created_at).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </Text>
+      </View>
+      {isCurrentUser && (
+        <Image source={{uri: avatarUri}} style={styles.avatar} />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  messageWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 8,
+    maxWidth: '90%',
+  },
+  currentUserWrapper: {
+    alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
+  },
+  otherUserWrapper: {
+    alignSelf: 'flex-start',
+    justifyContent: 'flex-start',
+  },
+  specialMessageWrapper: {
+    alignSelf: 'center',
+    width: '90%',
+    marginVertical: 8,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginHorizontal: 8,
+  },
+  expertAvatar: {
+    borderWidth: 2,
+    borderColor: '#FFD700',
+  },
   messageContainer: {
     maxWidth: '80%',
     padding: 12,
     borderRadius: 12,
-    marginBottom: 8,
     position: 'relative',
   },
   currentUserMessage: {
-    alignSelf: 'flex-end',
     backgroundColor: '#4B7BE5',
-    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
   },
   currentUserText: {
     color: '#fff',
   },
   otherUserMessage: {
-    alignSelf: 'flex-start',
     backgroundColor: '#fff',
     borderTopLeftRadius: 0,
   },
   expertUserMessage: {
-    alignSelf: 'flex-start',
     backgroundColor: '#FFF9E6',
     borderColor: '#FFD700',
     borderWidth: 1,
@@ -162,13 +223,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignSelf: 'flex-end',
   },
-  expertContainer: {
+  specialMessageTime: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
     alignSelf: 'center',
+  },
+  expertContainer: {
     backgroundColor: '#FFF9C4',
     borderColor: '#FFC107',
     borderWidth: 1,
-    width: '90%',
-    marginVertical: 8,
   },
   expertHeader: {
     flexDirection: 'row',
@@ -184,12 +248,9 @@ const styles = StyleSheet.create({
     color: '#5D4037',
   },
   profileContainer: {
-    alignSelf: 'center',
     backgroundColor: '#E8F5E9',
     borderColor: '#4CAF50',
     borderWidth: 1,
-    width: '90%',
-    marginVertical: 8,
   },
   profileHeader: {
     flexDirection: 'row',
