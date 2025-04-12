@@ -166,7 +166,6 @@ const HomeScreen = () => {
       }
     } catch (error) {
       console.log('Error fetching health data:', error);
-      // Set individual errors based on what failed
       if (error.response?.data?.errors) {
         const newErrors = {...errors};
         Object.keys(error.response.data.errors).forEach(key => {
@@ -507,20 +506,22 @@ const HomeScreen = () => {
           <WellnessAndMedication navigation={navigation} />
         </AnimatedView>
       </ScrollView>
+
+      {/* Common Dialog - Moved to root level */}
       <CommonDialog
-          visible={infoDialogVisible}
-          onClose={() => setInfoDialogVisible(false)}
-          title={currentMetricInfo.title}
-          content={<Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>}
-          actionButtons={[
-            {
-              label: 'Close',
-              variant: 'contained',
-              color: theme.colors.primaryDark,
-              handler: () => setInfoDialogVisible(false),
-            }
-          ]}
-        />
+        visible={infoDialogVisible}
+        onClose={() => setInfoDialogVisible(false)}
+        title={currentMetricInfo.title}
+        content={<Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>}
+        actionButtons={[
+          {
+            label: 'Close',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setInfoDialogVisible(false),
+          }
+        ]}
+      />
     </SafeAreaView>
   );
 };

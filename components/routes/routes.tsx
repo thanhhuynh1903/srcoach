@@ -42,7 +42,6 @@ import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordR
 import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
 import RunnerProfileScreen from '../screens/RunnerProfileScreen';
 import LeaderBoardScreen from '../screens/LeaderBoardScreen';
-import ExpertChatScreen from '../screens/ExpertChatScreens/ExpertChatScreen';
 import RecordStepsScreen from '../screens/DashboardScreens/RecordStepsScreen';
 import RecordDistanceScreen from '../screens/DashboardScreens/RecordDistanceScreen';
 import UserCertificatesIntroScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesIntroScreen';
@@ -53,10 +52,8 @@ import UserCertificatesAlreadyExistsScreen from '../screens/SettingsScreens/User
 import UserCertificatesExpertScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesExpertsScreen';
 import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen';
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
-import ECPRMessageScreen from '../screens/ExpertChatScreens/ExpertChatPOVRunner/ECPRMessageScreen';
-import ECPEMessageScreen from '../screens/ExpertChatScreens/ExpertChatPOVExpert/ECPEMessageScreen';
-import ExpertChatSearchUser from '../screens/ExpertChatScreens/ExpertChatSearchUser';
-import ExpertChatInvitationScreen from '../screens/ExpertChatScreens/ExpertChatInvitationScreen';
+import ChatsScreen from '../screens/ChatsScreen/ChatsScreen';
+import ExerciseRecordsScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -108,16 +105,6 @@ export const stackScreens = [
   {name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen},
   {name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen},
 
-  //General Chat Screens
-  { name: "ExpertChatSearchUser", component: ExpertChatSearchUser},
-  { name: "ExpertChatInvitationScreen", component: ExpertChatInvitationScreen},
-
-  //Expert Chat Screens
-  {name: 'ECPEMessageScreen', component: ECPEMessageScreen},
-
-  //Runner Chat Screens
-  {name: 'ECPRMessageScreen', component: ECPRMessageScreen},
-
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},
   {name: 'TermsOfServiceScreen', component: TermsOfServiceScreen},
@@ -149,10 +136,10 @@ export const stackScreens = [
 // Cấu hình cho Tab Navigator
 export const tabScreens = [
   {name: 'Home', component: HomeScreen},
-  {name: 'Records', component: RecordScreen},
+  {name: 'Records', component: ExerciseRecordsScreen},
   {name: 'Risk', component: RiskWarningListScreen},
   {name: 'Community', component: CommunityScreen},
-  {name: 'Chat', component: ExpertChatScreen},
+  {name: 'Chat', component: ChatsScreen},
   {name: 'Settings', component: SettingsScreen},
 ];
 
