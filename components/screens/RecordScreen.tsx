@@ -108,9 +108,9 @@ export default function RecordScreen() {
       setError(null);
       
       const isInitialized = await initializeHealthConnect();
-      if (!isInitialized) {
-        throw new Error('Health Connect initialization failed');
-      }
+      // if (!isInitialized) {
+      //   throw new Error('Health Connect initialization failed');
+      // }
 
       const data = await fetchExerciseSessionRecords(startDate, endDate);
       console.log('Fetched exercise sessions:', data);
