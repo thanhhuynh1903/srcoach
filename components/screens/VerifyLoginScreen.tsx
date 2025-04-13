@@ -1,5 +1,3 @@
-'use client';
-
 import {useState, useRef, useEffect} from 'react';
 import {
   View,
@@ -16,23 +14,41 @@ import {
 import BackButton from '../BackButton';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation, useRoute} from '@react-navigation/native';
+import useAuthStore from '../utils/useAuthStore';
+
 interface VerifyParam {
   emailLabel: string;
+  password: string;
 }
+
 const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
   const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
   const [isLoading, setIsLoading] = useState(false);
-  const {verifyCode, status, message, ResendCode, resendStatus,clear} =
-    useLoginStore();
+  const {
+    verifyCode,
+    status,
+    message,
+    ResendCode,
+    resendStatus,
+    clearstatus,
+    login,
+  } = useLoginStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
   const route = useRoute();
-  const {emailLabel} = route.params as VerifyParam;
+  const {loadToken, token} = useAuthStore();
+  const {emailLabel, password} = route.params as VerifyParam;
+
   // Initialize refs array
   useEffect(() => {
     if (Array.isArray(inputRefs.current)) {
       inputRefs.current = inputRefs.current.slice(0, 6);
     }
+
+    // Đảm bảo trạng thái ban đầu sạch
+    return () => {
+      clearstatus();
+    };
   }, []);
 
   // Handle input change: update code and auto-focus next input
@@ -55,38 +71,51 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
 
   // Handle verify: call verifyCode and set loading status
   const handleVerify = async () => {
+    if (code.some(c => c === '')) {
+      Alert.alert('Error', 'Please enter the full verification code.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      console.log('emailLabel', emailLabel);
-      
-      await verifyCode(emailLabel,code.join(''));
-    } catch (error) {
-      console.log('Error verifying code:', error);
-    }
-    setIsLoading(false);
-  };
+      // 1. Verify the code
+      await verifyCode(emailLabel, code.join(''));
 
-  // Monitor verifyStatus changes to handle success or error
-  useEffect(() => {
-    if (status === 'success') {
-      Alert.alert('Success', 'Verification successful!');
-      navigate.navigate('HomeTabs' as never);
-    } else if (status === 'error') {
-      Alert.alert(message);
-    
+      // 2. Login after successful verification
+      await login(emailLabel, password);
+
+      // 3. Load token directly from storage
+      const storedToken = await loadToken();
+
+      if (storedToken) {
+        navigation.reset({
+          index: 0,
+          routes: [{name: 'HomeTabs' as never}],
+        });
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Verification or login failed. Please check the code and try again.',
+      );
+      console.log('Error verifying code:', error);
+    } finally {
+      setIsLoading(false);
+      clearstatus(); // Clear any residual status
     }
-      clear();
-  }, [status]);
+  };
   // Handle resend code
   const handleResendCode = async () => {
-    Alert.alert('New code sent to your email');
     setIsLoading(true);
     try {
       await ResendCode(emailLabel);
+      Alert.alert('Success', 'New code sent to your email');
     } catch (error) {
-      console.log('Error verifying code:', error);
+      console.log('Error resending code:', error);
+      Alert.alert('Error', 'Failed to resend code. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -95,7 +124,8 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
 
       {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
+        <TouchableOpacity
+          style={styles.backButton}>
           <BackButton size={26} />
         </TouchableOpacity>
       </View>
@@ -104,11 +134,9 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
       <View style={styles.content}>
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
-          This account have been signed up but not verified Please enter the
+          This account has been signed up but not verified. Please enter the
           code sent to your email{' '}
-          <Text style={{color: '#666', fontWeight: 'bold'}}>
-            {emailLabel}
-          </Text>
+          <Text style={{color: '#666', fontWeight: 'bold'}}>{emailLabel}</Text>
         </Text>
 
         {/* Verification code inputs */}
@@ -130,26 +158,33 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
 
         {/* Verify button */}
         <TouchableOpacity
-          style={styles.verifyButton}
+          style={[
+            styles.verifyButton,
+            (isLoading || code.join('').length !== 6) && styles.disabledButton,
+          ]}
           onPress={handleVerify}
           disabled={isLoading || code.join('').length !== 6}>
-          <Text style={styles.verifyButtonText}>
-            {isLoading ? 'Verifying...' : 'Verify'}
-          </Text>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.verifyButtonText}>Verify</Text>
+          )}
         </TouchableOpacity>
 
         {/* Resend code link */}
         <Pressable
           onPress={handleResendCode}
+          disabled={isLoading}
           style={{
             borderWidth: 1,
             borderColor: '#0a2463',
             borderRadius: 5,
             paddingVertical: 12,
             paddingHorizontal: 16,
+            opacity: isLoading ? 0.6 : 1,
           }}>
           {isLoading ? (
-            <ActivityIndicator color="#ccc" size="small" />
+            <ActivityIndicator color="#0a2463" size="small" />
           ) : (
             <Text style={styles.resendText}>Send code again</Text>
           )}

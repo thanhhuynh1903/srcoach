@@ -20,7 +20,10 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import {usePostStore} from '../../utils/usePostStore';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import RecordSelectionButton from './RecordSelectionButton';
+import { fetchDetailRecords } from '../../utils/utils_healthconnect';
 import type { ExerciseRecord } from './RecordSelectionModal';
+import type { ExerciseSession } from '../../utils/utils_healthconnect';
+import { format, parseISO } from "date-fns"
 
 interface CommunityPostUpdateScreenProps {
   route?: {
@@ -36,6 +39,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
   const postId = route.params?.postId;
 
   const [title, setTitle] = useState('');
+  const [session, setSession] = useState<ExerciseSession | null>(null);
   const [content, setContent] = useState('');
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -66,7 +70,18 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
     loadPostData();
   }, [postId]);
-
+  
+  const loadSession = async (id : any) => {
+    try {
+      const sessionData : ExerciseSession = await fetchDetailRecords(id);
+      console.log('sessionData', sessionData);
+      
+      setSession(sessionData);
+    } catch (error) {
+      console.error('Error loading session:', error);
+    }
+  };
+  
   // Cập nhật state từ dữ liệu bài viết hiện tại
   useEffect(() => {
     console.log('currentPost', currentPost);
@@ -76,8 +91,8 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
       setContent(currentPost.content || '');
 
       // Xử lý tags
-      if (currentPost.tags && currentPost.tags.length > 0) {
-        setTags(currentPost.tags.join(', ') || '');
+      if (currentPost.tags && Array.isArray(currentPost.tags) && currentPost.tags.length > 0) {
+        setTags(currentPost.tags.join(', '));
         setDisplayTags([...currentPost.tags]);
       } else {
         setTags('');
@@ -87,19 +102,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
       // Xử lý exercise record
       if (currentPost.exercise_session_record_id) {
         console.log('currentPost', currentPost.exercise_session_record_id);
-        // Nếu chỉ có ID, tạo một đối tượng tạm thời với ID
-        // Lưu ý: Đây là giải pháp tạm thời, tốt nhất là nên fetch thông tin đầy đủ của record
-        const tempRecord: ExerciseRecord = {
-          id: currentPost.exercise_session_record_id,
-          clientRecordId: '',
-          exerciseType: 'com.google.walking', // Giá trị mặc định
-          startTime: new Date().toISOString(),
-          endTime: new Date().toISOString(),
-          duration_minutes: 0,
-          total_distance: 0,
-          total_steps: 0
-        };
-        setRunRecord(tempRecord);
+        loadSession(currentPost.exercise_session_record_id);
       } else {
         setRunRecord(null);
       }
@@ -118,15 +121,39 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
     }
   }, [currentPost]);
 
+  // Cập nhật runRecord khi session thay đổi
+  useEffect(() => {
+    console.log('session', session);
+    
+    if (session && currentPost?.exercise_session_record_id) {
+      try {        
+        const tempRecord = {
+          id: currentPost.exercise_session_record_id,
+          clientRecordId: '',
+          exerciseType: 'com.google.walking',
+          startTime: session.start_time,
+          endTime: session.end_time,
+          duration_minutes: session.duration_minutes,
+          total_distance: session.total_distance,
+          total_steps: 0
+        };
+        setRunRecord(tempRecord);
+      } catch (error) {
+        console.error('Error setting run record:', error);
+      }
+    }
+  }, [session, currentPost]);
+
   // Cập nhật displayTags khi tags thay đổi
   useEffect(() => {
-    if (tags) {
-      const tagsArray = tags
-        .split(',')
+    if (tags && typeof tags === 'string') {
+      const tagsArray = tags.split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
       if (tagsArray.length > 0) {
         setDisplayTags(tagsArray);
+      } else {
+        setDisplayTags([]);
       }
     } else {
       setDisplayTags([]);
@@ -185,10 +212,10 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
     }
 
     try {
-      const tagsArray = tags
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag !== '');
+      // Xử lý tags an toàn
+      const tagsArray = typeof tags === 'string' 
+        ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
+        : [];
 
       // Tách riêng ảnh cũ và ảnh mới theo yêu cầu API
       const oldImageUrls = existingImages; // Mảng chứa các URL ảnh cũ muốn giữ lại

@@ -11,6 +11,7 @@ interface LoginState {
   status: any;
   message: string;
   login: (email: string, password: string) => Promise<void>;
+  clearstatus: () => Promise<void>;
   clear: () => void;
   clearAll: () => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<void>;
@@ -92,7 +93,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
         },
       );
 
-      console.log('Identified');
+      console.log("Identified")
 
       console.log('response', response);
       if (response?.status === 201 || response?.data?.status === 'error') {
@@ -183,6 +184,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
       // Xử lý lỗi nếu cần
     }
   },
+  clearstatus: () => set({status: '', message: ''}),
   clear: () => set({userdata: null, status: '', message: ''}),
   clearAll: async () => {
     await AsyncStorage.removeItem('authToken');

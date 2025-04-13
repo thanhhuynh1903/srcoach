@@ -280,18 +280,18 @@ const RunnerProfileScreen = () => {
           {/* Stats Section */}
           <View style={styles.statsSection}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>1.2K</Text>
-              <Text style={styles.statLabel}>Following</Text>
+              <Text style={styles.statValue}>{profile?.points || 0}</Text>
+              <Text style={styles.statLabel}>Points</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>45.6K</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>328</Text>
+              <Text style={styles.statValue}>{profile?.total_posts || 0}</Text>
               <Text style={styles.statLabel}>Posts</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{profile?.total_posts_liked || 0}</Text>
+              <Text style={styles.statLabel}>Liked</Text>
             </View>
           </View>
 

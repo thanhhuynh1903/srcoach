@@ -67,6 +67,7 @@ const useScheduleStore = create<ScheduleState>()(
         set({isLoading: true, error: null});
         try {
           const response = await api.fetchData(`/schedules`);
+          console.log('response', response);
           set({schedules: response.data, isLoading: false});
         } catch (error) {
           console.error('Lỗi khi lấy danh sách lịch tập:', error);
@@ -81,6 +82,8 @@ const useScheduleStore = create<ScheduleState>()(
         set({isLoading: true, error: null});
         try {
           const response = await api.fetchData(`/schedules/self`);
+          console.log('response', response);
+          
           set({schedules: response.data, isLoading: false});
         } catch (error) {
           console.error('Lỗi khi lấy danh sách lịch tập cá nhân:', error);

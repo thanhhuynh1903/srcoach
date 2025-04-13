@@ -29,9 +29,12 @@ export interface ExerciseSession {
   dataOrigin: string;
   startTime: string;
   endTime: string;
+  start_time: string;
+  end_time: string;
   routes?: ExerciseRouteRecord[];
   avgPace?: number;
   durationMinutes?: number;
+  duration_minutes?: number;
   heartRate?: {
     avg: number;
     min: number;
@@ -42,6 +45,7 @@ export interface ExerciseSession {
     };
   };
   totalDistance?: number;
+  total_distance?: number;
   totalCalories?: number;
   totalSteps?: number;
 }
@@ -349,6 +353,18 @@ const syncRestingHeartRateRecords = async (
   if (records.length > 0) await api.post('/record-resting-heart-rate', records);
 };
 
+export const fetchDetailRecords = async (
+ id : string
+): Promise<ExerciseSession> => {
+  try {
+    const response = await api.get(`/record-exercise-session/${id}`);
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching step records:', error);
+    throw error;
+  }
+};
+
 export const fetchStepRecords = async (
   startTime: string,
   endTime: string,
@@ -511,7 +527,7 @@ export const fetchExerciseSessionByRecordId = async (
 ): Promise<ExerciseSession | null> => {
   try {
     let routes: any = [];
-
+    
     try {
       const exercise = await readRecord('ExerciseSession', recordId);
       if (exercise.exerciseRoute?.type == 'CONSENT_REQUIRED') {

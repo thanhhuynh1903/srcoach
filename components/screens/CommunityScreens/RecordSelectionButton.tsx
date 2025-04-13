@@ -1,9 +1,9 @@
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TouchableOpacity, Text, StyleSheet, Alert, View } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
 import RecordSelectionModal, { type ExerciseRecord } from "./RecordSelectionModal"
-import { fetchExerciseSessionRecordsbyIdOnly,initializeHealthConnect } from "../../utils/utils_healthconnect"
+import { fetchExerciseSessionRecordsbyIdOnly, initializeHealthConnect } from "../../utils/utils_healthconnect"
 import { format, parseISO } from "date-fns"
 
 interface RecordSelectionButtonProps {
@@ -19,11 +19,22 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
   buttonStyle,
   textStyle,
   iconColor = "#666",
-  selectedRecord = null,
-}) => {
+  selectedRecord,
+}) => {  
+  console.log("selectedRecord", selectedRecord);
+  
   const [modalVisible, setModalVisible] = useState(false)
-  const [record, setRecord] = useState<ExerciseRecord | null>(selectedRecord)
-
+  const [record, setRecord] = useState<ExerciseRecord | null>(selectedRecord || null)
+  
+  // Thêm useEffect để cập nhật record khi selectedRecord thay đổi
+  useEffect(() => {
+    if (selectedRecord) {
+      setRecord(selectedRecord);
+    }
+  }, [selectedRecord]);
+  
+  console.log("record", record);
+  
   const fetchRecords = async (): Promise<ExerciseRecord[]> => {
     try {
       const isInitialized = await initializeHealthConnect()
@@ -75,30 +86,45 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
     return typeMap[type] || "Exercise"
   }
 
+  // Thêm hàm xử lý lỗi khi hiển thị thông tin record
+  const renderRecordInfo = () => {
+    if (!record) {
+      return <Text style={[styles.runRecordText, textStyle]}>Select run record</Text>;
+    }
+    
+    try {
+      const exerciseTypeName = getNameFromExerciseType(record.exerciseType);
+      const formattedDate = format(parseISO(record.startTime), "MMM d, yyyy");
+      
+      return (
+        <View style={styles.selectedRecordContainer}>
+          <Text style={[styles.runRecordText, textStyle]}>
+            {exerciseTypeName} • {formattedDate}
+          </Text>
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => {
+              setRecord(null)
+              if (onSelectRecord) {
+                onSelectRecord(null as any)
+              }
+            }}
+          >
+            <Icon name="close-circle" size={18} color="#666" />
+          </TouchableOpacity>
+        </View>
+      );
+    } catch (error) {
+      console.error("Error rendering record info:", error, record);
+      return <Text style={[styles.runRecordText, textStyle]}>Invalid record data</Text>;
+    }
+  };
+
   return (
     <>
       <TouchableOpacity style={[styles.runRecordButton, buttonStyle]} onPress={() => setModalVisible(true)}>
         <Icon name="fitness-outline" size={20} color={iconColor} />
-        {record ? (
-          <View style={styles.selectedRecordContainer}>
-            <Text style={[styles.runRecordText, textStyle]}>
-              {getNameFromExerciseType(record.exerciseType)} • {format(parseISO(record.startTime), "MMM d, yyyy")}
-            </Text>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => {
-                setRecord(null)
-                if (onSelectRecord) {
-                  onSelectRecord(null as any)
-                }
-              }}
-            >
-              <Icon name="close-circle" size={18} color="#666" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <Text style={[styles.runRecordText, textStyle]}>Select run record</Text>
-        )}
+        {renderRecordInfo()}
         <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
       </TouchableOpacity>
 
