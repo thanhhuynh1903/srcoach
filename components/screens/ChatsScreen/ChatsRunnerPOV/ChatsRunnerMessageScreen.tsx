@@ -1,0 +1,396 @@
+import React, {useState, useEffect, useRef} from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import {useLoginStore} from '../../../utils/useLoginStore';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import {
+  getMessages,
+  sendMessage,
+  getSessionInfo,
+  sendExpertRecommendation,
+  sendProfile,
+} from '../../../utils/useChatsAPI';
+import Toast from 'react-native-toast-message';
+import ToastUtil from '../../../utils/utils_toast';
+import {CRMessageContainer} from './CRMessageContainer';
+import {CRMessageHeader} from './CRMessageHeader';
+import {CRMessageInfoPanel} from './CRMessageInfoPanel';
+import {CRMessageActionsPanel} from './CRMessageActionsPanel';
+import {CRMessageProfilePanel} from './CRMessageProfilePanel';
+import {theme} from '../../../contants/theme';
+import Icon from '@react-native-vector-icons/ionicons';
+import {CRMessageRunRecordPanel} from './CRMessageRunRecordPanel';
+
+type Message = {
+  id: string;
+  message: string;
+  created_at: string;
+  user_id: string;
+  User: User;
+  type: 'MESSAGE' | 'EXPERT_RECOMMENDATION' | 'PROFILE' | 'EXERCISE_RECORD';
+  height?: string;
+  weight?: string;
+  running_level?: string;
+  running_goal?: string;
+  metrics?: {
+    distance: number;
+    calories: number;
+    steps: number;
+    avg_heart_rate: number;
+    min_heart_rate: number;
+    max_heart_rate: number;
+    start_time: string;
+    end_time: string;
+    exercise_type: number;
+  };
+};
+
+type User = {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  points: number;
+  user_level: string;
+  roles: string[];
+};
+
+type SessionInfo = {
+  id: string;
+  status: string;
+  other_user: User;
+  initiated_by_you: boolean;
+  archived_by_you: boolean;
+};
+
+const MessageList = ({
+  messages,
+  userId,
+  flatListRef,
+}: {
+  messages: Message[];
+  userId: string;
+  flatListRef: React.RefObject<FlatList>;
+}) => {
+  const renderItem = ({item}: {item: Message}) => (
+    <CRMessageContainer
+      message={item}
+      isCurrentUser={item.user_id === userId}
+    />
+  );
+
+  return (
+    <FlatList
+      ref={flatListRef}
+      data={messages}
+      renderItem={renderItem}
+      keyExtractor={item => item.id}
+      contentContainerStyle={styles.messagesContainer}
+      onContentSizeChange={() =>
+        flatListRef.current?.scrollToEnd({animated: true})
+      }
+      onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No messages yet</Text>
+        </View>
+      }
+    />
+  );
+};
+
+const MessageInput = ({
+  inputMessage,
+  setInputMessage,
+  handleSend,
+  isSending,
+  isExpert,
+  onMenuPress,
+}: {
+  inputMessage: string;
+  setInputMessage: (text: string) => void;
+  handleSend: () => void;
+  isSending: boolean;
+  isExpert: boolean;
+  onMenuPress: () => void;
+}) => {
+  return (
+    <View style={styles.inputContainer}>
+      <TouchableOpacity style={styles.menuButton} onPress={onMenuPress}>
+        <Icon
+          name="ellipsis-horizontal"
+          size={24}
+          color={theme.colors.primaryDark}
+        />
+      </TouchableOpacity>
+      <TextInput
+        style={styles.input}
+        placeholder="Type a message..."
+        placeholderTextColor="#8E8E93"
+        value={inputMessage}
+        onChangeText={setInputMessage}
+        multiline
+      />
+      <TouchableOpacity
+        style={styles.sendButton}
+        onPress={handleSend}
+        disabled={isSending || !inputMessage.trim()}>
+        {isSending ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Icon name="send" size={20} color="white" />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// Main Component
+export default function ChatsRunnerMessageScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const {sessionId} = route.params as {sessionId: string};
+  const {profile} = useLoginStore();
+  const userId = profile?.id;
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [showUserInfo, setShowUserInfo] = useState(false);
+  const [showActionsPanel, setShowActionsPanel] = useState(false);
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const [showRunRecordPanel, setShowRunRecordPanel] = useState(false);
+
+  const flatListRef = useRef<FlatList>(null);
+
+  const fetchSessionInfo = async () => {
+    try {
+      const response = await getSessionInfo(sessionId);
+      if (response.status) {
+        setSessionInfo(response.data);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: response.message,
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to fetch session info',
+      });
+    }
+  };
+
+  const fetchMessages = async () => {
+    try {
+      const response = await getMessages(sessionId);
+      if (response.status) {
+        setMessages(response.data.messages);
+      } else {
+        ToastUtil.error('Failed to fetch messages', response.message);
+      }
+    } catch (error) {
+      ToastUtil.error('Failed to fetch messages', 'An exception occured.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    await fetchSessionInfo();
+    await fetchMessages();
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [sessionId]);
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
+
+    setIsSending(true);
+    try {
+      const response = profile?.roles.includes('expert')
+        ? await sendExpertRecommendation(sessionId, inputMessage)
+        : await sendMessage(sessionId, inputMessage);
+
+      if (response.status) {
+        setInputMessage('');
+        await fetchMessages();
+      } else {
+        ToastUtil.error('Failed to send message', response.message);
+      }
+    } catch (error) {
+      ToastUtil.error('Failed to send message', 'An exception occured.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleProfileStatsSubmit = () => {
+    setShowActionsPanel(false);
+    setShowProfilePanel(true);
+  };
+
+  const handleProfileSubmit = async (profileData: {
+    height: string;
+    weight: string;
+    running_level: string;
+    running_goal: string;
+  }) => {
+    try {
+      const response = await sendProfile(sessionId, profileData);
+      if (response.status) {
+        ToastUtil.success('Profile submitted successfully');
+        setShowProfilePanel(false);
+        await fetchMessages(); // Refresh messages
+      } else {
+        ToastUtil.error('Failed to submit profile', response.message);
+      }
+    } catch (error) {
+      ToastUtil.error('Failed to submit profile', 'An exception occurred.');
+    }
+  };
+
+  const handleRunRecordSubmit = () => {
+    setShowActionsPanel(false);
+    setShowRunRecordPanel(true);
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <CRMessageHeader
+          sessionInfo={null}
+          navigation={navigation}
+          onInfoPress={() => {}}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
+      <CRMessageHeader
+        sessionInfo={sessionInfo}
+        navigation={navigation}
+        onInfoPress={() => setShowUserInfo(true)}
+      />
+      <MessageList
+        messages={messages}
+        userId={userId}
+        flatListRef={flatListRef}
+      />
+      <MessageInput
+        inputMessage={inputMessage}
+        setInputMessage={setInputMessage}
+        handleSend={handleSendMessage}
+        isSending={isSending}
+        isExpert={profile?.roles.includes('expert') || false}
+        onMenuPress={() => setShowActionsPanel(true)}
+      />
+      <CRMessageInfoPanel
+        sessionInfo={sessionInfo}
+        visible={showUserInfo}
+        onClose={() => setShowUserInfo(false)}
+      />
+      <CRMessageActionsPanel
+        visible={showActionsPanel}
+        onClose={() => setShowActionsPanel(false)}
+        onSelectProfileStats={handleProfileStatsSubmit}
+        onSelectRunRecord={handleRunRecordSubmit}
+      />
+      <CRMessageProfilePanel
+        visible={showProfilePanel}
+        onClose={() => setShowProfilePanel(false)}
+        onSubmit={handleProfileSubmit}
+      />
+      <CRMessageRunRecordPanel
+        visible={showRunRecordPanel}
+        sessionId={sessionId}
+        onClose={() => setShowRunRecordPanel(false)}
+        onSubmitSuccess={() => {
+          fetchMessages();
+          setShowRunRecordPanel(false);
+        }}
+      />
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#EFEFF4',
+  },
+  messagesContainer: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#8E8E93',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  menuButton: {
+    padding: 8,
+  },
+  input: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 120,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    marginHorizontal: 8,
+    fontSize: 16,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

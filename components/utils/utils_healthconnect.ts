@@ -464,7 +464,7 @@ export const fetchExerciseSessionRecords = async (
       params: {startTime, endTime},
     });
     return response.data.data.map((session: any) => ({
-      id: session.record_id || session.id,
+      id: session.id,
       exerciseType: session.exercise_type,
       clientRecordId: session.client_record_id,
       dataOrigin: session.data_origin,

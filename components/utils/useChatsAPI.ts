@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
 import {MASTER_URL} from './zustandfetchAPI';
+import ToastUtil from './utils_toast';
 
 // Axios instance
 const api = axios.create({
@@ -72,7 +73,8 @@ export const getPendingSessions = async (): Promise<any> => {
   } catch (error: any) {
     return {
       status: false,
-      message: error.response?.data?.message || 'Failed to get pending sessions',
+      message:
+        error.response?.data?.message || 'Failed to get pending sessions',
       data: null,
     };
   }
@@ -89,6 +91,7 @@ export const acceptSession = async (sessionId: any): Promise<any> => {
     });
     return response.data;
   } catch (error: any) {
+    ToastUtil.error('Failed to accept session', error.response?.data?.message);
     return {
       status: false,
       message: error.response?.data?.message || 'Failed to accept session',
@@ -188,7 +191,11 @@ export const archiveMessage = async (messageId: any): Promise<any> => {
 };
 
 // Send a message
-export const sendMessage = async (sessionId: any, message: any, imageId?: any): Promise<any> => {
+export const sendMessage = async (
+  sessionId: any,
+  message: any,
+  imageId?: any,
+): Promise<any> => {
   try {
     const response = await api.post(`/chats/sessions/${sessionId}/messages`, {
       message,
@@ -205,7 +212,10 @@ export const sendMessage = async (sessionId: any, message: any, imageId?: any): 
 };
 
 // Send expert recommendation (only for experts)
-export const sendExpertRecommendation = async (sessionId: any, message: any): Promise<any> => {
+export const sendExpertRecommendation = async (
+  sessionId: any,
+  message: any,
+): Promise<any> => {
   try {
     const response = await api.post(
       `/chats/sessions/${sessionId}/expert-recommendations`,
@@ -227,7 +237,10 @@ export const sendExpertRecommendation = async (sessionId: any, message: any): Pr
 };
 
 // Send profile data
-export const sendProfile = async (sessionId: any, profileData: any): Promise<any> => {
+export const sendProfile = async (
+  sessionId: any,
+  profileData: any,
+): Promise<any> => {
   try {
     const response = await api.post(
       `/chats/sessions/${sessionId}/profiles`,
@@ -243,6 +256,27 @@ export const sendProfile = async (sessionId: any, profileData: any): Promise<any
     return {
       status: false,
       message: error.response?.data?.message || 'Failed to send profile',
+      data: null,
+    };
+  }
+};
+
+export const sendExerciseRecord = async (
+  sessionId: string,
+  exerciseRecord: string,
+): Promise<any> => {
+  try {
+    const response = await api.post(
+      `/chats/sessions/${sessionId}/exercise-record`,
+      {exercise_session_record_id: exerciseRecord},
+    );
+    ToastUtil.success('Success', response.data.message);
+    return response.data;
+  } catch (error: any) {
+    return {
+      status: false,
+      message:
+        error.response?.data?.message || 'Failed to send exercise record',
       data: null,
     };
   }
@@ -315,6 +349,19 @@ export const getSessionInfo = async (sessionId: any): Promise<any> => {
     return {
       status: false,
       message: error.response?.data?.message || 'Failed to get session info',
+      data: null,
+    };
+  }
+};
+
+export const getUserInfo = async (userId: any): Promise<any> => {
+  try {
+    const response = await api.get(`/chats/user/${userId}`);
+    return response.data;
+  } catch (error: any) {
+    return {
+      status: false,
+      message: error.response?.data?.message || 'Failed to get user info',
       data: null,
     };
   }

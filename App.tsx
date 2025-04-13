@@ -1,15 +1,20 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import Icon from '@react-native-vector-icons/ionicons';
 import Toast from 'react-native-toast-message';
-import { homeStackScreens, tabScreens, stackScreens } from './components/routes/routes';
-import { useLoginStore } from './components/utils/useLoginStore';
-import { View, ActivityIndicator } from 'react-native';
+import {
+  homeStackScreens,
+  tabScreens,
+  stackScreens,
+} from './components/routes/routes';
+import {useLoginStore} from './components/utils/useLoginStore';
+import {View, ActivityIndicator} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
-import { startSyncData } from './components/utils/utils_healthconnect';
+import {useEffect, useState} from 'react';
+import {startSyncData} from './components/utils/utils_healthconnect';
+import {SocketProvider} from './components/contexts/SocketContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -17,7 +22,7 @@ const HomeStack = createNativeStackNavigator();
 
 const HomeStackScreen = () => {
   return (
-    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+    <HomeStack.Navigator screenOptions={{headerShown: false}}>
       {homeStackScreens.map((screen: any) => (
         <HomeStack.Screen
           key={screen.name}
@@ -32,8 +37,8 @@ const HomeStackScreen = () => {
 const HomeTabs = () => {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+      screenOptions={({route}) => ({
+        tabBarIcon: ({focused, color, size}) => {
           let iconName;
           switch (route.name) {
             case 'Home':
@@ -62,8 +67,7 @@ const HomeTabs = () => {
         tabBarActiveTintColor: '#100077',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
-      })}
-    >
+      })}>
       <Tab.Screen name="Home" component={HomeStackScreen} />
       {tabScreens.slice(1).map((screen: any) => (
         <Tab.Screen
@@ -78,27 +82,27 @@ const HomeTabs = () => {
 
 const App = () => {
   const [loading, setLoading] = useState(true);
-  const { userdata, setUserData, fetchUserProfile, profile } = useLoginStore();
+  const {userdata, setUserData, fetchUserProfile, profile} = useLoginStore();
 
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
         const token = await AsyncStorage.getItem('authToken');
         const tokenTimestamp = await AsyncStorage.getItem('authTokenTimestamp');
-        
+
         if (token && tokenTimestamp) {
           const loginTime = new Date(parseInt(tokenTimestamp, 10));
           const now = new Date();
           // Kiểm tra khoảng cách giữa thời điểm hiện tại và thời điểm đăng nhập
           const diff = now.getTime() - loginTime.getTime();
-          
+
           // Nếu token tồn tại dưới 1 ngày (24h)
           if (diff < 24 * 60 * 60 * 1000) {
             setUserData(token); // Lưu token vào state
-            
+
             // Gọi API /me để lấy thông tin người dùng
             const profileSuccess = await fetchUserProfile();
-            
+
             if (profileSuccess) {
               // Nếu lấy thông tin thành công, đồng bộ dữ liệu sức khỏe
               const endDate = new Date();
@@ -132,7 +136,7 @@ const App = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
         <ActivityIndicator size="large" color="#100077" />
       </View>
     );
@@ -140,24 +144,27 @@ const App = () => {
 
   return (
     <>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName={userdata ? 'HomeTabs' : 'WelcomeScreen'}>
-          {stackScreens.map((screen: any) => (
+      <SocketProvider>
+        <NavigationContainer>
+          <Stack.Navigator
+            initialRouteName={userdata ? 'HomeTabs' : 'WelcomeScreen'}>
+            {stackScreens.map((screen: any) => (
+              <Stack.Screen
+                key={screen.name}
+                name={screen.name}
+                component={screen.component}
+                options={{headerShown: false}}
+              />
+            ))}
             <Stack.Screen
-              key={screen.name}
-              name={screen.name}
-              component={screen.component}
-              options={{ headerShown: false }}
+              name="HomeTabs"
+              component={HomeTabs}
+              options={{headerShown: false}}
             />
-          ))}
-          <Stack.Screen
-            name="HomeTabs"
-            component={HomeTabs}
-            options={{ headerShown: false }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-      <Toast />
+          </Stack.Navigator>
+        </NavigationContainer>
+        <Toast />
+      </SocketProvider>
     </>
   );
 };
