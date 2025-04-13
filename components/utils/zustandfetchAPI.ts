@@ -2,7 +2,7 @@ import { create } from "zustand";
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 import useAuthStore from "./useAuthStore";
 
-export const MASTER_URL = "http://192.168.1.10:5000/api";
+export const MASTER_URL = "https://xavia.pro/api";
 
 // Interface cho state của API store
 interface ApiState {
