@@ -26,6 +26,7 @@ type RootStackParamList = {
   Register: undefined;
   VerifyLoginScreen: {
     emailLabel: string;
+    password: string;
   };
 };
 
@@ -55,7 +56,7 @@ const LoginScreen: React.FC<{
       navigation.navigate('HomeTabs');
       clear();
     } else if (status === 'wait') {
-      navigation.navigate('VerifyLoginScreen', {emailLabel: email});
+      navigation.navigate('VerifyLoginScreen', {emailLabel: email,password: password});
       clear();
     } else if (status === 'error' && message) {
       console.log('message', message);

@@ -103,6 +103,7 @@ const HomeScreen = () => {
     title: '',
     content: '',
   });
+console.log('profile', profile);
 
   const metricInfo = {
     heartRate: {
