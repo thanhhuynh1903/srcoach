@@ -1,4 +1,4 @@
-import HomeScreen from '../screens/HomeScreen';
+import HomeScreen from '../screens/DashboardScreens/HomeScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import WelcomeInfoScreen from '../screens/WelcomeInfoScreen';
 import LoginScreen from '../screens/LoginScreen';

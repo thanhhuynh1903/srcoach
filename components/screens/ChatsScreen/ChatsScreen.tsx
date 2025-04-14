@@ -389,18 +389,24 @@ export default function ChatsScreen() {
               style={styles.headerIcon}
             />
           </TouchableOpacity>
-          <Icon
-            name="notifications-outline"
-            size={24}
-            color={theme.colors.primaryDark}
-            style={styles.headerIcon}
-          />
-          <Icon
-            name="trophy-outline"
-            size={24}
-            color={theme.colors.primaryDark}
-            style={styles.headerIcon}
-          />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ManageNotificationsScreen')}>
+            <Icon
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LeaderBoardScreen')}>
+            <Icon
+              name="trophy-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
