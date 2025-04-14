@@ -4,7 +4,8 @@ import {theme} from '../../../contants/theme';
 import moment from 'moment';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {CRMessageItemProfile} from './CRMessageItemProfile';
-import { ECMessageItemExerciseRecord } from './CRMessageItemExerciseRecord';
+import {ECMessageItemExerciseRecord} from './CRMessageItemExerciseRecord';
+import { CRMessageItemExpertRecommendation } from './CRMessageItemExpertRecommendation';
 
 type User = {
   id: string;
@@ -65,19 +66,22 @@ const CRRegularMessage = ({
   isCurrentUser: boolean;
 }) => {
   const isExpertRecommendation = message.type === 'EXPERT_RECOMMENDATION';
+  const isCurrentUserExpert =
+    isCurrentUser && message.User.roles.includes('expert');
 
   return (
     <View
       style={[
         styles.messageBubble,
         isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
-        isExpertRecommendation && styles.expertBubble,
+        isExpertRecommendation && !isCurrentUser && styles.expertBubble,
+        isCurrentUserExpert && styles.currentUserExpertBubble,
       ]}>
       <Text
         style={[
           styles.messageText,
           isCurrentUser ? styles.currentUserText : styles.otherUserText,
-          isExpertRecommendation && styles.expertText,
+          (isExpertRecommendation || isCurrentUserExpert) && styles.expertText,
         ]}>
         {message.message}
       </Text>
@@ -85,6 +89,7 @@ const CRRegularMessage = ({
         style={[
           styles.messageTime,
           isCurrentUser ? styles.currentUserTime : styles.otherUserTime,
+          (isExpertRecommendation || isCurrentUserExpert) && styles.expertTime,
         ]}>
         {moment(message.created_at).format('h:mm A')}
       </Text>
@@ -92,13 +97,14 @@ const CRRegularMessage = ({
   );
 };
 
-export const CRMessageContainer = ({
+export const CRMessageItemNormal = ({
   message,
   isCurrentUser,
 }: {
   message: Message;
   isCurrentUser: boolean;
 }) => {
+
   if (message.type === 'PROFILE') {
     return <CRMessageItemProfile message={message} />;
   }
@@ -107,24 +113,27 @@ export const CRMessageContainer = ({
     return <ECMessageItemExerciseRecord message={message} />;
   }
 
+  if (message.type === 'EXPERT_RECOMMENDATION') {
+    return <CRMessageItemExpertRecommendation message={message} isCurrentUser={isCurrentUser} />;
+  }
+
   return (
     <View
       style={[
         styles.messageContainer,
         isCurrentUser ? styles.currentUserContainer : styles.otherUserContainer,
       ]}>
-      {/* Avatar - shown for other users on left */}
       {!isCurrentUser && <UserAvatar user={message.User} />}
-
-      <View style={styles.messageContentWrapper}>
-        {/* User info */}
+      <View
+        style={[
+          styles.messageContentWrapper,
+          isCurrentUser && styles.expertContentWrapper,
+        ]}>
         {!isCurrentUser && <UserMetaInfo user={message.User} />}
 
         <CRRegularMessage message={message} isCurrentUser={isCurrentUser} />
       </View>
-
-      {/* Avatar - shown for current user on right */}
-      {isCurrentUser && <UserAvatar user={message.User} />}
+      {(isCurrentUser) && <UserAvatar user={message.User} />}
     </View>
   );
 };
@@ -147,12 +156,20 @@ const styles = StyleSheet.create({
     maxWidth: '75%',
     marginHorizontal: 8,
   },
+  expertContentWrapper: {
+    marginLeft: 'auto',
+  },
   messageBubble: {
     padding: 12,
     borderRadius: 16,
   },
   currentUserBubble: {
     backgroundColor: theme.colors.primaryDark,
+    borderTopRightRadius: 2,
+    marginLeft: 'auto',
+  },
+  currentUserExpertBubble: {
+    backgroundColor: '#ffe342',
     borderTopRightRadius: 2,
     marginLeft: 'auto',
   },
@@ -186,6 +203,9 @@ const styles = StyleSheet.create({
   },
   currentUserTime: {
     color: 'rgba(255,255,255,0.7)',
+  },
+  expertTime: {
+    color: 'rgba(0,0,0,0.7)',
   },
   otherUserTime: {
     color: '#8E8E93',

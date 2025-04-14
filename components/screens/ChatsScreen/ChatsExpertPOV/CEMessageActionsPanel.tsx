@@ -11,18 +11,23 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 
-interface CRMessageActionsPanelProps {
+interface CEMessageActionsPanelProps {
   visible: boolean;
   onClose: () => void;
   onSelectProfileStats: () => void;
   onSelectRunRecord: () => void;
+  onSelectExpertRecommendation: () => void;
+  disabled?: boolean;
 }
 
-export const CRMessageActionsPanel: React.FC<CRMessageActionsPanelProps> = ({
+
+export const CEMessageActionsPanel: React.FC<CEMessageActionsPanelProps> = ({
   visible,
   onClose,
   onSelectProfileStats,
   onSelectRunRecord,
+  onSelectExpertRecommendation, // Add this
+  disabled = false,
 }) => {
   const slideAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -62,33 +67,53 @@ export const CRMessageActionsPanel: React.FC<CRMessageActionsPanelProps> = ({
         <Animated.View
           style={[styles.panelContainer, {transform: [{translateY}]}]}>
           <View style={styles.panelHeader}>
-            <Text style={styles.panelTitle}>User Actions</Text>
+            <Text style={styles.panelTitle}>Expert Actions</Text>
             <TouchableOpacity onPress={onClose}>
               <Icon name="close" size={24} color={theme.colors.primaryDark} />
             </TouchableOpacity>
           </View>
           <View style={styles.actionsContainer}>
             <TouchableOpacity
-              style={styles.actionButton}
-              onPress={onSelectProfileStats}>
+              style={[styles.actionButton, disabled && styles.disabledButton]}
+              onPress={onSelectProfileStats}
+              disabled={disabled}>
               <Icon
                 name="person"
                 size={20}
-                color={theme.colors.primaryDark}
+                color={disabled ? theme.colors.gray : theme.colors.primaryDark}
                 style={styles.actionIcon}
               />
-              <Text style={styles.actionText}>Submit profile stats</Text>
+              <Text style={[styles.actionText, disabled && styles.disabledText]}>
+                Submit profile stats
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.actionButton}
-              onPress={onSelectRunRecord}>
+              style={[styles.actionButton, disabled && styles.disabledButton]}
+              onPress={onSelectRunRecord}
+              disabled={disabled}>
               <Icon
                 name="walk"
                 size={20}
-                color={theme.colors.primaryDark}
+                color={disabled ? theme.colors.gray : theme.colors.primaryDark}
                 style={styles.actionIcon}
               />
-              <Text style={styles.actionText}>Submit run record</Text>
+              <Text style={[styles.actionText, disabled && styles.disabledText]}>
+                Submit run record
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, disabled && styles.disabledButton]}
+              onPress={onSelectExpertRecommendation}
+              disabled={disabled}>
+              <Icon
+                name="ribbon"
+                size={20}
+                color={disabled ? theme.colors.gray : theme.colors.primaryDark}
+                style={styles.actionIcon}
+              />
+              <Text style={[styles.actionText, disabled && styles.disabledText]}>
+                Submit Expert Recommendation
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -140,5 +165,11 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 16,
     color: theme.colors.primaryDark,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: theme.colors.gray,
   },
 });

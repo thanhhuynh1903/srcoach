@@ -21,7 +21,7 @@ import {
 } from '../../../utils/useChatsAPI';
 import Toast from 'react-native-toast-message';
 import ToastUtil from '../../../utils/utils_toast';
-import {CRMessageContainer} from './CRMessageContainer';
+import {CRMessageItemNormal} from '../ChatsMessageItems/CRMessageItemNormal';
 import {CRMessageHeader} from './CRMessageHeader';
 import {CRMessageInfoPanel} from './CRMessageInfoPanel';
 import {CRMessageActionsPanel} from './CRMessageActionsPanel';
@@ -75,21 +75,49 @@ type SessionInfo = {
   archived_by_you: boolean;
 };
 
+const SkeletonMessageItem = ({isCurrentUser}: {isCurrentUser: boolean}) => {
+  return (
+    <View
+      style={[
+        styles.skeletonContainer,
+        isCurrentUser ? styles.skeletonCurrentUser : styles.skeletonOtherUser,
+      ]}>
+      {!isCurrentUser && <View style={styles.skeletonAvatar} />}
+      <View style={styles.skeletonBubble} />
+      {isCurrentUser && <View style={styles.skeletonAvatar} />}
+    </View>
+  );
+};
+
 const MessageList = ({
   messages,
   userId,
   flatListRef,
+  isLoading,
 }: {
   messages: Message[];
   userId: string;
   flatListRef: React.RefObject<FlatList>;
+  isLoading: boolean;
 }) => {
   const renderItem = ({item}: {item: Message}) => (
-    <CRMessageContainer
+    <CRMessageItemNormal
       message={item}
       isCurrentUser={item.user_id === userId}
     />
   );
+
+  const renderSkeleton = () => {
+    return (
+      <>
+        <SkeletonMessageItem isCurrentUser={false} />
+        <SkeletonMessageItem isCurrentUser={true} />
+        <SkeletonMessageItem isCurrentUser={false} />
+        <SkeletonMessageItem isCurrentUser={true} />
+        <SkeletonMessageItem isCurrentUser={false} />
+      </>
+    );
+  };
 
   return (
     <FlatList
@@ -98,14 +126,24 @@ const MessageList = ({
       renderItem={renderItem}
       keyExtractor={item => item.id}
       contentContainerStyle={styles.messagesContainer}
-      onContentSizeChange={() =>
-        flatListRef.current?.scrollToEnd({animated: true})
-      }
-      onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
+      onContentSizeChange={() => {
+        if (!isLoading) {
+          flatListRef.current?.scrollToEnd({animated: true});
+        }
+      }}
+      onLayout={() => {
+        if (!isLoading) {
+          flatListRef.current?.scrollToEnd({animated: true});
+        }
+      }}
       ListEmptyComponent={
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No messages yet</Text>
-        </View>
+        isLoading ? (
+          <View style={styles.skeletonList}>{renderSkeleton()}</View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No messages yet</Text>
+          </View>
+        )
       }
     />
   );
@@ -164,7 +202,6 @@ const MessageInput = ({
   );
 };
 
-// Main Component
 export default function ChatsRunnerMessageScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -182,6 +219,7 @@ export default function ChatsRunnerMessageScreen() {
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showRunRecordPanel, setShowRunRecordPanel] = useState(false);
   const [isInputDisabled, setIsInputDisabled] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -218,11 +256,18 @@ export default function ChatsRunnerMessageScreen() {
       ToastUtil.error('Failed to fetch messages', 'An exception occured.');
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        setIsInitialLoad(false);
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({animated: true});
+        }
+      }, 300);
     }
   };
 
   const loadData = async () => {
     setIsLoading(true);
+    setIsInitialLoad(true);
     await fetchSessionInfo();
     await fetchMessages();
   };
@@ -232,14 +277,16 @@ export default function ChatsRunnerMessageScreen() {
     const socket = getSocket();
     socket.emit('joinSession', sessionId);
 
-    // Handle new messages from socket
     const handleNewMessage = (data: any) => {
       setMessages(prevMessages => [...prevMessages, data]);
+      setTimeout(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({animated: true});
+        }
+      }, 100);
     };
 
-    socket.on('newMessage', (data) => {
-      handleNewMessage(data);
-    });
+    socket.on('newMessage', handleNewMessage);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
@@ -302,7 +349,7 @@ export default function ChatsRunnerMessageScreen() {
     setShowRunRecordPanel(true);
   };
 
-  if (isLoading) {
+  if (isLoading && isInitialLoad) {
     return (
       <View style={styles.container}>
         <CRMessageHeader
@@ -331,6 +378,7 @@ export default function ChatsRunnerMessageScreen() {
         messages={messages}
         userId={userId}
         flatListRef={flatListRef}
+        isLoading={isLoading && isInitialLoad}
       />
       <MessageInput
         inputMessage={inputMessage}
@@ -431,5 +479,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonList: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  skeletonContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  skeletonCurrentUser: {
+    justifyContent: 'flex-end',
+  },
+  skeletonOtherUser: {
+    justifyContent: 'flex-start',
+  },
+  skeletonAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E5EA',
+    marginHorizontal: 8,
+  },
+  skeletonBubble: {
+    maxWidth: '70%',
+    minHeight: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E5EA',
+    padding: 12,
+    marginHorizontal: 8,
   },
 });

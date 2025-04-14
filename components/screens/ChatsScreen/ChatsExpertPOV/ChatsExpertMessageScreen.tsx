@@ -21,15 +21,16 @@ import {
 } from '../../../utils/useChatsAPI';
 import Toast from 'react-native-toast-message';
 import ToastUtil from '../../../utils/utils_toast';
-import {CRMessageContainer} from './CRMessageContainer';
-import {CRMessageHeader} from './CRMessageHeader';
-import {CRMessageInfoPanel} from './CRMessageInfoPanel';
-import {CRMessageActionsPanel} from './CRMessageActionsPanel';
-import {CRMessageProfilePanel} from './CRMessageProfilePanel';
+import {CRMessageItemNormal} from '../ChatsMessageItems/CRMessageItemNormal';
+import {CRMessageHeader} from '../ChatsRunnerPOV/CRMessageHeader';
+import {CRMessageInfoPanel} from '../ChatsRunnerPOV/CRMessageInfoPanel';
+import {CEMessageActionsPanel} from './CEMessageActionsPanel';
+import {CRMessageProfilePanel} from '../ChatsRunnerPOV/CRMessageProfilePanel';
 import {theme} from '../../../contants/theme';
 import Icon from '@react-native-vector-icons/ionicons';
-import {CRMessageRunRecordPanel} from './CRMessageRunRecordPanel';
+import {CRMessageRunRecordPanel} from '../ChatsRunnerPOV/CRMessageRunRecordPanel';
 import {getSocket, disconnectSocket} from '../../../utils/socket';
+import { CEMessageExpertRecommendationPanel } from './CEMessageExpertRecommendationPanel';
 
 type Message = {
   id: string;
@@ -75,21 +76,51 @@ type SessionInfo = {
   archived_by_you: boolean;
 };
 
+const SkeletonMessageItem = ({isCurrentUser}: {isCurrentUser: boolean}) => {
+  return (
+    <View
+      style={[
+        styles.skeletonContainer,
+        isCurrentUser ? styles.skeletonCurrentUser : styles.skeletonOtherUser,
+      ]}>
+      {!isCurrentUser && <View style={styles.skeletonAvatar} />}
+      <View style={styles.skeletonBubble} />
+      {isCurrentUser && <View style={styles.skeletonAvatar} />}
+    </View>
+  );
+};
+
 const MessageList = ({
   messages,
   userId,
   flatListRef,
+  isLoading,
 }: {
   messages: Message[];
   userId: string;
   flatListRef: React.RefObject<FlatList>;
+  isLoading: boolean;
 }) => {
-  const renderItem = ({item}: {item: Message}) => (
-    <CRMessageContainer
-      message={item}
-      isCurrentUser={item.user_id === userId}
-    />
-  );
+  const renderItem = ({item}: {item: Message}) => {
+    return (
+      <CRMessageItemNormal
+        message={item}
+        isCurrentUser={item.user_id === userId}
+      />
+    );
+  };
+
+  const renderSkeleton = () => {
+    return (
+      <>
+        <SkeletonMessageItem isCurrentUser={false} />
+        <SkeletonMessageItem isCurrentUser={true} />
+        <SkeletonMessageItem isCurrentUser={false} />
+        <SkeletonMessageItem isCurrentUser={true} />
+        <SkeletonMessageItem isCurrentUser={false} />
+      </>
+    );
+  };
 
   return (
     <FlatList
@@ -98,14 +129,24 @@ const MessageList = ({
       renderItem={renderItem}
       keyExtractor={item => item.id}
       contentContainerStyle={styles.messagesContainer}
-      onContentSizeChange={() =>
-        flatListRef.current?.scrollToEnd({animated: true})
-      }
-      onLayout={() => flatListRef.current?.scrollToEnd({animated: true})}
+      onContentSizeChange={() => {
+        if (!isLoading) {
+          flatListRef.current?.scrollToEnd({animated: true});
+        }
+      }}
+      onLayout={() => {
+        if (!isLoading) {
+          flatListRef.current?.scrollToEnd({animated: true});
+        }
+      }}
       ListEmptyComponent={
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No messages yet</Text>
-        </View>
+        isLoading ? (
+          <View style={styles.skeletonList}>{renderSkeleton()}</View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No messages yet</Text>
+          </View>
+        )
       }
     />
   );
@@ -130,11 +171,10 @@ const MessageInput = ({
 }) => {
   return (
     <View style={styles.inputContainer}>
-      <TouchableOpacity 
-        style={styles.menuButton} 
+      <TouchableOpacity
+        style={styles.menuButton}
         onPress={onMenuPress}
-        disabled={isInputDisabled}
-      >
+        disabled={isInputDisabled}>
         <Icon
           name="ellipsis-horizontal"
           size={24}
@@ -143,7 +183,9 @@ const MessageInput = ({
       </TouchableOpacity>
       <TextInput
         style={[styles.input, isInputDisabled && styles.disabledInput]}
-        placeholder={isInputDisabled ? "Sending message..." : "Type a message..."}
+        placeholder={
+          isInputDisabled ? 'Sending message...' : 'Type a message...'
+        }
         placeholderTextColor="#8E8E93"
         value={inputMessage}
         onChangeText={setInputMessage}
@@ -151,7 +193,10 @@ const MessageInput = ({
         editable={!isInputDisabled}
       />
       <TouchableOpacity
-        style={[styles.sendButton, isInputDisabled && styles.disabledSendButton]}
+        style={[
+          styles.sendButton,
+          isInputDisabled && styles.disabledSendButton,
+        ]}
         onPress={handleSend}
         disabled={isSending || !inputMessage.trim() || isInputDisabled}>
         {isSending ? (
@@ -164,8 +209,7 @@ const MessageInput = ({
   );
 };
 
-// Main Component
-export default function ChatsRunnerMessageScreen() {
+export default function ChatsExpertMessageScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const {sessionId} = route.params as {sessionId: string};
@@ -181,7 +225,12 @@ export default function ChatsRunnerMessageScreen() {
   const [showActionsPanel, setShowActionsPanel] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showRunRecordPanel, setShowRunRecordPanel] = useState(false);
+  const [showExpertRecommendationPanel, setShowExpertRecommendationPanel] =
+    useState(false);
+
   const [isInputDisabled, setIsInputDisabled] = useState(false);
+
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -218,11 +267,18 @@ export default function ChatsRunnerMessageScreen() {
       ToastUtil.error('Failed to fetch messages', 'An exception occured.');
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        setIsInitialLoad(false);
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({animated: true});
+        }
+      }, 300);
     }
   };
 
   const loadData = async () => {
     setIsLoading(true);
+    setIsInitialLoad(true);
     await fetchSessionInfo();
     await fetchMessages();
   };
@@ -232,14 +288,16 @@ export default function ChatsRunnerMessageScreen() {
     const socket = getSocket();
     socket.emit('joinSession', sessionId);
 
-    // Handle new messages from socket
     const handleNewMessage = (data: any) => {
       setMessages(prevMessages => [...prevMessages, data]);
+      setTimeout(() => {
+        if (flatListRef.current) {
+          flatListRef.current.scrollToEnd({animated: true});
+        }
+      }, 100);
     };
 
-    socket.on('newMessage', (data) => {
-      handleNewMessage(data);
-    });
+    socket.on('newMessage', handleNewMessage);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
@@ -253,9 +311,7 @@ export default function ChatsRunnerMessageScreen() {
     setIsSending(true);
     setIsInputDisabled(true);
     try {
-      const response = profile?.roles.includes('expert')
-        ? await sendExpertRecommendation(sessionId, inputMessage)
-        : await sendMessage(sessionId, inputMessage);
+      const response = await sendMessage(sessionId, inputMessage);
 
       if (!response.status) {
         ToastUtil.error('Failed to send message', response.message);
@@ -302,7 +358,7 @@ export default function ChatsRunnerMessageScreen() {
     setShowRunRecordPanel(true);
   };
 
-  if (isLoading) {
+  if (isLoading && isInitialLoad) {
     return (
       <View style={styles.container}>
         <CRMessageHeader
@@ -316,6 +372,29 @@ export default function ChatsRunnerMessageScreen() {
       </View>
     );
   }
+
+  const handleExpertRecommendationSubmit = async (recommendation: string) => {
+    try {
+      setIsInputDisabled(true);
+      const response = await sendExpertRecommendation(
+        sessionId,
+        recommendation,
+      );
+      if (response.status) {
+        ToastUtil.success('Recommendation submitted successfully');
+        setShowExpertRecommendationPanel(false);
+      } else {
+        ToastUtil.error('Failed to submit recommendation', response.message);
+      }
+    } catch (error) {
+      ToastUtil.error(
+        'Failed to submit recommendation',
+        'An exception occurred.',
+      );
+    } finally {
+      setIsInputDisabled(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -331,6 +410,7 @@ export default function ChatsRunnerMessageScreen() {
         messages={messages}
         userId={userId}
         flatListRef={flatListRef}
+        isLoading={isLoading && isInitialLoad}
       />
       <MessageInput
         inputMessage={inputMessage}
@@ -346,11 +426,15 @@ export default function ChatsRunnerMessageScreen() {
         visible={showUserInfo}
         onClose={() => setShowUserInfo(false)}
       />
-      <CRMessageActionsPanel
+      <CEMessageActionsPanel
         visible={showActionsPanel}
         onClose={() => setShowActionsPanel(false)}
         onSelectProfileStats={handleProfileStatsSubmit}
         onSelectRunRecord={handleRunRecordSubmit}
+        onSelectExpertRecommendation={() => {
+          setShowActionsPanel(false);
+          setShowExpertRecommendationPanel(true);
+        }}
         disabled={isInputDisabled}
       />
       <CRMessageProfilePanel
@@ -366,6 +450,12 @@ export default function ChatsRunnerMessageScreen() {
         onSubmitSuccess={() => {
           setShowRunRecordPanel(false);
         }}
+        disabled={isInputDisabled}
+      />
+      <CEMessageExpertRecommendationPanel
+        visible={showExpertRecommendationPanel}
+        onClose={() => setShowExpertRecommendationPanel(false)}
+        onSubmit={handleExpertRecommendationSubmit}
         disabled={isInputDisabled}
       />
     </KeyboardAvoidingView>
@@ -431,5 +521,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skeletonList: {
+    padding: 16,
+    paddingBottom: 80,
+  },
+  skeletonContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  skeletonCurrentUser: {
+    justifyContent: 'flex-end',
+  },
+  skeletonOtherUser: {
+    justifyContent: 'flex-start',
+  },
+  skeletonAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E5EA',
+    marginHorizontal: 8,
+  },
+  skeletonBubble: {
+    maxWidth: '70%',
+    minHeight: 40,
+    borderRadius: 20,
+    backgroundColor: '#E5E5EA',
+    padding: 12,
+    marginHorizontal: 8,
   },
 });

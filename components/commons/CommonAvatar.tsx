@@ -10,6 +10,7 @@ type CommonAvatarProps = {
 };
 
 export const CommonAvatar = ({mode, size = 36, uri}: CommonAvatarProps) => {
+  const badgeSize = size * 0.4;
   return (
     <View style={styles.avatarContainer}>
       {uri ? (
@@ -34,9 +35,15 @@ export const CommonAvatar = ({mode, size = 36, uri}: CommonAvatarProps) => {
           style={[
             styles.roleBadge,
             styles.expertBadge,
-            {right: -2, bottom: -2},
+            {
+              width: badgeSize,
+              height: badgeSize,
+              borderRadius: badgeSize / 2,
+              right: -2,
+              bottom: -2,
+            },
           ]}>
-          <Icon name="trophy" size={size * 0.33} color="white" />
+          <Icon name="trophy" size={badgeSize * 0.5} color="white" />
         </View>
       )}
       {mode === 'runner' && (
@@ -44,9 +51,15 @@ export const CommonAvatar = ({mode, size = 36, uri}: CommonAvatarProps) => {
           style={[
             styles.roleBadge,
             styles.runnerBadge,
-            {right: -2, bottom: -2},
+            {
+              width: badgeSize,
+              height: badgeSize,
+              borderRadius: badgeSize / 2,
+              right: -2,
+              bottom: -2,
+            },
           ]}>
-          <Icon name="footsteps" size={size * 0.33} color="white" />
+          <Icon name="footsteps" size={badgeSize * 0.5} color="white" />
         </View>
       )}
     </View>
@@ -67,9 +80,6 @@ const styles = StyleSheet.create({
   },
   roleBadge: {
     position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,

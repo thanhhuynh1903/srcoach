@@ -1,12 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, SafeAreaView, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+} from 'react-native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
-import { createSession, getUserInfo } from '../../../utils/useChatsAPI';
-import { theme } from '../../../contants/theme';
+import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
+import {createSession, getUserInfo} from '../../../utils/useChatsAPI';
+import {theme} from '../../../contants/theme';
 import Toast from 'react-native-toast-message';
+import { CommonAvatar } from '../../../commons/CommonAvatar';
 
 interface UserInfo {
   name: string;
@@ -14,11 +23,13 @@ interface UserInfo {
   roles: string[];
   points: number;
   user_level: string;
+  expert_badges?: string[];
+  profile_picture?: string;
 }
 
 const ChatsUserInviRunnerScreen = () => {
-  const { goBack } = useNavigation();
-  const { userId } = useRoute().params as { userId: string };
+  const {goBack} = useNavigation();
+  const {userId} = useRoute().params as {userId: string};
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -28,9 +39,13 @@ const ChatsUserInviRunnerScreen = () => {
       try {
         const res = await getUserInfo(userId);
         if (res.status) setUserInfo(res.data);
-        else Toast.show({ type: 'error', text1: 'Error', text2: res.message });
+        else Toast.show({type: 'error', text1: 'Error', text2: res.message});
       } catch {
-        Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load user' });
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to load runner',
+        });
       } finally {
         setLoading(false);
       }
@@ -42,163 +57,227 @@ const ChatsUserInviRunnerScreen = () => {
     try {
       const res = await createSession(userId);
       if (res.status) {
-        Toast.show({ type: 'success', text1: 'Success', text2: res.message });
+        Toast.show({type: 'success', text1: 'Success', text2: res.message});
         goBack();
       } else {
-        Toast.show({ type: 'error', text1: 'Error', text2: res.message });
+        Toast.show({type: 'error', text1: 'Error', text2: res.message});
       }
     } catch {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to create session' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to create session',
+      });
     } finally {
       setCreating(false);
     }
   };
 
-  if (loading) return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#1E90FF', '#00BFFF']} style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Runner Invitation</Text>
-      </LinearGradient>
-      <View style={styles.loadingContainer}>
-        {[...Array(3)].map((_, i) => (
-          <ContentLoader 
-            key={i} 
-            speed={1} 
-            width="100%" 
-            height={100} 
-            viewBox="0 0 400 100" 
-            backgroundColor="#f3f3f3" 
-            foregroundColor="#ecebeb"
-          >
-            <Circle cx="50" cy="50" r="40" />
-            <Rect x="110" y="20" rx="4" ry="4" width="200" height="20" />
-            <Rect x="110" y="50" rx="3" ry="3" width="150" height="15" />
-            <Rect x="110" y="75" rx="3" ry="3" width="100" height="15" />
-          </ContentLoader>
-        ))}
-      </View>
-    </SafeAreaView>
-  );
+  if (loading)
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={goBack} style={styles.backButton}>
+            <Icon name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Runner Invitation</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          {[...Array(3)].map((_, i) => (
+            <ContentLoader
+              key={i}
+              speed={1}
+              width="100%"
+              height={100}
+              viewBox="0 0 400 100"
+              backgroundColor="#f3f3f3"
+              foregroundColor="#ecebeb">
+              <Circle cx="50" cy="50" r="40" />
+              <Rect x="110" y="20" rx="4" ry="4" width="200" height="20" />
+              <Rect x="110" y="50" rx="3" ry="3" width="150" height="15" />
+              <Rect x="110" y="75" rx="3" ry="3" width="100" height="15" />
+            </ContentLoader>
+          ))}
+        </View>
+      </SafeAreaView>
+    );
 
-  if (!userInfo) return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#1E90FF', '#00BFFF']} style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Runner Invitation</Text>
-      </LinearGradient>
-      <View style={styles.errorContainer}>
-        <Icon name="alert-circle-outline" size={40} color="#1E90FF" />
-        <Text style={styles.errorText}>Failed to load runner profile</Text>
-      </View>
-    </SafeAreaView>
-  );
+  if (!userInfo)
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={goBack} style={styles.backButton}>
+            <Icon name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Runner Invitation</Text>
+        </View>
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle-outline" size={40} color="#4CAF50" />
+          <Text style={styles.errorText}>Failed to load runner profile</Text>
+        </View>
+      </SafeAreaView>
+    );
 
   const isExpert = userInfo.roles.includes('expert');
   const isRunner = userInfo.roles.includes('runner');
+  const expertBadges = userInfo.expert_badges || [];
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#1E90FF', '#00BFFF']} style={styles.header}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={goBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Runner Invitation</Text>
-      </LinearGradient>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileCard}>
           <LinearGradient
-            colors={['#1E90FF', '#00BFFF']}
-            style={styles.avatarContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Image
-              source={{
-                uri: `https://ui-avatars.com/api/?name=${userInfo.name}&background=random`,
-              }}
-              style={styles.avatar}
+            colors={['#4CAF50', '#2E7D32']}
+            style={styles.avatarWrapper}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 1}}>
+            <CommonAvatar
+              mode={isRunner ? 'runner' : isExpert ? 'expert' : undefined}
+              size={140}
+              uri={userInfo.profile_picture}
             />
           </LinearGradient>
 
-          <View style={styles.nameContainer}>
-            <Text style={styles.nameText}>{userInfo.name}</Text>
-            <Text style={styles.usernameText}>@{userInfo.username}</Text>
+          <View style={{alignItems: 'center', marginBottom: 15}}>
+            <Text style={styles.userName}>{userInfo.name}</Text>
+            <Text style={styles.userHandle}>@{userInfo.username}</Text>
           </View>
 
-          <View style={styles.rolesContainer}>
+          <View style={styles.badgeContainer}>
             {isExpert && (
               <View style={styles.expertBadge}>
                 <Icon name="trophy" size={18} color="black" />
-                <Text style={styles.expertBadgeText}>Expert</Text>
+                <Text style={[styles.badgeText, {color: 'black'}]}>Expert</Text>
               </View>
             )}
             {isRunner && (
-              <LinearGradient colors={['#1E90FF', '#00BFFF']} style={styles.runnerBadge}>
+              <LinearGradient
+                colors={['#4CAF50', '#2E7D32']}
+                style={styles.runnerBadge}>
                 <Icon name="walk" size={18} color="white" />
-                <Text style={styles.runnerBadgeText}>Runner</Text>
+                <Text style={styles.badgeText}>Runner</Text>
               </LinearGradient>
             )}
           </View>
 
+          {expertBadges.length > 0 && (
+            <View style={{width: '100%', marginBottom: 15}}>
+              <Text style={styles.badgesTitle}>Expert Badges</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                }}>
+                {expertBadges.map((badge, index) => (
+                  <View key={index} style={styles.badgeItem}>
+                    <Icon name="ribbon" size={14} color="#4CAF50" />
+                    <Text style={styles.badgeItemText}>{badge}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Icon name="trophy" size={20} color="#1E90FF" />
+              <Icon name="trophy" size={20} color="#4CAF50" />
               <Text style={styles.statText}>{userInfo.points} Points</Text>
             </View>
             <View style={styles.statItem}>
-              <Icon name="star" size={20} color="#1E90FF" />
+              <Icon name="star" size={20} color="#4CAF50" />
               <Text style={styles.statText}>
-                {userInfo.user_level.charAt(0).toUpperCase() + userInfo.user_level.slice(1)}
+                {userInfo.user_level.charAt(0).toUpperCase() +
+                  userInfo.user_level.slice(1)}
               </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Runner-to-Runner Chat</Text>
+          <Text style={styles.infoTitle}>Runner Connection</Text>
           <Text style={styles.infoDescription}>
-            You're about to start a chat session with another runner. This special connection allows you to:
+            You're about to start a chat session with another runner. This
+            connection allows you to:
           </Text>
           <View style={styles.benefitItem}>
-            <Icon name="checkmark-circle" size={18} color="#1E90FF" style={styles.benefitIcon} />
-            <Text style={styles.benefitText}>Exchange running tips and experiences</Text>
+            <Icon
+              name="checkmark-circle"
+              size={18}
+              color="#4CAF50"
+              style={{marginTop: 2}}
+            />
+            <Text style={styles.benefitText}>
+              Exchange running tips and experiences
+            </Text>
           </View>
           <View style={styles.benefitItem}>
-            <Icon name="checkmark-circle" size={18} color="#1E90FF" style={styles.benefitIcon} />
-            <Text style={styles.benefitText}>Coordinate meetups for group runs</Text>
+            <Icon
+              name="checkmark-circle"
+              size={18}
+              color="#4CAF50"
+              style={{marginTop: 2}}
+            />
+            <Text style={styles.benefitText}>
+              Coordinate meetups for group runs
+            </Text>
           </View>
           <View style={styles.benefitItem}>
-            <Icon name="checkmark-circle" size={18} color="#1E90FF" style={styles.benefitIcon} />
-            <Text style={styles.benefitText}>Share your achievements and goals</Text>
+            <Icon
+              name="checkmark-circle"
+              size={18}
+              color="#4CAF50"
+              style={{marginTop: 2}}
+            />
+            <Text style={styles.benefitText}>
+              Share your achievements and goals
+            </Text>
           </View>
-          <Text style={styles.footerNote}>
-            By accepting, you agree to our Terms of Service and Community Guidelines.
+          <View style={styles.benefitItem}>
+            <Icon
+              name="checkmark-circle"
+              size={18}
+              color="#4CAF50"
+              style={{marginTop: 2}}
+            />
+            <Text style={styles.benefitText}>
+              Find motivation and running partners
+            </Text>
+          </View>
+          <Text style={styles.disclaimerText}>
+            By proceeding, you agree to our Terms of Service and Community
+            Guidelines.
           </Text>
         </View>
       </ScrollView>
 
-      <LinearGradient colors={['#1E90FF', '#00BFFF']} style={styles.startButton}>
+      <View style={styles.actionButton}>
         <TouchableOpacity
-          style={styles.startButtonTouchable}
+          style={{width: '100%', alignItems: 'center'}}
           onPress={handleCreateSession}
-          disabled={creating}
-        >
+          disabled={creating}>
           {creating ? (
             <ActivityIndicator color="white" />
           ) : (
             <View style={styles.buttonContent}>
-              <Icon name="chatbubbles" size={20} color="white" style={styles.buttonIcon} />
+              <Icon
+                name="chatbubbles"
+                size={20}
+                color="white"
+                style={{marginRight: 10}}
+              />
               <Text style={styles.buttonText}>Start Chat Session</Text>
             </View>
           )}
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
@@ -206,31 +285,30 @@ const ChatsUserInviRunnerScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E6F7FF',
+    backgroundColor: '#F1F8E9',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
     height: 60,
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
+    backgroundColor: theme.colors.primaryDark,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
-  },
-  backButton: {
-    marginRight: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
     textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 1, height: 1 },
+    textShadowOffset: {width: 1, height: 1},
     textShadowRadius: 2,
+  },
+  backButton: {
+    marginRight: 15,
   },
   loadingContainer: {
     padding: 20,
@@ -242,13 +320,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     marginTop: 10,
-    color: '#1E90FF',
+    color: '#4CAF50',
     fontSize: 16,
     fontWeight: '500',
-  },
-  scrollContainer: {
-    padding: 20,
-    paddingBottom: 80,
   },
   profileCard: {
     backgroundColor: 'white',
@@ -256,50 +330,65 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(30, 144, 255, 0.3)',
+    borderColor: 'rgba(76, 175, 80, 0.3)',
   },
-  avatarContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+  avatarWrapper: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
-  avatar: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarPlaceholder: {
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: {
+    backgroundColor: '#f0f0f0',
     borderWidth: 3,
     borderColor: 'white',
   },
-  nameContainer: {
+  roleBadge: {
+    position: 'absolute',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: 'white',
   },
-  nameText: {
+  runnerBadge: {
+    backgroundColor: theme.colors.success,
+  },
+  expertBadge: {
+    backgroundColor: theme.colors.warning,
+  },
+  userName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
   },
-  usernameText: {
+  userHandle: {
     fontSize: 16,
     color: '#888',
     marginTop: 5,
   },
-  rolesContainer: {
+  badgeContainer: {
     flexDirection: 'row',
     marginBottom: 15,
     flexWrap: 'wrap',
@@ -314,12 +403,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginHorizontal: 5,
     marginVertical: 5,
-  },
-  expertBadgeText: {
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'black',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   runnerBadge: {
     flexDirection: 'row',
@@ -329,23 +417,52 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginHorizontal: 5,
     marginVertical: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  runnerBadgeText: {
+  badgeText: {
     marginLeft: 8,
     fontSize: 14,
     fontWeight: 'bold',
     color: 'white',
+  },
+  badgesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  badgeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    margin: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  badgeItemText: {
+    marginLeft: 5,
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
     marginTop: 10,
-    backgroundColor: 'rgba(30, 144, 255, 0.1)',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
     borderRadius: 15,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(30, 144, 255, 0.2)',
+    borderColor: 'rgba(76, 175, 80, 0.2)',
   },
   statItem: {
     flexDirection: 'row',
@@ -362,17 +479,17 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(30, 144, 255, 0.3)',
+    borderColor: 'rgba(76, 175, 80, 0.3)',
   },
   infoTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1E90FF',
+    color: '#4CAF50',
     marginBottom: 15,
     textAlign: 'center',
   },
@@ -387,12 +504,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
-    backgroundColor: 'rgba(30, 144, 255, 0.05)',
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
     borderRadius: 10,
     padding: 10,
-  },
-  benefitIcon: {
-    marginTop: 2,
   },
   benefitText: {
     fontSize: 14,
@@ -401,14 +515,14 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
-  footerNote: {
+  disclaimerText: {
     fontSize: 12,
     color: '#888',
     marginTop: 15,
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  startButton: {
+  actionButton: {
     position: 'absolute',
     bottom: 20,
     left: 20,
@@ -417,30 +531,28 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.primaryDark,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  startButtonTouchable: {
-    width: '100%',
-    alignItems: 'center',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  buttonIcon: {
-    marginRight: 10,
   },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
     textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 1, height: 1 },
+    textShadowOffset: {width: 1, height: 1},
     textShadowRadius: 2,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 80,
   },
 });
 

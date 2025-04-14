@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
@@ -64,38 +65,14 @@ const ChatsUserInviExpertScreen = () => {
 
   if (loading)
     return (
-      <SafeAreaView style={{flex: 1, backgroundColor: '#FFF9E6'}}>
-        <LinearGradient
-          colors={['#FFD700', '#D4AF37']}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 15,
-            height: 60,
-            borderBottomLeftRadius: 15,
-            borderBottomRightRadius: 15,
-            shadowColor: '#000',
-            shadowOffset: {width: 0, height: 3},
-            shadowOpacity: 0.3,
-            shadowRadius: 5,
-            elevation: 5,
-          }}>
-          <TouchableOpacity onPress={goBack} style={{marginRight: 15}}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={goBack} style={styles.backButton}>
             <Icon name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          <Text
-            style={{
-              color: 'white',
-              fontSize: 18,
-              fontWeight: 'bold',
-              textShadowColor: 'rgba(0,0,0,0.2)',
-              textShadowOffset: {width: 1, height: 1},
-              textShadowRadius: 2,
-            }}>
-            Expert Invitation
-          </Text>
-        </LinearGradient>
-        <View style={{padding: 20}}>
+          <Text style={styles.headerTitle}>Expert Invitation</Text>
+        </View>
+        <View style={styles.loadingContainer}>
           {[...Array(3)].map((_, i) => (
             <ContentLoader
               key={i}
@@ -117,48 +94,16 @@ const ChatsUserInviExpertScreen = () => {
 
   if (!userInfo)
     return (
-      <SafeAreaView style={{flex: 1, backgroundColor: '#FFF9E6'}}>
-        <LinearGradient
-          colors={['#FFD700', '#D4AF37']}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 15,
-            height: 60,
-            borderBottomLeftRadius: 15,
-            borderBottomRightRadius: 15,
-            shadowColor: '#000',
-            shadowOffset: {width: 0, height: 3},
-            shadowOpacity: 0.3,
-            shadowRadius: 5,
-            elevation: 5,
-          }}>
-          <TouchableOpacity onPress={goBack} style={{marginRight: 15}}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={goBack} style={styles.backButton}>
             <Icon name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          <Text
-            style={{
-              color: 'white',
-              fontSize: 18,
-              fontWeight: 'bold',
-              textShadowColor: 'rgba(0,0,0,0.2)',
-              textShadowOffset: {width: 1, height: 1},
-              textShadowRadius: 2,
-            }}>
-            Expert Invitation
-          </Text>
-        </LinearGradient>
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <Text style={styles.headerTitle}>Expert Invitation</Text>
+        </View>
+        <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={40} color="#D4AF37" />
-          <Text
-            style={{
-              marginTop: 10,
-              color: '#D4AF37',
-              fontSize: 16,
-              fontWeight: '500',
-            }}>
-            Failed to load expert profile
-          </Text>
+          <Text style={styles.errorText}>Failed to load expert profile</Text>
         </View>
       </SafeAreaView>
     );
@@ -168,195 +113,57 @@ const ChatsUserInviExpertScreen = () => {
   const expertBadges = userInfo.expert_badges || [];
 
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: '#FFF9E6'}}>
-      <LinearGradient
-        colors={['#FFD700', '#D4AF37']}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          padding: 15,
-          height: 60,
-          borderBottomLeftRadius: 15,
-          borderBottomRightRadius: 15,
-          shadowColor: '#000',
-          shadowOffset: {width: 0, height: 3},
-          shadowOpacity: 0.3,
-          shadowRadius: 5,
-          elevation: 5,
-        }}>
-        <TouchableOpacity onPress={goBack} style={{marginRight: 15}}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={goBack} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text
-          style={{
-            color: 'white',
-            fontSize: 18,
-            fontWeight: 'bold',
-            textShadowColor: 'rgba(0,0,0,0.2)',
-            textShadowOffset: {width: 1, height: 1},
-            textShadowRadius: 2,
-          }}>
-          Expert Invitation
-        </Text>
-      </LinearGradient>
+        <Text style={styles.headerTitle}>Expert Invitation</Text>
+      </View>
 
-      <ScrollView contentContainerStyle={{padding: 20, paddingBottom: 80}}>
-        <View
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 15,
-            padding: 20,
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: {width: 0, height: 4},
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 5,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: 'rgba(212, 175, 55, 0.3)',
-          }}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.profileCard}>
           <LinearGradient
             colors={['#FFD700', '#D4AF37']}
-            style={{
-              width: 140,
-              height: 140,
-              borderRadius: 70,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 15,
-              shadowColor: '#000',
-              shadowOffset: {width: 0, height: 3},
-              shadowOpacity: 0.3,
-              shadowRadius: 5,
-              elevation: 5,
-            }}
+            style={styles.avatarGradient}
             start={{x: 0, y: 0}}
             end={{x: 1, y: 1}}>
             <Image
               source={{
                 uri: `https://ui-avatars.com/api/?name=${userInfo.name}&background=random`,
               }}
-              style={{
-                width: 130,
-                height: 130,
-                borderRadius: 65,
-                borderWidth: 3,
-                borderColor: 'white',
-              }}
+              style={styles.avatarImage}
             />
-            <View
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                backgroundColor: '#D4AF37',
-                borderRadius: 15,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderWidth: 2,
-                borderColor: 'white',
-              }}>
+            <View style={styles.avatarBadge}>
               <Icon name="ribbon" size={14} color="white" />
             </View>
           </LinearGradient>
 
           <View style={{alignItems: 'center', marginBottom: 15}}>
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: '#333',
-                textAlign: 'center',
-              }}>
-              {userInfo.name}
-            </Text>
-            <Text style={{fontSize: 16, color: '#888', marginTop: 5}}>
-              @{userInfo.username}
-            </Text>
+            <Text style={styles.userName}>{userInfo.name}</Text>
+            <Text style={styles.userHandle}>@{userInfo.username}</Text>
           </View>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              marginBottom: 15,
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-            }}>
+          <View style={styles.badgeContainer}>
             {isExpert && (
               <LinearGradient
                 colors={['#FFD700', '#D4AF37']}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 20,
-                  paddingHorizontal: 15,
-                  paddingVertical: 6,
-                  marginHorizontal: 5,
-                  marginVertical: 5,
-                  shadowColor: '#000',
-                  shadowOffset: {width: 0, height: 2},
-                  shadowOpacity: 0.2,
-                  shadowRadius: 3,
-                  elevation: 3,
-                }}>
+                style={styles.expertBadge}>
                 <Icon name="trophy" size={18} color="white" />
-                <Text
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    color: 'white',
-                  }}>
-                  Certified Expert
-                </Text>
+                <Text style={styles.badgeText}>Certified Expert</Text>
               </LinearGradient>
             )}
             {isRunner && (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#4CAF50',
-                  borderRadius: 20,
-                  paddingHorizontal: 15,
-                  paddingVertical: 6,
-                  marginHorizontal: 5,
-                  marginVertical: 5,
-                  shadowColor: '#000',
-                  shadowOffset: {width: 0, height: 2},
-                  shadowOpacity: 0.2,
-                  shadowRadius: 3,
-                  elevation: 3,
-                }}>
+              <View style={styles.runnerBadge}>
                 <Icon name="walk" size={18} color="white" />
-                <Text
-                  style={{
-                    marginLeft: 8,
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    color: 'white',
-                  }}>
-                  Runner
-                </Text>
+                <Text style={styles.badgeText}>Runner</Text>
               </View>
             )}
           </View>
 
           {expertBadges.length > 0 && (
             <View style={{width: '100%', marginBottom: 15}}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: '#D4AF37',
-                  marginBottom: 10,
-                  textAlign: 'center',
-                }}>
-                Expert Badges
-              </Text>
+              <Text style={styles.badgesTitle}>Expert Badges</Text>
               <View
                 style={{
                   flexDirection: 'row',
@@ -364,68 +171,23 @@ const ChatsUserInviExpertScreen = () => {
                   justifyContent: 'center',
                 }}>
                 {expertBadges.map((badge, index) => (
-                  <View
-                    key={index}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                      borderRadius: 15,
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      margin: 5,
-                      borderWidth: 1,
-                      borderColor: 'rgba(212, 175, 55, 0.3)',
-                    }}>
+                  <View key={index} style={styles.badgeItem}>
                     <Icon name="ribbon" size={14} color="#D4AF37" />
-                    <Text
-                      style={{
-                        marginLeft: 5,
-                        fontSize: 12,
-                        color: '#D4AF37',
-                        fontWeight: '500',
-                      }}>
-                      {badge}
-                    </Text>
+                    <Text style={styles.badgeItemText}>{badge}</Text>
                   </View>
                 ))}
               </View>
             </View>
           )}
 
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
-              width: '100%',
-              marginTop: 10,
-              backgroundColor: 'rgba(212, 175, 55, 0.1)',
-              borderRadius: 15,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(212, 175, 55, 0.2)',
-            }}>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
               <Icon name="trophy" size={20} color="#D4AF37" />
-              <Text
-                style={{
-                  marginLeft: 5,
-                  fontSize: 14,
-                  color: '#555',
-                  fontWeight: '600',
-                }}>
-                {userInfo.points} Points
-              </Text>
+              <Text style={styles.statText}>{userInfo.points} Points</Text>
             </View>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={styles.statItem}>
               <Icon name="star" size={20} color="#D4AF37" />
-              <Text
-                style={{
-                  marginLeft: 5,
-                  fontSize: 14,
-                  color: '#555',
-                  fontWeight: '600',
-                }}>
+              <Text style={styles.statText}>
                 {userInfo.user_level.charAt(0).toUpperCase() +
                   userInfo.user_level.slice(1)}
               </Text>
@@ -433,175 +195,64 @@ const ChatsUserInviExpertScreen = () => {
           </View>
         </View>
 
-        <View
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 15,
-            padding: 20,
-            shadowColor: '#000',
-            shadowOffset: {width: 0, height: 4},
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 3,
-            borderWidth: 1,
-            borderColor: 'rgba(212, 175, 55, 0.3)',
-          }}>
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: 'bold',
-              color: '#D4AF37',
-              marginBottom: 15,
-              textAlign: 'center',
-            }}>
-            Expert Consultation
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              color: '#555',
-              marginBottom: 15,
-              lineHeight: 22,
-              textAlign: 'center',
-            }}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Expert Consultation</Text>
+          <Text style={styles.infoDescription}>
             You're about to start a consultation session with a certified
             expert. This privileged access allows you to:
           </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              marginBottom: 12,
-              backgroundColor: 'rgba(212, 175, 55, 0.05)',
-              borderRadius: 10,
-              padding: 10,
-            }}>
+          <View style={styles.benefitItem}>
             <Icon
               name="checkmark-circle"
               size={18}
               color="#D4AF37"
               style={{marginTop: 2}}
             />
-            <Text
-              style={{
-                fontSize: 14,
-                color: '#555',
-                marginLeft: 10,
-                flex: 1,
-                lineHeight: 20,
-              }}>
+            <Text style={styles.benefitText}>
               Get professional advice on training techniques and strategies
             </Text>
           </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              marginBottom: 12,
-              backgroundColor: 'rgba(212, 175, 55, 0.05)',
-              borderRadius: 10,
-              padding: 10,
-            }}>
+          <View style={styles.benefitItem}>
             <Icon
               name="checkmark-circle"
               size={18}
               color="#D4AF37"
               style={{marginTop: 2}}
             />
-            <Text
-              style={{
-                fontSize: 14,
-                color: '#555',
-                marginLeft: 10,
-                flex: 1,
-                lineHeight: 20,
-              }}>
+            <Text style={styles.benefitText}>
               Receive personalized recommendations for your running goals
             </Text>
           </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              marginBottom: 12,
-              backgroundColor: 'rgba(212, 175, 55, 0.05)',
-              borderRadius: 10,
-              padding: 10,
-            }}>
+          <View style={styles.benefitItem}>
             <Icon
               name="checkmark-circle"
               size={18}
               color="#D4AF37"
               style={{marginTop: 2}}
             />
-            <Text
-              style={{
-                fontSize: 14,
-                color: '#555',
-                marginLeft: 10,
-                flex: 1,
-                lineHeight: 20,
-              }}>
+            <Text style={styles.benefitText}>
               Learn about injury prevention and recovery techniques
             </Text>
           </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              marginBottom: 12,
-              backgroundColor: 'rgba(212, 175, 55, 0.05)',
-              borderRadius: 10,
-              padding: 10,
-            }}>
+          <View style={styles.benefitItem}>
             <Icon
               name="checkmark-circle"
               size={18}
               color="#D4AF37"
               style={{marginTop: 2}}
             />
-            <Text
-              style={{
-                fontSize: 14,
-                color: '#555',
-                marginLeft: 10,
-                flex: 1,
-                lineHeight: 20,
-              }}>
+            <Text style={styles.benefitText}>
               Discuss equipment and nutrition for optimal performance
             </Text>
           </View>
-          <Text
-            style={{
-              fontSize: 12,
-              color: '#888',
-              marginTop: 15,
-              fontStyle: 'italic',
-              textAlign: 'center',
-            }}>
+          <Text style={styles.disclaimerText}>
             By proceeding, you acknowledge that this is a professional
             consultation and agree to our Terms of Service.
           </Text>
         </View>
       </ScrollView>
 
-      <LinearGradient
-        colors={['#FFD700', '#D4AF37']}
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
-          borderRadius: 10,
-          padding: 15,
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: {width: 0, height: 4},
-          shadowOpacity: 0.3,
-          shadowRadius: 6,
-          elevation: 5,
-        }}>
+      <View style={styles.actionButton}>
         <TouchableOpacity
           style={{width: '100%', alignItems: 'center'}}
           onPress={handleCreateSession}
@@ -609,30 +260,288 @@ const ChatsUserInviExpertScreen = () => {
           {creating ? (
             <ActivityIndicator color="white" />
           ) : (
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={styles.buttonContent}>
               <Icon
                 name="chatbubbles"
                 size={20}
                 color="white"
                 style={{marginRight: 10}}
               />
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                  textShadowColor: 'rgba(0,0,0,0.2)',
-                  textShadowOffset: {width: 1, height: 1},
-                  textShadowRadius: 2,
-                }}>
-                Start Expert Consultation
-              </Text>
+              <Text style={styles.buttonText}>Start Expert Consultation</Text>
             </View>
           )}
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF9E6',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    height: 60,
+    backgroundColor: theme.colors.primaryDark,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+  },
+  backButton: {
+    marginRight: 15,
+  },
+  loadingContainer: {
+    padding: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    marginTop: 10,
+    color: '#D4AF37',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  profileCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.3)',
+  },
+  avatarGradient: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  avatarImage: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#D4AF37',
+    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+  },
+  userHandle: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 5,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  expertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    marginHorizontal: 5,
+    marginVertical: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  runnerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    marginHorizontal: 5,
+    marginVertical: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  badgeText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  badgesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D4AF37',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  badgeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    margin: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.3)',
+  },
+  badgeItemText: {
+    marginLeft: 5,
+    fontSize: 12,
+    color: '#D4AF37',
+    fontWeight: '500',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 10,
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    borderRadius: 15,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.2)',
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statText: {
+    marginLeft: 5,
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '600',
+  },
+  infoCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.3)',
+  },
+  infoTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D4AF37',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  infoDescription: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+  },
+  benefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    backgroundColor: 'rgba(212, 175, 55, 0.05)',
+    borderRadius: 10,
+    padding: 10,
+  },
+  benefitText: {
+    fontSize: 14,
+    color: '#555',
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  actionButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    borderRadius: 10,
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primaryDark,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: {width: 1, height: 1},
+    textShadowRadius: 2,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 80,
+  },
+});
 
 export default ChatsUserInviExpertScreen;

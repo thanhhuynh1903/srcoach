@@ -57,6 +57,7 @@ import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsU
 import ChatsUserInviRunnerScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviRunnerScreen';
 import ChatsUserInviExpertScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviExpertScreen';
 import ChatsRunnerMessageScreen from '../screens/ChatsScreen/ChatsRunnerPOV/ChatsRunnerMessageScreen';
+import ChatsExpertMessageScreen from '../screens/ChatsScreen/ChatsExpertPOV/ChatsExpertMessageScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -113,6 +114,7 @@ export const stackScreens = [
   { name: 'ChatsUserInviRunnerScreen', component: ChatsUserInviRunnerScreen},
   { name: 'ChatsUserInviExpertScreen', component: ChatsUserInviExpertScreen},
   { name: 'ChatsRunnerMessageScreen', component: ChatsRunnerMessageScreen},
+  { name: 'ChatsExpertMessageScreen', component: ChatsExpertMessageScreen},
 
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},

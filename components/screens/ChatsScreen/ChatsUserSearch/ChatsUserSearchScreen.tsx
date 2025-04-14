@@ -7,15 +7,14 @@ import {
   FlatList,
   TextInput,
   RefreshControl,
-  Image,
   SafeAreaView,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {searchUsers, searchExperts} from '../../../utils/useChatsAPI';
 import {theme} from '../../../contants/theme';
+import { CommonAvatar } from '../../../commons/CommonAvatar';
 
 const RunnerItem = ({item}: {item: any}) => {
   const navigation = useNavigation();
@@ -44,17 +43,11 @@ const RunnerItem = ({item}: {item: any}) => {
       onPress={onPress}
       disabled={item.status !== null}>
       <View style={styles.listItemContent}>
-        <View style={styles.avatarContainer}>
-          <Image
-            source={{
-              uri: `https://randomuser.me/api/portraits/men/1.jpg`,
-            }}
-            style={styles.avatar}
-          />
-          <View style={[styles.badge, styles.runnerBadge]}>
-            <Icon name="flash" size={12} color="white" />
-          </View>
-        </View>
+        <CommonAvatar 
+          mode="runner" 
+          size={52} 
+          uri={item.profile_picture || `https://ui-avatars.com/api/?name=${item.name}&background=random`}
+        />
 
         <View style={styles.textContainer}>
           <View style={styles.nameRow}>
@@ -137,17 +130,11 @@ const ExpertItem = ({item}: {item: any}) => {
       onPress={onPress}
       disabled={item.status !== null}>
       <View style={styles.listItemContent}>
-        <View style={styles.avatarContainer}>
-          <Image
-            source={{
-              uri: `https://randomuser.me/api/portraits/men/1.jpg`,
-            }}
-            style={styles.avatar}
-          />
-          <View style={[styles.badge, styles.expertBadge]}>
-            <Icon name="trophy" size={12} color="white" />
-          </View>
-        </View>
+        <CommonAvatar 
+          mode="expert" 
+          size={52} 
+          uri={item.profile_picture || `https://ui-avatars.com/api/?name=${item.name}&background=random`}
+        />
 
         <View style={styles.textContainer}>
           <View style={styles.nameRow}>
@@ -405,35 +392,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
   },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-  },
-  badge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  expertBadge: {
-    backgroundColor: '#FFD700',
-  },
-  runnerBadge: {
-    backgroundColor: '#4CAF50',
-  },
   textContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   nameRow: {
     flexDirection: 'row',

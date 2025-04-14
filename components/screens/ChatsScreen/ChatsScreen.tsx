@@ -7,6 +7,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  SectionList,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
@@ -113,37 +114,91 @@ export default function ChatsScreen() {
     }
   };
 
-  const getFilteredData = (): (Session | User)[] => {
+  const getFilteredSections = () => {
+    const allData = [
+      ...acceptedSessions,
+      ...pendingSessions.initiated,
+      ...pendingSessions.invited,
+      ...blockedUsers.map(
+        user =>
+          ({
+            id: `blocked-${user.id}`,
+            status: 'BLOCKED',
+            participant1: {
+              id: userId!,
+              name: '',
+              username: '',
+              email: '',
+              points: 0,
+              user_level: '',
+              roles: [],
+            },
+            participant2: user,
+            initiatedByYou: true,
+          } as any),
+      ),
+    ];
+
+    const expertSessions = allData.filter(
+      item => 'status' in item && item.participant2.roles.includes('expert'),
+    );
+    const runnerSessions = allData.filter(
+      item => 'status' in item && !item.participant2.roles.includes('expert'),
+    );
+    const blockedItems = allData.filter(item => !('status' in item));
+
     switch (activeFilter) {
       case 'ACCEPTED':
-        return acceptedSessions;
+        return [
+          {
+            title: `Expert Sessions (${
+              expertSessions.filter(s => s.status === 'ACCEPTED').length
+            })`,
+            data: expertSessions.filter(s => s.status === 'ACCEPTED'),
+          },
+          {
+            title: `Messages (${
+              runnerSessions.filter(s => s.status === 'ACCEPTED').length
+            })`,
+            data: runnerSessions.filter(s => s.status === 'ACCEPTED'),
+          },
+        ];
       case 'PENDING':
-        return [...pendingSessions.initiated, ...pendingSessions.invited];
+        return [
+          {
+            title: `Expert Sessions (${
+              expertSessions.filter(s => s.status === 'PENDING').length
+            })`,
+            data: expertSessions.filter(s => s.status === 'PENDING'),
+          },
+          {
+            title: `Messages (${
+              runnerSessions.filter(s => s.status === 'PENDING').length
+            })`,
+            data: runnerSessions.filter(s => s.status === 'PENDING'),
+          },
+        ];
       case 'BLOCKED':
-        return blockedUsers;
+        return [
+          {
+            title: `Blocked Users (${blockedItems.length})`,
+            data: blockedItems,
+          },
+        ];
       default:
         return [
-          ...acceptedSessions,
-          ...pendingSessions.initiated,
-          ...pendingSessions.invited,
-          ...blockedUsers.map(
-            user =>
-              ({
-                id: `blocked-${user.id}`,
-                status: 'BLOCKED',
-                participant1: {
-                  id: userId!,
-                  name: '',
-                  username: '',
-                  email: '',
-                  points: 0,
-                  user_level: '',
-                  roles: [],
-                },
-                participant2: user,
-                initiatedByYou: true,
-              } as any),
-          ),
+          {
+            title: `Expert Sessions (${expertSessions.length})`,
+            data: expertSessions,
+          },
+          {
+            title: `Messages (${runnerSessions.length})`,
+            data: runnerSessions,
+          },
+          {
+            title: `Blocked Users (${blockedItems.length})`,
+            data: blockedItems,
+          },
         ];
     }
   };
@@ -163,7 +218,15 @@ export default function ChatsScreen() {
 
   const handleChatPress = (session: Session) => {
     if (session.status === 'ACCEPTED') {
-      navigation.navigate('ChatsRunnerMessageScreen', {sessionId: session.id});
+      if (profile.roles.includes('expert')) {
+        navigation.navigate('ChatsExpertMessageScreen', {
+          sessionId: session.id,
+        });
+      } else {
+        navigation.navigate('ChatsRunnerMessageScreen', {
+          sessionId: session.id,
+        });
+      }
     }
   };
 
@@ -262,7 +325,7 @@ export default function ChatsScreen() {
     if (isExpert) {
       return (
         <LinearGradient
-          colors={['#FFD700', '#FFC300']}
+          colors={['#FFF9E6', '#FFF0C2']}
           start={{x: 0, y: 0}}
           end={{x: 1, y: 0}}
           style={styles.expertContainer}>
@@ -273,6 +336,16 @@ export default function ChatsScreen() {
 
     return <View style={styles.regularContainer}>{content}</View>;
   };
+
+  const renderSectionHeader = ({
+    section: {title},
+  }: {
+    section: {title: string};
+  }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionHeaderText}>{title}</Text>
+    </View>
+  );
 
   const renderLoader = () => (
     <View style={styles.contentLoaderContainer}>
@@ -381,9 +454,10 @@ export default function ChatsScreen() {
       {isLoading ? (
         renderLoader()
       ) : (
-        <FlatList
-          data={getFilteredData()}
+        <SectionList
+          sections={getFilteredSections()}
           renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
@@ -395,6 +469,7 @@ export default function ChatsScreen() {
           }
           refreshing={refreshing}
           onRefresh={fetchData}
+          stickySectionHeadersEnabled={false}
         />
       )}
     </View>
@@ -472,6 +547,17 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 16,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#EFEFF4',
+  },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#8E8E93',
+    textTransform: 'uppercase',
   },
   itemContainer: {
     flexDirection: 'row',
@@ -562,6 +648,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 4,
     borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#fffee9',
   },
   regularContainer: {
     marginHorizontal: 16,
