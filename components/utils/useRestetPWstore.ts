@@ -2,7 +2,7 @@ import {create} from 'zustand';
 import axios from 'axios';
 import Config from 'react-native-config';
 
-const MASTER_URL = Config.ENV_MASTER_URL
+const MASTER_URL = Config.ENV_MASTER_URL || Config.ENV_MASTER_URL_2
 
 interface ResetPasswordState {
   userdata: any | null;

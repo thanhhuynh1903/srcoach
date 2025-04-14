@@ -3,7 +3,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from "axios";
 import useAuthStore from "./useAuthStore";
 import Config from 'react-native-config';
 
-export const MASTER_URL = Config.ENV_MASTER_URL
+export const MASTER_URL = Config.ENV_MASTER_URL || Config.ENV_MASTER_URL_2;
 
 // Interface cho state của API store
 interface ApiState {

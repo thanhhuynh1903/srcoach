@@ -19,7 +19,7 @@ interface LoginState {
   fetchUserProfile: () => Promise<boolean>;
   setUserData: (data: any) => void;
 }
-const MASTER_URL = Config.ENV_MASTER_URL;
+const MASTER_URL = Config.ENV_MASTER_URL || Config.ENV_MASTER_URL_2;
 
 export const useLoginStore = create<LoginState>((set, get) => ({
   userdata: null,

@@ -20,7 +20,7 @@ interface RegisterState {
   verifyCode: (email: string, code: string) => Promise<void>;
   ResendCode: (email: string) => Promise<void>;
 }
-const MASTER_URL = Config.ENV_MASTER_URL;
+const MASTER_URL = Config.ENV_MASTER_URL || Config.ENV_MASTER_URL_2;
 
 export const useRegisterStore = create<RegisterState>((set, get) => ({
   dataUser: null,

@@ -8,13 +8,21 @@ import {
   ScrollView,
   SafeAreaView,
   ActivityIndicator,
+  Dimensions
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 
 const filters = ['All', 'High', 'Moderate', 'Normal'];
+const { width, height } = Dimensions.get('window');
+const guidelineBaseWidth = 350;
+const guidelineBaseHeight = 680;
 
+const scale = (size: number) => (width / guidelineBaseWidth) * size;
+const verticalScale = (size: number) => (height / guidelineBaseHeight) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
 const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,11 +91,11 @@ const RiskWarningListScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity>
-            <Icon name="menu" size={24} color="#000" />
+            <Icon name="menu" size={moderateScale(24)} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Risk Analysis</Text>
           <TouchableOpacity>
-            <Icon name="plus" size={24} color="#2563EB" />
+            <Icon name="plus" size={moderateScale(24)}  color="#2563EB" />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
@@ -130,17 +138,17 @@ const RiskWarningListScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity>
-          <Icon name="menu" size={24} color="#000" />
+          <Icon name="menu" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Health Risk Analysis</Text>
         <TouchableOpacity>
-          <Icon name="plus" size={24} color="#2563EB" />
+          <Icon name="plus" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Icon name="search" size={20} color="#64748B" />
+        <Icon name="search" size={moderateScale(20)} color="#64748B" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search health alerts"
@@ -150,7 +158,7 @@ const RiskWarningListScreen = () => {
         />
         {searchQuery ? (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Icon name="close-circle" size={20} color="#64748B" />
+            <Icon name="close-circle" size={moderateScale(20)}  color="#64748B" />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -238,7 +246,7 @@ const RiskWarningListScreen = () => {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Icon name="search-outline" size={48} color="#CBD5E1" />
+            <Icon name="search-outline" size={moderateScale(48)} color="#CBD5E1" />
             <Text style={styles.emptyStateTitle}>No results found</Text>
             <Text style={styles.emptyStateDescription}>
               Try adjusting your search or filter to find what you're looking
@@ -260,60 +268,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(12),
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
     color: '#000000',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    marginHorizontal: moderateScale(16),
+    marginVertical: verticalScale(12),
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(10),
+    borderRadius: moderateScale(12),
     backgroundColor: '#F8FAFC',
-    gap: 8,
+    gap: moderateScale(8),
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#000000',
     padding: 0,
   },
   filtersScrollView: {
-    maxHeight: 40,
+    maxHeight: verticalScale(40),
   },
   filtersContainer: {
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 16,
+    paddingHorizontal: moderateScale(16),
+    gap: moderateScale(12),
+    marginBottom: verticalScale(16),
     flexDirection: 'row',
   },
   filterTab: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 20,
+    borderRadius: moderateScale(20),
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    height: 36,
+    paddingHorizontal: moderateScale(16),
+    height: verticalScale(36),
   },
   filterTabActive: {
     backgroundColor: '#2563EB',
     shadowColor: '#2563EB',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(2),
     },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowRadius: moderateScale(4),
     elevation: 3,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#64748B',
     fontWeight: '500',
   },
@@ -323,13 +331,13 @@ const styles = StyleSheet.create({
   },
   riskList: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: moderateScale(16),
   },
   riskItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: moderateScale(12),
+    padding: moderateScale(16),
+    marginBottom: verticalScale(12),
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
@@ -337,25 +345,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   riskTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
     color: '#000000',
     flex: 1,
-    marginRight: 12,
+    marginRight: moderateScale(12),
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
   },
   riskDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#64748B',
-    marginBottom: 12,
-    lineHeight: 20,
+    marginBottom: verticalScale(12),
+    lineHeight: moderateScale(20),
   },
   riskFooter: {
     flexDirection: 'row',
@@ -363,48 +371,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   date: {
-    fontSize: 14,
+    fontSize: moderateScale(10),
     color: '#64748B',
   },
   riskStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: moderateScale(8),
   },
   riskLevel: {
-    fontSize: 14,
+    fontSize: moderateScale(10),
     fontWeight: '500',
   },
   score: {
-    fontSize: 14,
+    fontSize: moderateScale(10),
     color: '#FFFFFF',
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  completedStatus: {
-    fontSize: 14,
-    color: '#64748B',
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(2),
+    borderRadius: moderateScale(12),
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
+    paddingVertical: verticalScale(60),
+    paddingHorizontal: moderateScale(20),
   },
   emptyStateTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '600',
     color: '#0F172A',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
   },
   emptyStateDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: moderateScale(20),
   },
   loadingContainer: {
     flex: 1,
@@ -412,16 +416,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(16),
     color: '#64748B',
   },
   retryButton: {
-    marginTop: 16,
+    marginTop: verticalScale(16),
     backgroundColor: '#2563EB',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: moderateScale(24),
+    paddingVertical: verticalScale(12),
+    borderRadius: moderateScale(8),
   },
   retryButtonText: {
     color: '#FFFFFF',

@@ -151,14 +151,14 @@ const LoginScreen: React.FC<{
           <Text style={styles.formHeaderText}>Please login to continue</Text>
           <Input
             icon={<Icon name="mail-outline" size={24} color="black" />}
-            placeholder="Enter your email or username"
+            placeholder="Enter email or username"
             onChangeText={setEmail}
             value={email}
             keyboardType="email-address"
           />
           <Input
             icon={<Icon name="lock-closed-outline" size={24} color="black" />}
-            placeholder="Enter your password"
+            placeholder="Enter password"
             onChangeText={setPassword}
             value={password}
             isPassword
