@@ -53,11 +53,11 @@ import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen'
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
 import ChatsScreen from '../screens/ChatsScreen/ChatsScreen';
 import ExerciseRecordsScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsScreen';
-import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsUserSearchScreen';
 import ChatsUserInviRunnerScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviRunnerScreen';
 import ChatsUserInviExpertScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviExpertScreen';
 import ChatsRunnerMessageScreen from '../screens/ChatsScreen/ChatsRunnerPOV/ChatsRunnerMessageScreen';
 import ChatsExpertMessageScreen from '../screens/ChatsScreen/ChatsExpertPOV/ChatsExpertMessageScreen';
+import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsUserSearchScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
