@@ -14,7 +14,7 @@ import {View, ActivityIndicator} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useEffect, useState} from 'react';
 import {startSyncData} from './components/utils/utils_healthconnect';
-import {SocketProvider} from './components/contexts/SocketContext';
+import {WebSocketProvider} from './components/contexts/WebsocketContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -144,27 +144,25 @@ const App = () => {
 
   return (
     <>
-      <SocketProvider>
-        <NavigationContainer>
-          <Stack.Navigator
-            initialRouteName={userdata ? 'HomeTabs' : 'WelcomeScreen'}>
-            {stackScreens.map((screen: any) => (
-              <Stack.Screen
-                key={screen.name}
-                name={screen.name}
-                component={screen.component}
-                options={{headerShown: false}}
-              />
-            ))}
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName={userdata ? 'HomeTabs' : 'WelcomeScreen'}>
+          {stackScreens.map((screen: any) => (
             <Stack.Screen
-              name="HomeTabs"
-              component={HomeTabs}
+              key={screen.name}
+              name={screen.name}
+              component={screen.component}
               options={{headerShown: false}}
             />
-          </Stack.Navigator>
-        </NavigationContainer>
-        <Toast />
-      </SocketProvider>
+          ))}
+          <Stack.Screen
+            name="HomeTabs"
+            component={HomeTabs}
+            options={{headerShown: false}}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <Toast />
     </>
   );
 };
