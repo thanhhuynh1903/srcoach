@@ -1,7 +1,8 @@
 import {create} from 'zustand';
 import axios from 'axios';
+import Config from 'react-native-config';
 
-const MASTER_URL = 'https://xavia.pro/api';
+const MASTER_URL = Config.ENV_MASTER_URL
 
 interface ResetPasswordState {
   userdata: any | null;

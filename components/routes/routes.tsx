@@ -3,7 +3,6 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import WelcomeInfoScreen from '../screens/WelcomeInfoScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
-import RecordScreen from '../screens/RecordScreen';
 import SearchResultsScreen from '../screens/SearchScreenResult';
 import SettingsScreen from '../screens/SettingsScreen';
 import ErrorScreen from '../screens/ErrorScreen';
@@ -54,6 +53,11 @@ import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen'
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
 import ChatsScreen from '../screens/ChatsScreen/ChatsScreen';
 import ExerciseRecordsScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsScreen';
+import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsUserSearchScreen';
+import ChatsUserInviRunnerScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviRunnerScreen';
+import ChatsUserInviExpertScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviExpertScreen';
+import ChatsRunnerMessageScreen from '../screens/ChatsScreen/ChatsRunnerPOV/ChatsRunnerMessageScreen';
+import ChatsExpertMessageScreen from '../screens/ChatsScreen/ChatsExpertPOV/ChatsExpertMessageScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -104,6 +108,13 @@ export const stackScreens = [
   {name: 'CommunityPostDetailScreen', component: CommunityPostDetailScreen},
   {name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen},
   {name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen},
+
+  //Chats Screen
+  { name: 'ChatsUserSearchScreen', component: ChatsUserSearchScreen},
+  { name: 'ChatsUserInviRunnerScreen', component: ChatsUserInviRunnerScreen},
+  { name: 'ChatsUserInviExpertScreen', component: ChatsUserInviExpertScreen},
+  { name: 'ChatsRunnerMessageScreen', component: ChatsRunnerMessageScreen},
+  { name: 'ChatsExpertMessageScreen', component: ChatsExpertMessageScreen},
 
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},

@@ -23,14 +23,16 @@ import {
   fetchExerciseSessionRecords,
   initializeHealthConnect,
 } from '../utils/utils_healthconnect';
-import ContentLoader, { Rect } from 'react-content-loader/native';
+import ContentLoader, {Rect} from 'react-content-loader/native';
 import {format, parseISO} from 'date-fns';
 
 const {width} = Dimensions.get('window');
 
 export default function RecordScreen() {
   const navigate = useNavigation();
-  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
+  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,18 +46,18 @@ export default function RecordScreen() {
     sessions.forEach(session => {
       const startDate = parseISO(session.startTime);
       const dateStr = format(startDate, 'EEE, MMM d');
-      
+
       if (!sessionsByDate[dateStr]) {
         sessionsByDate[dateStr] = [];
       }
 
       const endDate = parseISO(session.endTime);
-      const duration = session.duration_minutes || Math.round(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60),
-      );
+      const duration =
+        session.duration_minutes ||
+        Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
 
-      const distanceInMeters = session.total_distance || 
-        Math.round((2 + Math.random() * 8) * 1000);
+      const distanceInMeters =
+        session.total_distance || Math.round((2 + Math.random() * 8) * 1000);
 
       const timeStr = format(startDate, 'HH:mm');
 
@@ -64,7 +66,8 @@ export default function RecordScreen() {
         type: getNameFromExerciseType(session.exerciseType),
         duration,
         distance: distanceInMeters,
-        steps: session.total_steps || Math.round(distanceInMeters / 1000 * 1300),
+        steps:
+          session.total_steps || Math.round((distanceInMeters / 1000) * 1300),
         id: session.id,
         clientRecordId: session.clientRecordId,
         exerciseType: session.exerciseType,
@@ -91,8 +94,9 @@ export default function RecordScreen() {
           steps: totalSteps,
           distance: totalDistance,
         },
-        activities: activities.sort((a, b) => 
-          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+        activities: activities.sort(
+          (a, b) =>
+            new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
         ),
       };
     });
@@ -106,7 +110,7 @@ export default function RecordScreen() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const isInitialized = await initializeHealthConnect();
       // if (!isInitialized) {
       //   throw new Error('Health Connect initialization failed');
@@ -114,11 +118,13 @@ export default function RecordScreen() {
 
       const data = await fetchExerciseSessionRecords(startDate, endDate);
       console.log('Fetched exercise sessions:', data);
-      
+
       setExerciseSessions(data);
     } catch (error) {
       console.error('Error reading health data:', error);
-      setError('Failed to load health data. Please check Health Connect permissions.');
+      setError(
+        'Failed to load health data. Please check Health Connect permissions.',
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -140,14 +146,13 @@ export default function RecordScreen() {
     <View style={styles.loadingContainer}>
       {[...Array(3)].map((_, i) => (
         <View key={i} style={styles.skeletonDayContainer}>
-          <ContentLoader 
+          <ContentLoader
             speed={1}
             width={width - 32}
             height={200}
             viewBox={`0 0 ${width - 32} 200`}
             backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-          >
+            foregroundColor="#ecebeb">
             <Rect x="0" y="0" rx="4" ry="4" width="150" height="24" />
             <Rect x={width - 182} y="0" rx="4" ry="4" width="150" height="24" />
             <Rect x="0" y="40" rx="4" ry="4" width={width - 32} height="20" />
@@ -166,10 +171,7 @@ export default function RecordScreen() {
       <Icon name="warning" size={48} color="#FF5252" />
       <Text style={styles.emptyText}>Error loading data</Text>
       <Text style={styles.emptySubtext}>{error}</Text>
-      <TouchableOpacity 
-        style={styles.retryButton}
-        onPress={readSampleData}
-      >
+      <TouchableOpacity style={styles.retryButton} onPress={readSampleData}>
         <Text style={styles.retryButtonText}>Try Again</Text>
       </TouchableOpacity>
     </View>
@@ -188,7 +190,7 @@ export default function RecordScreen() {
   return (
     <ScreenWrapper bg={'#FFFFFF'}>
       <HeaderBar />
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         refreshControl={
           <RefreshControl
@@ -197,76 +199,74 @@ export default function RecordScreen() {
             colors={['#1E3A8A']}
             tintColor="#1E3A8A"
           />
-        }
-      >
-        {loading ? (
-          renderLoadingSkeleton()
-        ) : error ? (
-          renderErrorState()
-        ) : exerciseData.length > 0 ? (
-          exerciseData.map((day, dayIndex) => (
-            <View key={dayIndex} style={styles.dayContainer}>
-              <View style={styles.dayHeader}>
-                <Text style={styles.dateText}>{day.date}</Text>
-                <View style={styles.metricsContainer}>
-                  <View style={styles.metricItem}>
-                    <Icon
-                      name="footsteps"
-                      size={18}
-                      color="#4285F4"
-                      style={styles.metricIcon}
-                    />
-                    <Text style={styles.metricText}>
-                      {day.metrics.steps.toLocaleString()} steps
-                    </Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Icon
-                      name="map"
-                      size={18}
-                      color="#0F9D58"
-                      style={styles.metricIcon}
-                    />
-                    <Text style={styles.metricText}>
-                      {(day.metrics.distance / 1000).toFixed(1)} km
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {day.activities.map((activity, actIndex) => (
-                <View key={actIndex} style={styles.activityContainer}>
-                  <TouchableOpacity
-                    style={styles.activityRow}
-                    onPress={() => {
-                      navigate.navigate('RecordDetailScreen' as never, {
-                        id: activity.id,
-                        clientRecordId: activity.clientRecordId,
-                      });
-                    }}>
-                    <Text style={styles.timeText}>{activity.time}</Text>
-                    <View style={styles.iconContainer}>
+        }>
+        {loading
+          ? renderLoadingSkeleton()
+          : error
+          ? renderErrorState()
+          : exerciseData.length > 0
+          ? exerciseData.map((day, dayIndex) => (
+              <View key={dayIndex} style={styles.dayContainer}>
+                <View style={styles.dayHeader}>
+                  <Text style={styles.dateText}>{day.date}</Text>
+                  <View style={styles.metricsContainer}>
+                    <View style={styles.metricItem}>
                       <Icon
-                        name={getIconFromExerciseType(activity.exerciseType)}
-                        size={32}
-                        color="#052658"
-                        style={styles.runIcon}
+                        name="footsteps"
+                        size={18}
+                        color="#4285F4"
+                        style={styles.metricIcon}
                       />
-                    </View>
-                    <View style={styles.activityDetails}>
-                      <Text style={styles.activityType}>{activity.type}</Text>
-                      <Text style={styles.activityMetrics}>
-                        {activity.duration} min • {(activity.distance / 1000).toFixed(1)} km
+                      <Text style={styles.metricText}>
+                        {day.metrics.steps.toLocaleString()} steps
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                    <View style={styles.metricItem}>
+                      <Icon
+                        name="map"
+                        size={18}
+                        color="#0F9D58"
+                        style={styles.metricIcon}
+                      />
+                      <Text style={styles.metricText}>
+                        {(day.metrics.distance / 1000).toFixed(1)} km
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              ))}
-            </View>
-          ))
-        ) : (
-          renderEmptyState()
-        )}
+
+                {day.activities.map((activity, actIndex) => (
+                  <View key={actIndex} style={styles.activityContainer}>
+                    <TouchableOpacity
+                      style={styles.activityRow}
+                      onPress={() => {
+                        navigate.navigate('RecordDetailScreen' as never, {
+                          id: activity.id,
+                          clientRecordId: activity.clientRecordId,
+                        });
+                      }}>
+                      <Text style={styles.timeText}>{activity.time}</Text>
+                      <View style={styles.iconContainer}>
+                        <Icon
+                          name={getIconFromExerciseType(activity.exerciseType)}
+                          size={32}
+                          color="#052658"
+                          style={styles.runIcon}
+                        />
+                      </View>
+                      <View style={styles.activityDetails}>
+                        <Text style={styles.activityType}>{activity.type}</Text>
+                        <Text style={styles.activityMetrics}>
+                          {activity.duration} min •{' '}
+                          {(activity.distance / 1000).toFixed(1)} km
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ))
+          : renderEmptyState()}
       </ScrollView>
     </ScreenWrapper>
   );

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import Config from 'react-native-config';
 
 interface RegisterState {
   dataUser: any | null;
@@ -19,7 +20,7 @@ interface RegisterState {
   verifyCode: (email: string, code: string) => Promise<void>;
   ResendCode: (email: string) => Promise<void>;
 }
-const MASTER_URL = "https://xavia.pro/api";
+const MASTER_URL = Config.ENV_MASTER_URL;
 
 export const useRegisterStore = create<RegisterState>((set, get) => ({
   dataUser: null,
