@@ -175,7 +175,7 @@ export const CRMessageItemNormal = ({
   return (
     <>
       <TouchableOpacity 
-        activeOpacity={1}
+        activeOpacity={.8}
         onLongPress={handleLongPress}
         delayLongPress={300}
       >
