@@ -1,4 +1,6 @@
-import React, {useState, useEffect} from 'react';
+'use client';
+
+import {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -8,21 +10,29 @@ import {
   SafeAreaView,
   StatusBar,
   FlatList,
-  ScrollView,
+  Animated,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {PieChart} from 'react-native-gifted-charts';
 import BackButton from '../BackButton';
 import useUserPointsStore from '../utils/useUserPointsStore';
 import {useLoginStore} from '../utils/useLoginStore';
-import { capitalizeFirstLetter } from '../utils/utils_format';
+import {capitalizeFirstLetter} from '../utils/utils_format';
+
+const {width} = Dimensions.get('window');
 
 const LeaderBoardScreen = ({navigation}) => {
   const [activeTab, setActiveTab] = useState('All Time');
   const [profileRank, setprofileRank] = useState(0);
+  const [showFloatingCard, setShowFloatingCard] = useState(false);
   const {pointsData, leaderboard, isLoading, getMyPoints, getLeaderboard} =
     useUserPointsStore();
   const {profile} = useLoginStore();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(100)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     getMyPoints();
@@ -37,8 +47,39 @@ const LeaderBoardScreen = ({navigation}) => {
   }, [leaderboard, profile]);
 
   useEffect(() => {
-    console.log(pointsData)
+    console.log(pointsData);
   }, [pointsData, profile]);
+
+  // Set up scroll listener to show/hide floating card
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({value}) => {
+      // Show floating card when scrolled past a certain point
+      const threshold = 500;
+      const shouldShow = value > threshold;
+
+      if (shouldShow !== showFloatingCard) {
+        setShowFloatingCard(shouldShow);
+
+        // Animate the floating card
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: shouldShow ? 0 : 100,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: shouldShow ? 1 : 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    });
+
+    return () => {
+      scrollY.removeListener(listenerId);
+    };
+  }, [showFloatingCard]);
 
   // Circular progress component with pie chart
   const CircularProgress = ({percentage}) => {
@@ -71,7 +112,7 @@ const LeaderBoardScreen = ({navigation}) => {
   };
 
   // Render rank indicator with cool icons
-  const renderRankIndicator = (index: number) => {
+  const renderRankIndicator = index => {
     const rank = index + 1;
     if (rank === 1) {
       return <Icon name="trophy" size={24} color="#F59E0B" />;
@@ -118,7 +159,9 @@ const LeaderBoardScreen = ({navigation}) => {
         <CircularProgress
           percentage={Math.min(
             100,
-            Math.floor((item.totalPoints / (leaderboard[0]?.totalPoints || 1)) * 100),
+            Math.floor(
+              (item.totalPoints / (leaderboard[0]?.totalPoints || 1)) * 100,
+            ),
           )}
         />
       </View>
@@ -126,7 +169,7 @@ const LeaderBoardScreen = ({navigation}) => {
   };
 
   // Time filter tabs with smooth animation
-  const renderTab = (tab: string) => (
+  const renderTab = tab => (
     <TouchableOpacity
       key={tab}
       style={[styles.tab, activeTab === tab && styles.activeTab]}
@@ -136,6 +179,51 @@ const LeaderBoardScreen = ({navigation}) => {
       </Text>
     </TouchableOpacity>
   );
+
+  // Floating position card component
+  const FloatingPositionCard = () => {
+    if (!profile) return null;
+
+    return (
+      <Animated.View
+        style={[
+          styles.floatingCard,
+          {
+            transform: [{translateY}],
+            opacity,
+          },
+        ]}>
+        <Text style={styles.floatingCardTitle}>Your Position</Text>
+        <View style={styles.floatingCardContent}>
+          <Text style={styles.floatingCardRank}>{profileRank}</Text>
+          <Image
+            source={{
+              uri:
+                profile.avatar ||
+                'https://randomuser.me/api/portraits/men/1.jpg',
+            }}
+            style={styles.floatingCardAvatar}
+          />
+          <View style={styles.floatingCardUserInfo}>
+            <Text style={styles.floatingCardUserName}>You</Text>
+            <View style={styles.floatingCardAchievements}>
+              <Icon name="trophy" size={14} color="#F59E0B" />
+              <Text style={styles.userStats}>
+                {pointsData?.points?.toLocaleString() || '0'} pts
+              </Text>
+            </View>
+          </View>
+          <View>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>
+                {capitalizeFirstLetter(pointsData?.level) || 'Unknown'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -151,9 +239,14 @@ const LeaderBoardScreen = ({navigation}) => {
         <Text style={styles.headerTitle}>Leaderboard</Text>
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
         style={styles.scrollView}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{nativeEvent: {contentOffset: {y: scrollY}}}],
+          {useNativeDriver: true},
+        )}
+        scrollEventThrottle={16}>
         <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
             <Image
@@ -192,7 +285,8 @@ const LeaderBoardScreen = ({navigation}) => {
                 <Icon name="star" size={20} color="#7E3AF2" />
               </View>
               <Text style={styles.statValue}>
-                Level: {capitalizeFirstLetter(pointsData?.level || '') || 'Unknown'}
+                Level:{' '}
+                {capitalizeFirstLetter(pointsData?.level || '') || 'Unknown'}
               </Text>
             </View>
           </View>
@@ -207,7 +301,10 @@ const LeaderBoardScreen = ({navigation}) => {
                     width: `${Math.min(
                       100,
                       Math.floor(
-                        (pointsData?.points / (pointsData?.points + pointsData?.pointsToNextLevel || 1)) * 100,
+                        (pointsData?.points /
+                          (pointsData?.points + pointsData?.pointsToNextLevel ||
+                            1)) *
+                          100,
                       ),
                     )}%`,
                   },
@@ -215,7 +312,7 @@ const LeaderBoardScreen = ({navigation}) => {
               />
             </View>
             <Text style={styles.progressLabel}>
-              {pointsData?.pointsToNextLevel|| 0} pts to next level
+              {pointsData?.pointsToNextLevel || 0} pts to next level
             </Text>
           </View>
         </View>
@@ -243,41 +340,12 @@ const LeaderBoardScreen = ({navigation}) => {
             />
           )}
         </View>
+        {/* Add extra space at the bottom for the floating card */}
+        <View style={{height: 80}} />
+      </Animated.ScrollView>
 
-        {/* Current User Position */}
-        {profile && (
-          <View style={styles.yourPositionContainer}>
-            <Text style={styles.yourPositionTitle}>Your Position</Text>
-            <View style={styles.yourPositionContent}>
-              <View style={styles.yourPositionLeft}>
-                <Text style={styles.yourRank}>{profileRank}</Text>
-                <Image
-                  source={{
-                    uri:
-                      profile.avatar ||
-                      'https://randomuser.me/api/portraits/men/1.jpg',
-                  }}
-                  style={styles.avatar}
-                />
-                <View style={styles.userInfo}>
-                  <Text style={styles.userName}>You</Text>
-                  <View>
-                    <Icon name="trophy" size={14} color="#F59E0B" />
-                    <Text style={styles.userStats}>
-                      {pointsData?.points?.toLocaleString() || '0'} pts
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>
-                  {capitalizeFirstLetter(pointsData?.level) || 'Unknown'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-      </ScrollView>
+      {/* Floating position card */}
+      <FloatingPositionCard />
     </SafeAreaView>
   );
 };
@@ -307,6 +375,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
+    marginLeft: 12,
   },
   profileCard: {
     backgroundColor: '#7E3AF2',
@@ -438,6 +507,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    marginBottom: 50,
   },
   leaderboardItem: {
     flexDirection: 'row',
@@ -576,6 +646,72 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6B7280',
     padding: 16,
+  },
+
+  // Floating card styles
+  floatingCard: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 20 : 16,
+    left: 16,
+    right: 16,
+    backgroundColor: '#F0F7FF',
+    borderRadius: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 999,
+  },
+  floatingCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4F46E5',
+    marginBottom: 12,
+  },
+  floatingCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  floatingCardRank: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginRight: 12,
+    width: 24,
+    textAlign: 'center',
+  },
+  floatingCardAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  floatingCardUserInfo: {
+    flex: 1,
+  },
+  floatingCardUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  floatingCardAchievements: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  floatingCardAchievementsText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  floatingCardPoints: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4F46E5',
   },
 });
 

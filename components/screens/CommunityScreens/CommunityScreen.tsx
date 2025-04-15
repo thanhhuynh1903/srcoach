@@ -484,7 +484,7 @@ const CommunityScreen = () => {
             style={styles.iconButton}
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
             <Icon
-              name="nuclear-outline"
+              name="rocket-outline"
               size={24}
               color={theme.colors.primary}
             />
