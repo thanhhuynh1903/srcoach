@@ -18,7 +18,7 @@ interface DaySchedule {
 }
 
 interface ScheduleCardProps {
-  id;
+  id: string;
   title: string;
   description: string;
   startDate: string;
@@ -27,7 +27,7 @@ interface ScheduleCardProps {
   alarmEnabled: boolean;
   isExpertChoice: boolean;
   daySchedules?: DaySchedule[]; // Added daySchedules prop
-  status;
+  status :  string;
 }
 
 const EnhancedScheduleCard = ({
@@ -104,9 +104,6 @@ const EnhancedScheduleCard = ({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.startedText}>Started {startDate}</Text>
-        {isExpertChoice && (
-          <Text style={styles.expertChoiceText}>Expert's Choice</Text>
-        )}
         <View style={[styles.statusBadge, {backgroundColor: getStatusColor()}]}>
           <Text style={styles.statusText}>{status}</Text>
         </View>
@@ -148,8 +145,26 @@ const EnhancedScheduleCard = ({
               <View key={index} style={styles.workoutItem}>
                 {/* Time */}
                 <View style={styles.timeContainer}>
-                  <Icon name="time-outline" size={18} color="#666" />
-                  <Text style={styles.timeText}>{workout.time}</Text>
+                  <View style={styles.timeChildContainer}>
+                    <Icon name="time-outline" size={18} color="#666" />
+                    <Text style={styles.timeText}>{workout.time}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.workoutStatusBadge,
+                      {
+                        backgroundColor:
+                          workout.status === 'COMPLETED'
+                            ? '#22C55E'
+                            : workout.status === 'IN_PROGRESS'
+                            ? '#3B82F6'
+                            : '#64748B',
+                      },
+                    ]}>
+                    <Text style={styles.workoutStatusText}>
+                      {workout.status}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Session Name */}
@@ -161,22 +176,6 @@ const EnhancedScheduleCard = ({
                     marginBottom: 6,
                   }}>
                   <Text style={styles.sessionName}>{workout.name}</Text>
-                  <View
-                    style={[
-                      styles.workoutStatusBadge,
-                      {
-                        backgroundColor:
-                          workout.status === 'COMPLETED'
-                            ? '#22C55E'
-                            : workout.status === 'IN_PROGRESS'
-                            ? '#3B82F6'
-                            : '#F97316',
-                      },
-                    ]}>
-                    <Text style={styles.workoutStatusText}>
-                      {workout.status}
-                    </Text>
-                  </View>
                 </View>
                 {/* Stats */}
                 <View style={styles.statsContainer}>
@@ -211,9 +210,11 @@ const EnhancedScheduleCard = ({
       {/* Card Footer */}
       <View style={styles.cardFooter}>
         <TouchableOpacity>
-          <Text style={[styles.viewDetailsText, {color: '#fff'}]}>
-            View Details
-          </Text>
+          {isExpertChoice ? (
+            <Text style={styles.expertChoiceText}>Expert's Choice</Text>
+          ) : (
+            <Text style={styles.expertChoiceText}>Self's Choice</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.alarmContainer}>
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     backgroundColor: '#F4F0FF',
-    fontSize: 12,
+    fontSize: 15,
     color: '#052658',
     fontWeight: '500',
   },
@@ -362,6 +363,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   timeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  timeChildContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,

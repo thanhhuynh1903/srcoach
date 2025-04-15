@@ -100,11 +100,15 @@ const useScheduleStore = create<ScheduleState>()(
 
         try {
           // Đảm bảo dữ liệu có định dạng đúng
-          const payload = {
+          const payload = scheduleData?.user_id ? {
             title: scheduleData.title || '',
             description: scheduleData.description || '',
-            user_id: null, // Sẽ được cập nhật bởi backend
-            days: scheduleData.days || [],
+            user_id: scheduleData.user_id, // Sẽ được cập nhật bởi backend
+            days: scheduleData.days || [], 
+          } : {
+            title: scheduleData.title || '',
+            description: scheduleData.description || '',
+            days: scheduleData.days || [],             
           };
           console.log('Payload tạo lịch tập:', payload);
 

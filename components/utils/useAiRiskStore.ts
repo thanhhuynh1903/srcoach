@@ -11,6 +11,12 @@ interface HealthAlert {
   created_at: string;
   risk_factors: RiskFactor[];
   recommendations: string[];
+  AIHealthAlertType: {
+    id: string;
+    type_name: string;
+    description: string;
+  }
+
 }
 
 // Định nghĩa interface cho chi tiết cảnh báo sức khỏe
@@ -82,12 +88,14 @@ interface AiRiskState {
   selectedHealthAlert: HealthAlertDetail | null;
   isLoading: boolean;
   isLoadingAlerts: boolean;
+  isSavingResult: boolean;
   isLoadingAlertDetail: boolean;
   error: string | null;
   message: string | null;
   saveFullAiResult: (activityData: ActivityData) => Promise<boolean>;
   evaluateActivityHealth: (activityData: ActivityData) => Promise<void>;
   fetchHealthAlerts: () => Promise<void>;
+  deleteHealthAlert: (alertId: string) => Promise<boolean>;
   fetchHealthAlertDetail: (id: string) => Promise<void>;
   clearAssessment: () => void;
   clearError: () => void;
@@ -272,6 +280,44 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
       set({
         error: error.message || 'Failed to save AI assessment result',
         isSavingResult: false
+      });
+      return false;
+    }
+  },
+  deleteHealthAlert: async (alertId: string) => {
+    try {
+      set({isLoading: true, });
+
+      // Sử dụng PATCH để soft delete thay vì xóa hoàn toàn
+      const response = await api.patchData(
+        `/ai/ai-health-alert/${alertId}/soft-delete`,
+      );
+      console.log('Delete health alert response:', response);
+
+      if (response.status === 'success') {
+        // Cập nhật danh sách cảnh báo sau khi xóa thành công
+        await get().fetchHealthAlerts(); // Tải lại toàn bộ danh sách
+
+        set({
+          isLoading: false,
+          message: 'Health alert deleted successfully',
+        });
+        return true;
+      } else {
+        set({
+          message: response.message || 'Failed to delete health alert',
+          isLoading: false,
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting health alert:', error);
+      set({
+        message:
+          error instanceof Error
+            ? error.message
+            : 'An unknown error occurred while deleting health alert',
+        isLoading: false,
       });
       return false;
     }
