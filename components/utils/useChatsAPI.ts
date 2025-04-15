@@ -362,3 +362,34 @@ export const getUserInfo = async (userId: any): Promise<any> => {
     };
   }
 };
+
+export const getAllMessages = async (query: any): Promise<any> => {
+  try {
+    const response = await api.get(
+      `/chats/search/all-messages?query=${encodeURIComponent(query)}`,
+    );
+    return response.data;
+  } catch (error: any) {
+    return {
+      status: false,
+      message: error.response?.data?.message || 'Failed to get all messages',
+      data: null,
+    };
+  }
+};
+
+export const getSessionMessages = async (sessionId: any, query: any): Promise<any> => {
+  try {
+    const response = await api.get(
+      `/chats/search/session-messages/${sessionId}?query=${encodeURIComponent(query)}`,
+    );
+    return response.data;
+  } catch (error: any) {
+    return {
+      status: false,
+      message: error.response?.data?.message || 'Failed to get session messages',
+      data: null,
+    };
+  }
+};
+

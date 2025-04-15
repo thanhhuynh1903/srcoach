@@ -408,7 +408,6 @@ export default function ChatsScreen() {
         </View>
       </View>
 
-      {/* Search Bar - Always visible */}
       <View style={styles.searchContainer}>
         <Icon
           name="search"
@@ -421,12 +420,16 @@ export default function ChatsScreen() {
           placeholder="Search chats..."
           placeholderTextColor="#8E8E93"
         />
-        <Icon
-          name="options"
-          size={20}
-          color="#007AFF"
-          style={styles.searchButton}
-        />
+        <TouchableOpacity
+          style={[styles.searchButton, { backgroundColor: theme.colors.primaryDark }]}
+          onPress={() => navigation.navigate('ChatsSearchAllMessagesScreen')}
+        >
+          <Icon
+            name="search-outline"
+            size={20}
+            color="#FFF"
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Filter Chips - Always visible */}
@@ -531,7 +534,9 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   searchButton: {
+    padding: 8,
     marginLeft: 8,
+    borderRadius: 10,
   },
   filterContainer: {
     flexDirection: 'row',
