@@ -305,8 +305,7 @@ const CommunityScreen = () => {
       const focusHandler = () => {
         onRefresh();
       };
-      return () => {
-      };
+      return () => {};
     }, [onRefresh]),
   );
 
@@ -383,7 +382,7 @@ const CommunityScreen = () => {
   );
 
   const renderPostsContent = () => {
-    if (isLoading && localPosts.length === 0 || refreshing) {
+    if ((isLoading && localPosts.length === 0) || refreshing) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -460,14 +459,21 @@ const CommunityScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={{flex: 1, flexDirection: 'row', alignItems: 'center'}}>
+        <Icon name="fitness" size={24} color={theme.colors.primaryDark} />
         <Text style={styles.title}>Community</Text>
+        </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate('SearchScreen' as never)}>
             <Icon name="search" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() =>
+              navigation.navigate('ManageNotificationsScreen' as never)
+            }>
             <Icon
               name="notifications-outline"
               size={24}
@@ -601,7 +607,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  title: {fontSize: 24, fontWeight: 'bold'},
+  title: {fontSize: 24, fontWeight: 'bold',marginHorizontal: 10},
   headerIcons: {flexDirection: 'row', alignItems: 'center'},
   iconButton: {marginLeft: 16},
   searchContainer: {

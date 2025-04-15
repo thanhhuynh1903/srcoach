@@ -45,7 +45,7 @@ const HomeTabs = () => {
               iconName = focused ? 'home' : 'home-outline';
               break;
             case 'Records':
-              iconName = focused ? 'add-circle' : 'add-circle-outline';
+              iconName = focused ? 'pulse' : 'pulse-outline';
               break;
             case 'Risk':
               iconName = focused ? 'warning' : 'warning-outline';

@@ -14,7 +14,7 @@ import {
 import Icon from "@react-native-vector-icons/ionicons"
 import { useNavigation } from "@react-navigation/native"
 import useAiRiskStore from "../utils/useAiRiskStore"
-
+import { theme } from "../contants/theme"
 const filters = ["All", "High", "Moderate", "Normal"]
 const { width, height } = Dimensions.get("window")
 const guidelineBaseWidth = 350
@@ -166,13 +166,15 @@ const RiskWarningListScreen = () => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
-          <Icon name="menu" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Health Risk Analysis</Text>
-        <TouchableOpacity>
-          <Icon name="plus" size={24} color="#FFF" />
-        </TouchableOpacity>
+      <View style={styles.headerLeft}>
+          <Icon name="warning" size={24} color={theme.colors.primaryDark} />
+          <Text style={styles.headerTitle}>Risk analysis</Text>
+          <TouchableOpacity
+            onPress={() => setShowInfoDialog(true)}
+            style={styles.infoButton}>
+         
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -292,10 +294,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(12),
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: "600",
-    color: "#000000",
+    fontSize: 20,
+    fontWeight: '600',
+    marginLeft: 10,
+    color: '#000',
+  },
+  infoButton: {
+    marginLeft: 8,
   },
   searchContainer: {
     flexDirection: "row",

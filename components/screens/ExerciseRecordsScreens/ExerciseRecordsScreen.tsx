@@ -221,7 +221,7 @@ export default function ExerciseRecordsScreen() {
     <ScreenWrapper bg={'#FFFFFF'}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Icon name="fitness" size={24} color={theme.colors.primaryDark} />
+          <Icon name="pulse" size={24} color={theme.colors.primaryDark} />
           <Text style={styles.headerTitle}>Run Records</Text>
           <TouchableOpacity
             onPress={() => setShowInfoDialog(true)}
