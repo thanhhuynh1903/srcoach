@@ -101,7 +101,7 @@ export const acceptSession = async (sessionId: any): Promise<any> => {
 };
 
 // Reject/archive a session
-export const rejectOrArchiveSession = async (sessionId: any): Promise<any> => {
+export const rejectSession = async (sessionId: any): Promise<any> => {
   try {
     const response = await api.put(`/chats/sessions/${sessionId}/reject`);
     Toast.show({
@@ -175,11 +175,7 @@ export const getBlockedUsers = async (): Promise<any> => {
 export const archiveMessage = async (messageId: any): Promise<any> => {
   try {
     const response = await api.put(`/chats/messages/${messageId}/archive`);
-    Toast.show({
-      type: 'success',
-      text1: 'Success',
-      text2: response.data.message,
-    });
+    ToastUtil.success('Success', response.data.message);
     return response.data;
   } catch (error: any) {
     return {

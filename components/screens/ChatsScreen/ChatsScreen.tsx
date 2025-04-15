@@ -4,9 +4,7 @@ import {
   Text,
   TextInput,
   View,
-  FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   SectionList,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
@@ -18,7 +16,7 @@ import {
   getPendingSessions,
   getBlockedUsers,
   acceptSession,
-  rejectOrArchiveSession,
+  rejectSession,
 } from '../../utils/useChatsAPI';
 import {useNavigation} from '@react-navigation/native';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
@@ -105,7 +103,7 @@ export default function ChatsScreen() {
 
   const handleRejectSession = async (sessionId: string) => {
     try {
-      const response = await rejectOrArchiveSession(sessionId);
+      const response = await rejectSession(sessionId);
       if (response.status) {
         fetchData(); // Refresh data
       }
@@ -420,7 +418,7 @@ export default function ChatsScreen() {
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search for user or chat"
+          placeholder="Search chats..."
           placeholderTextColor="#8E8E93"
         />
         <Icon

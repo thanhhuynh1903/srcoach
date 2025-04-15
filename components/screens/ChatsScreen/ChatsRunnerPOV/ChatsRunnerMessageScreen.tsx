@@ -55,6 +55,7 @@ type Message = {
   };
   imageId?: string;
   image_url?: string;
+  archive?: boolean;
 };
 
 type User = {
@@ -94,16 +95,19 @@ const MessageList = ({
   userId,
   flatListRef,
   isLoading,
+  onMessageArchived,
 }: {
   messages: Message[];
   userId: string;
   flatListRef: React.RefObject<FlatList>;
   isLoading: boolean;
+  onMessageArchived: (messageId: string) => void;
 }) => {
   const renderItem = ({item}: {item: Message}) => (
     <CRMessageItemNormal
       message={item}
       isCurrentUser={item.user_id === userId}
+      onMessageArchived={onMessageArchived}
     />
   );
 
@@ -272,6 +276,14 @@ export default function ChatsRunnerMessageScreen() {
     await fetchMessages();
   };
 
+  const handleMessageArchived = (messageId: string) => {
+    setMessages(prevMessages =>
+      prevMessages.map(msg =>
+        msg.id === messageId ? {...msg, message: null, archive: true} : msg
+      )
+    );
+  };
+
   useEffect(() => {
     loadData();
     const socket = getSocket();
@@ -286,10 +298,16 @@ export default function ChatsRunnerMessageScreen() {
       }, 100);
     };
 
+    const handleDeleteMessage = (data: {messageId: string}) => {
+      handleMessageArchived(data.messageId);
+    };
+
     socket.on('newMessage', handleNewMessage);
+    socket.on('deleteMessage', handleDeleteMessage);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
+      socket.off('deleteMessage', handleDeleteMessage);
       socket.emit('leaveSession', sessionId);
     };
   }, [sessionId]);
@@ -379,6 +397,7 @@ export default function ChatsRunnerMessageScreen() {
         userId={userId}
         flatListRef={flatListRef}
         isLoading={isLoading && isInitialLoad}
+        onMessageArchived={handleMessageArchived}
       />
       <MessageInput
         inputMessage={inputMessage}
