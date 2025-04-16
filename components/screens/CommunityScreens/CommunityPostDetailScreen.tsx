@@ -516,13 +516,14 @@ const CommunityPostDetailScreen = () => {
           ? currentPost.upvote_count - 1
           : currentPost?.upvote_count,
       };
-
+      console.log('updatedPost', updatedPost);
+      
       // Cập nhật currentPost trong store
       usePostStore.setState({currentPost: updatedPost});
 
       // Gọi API để like/unlike bài viết
       const success = await likePost(id, isLike);
-
+      await getMyPosts();
       if (!success) {
         // Nếu API thất bại, khôi phục lại trạng thái cũ
         usePostStore.setState({currentPost: oldPostState});
