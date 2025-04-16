@@ -182,23 +182,6 @@ const EditProfileScreen = ({navigation}) => {
       {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          {/* Profile Photo */}
-          <View style={styles.photoContainer}>
-            <View style={styles.photoWrapper}>
-              <Image
-                source={{
-                  uri: 'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg',
-                }}
-                style={styles.profilePhoto}
-              />
-              <TouchableOpacity style={styles.cameraButton}>
-                <Icon name="camera" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity>
-              <Text style={styles.changePhotoText}>Change Photo</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Form Fields */}
           <View style={styles.formSection}>

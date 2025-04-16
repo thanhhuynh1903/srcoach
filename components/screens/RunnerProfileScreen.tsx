@@ -12,6 +12,7 @@ import {
   Modal,
   Alert,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
@@ -20,6 +21,7 @@ import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation} from '@react-navigation/native';
 import {useFocusEffect} from '@react-navigation/native';
 import {useCommentStore} from '../utils/useCommentStore';
+
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -37,24 +39,37 @@ interface Post {
   is_downvoted: boolean;
   tags: string[];
 }
+
 interface Tag {
   tag_name: string;
 }
+
 const RunnerProfileScreen = () => {
   const {myPosts, getMyPosts, isLoading, deletePost, likePost} = usePostStore();
   const {profile} = useLoginStore();
   const navigation = useNavigation();
+  const currentUserId = profile?.id || '';
+
   // State cho modal và bài viết đã chọn
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  // State cho avatar
+  const [avatarModalVisible, setAvatarModalVisible] = useState(false);
+  const [avatarOptionsModalVisible, setAvatarOptionsModalVisible] =
+    useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(
+    'https://randomuser.me/api/portraits/women/32.jpg',
+  );
+
   // Cập nhật localPosts khi myPosts từ store thay đổi
   useEffect(() => {
     if (myPosts && myPosts.length > 0) {
       setLocalPosts(myPosts);
     }
-    console.log('myPosts', myPosts);
+
   }, [myPosts]);
 
   useEffect(() => {
@@ -71,6 +86,7 @@ const RunnerProfileScreen = () => {
         setRefreshing(false);
       });
   }, []);
+
   useFocusEffect(
     useCallback(() => {
       const focusHandler = () => {
@@ -79,10 +95,50 @@ const RunnerProfileScreen = () => {
       return () => {};
     }, [onRefresh]),
   );
+
+  // Xử lý khi nhấn vào avatar
+  const handleAvatarPress = () => {
+    setAvatarOptionsModalVisible(true);
+  };
+
+  // Xử lý xem avatar phóng to
+  const handleViewAvatar = () => {
+    setAvatarOptionsModalVisible(false);
+    setTimeout(() => {
+      setAvatarModalVisible(true);
+    }, 300);
+  };
+
+  // Xử lý cập nhật avatar
+  const handleUpdateAvatar = () => {
+    setAvatarOptionsModalVisible(false);
+    // Thêm logic cập nhật avatar ở đây
+    Alert.alert('Thông báo', 'Chức năng cập nhật avatar đang được phát triển');
+  };
+
+  // Xử lý xóa avatar
+  const handleDeleteAvatar = () => {
+    setAvatarOptionsModalVisible(false);
+    Alert.alert(
+      'Xóa ảnh đại diện',
+      'Bạn có chắc chắn muốn xóa ảnh đại diện không?',
+      [
+        {text: 'Hủy', style: 'cancel'},
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: () => {
+            // Thêm logic xóa avatar ở đây
+            Alert.alert('Thông báo', 'Đã xóa ảnh đại diện');
+          },
+        },
+      ],
+    );
+  };
+
   // Xử lý khi nhấn nút "More"
   const handleMorePress = (post: Post) => {
     console.log('post', post);
-
     setSelectedPost(post);
     setModalVisible(true);
   };
@@ -186,6 +242,12 @@ const RunnerProfileScreen = () => {
     }
   };
 
+  // Xử lý ẩn bài viết
+  const handleHide = () => {
+    setModalVisible(false);
+    Alert.alert('Thông báo', 'Đã ẩn bài viết này');
+  };
+
   const renderTags = (tags: Tag[]) => {
     if (!tags || tags.length === 0) {
       return null;
@@ -235,16 +297,23 @@ const RunnerProfileScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() =>
-            navigation.navigate('CommunityCreatePostScreen' as never)
-          }>
-          <Icon name="create-outline" size={24} color="#000" />
-        </TouchableOpacity>
+        <View style={{flexDirection: 'row'}}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.navigate('EditProfileScreen' as never)}>
+            <Icon name="create-outline" size={24} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() =>
+              navigation.navigate('CommunityCreatePostScreen' as never)
+            }>
+            <Icon name="add-circle-outline" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {isLoading && localPosts.length === 0 || refreshing ? (
+      {(isLoading && localPosts.length === 0) || refreshing ? (
         // Nếu đang tải dữ liệu thì hiển thị loading
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <ActivityIndicator size="large" color="#000" />
@@ -262,10 +331,19 @@ const RunnerProfileScreen = () => {
           }>
           {/* Profile Section */}
           <View style={styles.profileSection}>
-            <Image
-              source={{uri: 'https://randomuser.me/api/portraits/women/32.jpg'}}
-              style={styles.profileImage}
-            />
+            <View style={styles.photoContainer}>
+              <TouchableOpacity style={styles.photoWrapper} onPress={handleAvatarPress}>
+                <Image
+                  source={{
+                    uri: avatarUrl,
+                  }}
+                  style={styles.profilePhoto}
+                />
+                <TouchableOpacity style={styles.cameraButton}>
+                  <Icon name="camera" size={20} color="#fff" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.profileName}>{profile?.name}</Text>
             <Text style={styles.profileBio}>
               Fitness enthusiast | Marathon runner | Helping others achieve
@@ -290,47 +368,12 @@ const RunnerProfileScreen = () => {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{profile?.total_posts_liked || 0}</Text>
+              <Text style={styles.statValue}>
+                {profile?.total_posts_liked || 0}
+              </Text>
               <Text style={styles.statLabel}>Liked</Text>
             </View>
           </View>
-
-          {/* Achievements Section */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Achievements</Text>
-            <View style={styles.achievementsContainer}>
-              <View style={styles.achievementItem}>
-                <View style={styles.achievementIconContainer}>
-                  <Icon name="medal" size={24} color="#0F2B5B" />
-                </View>
-                <Text style={styles.achievementTitle}>Marathon Master</Text>
-                <Text style={styles.achievementDescription}>
-                  Completed 10 marathons
-                </Text>
-              </View>
-
-              <View style={styles.achievementItem}>
-                <View style={styles.achievementIconContainer}>
-                  <Icon name="trophy" size={24} color="#0F2B5B" />
-                </View>
-                <Text style={styles.achievementTitle}>Top Contributor</Text>
-                <Text style={styles.achievementDescription}>
-                  1000+ helpful posts
-                </Text>
-              </View>
-
-              <View style={styles.achievementItem}>
-                <View style={styles.achievementIconContainer}>
-                  <Icon name="people" size={24} color="#0F2B5B" />
-                </View>
-                <Text style={styles.achievementTitle}>Community Leader</Text>
-                <Text style={styles.achievementDescription}>
-                  Most active expert
-                </Text>
-              </View>
-            </View>
-          </View>
-
           {/* Posts Section */}
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>My Posts</Text>
@@ -432,7 +475,7 @@ const RunnerProfileScreen = () => {
         </ScrollView>
       )}
 
-      {/* Modal hiển thị các tùy chọn */}
+      {/* Modal hiển thị các tùy chọn cho bài viết */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -443,19 +486,36 @@ const RunnerProfileScreen = () => {
           activeOpacity={1}
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
-              <Icon name="create-outline" size={24} color="#0F2B5B" />
-              <Text style={styles.modalOptionText}>Edit Post</Text>
-            </TouchableOpacity>
-
+            {selectedPost && selectedPost.user_id === currentUserId ? (
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={handleUpdate}>
+                <Icon name="create-outline" size={24} color="#0F2B5B" />
+                <Text style={styles.modalOptionText}>Update</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.modalOption}>
+                <Icon name="bookmark-outline" size={24} color="#0F2B5B" />
+                <Text style={styles.modalOptionText}>Save draft</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.modalDivider} />
 
-            <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
-              <Icon name="trash-outline" size={24} color="red" />
-              <Text style={[styles.modalOptionText, {color: 'red'}]}>
-                Delete Post
-              </Text>
-            </TouchableOpacity>
+            {selectedPost && selectedPost?.user_id === currentUserId ? (
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={handleDelete}>
+                <Icon name="trash-outline" size={24} color="red" />
+                <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
+                <Icon name="eye-off-outline" size={24} color="#666" />
+                <Text style={styles.modalOptionText}>Hide</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.modalDivider} />
 
@@ -463,6 +523,80 @@ const RunnerProfileScreen = () => {
               style={styles.modalCancelButton}
               onPress={() => setModalVisible(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Modal hiển thị các tùy chọn cho avatar */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={avatarOptionsModalVisible}
+        onRequestClose={() => setAvatarOptionsModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setAvatarOptionsModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={handleViewAvatar}>
+              <Icon name="eye-outline" size={24} color="#0F2B5B" />
+              <Text style={styles.modalOptionText}>View avatar</Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalDivider} />
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={handleUpdateAvatar}>
+              <Icon name="camera-outline" size={24} color="#0F2B5B" />
+              <Text style={styles.modalOptionText}>Edit Avatar</Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalDivider} />
+
+            <TouchableOpacity
+              style={styles.modalOption}
+              onPress={handleDeleteAvatar}>
+              <Icon name="trash-outline" size={24} color="red" />
+              <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                Delete Avatar
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalDivider} />
+
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setAvatarOptionsModalVisible(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Modal hiển thị avatar phóng to */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={avatarModalVisible}
+        onRequestClose={() => setAvatarModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.avatarModalOverlay}
+          activeOpacity={1}
+          onPress={() => setAvatarModalVisible(false)}>
+          <View style={styles.avatarModalContent}>
+            <Image
+              source={{uri: avatarUrl}}
+              style={styles.zoomedAvatar}
+              resizeMode="contain"
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setAvatarModalVisible(false)}>
+              <Icon name="close-circle" size={40} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -499,6 +633,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 24,
+  },
+  photoContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  photoWrapper: {
+    position: 'relative',
+  },
+  profilePhoto: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  cameraButton: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#3B82F6',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   profileImage: {
     width: 100,
@@ -565,10 +724,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginBottom: 16,
   },
-  achievementsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   postCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -628,31 +783,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginLeft: 4,
   },
-  achievementItem: {
-    alignItems: 'center',
-    width: '30%',
-  },
-  achievementIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E0E7FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  achievementTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  achievementDescription: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-  },
+
   runStatsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -756,5 +887,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 12,
+  },
+  avatarModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarModalContent: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomedAvatar: {
+    width: Dimensions.get('window').width * 0.9,
+    height: Dimensions.get('window').width * 0.9,
+    borderRadius: 20,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
   },
 });

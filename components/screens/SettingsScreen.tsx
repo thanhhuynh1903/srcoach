@@ -239,7 +239,6 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
 const menuItems = [
   {title: 'View Profile', subtitle: 'View your profile information', icon: 'person-circle-outline', screen: 'RunnerProfileScreen'},
   {title: 'View schedules', subtitle: 'View your schedule information', icon: 'calendar-outline', screen: 'GenerateScheduleScreen'},
-  {title: 'Edit Profile', subtitle: 'Change your profile information', icon: 'create-outline', screen: 'EditProfileScreen'},
   {title: 'Connect Accounts', subtitle: 'Manage your connect account', icon: 'construct-outline', screen: 'DevicesScreen'},
   {title: 'Goals', subtitle: 'Manage your Goals', icon: 'golf-outline', screen: 'GoalListScreen'},
   {title: 'Notifications', subtitle: 'Manage your notifications', icon: 'notifications-outline', screen: 'DeviceNotificationsScreen'},
