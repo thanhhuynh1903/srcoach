@@ -142,8 +142,7 @@ export const initializeHealthConnect = async (): Promise<boolean> => {
 
     return grantedPermissions;
   } catch (error) {
-    console.error('Error initializing Health Connect:', error);
-    return false;
+    throw new Error('Failed to initialize HealthConnect');
   }
 };
 

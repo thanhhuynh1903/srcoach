@@ -103,7 +103,14 @@ export const CRMessageHeader = ({
       </View>
 
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() =>
+            navigation.navigate('ChatsSearchSessionMessagesScreen', {
+              sessionId: sessionInfo.id,
+            })
+          }
+        >
           <Icon name="search" size={24} color={theme.colors.primaryDark} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerButton} onPress={onInfoPress}>

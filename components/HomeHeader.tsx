@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
-  TextInput,
   TouchableOpacity,
   Platform,
   StatusBar,
@@ -12,7 +10,8 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {useLoginStore} from './utils/useLoginStore';
-import LinearGradient from 'react-native-linear-gradient';
+import {CommonAvatar} from './commons/CommonAvatar';
+import { theme } from './contants/theme';
 
 const HomeHeader = () => {
   const {profile} = useLoginStore();
@@ -22,13 +21,15 @@ const HomeHeader = () => {
     month: 'short',
     year: 'numeric',
   });
+  const currentTime = new Date().toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   const navigation = useNavigation();
 
-  // Check user roles
   const isExpert = profile?.roles?.includes('expert');
   const isRunner = profile?.roles?.includes('runner') && !isExpert;
 
-  // Capitalize first letter of role
   const getRoleText = () => {
     if (isExpert) return 'Expert';
     if (isRunner) return 'Runner';
@@ -38,49 +39,25 @@ const HomeHeader = () => {
     );
   };
 
-  // Container component that switches between View and LinearGradient based on role
-  const Container = ({children}) => {
-    if (isExpert) {
-      return (
-        <LinearGradient
-          colors={['#FFD700', '#D4AF37', '#FFD700']}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 0}}
-          style={[styles.container, styles.expertContainer]}>
-          {children}
-        </LinearGradient>
-      );
-    }
-    return <View style={styles.container}>{children}</View>;
-  };
-
   return (
-    <Container>
-      <StatusBar barStyle={isExpert ? 'dark-content' : 'light-content'} />
+    <View style={styles.container}>
+      <StatusBar barStyle={'light-content'} />
 
       {/* Date and Notification */}
       <View style={styles.topBar}>
-        <Text style={[styles.dateText, isExpert && styles.expertDateText]}>
-          {currentDate}
+        <Text style={styles.dateText}>
+          {currentDate} • {currentTime}
         </Text>
         <View style={{flexDirection: 'row', gap: 16}}>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('ManageNotificationsScreen' as never)
             }>
-            <Icon
-              name="notifications-outline"
-              size={24}
-              color={isExpert ? '#000' : '#fff'}
-            />
+            <Icon name="notifications-outline" size={24} color={'#fff'} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
-            <Icon
-              name="nuclear-outline"
-              size={24}
-              color={isExpert ? '#000' : '#fff'}
-            />
+            <Icon name="trophy-outline" size={24} color={'#fff'} />
           </TouchableOpacity>
         </View>
       </View>
@@ -90,27 +67,27 @@ const HomeHeader = () => {
         style={styles.profileSection}
         onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
         <View style={styles.profileLeft}>
-          <Image
-            source={{
-              uri: 'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg',
-            }}
-            style={[styles.avatar, isExpert && styles.expertAvatar]}
+          <CommonAvatar
+            mode={isExpert ? 'expert' : isRunner ? 'runner' : undefined}
+            uri={
+              profile?.avatar ||
+              'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg'
+            }
+            size={45}
           />
           <View style={styles.userInfo}>
-            <Text style={[styles.greeting, isExpert && styles.expertGreeting]}>
-              Hi, {profile?.username}! 👋
-            </Text>
+            <Text style={styles.greeting}>Hi, {profile?.username}! 👋</Text>
             <View
               style={[
                 styles.membershipContainer,
-                isExpert && styles.expertContainer,
-                isRunner && styles.runnerContainer,
+                isExpert && styles.expertMembershipContainer,
+                isRunner && styles.runnerMembershipContainer,
               ]}>
               <Icon
-                name={isExpert ? 'trophy' : isRunner ? 'footsteps' : 'star'}
+                name={isExpert ? 'trophy' : isRunner ? 'walk' : 'star'}
                 size={14}
-                color={isExpert ? '#ffc400' : isRunner ? '#10B981' : '#000000'}
-                style={isExpert ? {marginRight: 4} : {}}
+                color={isExpert ? '#FFD700' : isRunner ? '#00FF00' : '#FFFFFF'}
+                style={{marginRight: 4}}
               />
               <Text
                 style={[
@@ -118,47 +95,30 @@ const HomeHeader = () => {
                   isExpert && styles.expertText,
                   isRunner && styles.runnerText,
                 ]}>
-                {getRoleText()} {isExpert ? 'Member' : ''}
+                {getRoleText()}
               </Text>
             </View>
           </View>
         </View>
-        <Icon
-          name="chevron-forward-outline"
-          size={20}
-          color={isExpert ? '#000' : '#9CA3AF'}
-        />
+        <Icon name="chevron-forward-outline" size={20} color={'#fff'} />
       </TouchableOpacity>
 
       {/* Search Bar */}
       <TouchableOpacity
-        style={[
-          styles.searchContainer,
-          isExpert && styles.expertSearchContainer,
-        ]}
+        style={styles.searchContainer}
         onPress={() => {
           navigation.navigate('SearchScreen' as never);
         }}>
-        <Icon name="search" size={20} color={isExpert ? '#555' : '#9CA3AF'} />
-        <Text
-          style={[styles.searchInput, isExpert && styles.expertSearchInput]}>
-          Search Experts
-        </Text>
+        <Icon name="search" size={20} color={'#FFFFFF'} />
+        <Text style={styles.searchInput}>Search Experts</Text>
       </TouchableOpacity>
-    </Container>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#1F2937',
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  expertContainer: {
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -172,12 +132,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dateText: {
-    color: '#9CA3AF',
+    color: '#e2e2e2',
     fontSize: 14,
-  },
-  expertDateText: {
-    color: '#333',
-    fontWeight: '500',
   },
   profileSection: {
     flexDirection: 'row',
@@ -190,19 +146,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  expertAvatar: {
-    borderColor: '#000',
-  },
   userInfo: {
     flex: 1,
+    marginLeft: 12,
   },
   greeting: {
     color: '#FFFFFF',
@@ -210,41 +156,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
-  expertGreeting: {
-    color: '#000',
-  },
   membershipContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(107, 114, 128, 0.2)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
+    backgroundColor: 'rgba(107, 114, 128, 0.2)',
   },
-  expertContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 1)',
+  expertMembershipContainer: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.2)',
-    color: '#FFF',
+    borderColor: 'rgba(245, 158, 11, 0.5)',
   },
-  runnerContainer: {
+  runnerMembershipContainer: {
     backgroundColor: 'rgba(16, 185, 129, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    borderColor: 'rgba(16, 185, 129, 0.5)',
   },
   membershipText: {
-    color: '#9CA3AF',
     fontSize: 12,
     fontWeight: '500',
+    color: '#FFFFFF',
   },
   expertText: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: '#FFD700',
   },
   runnerText: {
-    color: '#10B981',
+    color: '#00FF00',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -255,17 +196,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  expertSearchContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
   searchInput: {
     flex: 1,
-    color: '#9CA3AF',
+    color: '#FFFFFF',
     fontSize: 14,
     padding: 0,
-  },
-  expertSearchInput: {
-    color: '#333',
   },
 });
 

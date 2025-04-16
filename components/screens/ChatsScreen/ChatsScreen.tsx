@@ -4,9 +4,7 @@ import {
   Text,
   TextInput,
   View,
-  FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   SectionList,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
@@ -18,7 +16,7 @@ import {
   getPendingSessions,
   getBlockedUsers,
   acceptSession,
-  rejectOrArchiveSession,
+  rejectSession,
 } from '../../utils/useChatsAPI';
 import {useNavigation} from '@react-navigation/native';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
@@ -105,7 +103,7 @@ export default function ChatsScreen() {
 
   const handleRejectSession = async (sessionId: string) => {
     try {
-      const response = await rejectOrArchiveSession(sessionId);
+      const response = await rejectSession(sessionId);
       if (response.status) {
         fetchData(); // Refresh data
       }
@@ -389,22 +387,27 @@ export default function ChatsScreen() {
               style={styles.headerIcon}
             />
           </TouchableOpacity>
-          <Icon
-            name="notifications-outline"
-            size={24}
-            color={theme.colors.primaryDark}
-            style={styles.headerIcon}
-          />
-          <Icon
-            name="trophy-outline"
-            size={24}
-            color={theme.colors.primaryDark}
-            style={styles.headerIcon}
-          />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ManageNotificationsScreen')}>
+            <Icon
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LeaderBoardScreen')}>
+            <Icon
+              name="trophy-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Search Bar - Always visible */}
       <View style={styles.searchContainer}>
         <Icon
           name="search"
@@ -414,15 +417,19 @@ export default function ChatsScreen() {
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search for user or chat"
+          placeholder="Search chats..."
           placeholderTextColor="#8E8E93"
         />
-        <Icon
-          name="options"
-          size={20}
-          color="#007AFF"
-          style={styles.searchButton}
-        />
+        <TouchableOpacity
+          style={[styles.searchButton, { backgroundColor: theme.colors.primaryDark }]}
+          onPress={() => navigation.navigate('ChatsSearchAllMessagesScreen')}
+        >
+          <Icon
+            name="search-outline"
+            size={20}
+            color="#FFF"
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Filter Chips - Always visible */}
@@ -527,7 +534,9 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   searchButton: {
+    padding: 8,
     marginLeft: 8,
+    borderRadius: 10,
   },
   filterContainer: {
     flexDirection: 'row',

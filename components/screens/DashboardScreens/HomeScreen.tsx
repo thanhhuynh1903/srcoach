@@ -6,10 +6,11 @@ import {
   Text,
   View,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import HomeHeader from '../HomeHeader';
-import WellnessAndMedication from '../WellnessAndMedication';
+import HomeHeader from '../../HomeHeader';
+import WellnessAndMedication from '../../WellnessAndMedication';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -26,15 +27,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import {useNavigation} from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import useAuthStore from '../utils/useAuthStore';
-import {wp} from '../helpers/common';
-import {initializeHealthConnect} from '../utils/utils_healthconnect';
+import useAuthStore from '../../utils/useAuthStore';
+import {wp} from '../../helpers/common';
+import {initializeHealthConnect} from '../../utils/utils_healthconnect';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import axios from 'axios';
-import { MASTER_URL } from '../utils/zustandfetchAPI';
-import { useLoginStore } from '../utils/useLoginStore';
-import CommonDialog from '../commons/CommonDialog';
-import { theme } from '../contants/theme';
+import {MASTER_URL} from '../../utils/zustandfetchAPI';
+import {useLoginStore} from '../../utils/useLoginStore';
+import CommonDialog from '../../commons/CommonDialog';
+import {theme} from '../../contants/theme';
 
 interface SummaryData {
   steps: {
@@ -103,36 +104,44 @@ const HomeScreen = () => {
     title: '',
     content: '',
   });
-console.log('profile', profile);
+  const [healthConnectError, setHealthConnectError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const metricInfo = {
     heartRate: {
       title: 'Heart Rate',
-      content: 'Your heart rate is the number of times your heart beats per minute. A normal resting heart rate for adults ranges from 60 to 100 beats per minute.',
+      content:
+        'Your heart rate is the number of times your heart beats per minute. A normal resting heart rate for adults ranges from 60 to 100 beats per minute.',
     },
     steps: {
       title: 'Steps',
-      content: 'Steps count your daily physical activity. The recommended daily step count is 10,000 steps for general health benefits.',
+      content:
+        'Steps count your daily physical activity. The recommended daily step count is 10,000 steps for general health benefits.',
     },
     distance: {
       title: 'Distance',
-      content: 'Distance shows how far you have walked or run. Tracking distance can help you monitor your physical activity levels.',
+      content:
+        'Distance shows how far you have walked or run. Tracking distance can help you monitor your physical activity levels.',
     },
     calories: {
       title: 'Active Calories',
-      content: 'Active calories are the calories you burn through physical activity. This doesn\'t include calories burned at rest (BMR).',
+      content:
+        "Active calories are the calories you burn through physical activity. This doesn't include calories burned at rest (BMR).",
     },
     oxygenSaturation: {
       title: 'Oxygen Saturation',
-      content: 'Oxygen saturation (SpO2) measures how much oxygen your blood is carrying. Normal levels are typically between 95-100%.',
+      content:
+        'Oxygen saturation (SpO2) measures how much oxygen your blood is carrying. Normal levels are typically between 95-100%.',
     },
     sleep: {
       title: 'Sleep',
-      content: 'Sleep duration and quality are essential for overall health. Adults typically need 7-9 hours of sleep per night.',
+      content:
+        'Sleep duration and quality are essential for overall health. Adults typically need 7-9 hours of sleep per night.',
     },
     totalCalories: {
       title: 'Total Calories',
-      content: 'Total calories include both active calories burned through movement and calories burned at rest (BMR).',
+      content:
+        'Total calories include both active calories burned through movement and calories burned at rest (BMR).',
     },
   };
 
@@ -156,11 +165,19 @@ console.log('profile', profile);
   const getHealthData = async () => {
     setLoading(true);
     setErrors({});
+    setHealthConnectError(false);
+
     try {
-      await initializeHealthConnect();
+      try {
+        await initializeHealthConnect();
+      } catch (hcError) {
+        console.log('Health Connect initialization error:', hcError);
+        setHealthConnectError(true);
+        return;
+      }
 
       const response = await api.get('/record-summary');
-      
+
       if (response.data.status === 'success') {
         setSummaryData(response.data.data.summaries);
         setHealthScore(response.data.data.healthScore);
@@ -176,8 +193,14 @@ console.log('profile', profile);
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    getHealthData();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -220,8 +243,12 @@ console.log('profile', profile);
     <View style={[styles.healthMetricCard, {backgroundColor: '#F8FAFC'}]}>
       <Icon name="warning" size={20} color="#64748B" />
       <Text style={[styles.healthMetricValue, {color: '#64748B'}]}>--</Text>
-      <Text style={styles.healthMetricLabel}>{metricInfo[metric]?.title || metric}</Text>
-      <Text style={[styles.healthMetricPercentage, {color: '#64748B'}]}>Error</Text>
+      <Text style={styles.healthMetricLabel}>
+        {metricInfo[metric]?.title || metric}
+      </Text>
+      <Text style={[styles.healthMetricPercentage, {color: '#64748B'}]}>
+        Error
+      </Text>
     </View>
   );
 
@@ -235,16 +262,19 @@ console.log('profile', profile);
       {errors.steps ? (
         <MetricErrorCard metric="steps" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.mainMetricItem}
-          onPress={() => navigation.navigate('StepsScreen')}
-        >
+          onPress={() => navigation.navigate('StepsScreen')}>
           <View style={styles.metricHeader}>
             <Icon name="footsteps" size={20} color="#2563EB" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('steps')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.mainMetricValue}>
@@ -263,16 +293,19 @@ console.log('profile', profile);
       {errors.distance ? (
         <MetricErrorCard metric="distance" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.mainMetricItem}
-          onPress={() => navigation.navigate('DistanceScreen')}
-        >
+          onPress={() => navigation.navigate('DistanceScreen')}>
           <View style={styles.metricHeader}>
             <Icon name="walk" size={20} color="#6366F1" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('distance')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.mainMetricValue}>
@@ -291,16 +324,19 @@ console.log('profile', profile);
       {errors.activeCalories ? (
         <MetricErrorCard metric="calories" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.mainMetricItem}
-          onPress={() => navigation.navigate('CaloriesScreen')}
-        >
+          onPress={() => navigation.navigate('CaloriesScreen')}>
           <View style={styles.metricHeader}>
             <Icon name="flame" size={20} color="#EF4444" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('calories')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.mainMetricValue}>
@@ -327,16 +363,19 @@ console.log('profile', profile);
       {errors.heartRate ? (
         <MetricErrorCard metric="heartRate" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.healthMetricCard, {backgroundColor: '#FFF1F2'}]}
-          onPress={() => navigation.navigate('HeartRateScreen')}
-        >
+          onPress={() => navigation.navigate('HeartRateScreen')}>
           <View style={styles.metricHeader}>
             <Icon name="heart" size={20} color="#FF4D4F" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('heartRate')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.healthMetricValue}>
@@ -353,16 +392,19 @@ console.log('profile', profile);
       {errors.oxygenSaturation ? (
         <MetricErrorCard metric="oxygenSaturation" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.healthMetricCard, {backgroundColor: '#ECFDF5'}]}
-          onPress={() => navigation.navigate('SPo2Screen')}
-        >
+          onPress={() => navigation.navigate('SPo2Screen')}>
           <View style={styles.metricHeader}>
             <Icon name="water" size={20} color="#10B981" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('oxygenSaturation')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.healthMetricValue}>
@@ -379,16 +421,19 @@ console.log('profile', profile);
       {errors.sleep ? (
         <MetricErrorCard metric="sleep" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.healthMetricCard, {backgroundColor: '#EEF2FF'}]}
-          onPress={() => navigation.navigate('SleepScreen')}
-        >
+          onPress={() => navigation.navigate('SleepScreen')}>
           <View style={styles.metricHeader}>
             <Icon name="moon" size={20} color="#6366F1" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('sleep')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.healthMetricValue}>
@@ -409,16 +454,19 @@ console.log('profile', profile);
       {errors.totalCalories ? (
         <MetricErrorCard metric="totalCalories" />
       ) : (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.healthMetricCard, {backgroundColor: '#FFF7E6'}]}
-          onPress={() => navigation.navigate('CaloriesScreen')}
-        >
+          onPress={() => navigation.navigate('CaloriesScreen')}>
           <View style={styles.metricHeader}>
             <Icon name="nutrition" size={20} color="#FAAD14" />
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => showInfoDialog('totalCalories')}
               style={styles.infoButton}>
-              <Icon name="information-circle-outline" size={16} color="#64748B" />
+              <Icon
+                name="information-circle-outline"
+                size={16}
+                color="#64748B"
+              />
             </TouchableOpacity>
           </View>
           <Text style={styles.healthMetricValue}>
@@ -442,7 +490,29 @@ console.log('profile', profile);
         <HomeHeader navigation={navigation} />
       </AnimatedView>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
+        {/* Health Connect Error Banner */}
+        {healthConnectError && (
+          <AnimatedView
+            entering={FadeInDown.duration(300)}
+            exiting={FadeOutDown.duration(300)}
+            style={styles.errorBanner}>
+            <View style={styles.errorBannerContent}>
+              <Icon name="warning" size={20} color="#FFF" />
+              <Text style={styles.errorBannerText}>
+                Sync data from Health Connect failed
+              </Text>
+            </View>
+            <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
+              <Icon name="refresh" size={20} color="#FFF" />
+            </TouchableOpacity>
+          </AnimatedView>
+        )}
+
         {/* Health Score */}
         <AnimatedView
           entering={FadeIn.delay(300).duration(500)}
@@ -451,7 +521,8 @@ console.log('profile', profile);
           style={[styles.section, fadeInStyle]}>
           <View style={styles.cardHeader}>
             <Text style={styles.sectionTitle}>Health Score</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('HealthScoreDetail')}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('HealthScoreDetail')}>
               <Icon
                 name="ellipsis-horizontal-outline"
                 size={16}
@@ -459,10 +530,27 @@ console.log('profile', profile);
               />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('HealthScoreDetail')}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('HealthScoreDetail')}>
             <View style={styles.scoreCard}>
-              <View style={[styles.scoreBox, {backgroundColor: healthScore ? getHealthScoreColor(healthScore.score) + '20' : '#E0E7FF'}]}>
-                <Text style={[styles.scoreNumber, {color: healthScore ? getHealthScoreColor(healthScore.score) : '#4F46E5'}]}>
+              <View
+                style={[
+                  styles.scoreBox,
+                  {
+                    backgroundColor: healthScore
+                      ? getHealthScoreColor(healthScore.score) + '20'
+                      : '#E0E7FF',
+                  },
+                ]}>
+                <Text
+                  style={[
+                    styles.scoreNumber,
+                    {
+                      color: healthScore
+                        ? getHealthScoreColor(healthScore.score)
+                        : '#4F46E5',
+                    },
+                  ]}>
                   {healthScore?.score || '--'}
                 </Text>
               </View>
@@ -471,7 +559,8 @@ console.log('profile', profile);
                   {healthScore?.scoreInfo?.scoreText || 'Loading...'}
                 </Text>
                 <Text style={styles.scoreDescription}>
-                  {healthScore?.scoreInfo?.scoreMessage || 'Calculating your health score...'}
+                  {healthScore?.scoreInfo?.scoreMessage ||
+                    'Calculating your health score...'}
                 </Text>
               </View>
             </View>
@@ -508,19 +597,21 @@ console.log('profile', profile);
         </AnimatedView>
       </ScrollView>
 
-      {/* Common Dialog - Moved to root level */}
+      {/* Metric Info Dialog */}
       <CommonDialog
         visible={infoDialogVisible}
         onClose={() => setInfoDialogVisible(false)}
         title={currentMetricInfo.title}
-        content={<Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>}
+        content={
+          <Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>
+        }
         actionButtons={[
           {
             label: 'Close',
             variant: 'contained',
             color: theme.colors.primaryDark,
             handler: () => setInfoDialogVisible(false),
-          }
+          },
         ]}
       />
     </SafeAreaView>
@@ -678,6 +769,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#334155',
     lineHeight: 20,
+  },
+  errorBanner: {
+    backgroundColor: '#EF4444',
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+  },
+  errorBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  errorBannerText: {
+    color: '#FFF',
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  refreshButton: {
+    marginLeft: 16,
+    padding: 4,
   },
 });
 

@@ -55,6 +55,7 @@ type Message = {
   };
   imageId?: string;
   image_url?: string;
+  archive?: boolean;
 };
 
 type User = {
@@ -94,16 +95,19 @@ const MessageList = ({
   userId,
   flatListRef,
   isLoading,
+  onMessageArchived,
 }: {
   messages: Message[];
   userId: string;
   flatListRef: React.RefObject<FlatList>;
   isLoading: boolean;
+  onMessageArchived: (messageId: string) => void;
 }) => {
   const renderItem = ({item}: {item: Message}) => (
     <CRMessageItemNormal
       message={item}
       isCurrentUser={item.user_id === userId}
+      onMessageArchived={onMessageArchived}
     />
   );
 
@@ -149,6 +153,16 @@ const MessageList = ({
   );
 };
 
+const TypingIndicator = ({name}: {name: string}) => {
+  return (
+    <View style={styles.typingIndicatorContainer}>
+      <View style={styles.typingIndicatorBubble}>
+        <Text style={styles.typingIndicatorText}>{name} is typing...</Text>
+      </View>
+    </View>
+  );
+};
+
 const MessageInput = ({
   inputMessage,
   setInputMessage,
@@ -157,6 +171,7 @@ const MessageInput = ({
   isExpert,
   onMenuPress,
   isInputDisabled,
+  onTyping,
 }: {
   inputMessage: string;
   setInputMessage: (text: string) => void;
@@ -165,14 +180,37 @@ const MessageInput = ({
   isExpert: boolean;
   onMenuPress: () => void;
   isInputDisabled: boolean;
+  onTyping: () => void;
 }) => {
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleChangeText = (text: string) => {
+    setInputMessage(text);
+    if (text.trim().length > 0) {
+      onTyping();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        onTyping();
+      }, 1500);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <View style={styles.inputContainer}>
-      <TouchableOpacity 
-        style={styles.menuButton} 
+      <TouchableOpacity
+        style={styles.menuButton}
         onPress={onMenuPress}
-        disabled={isInputDisabled}
-      >
+        disabled={isInputDisabled}>
         <Icon
           name="ellipsis-horizontal"
           size={24}
@@ -181,15 +219,20 @@ const MessageInput = ({
       </TouchableOpacity>
       <TextInput
         style={[styles.input, isInputDisabled && styles.disabledInput]}
-        placeholder={isInputDisabled ? "Sending message..." : "Type a message..."}
+        placeholder={
+          isInputDisabled ? 'Sending message...' : 'Type a message...'
+        }
         placeholderTextColor="#8E8E93"
         value={inputMessage}
-        onChangeText={setInputMessage}
+        onChangeText={handleChangeText}
         multiline
         editable={!isInputDisabled}
       />
       <TouchableOpacity
-        style={[styles.sendButton, isInputDisabled && styles.disabledSendButton]}
+        style={[
+          styles.sendButton,
+          isInputDisabled && styles.disabledSendButton,
+        ]}
         onPress={handleSend}
         disabled={isSending || !inputMessage.trim() || isInputDisabled}>
         {isSending ? (
@@ -220,6 +263,9 @@ export default function ChatsRunnerMessageScreen() {
   const [showRunRecordPanel, setShowRunRecordPanel] = useState(false);
   const [isInputDisabled, setIsInputDisabled] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingUser, setTypingUser] = useState<User | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -272,6 +318,44 @@ export default function ChatsRunnerMessageScreen() {
     await fetchMessages();
   };
 
+  const handleMessageArchived = (messageId: string) => {
+    setMessages(prevMessages =>
+      prevMessages.map(msg =>
+        msg.id === messageId ? {...msg, message: null, archive: true} : msg,
+      ),
+    );
+  };
+
+  const handleTypingEvent = (data: {userId: string; user: User}) => {
+    if (data.userId !== userId) {
+      setTypingUser(data.user);
+      setIsTyping(true);
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        setTypingUser(null);
+      }, 3000);
+    }
+  };
+
+  const handleSendTypingEvent = () => {
+    if (!sessionInfo) return;
+    const socket = getSocket();
+    socket.emit('typingMessage', {
+      sessionId,
+      userId,
+      user: {
+        id: userId,
+        name: profile?.name,
+        username: profile?.username,
+      },
+    });
+  };
+
   useEffect(() => {
     loadData();
     const socket = getSocket();
@@ -284,13 +368,30 @@ export default function ChatsRunnerMessageScreen() {
           flatListRef.current.scrollToEnd({animated: true});
         }
       }, 100);
+
+      // Reset typing indicator when a message is received
+      if (data.user_id !== userId) {
+        setIsTyping(false);
+        setTypingUser(null);
+      }
+    };
+
+    const handleDeleteMessage = (data: {messageId: string}) => {
+      handleMessageArchived(data.messageId);
     };
 
     socket.on('newMessage', handleNewMessage);
+    socket.on('deleteMessage', handleDeleteMessage);
+    socket.on('typingMessage', handleTypingEvent);
 
     return () => {
       socket.off('newMessage', handleNewMessage);
+      socket.off('deleteMessage', handleDeleteMessage);
+      socket.off('typingMessage', handleTypingEvent);
       socket.emit('leaveSession', sessionId);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [sessionId]);
 
@@ -308,6 +409,11 @@ export default function ChatsRunnerMessageScreen() {
         ToastUtil.error('Failed to send message', response.message);
       } else {
         setInputMessage('');
+        // Reset typing indicator when message is sent
+        setIsTyping(false);
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
       }
     } catch (error) {
       ToastUtil.error('Failed to send message', 'An exception occured.');
@@ -379,7 +485,9 @@ export default function ChatsRunnerMessageScreen() {
         userId={userId}
         flatListRef={flatListRef}
         isLoading={isLoading && isInitialLoad}
+        onMessageArchived={handleMessageArchived}
       />
+      {isTyping && typingUser && <TypingIndicator name={typingUser.name} />}
       <MessageInput
         inputMessage={inputMessage}
         setInputMessage={setInputMessage}
@@ -388,6 +496,7 @@ export default function ChatsRunnerMessageScreen() {
         isExpert={profile?.roles.includes('expert') || false}
         onMenuPress={() => setShowActionsPanel(true)}
         isInputDisabled={isInputDisabled}
+        onTyping={handleSendTypingEvent}
       />
       <CRMessageInfoPanel
         sessionInfo={sessionInfo}
@@ -509,5 +618,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E5EA',
     padding: 12,
     marginHorizontal: 8,
+  },
+  typingIndicatorContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  typingIndicatorBubble: {
+    backgroundColor: '#E5E5EA',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  typingIndicatorText: {
+    fontSize: 14,
+    color: '#7b7b7b',
   },
 });

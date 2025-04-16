@@ -13,6 +13,9 @@ import {
   getIconFromExerciseType,
   getNameFromExerciseType,
 } from '../../../contants/exerciseType';
+import CommonDialog from '../../../commons/CommonDialog';
+import { archiveMessage } from '../../../utils/useChatsAPI';
+import ToastUtil from '../../../utils/utils_toast';
 
 type Metrics = {
   distance: number;
@@ -30,6 +33,7 @@ type Message = {
   id: string;
   type: string;
   created_at: string;
+  user_id: string;
   User: {
     id: string;
     name: string;
@@ -42,17 +46,29 @@ type Message = {
   RecordExerciseSession: {
     start_time: string;
   };
+  archive?: boolean;
 };
 
-export const ECMessageItemExerciseRecord = ({message}: {message: Message}) => {
+export const ECMessageItemExerciseRecord = ({
+  message,
+  isCurrentUser,
+  onMessageArchived,
+}: {
+  message: Message;
+  isCurrentUser: boolean;
+  onMessageArchived?: (messageId: string) => void;
+}) => {
   const [showStats, setShowStats] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const isArchived = message.archive === true;
+
   const duration = moment
-    .duration(moment(message.metrics.end_time).diff(message.metrics.start_time))
+    .duration(moment(message.metrics?.end_time).diff(message.metrics?.start_time))
     .asMinutes()
     .toFixed(0);
 
-  const exerciseName = getNameFromExerciseType(message.metrics.exercise_type);
-  const exerciseIcon = getIconFromExerciseType(message.metrics.exercise_type);
+  const exerciseName = getNameFromExerciseType(message.metrics?.exercise_type);
+  const exerciseIcon = getIconFromExerciseType(message.metrics?.exercise_type);
   const formattedDate = moment(message.RecordExerciseSession.start_time).format(
     'MMM D, YYYY h:mm A',
   );
@@ -62,96 +78,159 @@ export const ECMessageItemExerciseRecord = ({message}: {message: Message}) => {
     setShowStats(!showStats);
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Icon name={exerciseIcon} size={20} color={theme.colors.primaryDark} />
-        <Text style={styles.headerText}>
-          <Text style={styles.userName}>@{message.User.username}</Text> shared a{' '}
-          <Text style={styles.exerciseName}>{exerciseName}</Text> record
-        </Text>
-      </View>
+  const handleLongPress = () => {
+    if (!isArchived && isCurrentUser) {
+      setShowDialog(true);
+    }
+  };
 
-      <View style={styles.dateContainer}>
-        <Text style={styles.dateText}>
-          Exercise recorded at {formattedDate}
-        </Text>
-      </View>
+  const handleArchiveMessage = async () => {
+    setShowDialog(false);
+    try {
+      const response = await archiveMessage(message.id);
+      if (response.status) {
+        ToastUtil.success('Exercise record archived successfully');
+        if (onMessageArchived) {
+          onMessageArchived(message.id);
+        }
+      } else {
+        ToastUtil.error('Failed to archive record', response.message);
+      }
+    } catch (error) {
+      ToastUtil.error('Failed to archive record', 'An error occurred');
+    }
+  };
 
-      <View style={styles.divider} />
-
-      <TouchableOpacity
-        style={styles.toggleButton}
-        onPress={toggleStats}
-        activeOpacity={0.7}>
-        <Text style={styles.toggleButtonText}>
-          {showStats ? 'Hide Stats' : 'Show Stats'}
-        </Text>
-        <Icon
-          name={showStats ? 'chevron-up-outline' : 'chevron-down-outline'}
-          size={16}
-          color={theme.colors.primaryDark}
-        />
-      </TouchableOpacity>
-
-      {showStats && (
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
-            <Icon name="speedometer-outline" size={20} color="#8E8E93" />
-            <Text style={styles.statLabel}>Distance</Text>
-            <Text style={styles.statValue}>
-              {(message.metrics.distance / 1000).toFixed(2)} km
-            </Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <Icon name="time-outline" size={20} color="#8E8E93" />
-            <Text style={styles.statLabel}>Duration</Text>
-            <Text style={styles.statValue}>{duration} mins</Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <Icon name="pulse-outline" size={20} color="#8E8E93" />
-            <Text style={styles.statLabel}>Avg HR</Text>
-            <Text style={styles.statValue}>
-              {message.metrics.avg_heart_rate.toFixed(0)} bpm
-            </Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <Icon name="flame-outline" size={20} color="#8E8E93" />
-            <Text style={styles.statLabel}>Calories</Text>
-            <Text style={styles.statValue}>
-              {message.metrics.calories || '0'} kcal
-            </Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <Icon name="footsteps-outline" size={20} color="#8E8E93" />
-            <Text style={styles.statLabel}>Steps</Text>
-            <Text style={styles.statValue}>{message.metrics.steps || '0'}</Text>
-          </View>
-
-          <View style={styles.statItem}>
-            <Icon name="trending-up-outline" size={20} color="#8E8E93" />
-            <Text style={styles.statLabel}>Max HR</Text>
-            <Text style={styles.statValue}>
-              {message.metrics.max_heart_rate} bpm
-            </Text>
-          </View>
-        </View>
-      )}
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.viewMapButton}>
-          <Icon name="map-outline" size={16} color={'#FFF'} />
-          <Text style={styles.viewMapText}>View Details</Text>
-        </TouchableOpacity>
-        <Text style={styles.timeText}>
+  if (isArchived) {
+    return (
+      <View style={[styles.container, styles.archivedContainer]}>
+        <Text style={styles.archivedText}>Exercise record deleted</Text>
+        <Text style={[styles.timeText, styles.archivedTime]}>
           {moment(message.created_at).format('h:mm A')}
         </Text>
       </View>
-    </View>
+    );
+  }
+
+  return (
+    <>
+      <TouchableOpacity 
+        activeOpacity={0.7}
+        onLongPress={handleLongPress}
+        delayLongPress={300}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Icon name={exerciseIcon} size={20} color={theme.colors.primaryDark} />
+            <Text style={styles.headerText}>
+              <Text style={styles.userName}>@{message.User.username}</Text> shared a{' '}
+              <Text style={styles.exerciseName}>{exerciseName}</Text> record
+            </Text>
+          </View>
+
+          <View style={styles.dateContainer}>
+            <Text style={styles.dateText}>
+              Exercise recorded at {formattedDate}
+            </Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={toggleStats}
+            activeOpacity={0.7}>
+            <Text style={styles.toggleButtonText}>
+              {showStats ? 'Hide Stats' : 'Show Stats'}
+            </Text>
+            <Icon
+              name={showStats ? 'chevron-up-outline' : 'chevron-down-outline'}
+              size={16}
+              color={theme.colors.primaryDark}
+            />
+          </TouchableOpacity>
+
+          {message.metrics && showStats && (
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Icon name="speedometer-outline" size={20} color="#8E8E93" />
+                <Text style={styles.statLabel}>Distance</Text>
+                <Text style={styles.statValue}>
+                  {(message.metrics?.distance / 1000).toFixed(2)} km
+                </Text>
+              </View>
+
+              <View style={styles.statItem}>
+                <Icon name="time-outline" size={20} color="#8E8E93" />
+                <Text style={styles.statLabel}>Duration</Text>
+                <Text style={styles.statValue}>{duration} mins</Text>
+              </View>
+
+              <View style={styles.statItem}>
+                <Icon name="pulse-outline" size={20} color="#8E8E93" />
+                <Text style={styles.statLabel}>Avg HR</Text>
+                <Text style={styles.statValue}>
+                  {message.metrics?.avg_heart_rate.toFixed(0)} bpm
+                </Text>
+              </View>
+
+              <View style={styles.statItem}>
+                <Icon name="flame-outline" size={20} color="#8E8E93" />
+                <Text style={styles.statLabel}>Calories</Text>
+                <Text style={styles.statValue}>
+                  {message.metrics?.calories || '0'} kcal
+                </Text>
+              </View>
+
+              <View style={styles.statItem}>
+                <Icon name="footsteps-outline" size={20} color="#8E8E93" />
+                <Text style={styles.statLabel}>Steps</Text>
+                <Text style={styles.statValue}>{message.metrics?.steps || '0'}</Text>
+              </View>
+
+              <View style={styles.statItem}>
+                <Icon name="trending-up-outline" size={20} color="#8E8E93" />
+                <Text style={styles.statLabel}>Max HR</Text>
+                <Text style={styles.statValue}>
+                  {message.metrics?.max_heart_rate} bpm
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.viewMapButton} activeOpacity={0.7}>
+              <Icon name="map-outline" size={16} color={'#FFF'} />
+              <Text style={styles.viewMapText}>View Details</Text>
+            </TouchableOpacity>
+            <Text style={styles.timeText}>
+              {moment(message.created_at).format('h:mm A')}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      <CommonDialog
+        visible={showDialog}
+        onClose={() => setShowDialog(false)}
+        title="Exercise Record Options"
+        content={<Text>What would you like to do with this exercise record?</Text>}
+        actionButtons={[
+          {
+            label: 'Delete',
+            color: theme.colors.error,
+            variant: 'contained',
+            iconName: 'trash',
+            handler: handleArchiveMessage,
+          },
+          {
+            label: 'Cancel',
+            variant: 'outlined',
+            handler: () => setShowDialog(false),
+          },
+        ]}
+      />
+    </>
   );
 };
 
@@ -168,6 +247,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  archivedContainer: {
+    opacity: 0.7,
+    backgroundColor: 'transparent',
+    borderColor: '#E5E5EA',
+  },
+  archivedText: {
+    fontStyle: 'italic',
+    color: '#8E8E93',
+    fontSize: 16,
+    textAlign: 'center',
+    paddingVertical: 16,
   },
   header: {
     flexDirection: 'row',
@@ -253,6 +344,9 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
+    color: '#8E8E93',
+  },
+  archivedTime: {
     color: '#8E8E93',
   },
   viewMapButton: {
