@@ -177,13 +177,13 @@ export const usePostStore = create<PostState>((set, get) => ({
       postData.tags.forEach((tag, index) => {
         formData.append(`tags[${index}]`, tag);
       });
-      
-      // Thêm exerciseSessionRecordId nếu có
-      formData.append(
-        'exerciseSessionRecordId',
-        postData?.exerciseSessionRecordId,
-      );
 
+      if (postData?.exerciseSessionRecordId) {
+        formData.append(
+          'exerciseSessionRecordId',
+          postData?.exerciseSessionRecordId,
+        );
+      }
       // Thêm images
       if (postData.images && postData.images.length > 0) {
         postData.images.forEach((image, index) => {
@@ -227,8 +227,14 @@ export const usePostStore = create<PostState>((set, get) => ({
 
       // Handle exercise session record ID
       if (postData.exerciseSessionRecordId) {
-        console.log('postData.exerciseSessionRecordId', postData.exerciseSessionRecordId);
-        formData.append('exerciseSessionRecordId',postData?.exerciseSessionRecordId);
+        console.log(
+          'postData.exerciseSessionRecordId',
+          postData.exerciseSessionRecordId,
+        );
+        formData.append(
+          'exerciseSessionRecordId',
+          postData?.exerciseSessionRecordId,
+        );
       }
 
       // Tách ảnh cũ và ảnh mới

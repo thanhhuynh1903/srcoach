@@ -102,13 +102,11 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
       // Ngược lại, sử dụng createPost từ usePostStore
       const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
       
-      console.log('Creating post with data:', runRecord.id);
-      
       await createPost({
         title: title.trim(),
         content: content.trim(),
         tags: tagsArray || [],
-        exerciseSessionRecordId: runRecord ? runRecord.id : null,
+        exerciseSessionRecordId: runRecord ? runRecord?.id : null,
         images: selectedImages || [],
       });
       console.log('status', usePostStore.getState().status);

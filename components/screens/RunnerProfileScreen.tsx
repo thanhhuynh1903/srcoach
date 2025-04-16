@@ -367,22 +367,6 @@ const RunnerProfileScreen = () => {
                     }>
                     <Text style={styles.postContent}>{post.content}</Text>
 
-                    <View style={styles.runStatsContainer}>
-                      <View style={styles.runStatItem}>
-                        <Icon name="walk" size={16} color="#64748B" />
-                        <Text style={styles.runStatText}>10.2km</Text>
-                      </View>
-                      <Text style={styles.runStatDot}>•</Text>
-                      <View style={styles.runStatItem}>
-                        <Icon name="time" size={16} color="#64748B" />
-                        <Text style={styles.runStatText}>48:23</Text>
-                      </View>
-                      <Text style={styles.runStatDot}>•</Text>
-                      <View style={styles.runStatItem}>
-                        <Icon name="speedometer" size={16} color="#64748B" />
-                        <Text style={styles.runStatText}>4'45"/km</Text>
-                      </View>
-                    </View>
                     {post.images && post.images.length > 0 && (
                       <View style={styles.postImageContainer}>
                         <Image
