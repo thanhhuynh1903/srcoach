@@ -53,7 +53,7 @@ interface Post {
   updated_at: string | null;
   exercise_session_record_id: string | null;
   User: User;
-  postTags: Tag[];
+  tags: Tag[];
   PostVote: any[];
   PostComment: any[];
   images: string[];
@@ -81,7 +81,7 @@ const CommunityScreen = () => {
   // Cập nhật localPosts khi posts từ store thay đổi
   useEffect(() => {
     console.log('posts ', posts);
-    console.log('localPosts : ', localPosts);
+    console.log('localPosts : ', localPosts?.user?.image?.url);
 
     if (posts && posts.length > 0) {
       setLocalPosts(posts);
@@ -255,12 +255,12 @@ const CommunityScreen = () => {
     }
 
     // Nếu có 1-2 tags, hiển thị tất cả
-    if (tags.length <= 4) {
+    if (tags.length <= 3) {
       return (
         <View style={styles.tagsContainer}>
           {tags.map((tag, index) => (
             <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{tag.tag_name}</Text>
+              <Text style={styles.tagText}>{tag}</Text>
             </View>
           ))}
         </View>
@@ -271,19 +271,16 @@ const CommunityScreen = () => {
     return (
       <View style={styles.tagsContainer}>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[0].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[0]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[1].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[1]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[2].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[2]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[3].tag_name}</Text>
-        </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>+{tags.length - 4}</Text>
+          <Text style={styles.tagText}>more +{tags.length - 3}</Text>
         </View>
       </View>
     );
@@ -317,9 +314,12 @@ const CommunityScreen = () => {
       }>
       <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
         <View style={styles.postHeader}>
-          <View style={[styles.avatar, styles.avatarPlaceholder]} />
+          <Image
+            source={{uri:  item?.user.image?.url || undefined}}
+            style={styles.avatar}
+          />
           <View>
-            <Text style={styles.name}>{item.User.username}</Text>
+            <Text style={styles.name}>{item.user.username}</Text>
             <Text style={styles.postTime}>
               {formatTimeAgo(item.created_at)}
             </Text>
@@ -376,7 +376,7 @@ const CommunityScreen = () => {
           <Text style={styles.postActionText}>{item?.comment_count}</Text>
         </TouchableOpacity>
         {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
-        {renderTags(item.postTags)}
+        {renderTags(item?.tags)}
       </View>
     </TouchableOpacity>
   );
@@ -460,8 +460,8 @@ const CommunityScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={{flex: 1, flexDirection: 'row', alignItems: 'center'}}>
-        <Icon name="fitness" size={24} color={theme.colors.primaryDark} />
-        <Text style={styles.title}>Community</Text>
+          <Icon name="fitness" size={24} color={theme.colors.primaryDark} />
+          <Text style={styles.title}>Community</Text>
         </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity
@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  title: {fontSize: 24, fontWeight: 'bold',marginHorizontal: 10},
+  title: {fontSize: 24, fontWeight: 'bold', marginHorizontal: 10},
   headerIcons: {flexDirection: 'row', alignItems: 'center'},
   iconButton: {marginLeft: 16},
   searchContainer: {
@@ -615,8 +615,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  avatar: {width: 40, height: 40, borderRadius: 20, marginRight: 8},
-  avatarPlaceholder: {backgroundColor: '#e0e0e0'},
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#4A6FA5',
+  },
   postCreateInput: {
     backgroundColor: '#f0f0f0',
     padding: 10,

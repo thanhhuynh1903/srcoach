@@ -1,16 +1,82 @@
 import React, {useEffect} from 'react';
-import {StyleSheet, View, Text, Image} from 'react-native'
+import {StyleSheet, View, Text, Image} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import { startSyncData } from '../utils/utils_healthconnect';
+import {startSyncData} from '../utils/utils_healthconnect';
+import {useLoginStore} from '../utils/useLoginStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WelcomeScreen = () => {
   const navigation = useNavigation();
+  const {setUserData, fetchUserProfile} = useLoginStore();
 
   useEffect(() => {
-    setTimeout(() => {
-      navigation.navigate('WelcomeInfoScreen' as never);
-    }, 2000);
-  }, [navigation]);
+    let isMounted = true;
+
+    const checkTokenAndNavigate = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        const tokenTimestamp = await AsyncStorage.getItem('authTokenTimestamp');
+
+        if (token && tokenTimestamp) {
+          const loginTime = new Date(parseInt(tokenTimestamp, 10));
+          const now = new Date();
+          const diff = now.getTime() - loginTime.getTime();
+
+          if (diff < 24 * 60 * 60 * 1000) {
+            // Token hợp lệ
+            setUserData(token);
+
+            // Lấy thông tin người dùng
+            const profileSuccess = await fetchUserProfile();
+
+            if (profileSuccess) {
+              // Đồng bộ dữ liệu sức khỏe
+              const endDate = new Date();
+              const startDate = new Date();
+              startDate.setDate(endDate.getDate() - 30);
+              startSyncData(startDate.toISOString(), endDate.toISOString());
+
+              if (isMounted) {
+                navigation.navigate('HomeTabs' as never);
+              }
+            } else {
+              // Không lấy được profile
+              await AsyncStorage.removeItem('authToken');
+              await AsyncStorage.removeItem('authTokenTimestamp');
+              setUserData(null);
+              if (isMounted) {
+                navigation.navigate('WelcomeInfoScreen' as never);
+              }
+            }
+          } else {
+            // Token hết hạn
+            await AsyncStorage.removeItem('authToken');
+            await AsyncStorage.removeItem('authTokenTimestamp');
+            setUserData(null);
+            if (isMounted) {
+              navigation.navigate('WelcomeInfoScreen' as never);
+            }
+          }
+        } else {
+          // Không có token
+          if (isMounted) {
+            navigation.navigate('WelcomeInfoScreen' as never);
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi kiểm tra token:', error);
+        if (isMounted) {
+          navigation.navigate('WelcomeInfoScreen' as never);
+        }
+      }
+    };
+
+    checkTokenAndNavigate();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigation, setUserData, fetchUserProfile]);
 
   return (
     <View style={styles.container}>

@@ -92,7 +92,7 @@ export const usePostStore = create<PostState>((set, get) => ({
     set({isLoading: true, status: null});
 
     try {
-      const response = await api.fetchData<ApiResponse<Post[]>>('/posts');
+      const response = await api.fetchData<ApiResponse<Post[]>>('/posts/filter');
       console.log('Response:', response);
 
       if (

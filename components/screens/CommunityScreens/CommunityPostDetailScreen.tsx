@@ -81,12 +81,12 @@ const CommunityPostDetailScreen = () => {
   // State cho modal
   const [modalVisible, setModalVisible] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [selectedCommentId, setSelectedCommentId] = useState(null);
 
   const [isEditingComment, setIsEditingComment] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);;
   const [editingParentCommentId, setEditingParentCommentId] = useState<
     string | null
   >(null);
@@ -112,7 +112,7 @@ const CommunityPostDetailScreen = () => {
     }
   }, [id]);
 
-  const handleEditComment = async commentId => {
+  const handleEditComment = async (commentId : string) => {
     setCommentText('');
     // Tìm comment cần edit trong danh sách comments
     const findComment = (comments: any[], targetId: string): any => {
@@ -238,7 +238,7 @@ const CommunityPostDetailScreen = () => {
         }
       } else {
         // Nếu đang tạo comment mới hoặc reply
-        const result = await createComment(id, commentText, replyingTo);
+        const result = await createComment(id, commentText, replyingTo ?? '');
 
         if (result) {
           // Reset input và trạng thái reply
@@ -400,7 +400,7 @@ const CommunityPostDetailScreen = () => {
         <Image
           source={{
             uri:
-              comment.user?.avatar ||
+              comment.User?.image.url ||
               'https://randomuser.me/api/portraits/women/32.jpg',
           }}
           style={styles.commentAvatar}
@@ -553,7 +553,7 @@ const CommunityPostDetailScreen = () => {
             <Image
               source={{
                 uri:
-                  localPost?.user?.avatar ||
+                  localPost?.user?.image?.url ||
                   'https://randomuser.me/api/portraits/men/32.jpg',
               }}
               style={styles.avatar}
@@ -790,7 +790,14 @@ const CommunityPostDetailScreen = () => {
       {/* Input container cho bình luận */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
-          <Icon name="person-circle-outline" size={32} color="#64748B" />
+        <Image
+          source={{
+            uri:
+              profile.image.url ||
+              'https://randomuser.me/api/portraits/women/32.jpg',
+          }}
+          style={styles.commentAvatar}
+        />
         </TouchableOpacity>
         <TextInput
           ref={inputRef}
@@ -988,6 +995,8 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    borderWidth:1,
+    borderColor: '#4285F4',
   },
   userTextInfo: {
     marginLeft: 12,
@@ -1169,6 +1178,8 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#4285F4',
   },
   commentContent: {
     flex: 1,

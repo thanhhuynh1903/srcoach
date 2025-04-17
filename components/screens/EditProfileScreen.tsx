@@ -24,7 +24,8 @@ import auth from '@react-native-firebase/auth';
 import {CommonActions} from '@react-navigation/native';
 import useAuthStore from '../utils/useAuthStore';
 import {MASTER_URL} from '../utils/zustandfetchAPI';
-
+import { ParamListBase } from '@react-navigation/native';
+import { NavigationProp } from '@react-navigation/native';
 interface ProfileData {
   id: string;
   username: string;
@@ -51,8 +52,11 @@ interface PhoneCode {
   dial_code: string;
   code: string;
 }
+interface EditProfileScreenProps {
+  navigation: NavigationProp<ParamListBase>;
+}
 
-const EditProfileScreen = ({navigation}) => {
+const EditProfileScreen = ({ navigation }: EditProfileScreenProps) => {
   const {fetchUserProfile, profile, clearAll, clear} = useLoginStore();
   const {clearToken} = useAuthStore();
   const [formData, setFormData] = useState<Partial<ProfileData>>({

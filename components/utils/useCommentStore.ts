@@ -15,8 +15,9 @@ interface Comment {
   parent_comment_id: string | null;
   is_upvote: boolean;
   is_downvote: boolean;
-  is_upvoted: boolean; // Sửa tên thuộc tính để phù hợp với API
-  is_downvoted: boolean; // Sửa tên thuộc tính để phù hợp với API
+  is_deleted: boolean; 
+  is_upvoted: boolean; 
+  is_downvoted: boolean; 
   upvote_count: number;
   downvote_count: number;
   created_at: string;

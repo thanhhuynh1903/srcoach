@@ -9,11 +9,7 @@ import {
   tabScreens,
   stackScreens,
 } from './components/routes/routes';
-import {useLoginStore} from './components/utils/useLoginStore';
-import {View, ActivityIndicator} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useEffect, useState} from 'react';
-import {startSyncData} from './components/utils/utils_healthconnect';
+
 import {WebSocketProvider} from './components/contexts/WebsocketContext';
 
 const Stack = createNativeStackNavigator();
@@ -81,72 +77,10 @@ const HomeTabs = () => {
 };
 
 const App = () => {
-  const [loading, setLoading] = useState(true);
-  const {userdata, setUserData, fetchUserProfile, profile} = useLoginStore();
-
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const token = await AsyncStorage.getItem('authToken');
-        const tokenTimestamp = await AsyncStorage.getItem('authTokenTimestamp');
-
-        if (token && tokenTimestamp) {
-          const loginTime = new Date(parseInt(tokenTimestamp, 10));
-          const now = new Date();
-          // Kiểm tra khoảng cách giữa thời điểm hiện tại và thời điểm đăng nhập
-          const diff = now.getTime() - loginTime.getTime();
-
-          // Nếu token tồn tại dưới 1 ngày (24h)
-          if (diff < 24 * 60 * 60 * 1000) {
-            setUserData(token); // Lưu token vào state
-
-            // Gọi API /me để lấy thông tin người dùng
-            const profileSuccess = await fetchUserProfile();
-
-            if (profileSuccess) {
-              // Nếu lấy thông tin thành công, đồng bộ dữ liệu sức khỏe
-              const endDate = new Date();
-              const startDate = new Date();
-              startDate.setDate(endDate.getDate() - 30);
-              startSyncData(startDate.toISOString(), endDate.toISOString());
-            } else {
-              // Nếu lấy thông tin thất bại, xóa token
-              await AsyncStorage.removeItem('authToken');
-              await AsyncStorage.removeItem('authTokenTimestamp');
-              setUserData(null);
-            }
-          } else {
-            // Token đã hết hạn
-            await AsyncStorage.removeItem('authToken');
-            await AsyncStorage.removeItem('authTokenTimestamp');
-            setUserData(null);
-          }
-        } else {
-          setUserData(null);
-        }
-      } catch (error) {
-        console.error('Error checking login status:', error);
-        setUserData(null);
-      }
-      setLoading(false);
-    };
-
-    checkLoginStatus();
-  }, []);
-
-  if (loading) {
-    return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator size="large" color="#100077" />
-      </View>
-    );
-  }
-
   return (
     <>
       <NavigationContainer>
-        <Stack.Navigator
-          initialRouteName={userdata ? 'HomeTabs' : 'WelcomeScreen'}>
+        <Stack.Navigator initialRouteName="WelcomeScreen">
           {stackScreens.map((screen: any) => (
             <Stack.Screen
               key={screen.name}
