@@ -272,10 +272,11 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
 const menuItems = [
   {title: 'View Profile', subtitle: 'View your profile information', icon: 'person-circle-outline', screen: 'RunnerProfileScreen'},
   {title: 'View schedules', subtitle: 'View your schedule information', icon: 'calendar-outline', screen: 'GenerateScheduleScreen'},
-  {title: 'Connect Accounts', subtitle: 'Manage your connect account', icon: 'construct-outline', screen: 'DevicesScreen'},
+  {title: 'Connect Accounts', subtitle: 'Manage your connect account', icon: 'construct-outline', screen: 'SettingsDevicesScreen'},
   {title: 'Notifications', subtitle: 'Manage your notifications', icon: 'notifications-outline', screen: 'DeviceNotificationsScreen'},
   {title: 'About', subtitle: 'App information and help', icon: 'information-circle-outline', screen: 'SettingsAboutScreen'},
 ];
+
 
 const styles = StyleSheet.create({
   safeArea: {flex: 1, backgroundColor: '#fff'},

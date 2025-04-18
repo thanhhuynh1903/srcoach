@@ -288,6 +288,7 @@ const RecordDetailScreen = () => {
                   onPress={() =>
                     navigate.navigate('ExerciseRecordsFullMapScreen', {
                       routes: session?.routes || [],
+                      exercise_type: session?.exercise_type,
                       distance: session?.total_distance
                         ? (session.total_distance / 1000).toFixed(2) + ' km'
                         : 'N/A',

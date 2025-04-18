@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-const DevicesScreen = () => {
+const SettingsDevicesScreen = () => {
   const [samsungHealthEnabled, setSamsungHealthEnabled] = useState(false);
   const [healthConnectEnabled, setHealthConnectEnabled] = useState(false);
 
@@ -254,4 +254,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DevicesScreen;
+export default SettingsDevicesScreen;

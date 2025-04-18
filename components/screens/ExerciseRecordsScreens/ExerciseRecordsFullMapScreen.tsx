@@ -6,25 +6,36 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
-import MapView, {Polyline, Marker} from 'react-native-maps';
+import Icon from '@react-native-vector-icons/Ionicons';
+import MapView, {Polyline, Marker, Region} from 'react-native-maps';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../BackButton';
 import Geolocation from '@react-native-community/geolocation';
+import { getNameFromExerciseType, getIconFromExerciseType } from '../../contants/exerciseType';
 
-const ExerciseRecordsFullMapScreen = () => {
+interface RouteCoordinate {
+  latitude: number;
+  longitude: number;
+}
+
+interface ExerciseRecordsFullMapScreenParams {
+  routes: RouteCoordinate[];
+  exercise_type: number;
+  distance: string;
+  duration: string;
+  steps: string;
+}
+
+const ExerciseRecordsFullMapScreen: React.FC = () => {
   const route = useRoute();
   const {
     routes,
+    exercise_type,
     distance,
     duration,
     steps,
-  } = route.params as {
-    routes: {latitude: number; longitude: number}[];
-    distance: string;
-    duration: string;
-    steps: string;
-  };
+  } = route.params as ExerciseRecordsFullMapScreenParams;
+  
   const navigate = useNavigation();
   const mapRef = useRef<MapView>(null);
 
@@ -35,7 +46,7 @@ const ExerciseRecordsFullMapScreen = () => {
   const startCoordinate = routeCoordinates[0];
   const endCoordinate = routeCoordinates[routeCoordinates.length - 1];
 
-  const getMapRegion = () => {
+  const getMapRegion = (): Region => {
     if (routeCoordinates.length === 0) {
       return {
         latitude: 37.78825,
@@ -84,13 +95,31 @@ const ExerciseRecordsFullMapScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerLeftContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigate.goBack()}>
+            <BackButton size={24} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerTitleContainer}>
+            <Icon 
+              name={getIconFromExerciseType(exercise_type)} 
+              size={20} 
+              color="#1E3A8A" 
+              style={styles.exerciseIcon}
+            />
+            <Text style={styles.headerTitle}>
+              {getNameFromExerciseType(exercise_type)}
+            </Text>
+          </View>
+        </View>
+
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigate.goBack()}>
-          <BackButton size={24} />
+          style={styles.currentLocationButton}
+          onPress={handleCurrentLocation}>
+          <Icon name="locate" size={20} color="#1E3A8A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Route Map</Text>
-        <View style={{width: 40}} />
       </View>
 
       <MapView
@@ -121,13 +150,6 @@ const ExerciseRecordsFullMapScreen = () => {
           </Marker>
         )}
       </MapView>
-
-      {/* Current location button */}
-      <TouchableOpacity
-        style={styles.currentLocationButton}
-        onPress={handleCurrentLocation}>
-        <Icon name="locate" size={20} color="#1E3A8A" />
-      </TouchableOpacity>
 
       {/* Floating info container */}
       <View style={styles.infoContainer}>
@@ -169,11 +191,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 12,
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
+  },
+  headerLeftContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   backButton: {
     width: 40,
@@ -182,6 +208,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  exerciseIcon: {
+    marginRight: 8,
   },
   headerTitle: {
     fontSize: 18,
@@ -246,22 +280,12 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   currentLocationButton: {
-    position: 'absolute',
-    bottom: 90,
-    right: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 12,
+    width: 40,
+    height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

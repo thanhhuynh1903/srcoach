@@ -7,7 +7,7 @@ import SearchResultsScreen from '../screens/SearchScreenResult';
 import SettingsScreen from '../screens/SettingsScreen';
 import ErrorScreen from '../screens/ErrorScreen';
 import ManageNotification from '../screens/ManageNotification';
-import DevicesScreen from '../screens/DevicesScreen';
+import SettingsDevicesScreen from '../screens/SettingsDevicesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SPo2Screen from '../screens/DashboardScreens/RecordSPo2Screen';
 import SleepScreen from '../screens/DashboardScreens/RecordSleepScreen';
@@ -72,7 +72,7 @@ export const stackScreens = [
   {name: 'VerifyScreen', component: VerifyScreen},
   {name: 'VerifyLoginScreen', component: VerifyLoginScreen},
   {name: 'ManageNotificationsScreen', component: ManageNotification},
-  {name: 'DevicesScreen', component: DevicesScreen},
+  {name: 'SettingsDevicesScreen', component: SettingsDevicesScreen},
   {name: 'EditProfileScreen', component: EditProfileScreen},
   {name: 'SPo2Screen', component: SPo2Screen},
   {name: 'DistanceScreen', component: RecordDistanceScreen},
