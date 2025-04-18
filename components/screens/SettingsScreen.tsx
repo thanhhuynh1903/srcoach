@@ -1,8 +1,7 @@
-import React from 'react';
+import React, {useCallback, useEffect} from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
@@ -14,15 +13,16 @@ import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useLoginStore} from '../utils/useLoginStore';
-import {CommonActions} from '@react-navigation/native';
+import {CommonActions, useFocusEffect} from '@react-navigation/native';
 import CommonDialog from '../commons/CommonDialog';
+import {CommonAvatar} from '../commons/CommonAvatar';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
   const {clearAll, clear, profile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
-  const [showExpertDialog, setShowExpertDialog] = React.useState(false);
+  const [showRecruitDialog, setShowRecruitDialog] = React.useState(false);
 
   async function handleLogout() {
     const currentUser = auth().currentUser;
@@ -48,11 +48,11 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
     );
   }
 
-  const handleExpertPress = () => {
+  const handleRecruitPress = () => {
     if (isExpert) {
       navigation.navigate('UserCertificatesExpertsScreen');
     } else {
-      setShowExpertDialog(true);
+      setShowRecruitDialog(true);
     }
   };
 
@@ -75,11 +75,11 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
     },
   ];
 
-  const expertButtons = [
+  const recruitButtons = [
     {
       label: 'Cancel',
       variant: 'text',
-      handler: () => setShowExpertDialog(false),
+      handler: () => setShowRecruitDialog(false),
       iconName: 'close-circle-outline',
     },
     {
@@ -87,12 +87,18 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       color: '#4A6FA5',
       variant: 'contained',
       handler: () => {
-        setShowExpertDialog(false);
+        setShowRecruitDialog(false);
         navigation.navigate('UserCertificatesIntroScreen');
       },
       iconName: 'arrow-forward-outline',
     },
   ];
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log(profile);
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -102,13 +108,10 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         <View style={styles.container}>
           {/* Profile Header Section */}
           <View style={styles.profileSection}>
-            <Image
-              source={{
-                uri: profile?.image?.url
-                  ? profile?.image?.url
-                  : `data:image/jpeg;base64,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`,
-              }}
-              style={styles.profileImage}
+            <CommonAvatar
+              mode={isExpert ? 'expert' : 'runner'}
+              size={100}
+              uri={profile?.avatar}
             />
             <Text style={styles.profileName}>{profile?.username}</Text>
 
@@ -118,7 +121,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
               </Text>
               {isExpert && (
                 <View style={styles.expertBadge}>
-                  <Icon name="ribbon" size={12} color="white" />
+                  <Icon name="trophy" size={12} color="white" />
                   <Text style={styles.expertBadgeText}>EXPERT</Text>
                 </View>
               )}
@@ -129,7 +132,9 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
                 <View
                   style={[
                     styles.progressFill,
-                    {width: `${profile?.points_percentage || 10}%`},
+                    {
+                      width: `${Math.max(profile?.points_percentage || 0, 2)}%`,
+                    },
                   ]}
                 />
               </View>
@@ -194,38 +199,19 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
             ))}
 
             <TouchableOpacity
-              style={[styles.expertItem, isExpert && styles.expertItemActive]}
-              onPress={handleExpertPress}>
+              style={styles.menuItem}
+              onPress={handleRecruitPress}>
               <View style={styles.iconContainer}>
-                <Icon
-                  name={isExpert ? 'ribbon' : 'ribbon-outline'}
-                  size={24}
-                  color={isExpert ? '#4CAF50' : '#FFA500'}
-                />
+                <Icon name="people-outline" size={24} color="#4A6FA5" />
               </View>
               <View style={styles.menuTextContainer}>
-                <Text
-                  style={[
-                    styles.expertTitle,
-                    isExpert && styles.expertTitleActive,
-                  ]}>
-                  {isExpert ? 'Expert Dashboard' : 'Become an Expert'}
-                </Text>
-                <Text
-                  style={[
-                    styles.expertSubtitle,
-                    isExpert && styles.expertSubtitleActive,
-                  ]}>
+                <Text style={styles.menuTitle}>Recruitments</Text>
+                <Text style={styles.menuSubtitle}>
                   {isExpert
-                    ? 'View your expert status and certificates'
-                    : 'Requires legal documents for verification'}
+                    ? 'View your recruit status and certificates'
+                    : 'Join our recruit program'}
                 </Text>
               </View>
-              {!isExpert && (
-                <View style={styles.legalBadge}>
-                  <Text style={styles.legalBadgeText}>LEGAL</Text>
-                </View>
-              )}
               <Icon name="chevron-forward" size={20} color="#888" />
             </TouchableOpacity>
 
@@ -263,20 +249,20 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         width="85%"
       />
 
-      {/* Become Expert Dialog */}
+      {/* Recruit Dialog */}
       <CommonDialog
-        visible={showExpertDialog}
-        onClose={() => setShowExpertDialog(false)}
-        title="Become an Expert"
+        visible={showRecruitDialog}
+        onClose={() => setShowRecruitDialog(false)}
+        title="Join Recruit Program"
         content={
           <View>
             <Text style={{color: '#666', fontSize: 16}}>
-              This process requires submission of legal documents for
-              verification. Are you ready to proceed?
+              This process requires submission of documents for verification.
+              Are you ready to proceed?
             </Text>
           </View>
         }
-        actionButtons={expertButtons}
+        actionButtons={recruitButtons}
         width="85%"
       />
     </SafeAreaView>
@@ -284,42 +270,11 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
 };
 
 const menuItems = [
-  {
-    title: 'View Profile',
-    subtitle: 'View your profile information',
-    icon: 'person-circle-outline',
-    screen: 'RunnerProfileScreen',
-  },
-  {
-    title: 'View schedules',
-    subtitle: 'View your schedule information',
-    icon: 'calendar-outline',
-    screen: 'GenerateScheduleScreen',
-  },
-  {
-    title: 'Connect Accounts',
-    subtitle: 'Manage your connect account',
-    icon: 'construct-outline',
-    screen: 'DevicesScreen',
-  },
-  {
-    title: 'Goals',
-    subtitle: 'Manage your Goals',
-    icon: 'golf-outline',
-    screen: 'GoalListScreen',
-  },
-  {
-    title: 'Notifications',
-    subtitle: 'Manage your notifications',
-    icon: 'notifications-outline',
-    screen: 'DeviceNotificationsScreen',
-  },
-  {
-    title: 'About',
-    subtitle: 'App information and help',
-    icon: 'information-circle-outline',
-    screen: 'SettingsAboutScreen',
-  },
+  {title: 'View Profile', subtitle: 'View your profile information', icon: 'person-circle-outline', screen: 'RunnerProfileScreen'},
+  {title: 'View schedules', subtitle: 'View your schedule information', icon: 'calendar-outline', screen: 'GenerateScheduleScreen'},
+  {title: 'Connect Accounts', subtitle: 'Manage your connect account', icon: 'construct-outline', screen: 'DevicesScreen'},
+  {title: 'Notifications', subtitle: 'Manage your notifications', icon: 'notifications-outline', screen: 'DeviceNotificationsScreen'},
+  {title: 'About', subtitle: 'App information and help', icon: 'information-circle-outline', screen: 'SettingsAboutScreen'},
 ];
 
 const styles = StyleSheet.create({
@@ -329,7 +284,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 50,
   },
   profileSection: {
     alignItems: 'center',
@@ -338,19 +293,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 15,
-    backgroundColor: '#e1e1e1',
-    borderWidth: 3,
-    borderColor: '#4A6FA5',
-  },
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 5,
+    marginTop: 10,
     color: '#333',
   },
   levelContainer: {
@@ -370,7 +317,7 @@ const styles = StyleSheet.create({
   expertBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#FFA500',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -421,31 +368,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  expertItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#ffffff',
-    marginVertical: 10,
-    borderRadius: 8,
-    paddingHorizontal: 0,
-  },
-  expertItemActive: {backgroundColor: '#F0F8F0', borderColor: '#4CAF50'},
   iconContainer: {width: 40, alignItems: 'center'},
   menuTextContainer: {flex: 1, marginLeft: 10},
   menuTitle: {fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 3},
-  expertTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFA500',
-    marginBottom: 3,
-  },
-  expertTitleActive: {color: '#4CAF50'},
   menuSubtitle: {fontSize: 13, color: '#888'},
-  expertSubtitle: {fontSize: 13, color: '#FFA500', fontWeight: '500'},
-  expertSubtitleActive: {color: '#4CAF50'},
   logoutItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -458,14 +384,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 3,
   },
-  legalBadge: {
-    backgroundColor: '#FFA500',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 10,
-  },
-  legalBadgeText: {color: 'white', fontSize: 10, fontWeight: 'bold'},
 });
 
 export default SettingsScreen;

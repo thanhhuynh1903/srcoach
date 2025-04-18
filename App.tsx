@@ -10,8 +10,6 @@ import {
   stackScreens,
 } from './components/routes/routes';
 
-import {WebSocketProvider} from './components/contexts/WebsocketContext';
-
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();

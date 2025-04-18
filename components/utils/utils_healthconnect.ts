@@ -9,6 +9,7 @@ import {
 } from 'react-native-health-connect';
 import {ExerciseType, getNameFromExerciseType} from '../contants/exerciseType';
 import {MASTER_URL} from './zustandfetchAPI';
+import ToastUtil from './utils_toast';
 
 const api = axios.create({
   baseURL: MASTER_URL,
@@ -24,30 +25,29 @@ api.interceptors.request.use(async config => {
 
 export interface ExerciseSession {
   id: string;
-  exerciseType: ExerciseType;
-  clientRecordId: string;
-  dataOrigin: string;
-  startTime: string;
-  endTime: string;
-  start_time: string;
-  end_time: string;
-  routes?: ExerciseRouteRecord[];
-  avgPace?: number;
-  durationMinutes?: number;
+  exercise_type: ExerciseType;
+  data_origin: string;
+  start_time?: string;
+  end_time?: string;
+  routes?: {
+    time: string;
+    latitude: number;
+    longitude: number;
+  }[];
+  avg_pace?: number;
   duration_minutes?: number;
-  heartRate?: {
+  heart_rate?: {
     avg: number;
     min: number;
     max: number;
     records: {
       time: string;
       value: number;
-    };
+    }[];
   };
-  totalDistance?: number;
   total_distance?: number;
-  totalCalories?: number;
-  totalSteps?: number;
+  total_calories?: number;
+  total_steps?: number;
 }
 
 export interface StepRecord {
@@ -125,7 +125,9 @@ export interface RestingHeartRateRecord {
 export const initializeHealthConnect = async (): Promise<boolean> => {
   try {
     const isInitialized = await initialize();
-    if (!isInitialized) return false;
+    if (!isInitialized) {
+      return false;
+    }
 
     const grantedPermissions = await requestPermission([
       {accessType: 'read', recordType: 'Steps'},
@@ -152,7 +154,9 @@ export const startSyncData = async (
 ): Promise<boolean> => {
   try {
     const isInitialized = await initializeHealthConnect();
-    if (!isInitialized) return false;
+    if (!isInitialized) {
+      return false;
+    }
 
     await Promise.all([
       syncStepRecords(startTime, endTime),
@@ -168,7 +172,10 @@ export const startSyncData = async (
 
     return true;
   } catch (error) {
-    console.error('Error during data sync:', error);
+    ToastUtil.error(
+      'Sync data error',
+      'An error occurred while syncing data from Health Connect.',
+    );
     return false;
   }
 };
@@ -186,7 +193,9 @@ const syncStepRecords = async (startTime: string, endTime: string) => {
     dataOrigin: record.metadata?.dataOrigin || '',
   }));
 
-  if (records.length > 0) await api.post('/record-steps', records);
+  if (records.length > 0) {
+    await api.post('/record-steps', records);
+  }
 };
 
 const syncDistanceRecords = async (startTime: string, endTime: string) => {
@@ -202,7 +211,9 @@ const syncDistanceRecords = async (startTime: string, endTime: string) => {
     dataOrigin: record.metadata?.dataOrigin || '',
   }));
 
-  if (records.length > 0) await api.post('/record-distance', records);
+  if (records.length > 0) {
+    await api.post('/record-distance', records);
+  }
 };
 
 const syncHeartRateRecords = async (startTime: string, endTime: string) => {
@@ -221,7 +232,9 @@ const syncHeartRateRecords = async (startTime: string, endTime: string) => {
     })),
   );
 
-  if (records.length > 0) await api.post('/record-heart-rate', records);
+  if (records.length > 0) {
+    await api.post('/record-heart-rate', records);
+  }
 };
 
 const syncActiveCaloriesRecords = async (
@@ -240,7 +253,9 @@ const syncActiveCaloriesRecords = async (
     dataOrigin: record.metadata?.dataOrigin || '',
   }));
 
-  if (records.length > 0) await api.post('/record-active-calories', records);
+  if (records.length > 0) {
+    await api.post('/record-active-calories', records);
+  }
 };
 
 const syncTotalCaloriesRecords = async (startTime: string, endTime: string) => {
@@ -256,7 +271,9 @@ const syncTotalCaloriesRecords = async (startTime: string, endTime: string) => {
     dataOrigin: record.metadata?.dataOrigin || '',
   }));
 
-  if (records.length > 0) await api.post('/record-total-calories', records);
+  if (records.length > 0) {
+    await api.post('/record-total-calories', records);
+  }
 };
 
 const syncExerciseSessionRecords = async (
@@ -267,29 +284,48 @@ const syncExerciseSessionRecords = async (
     timeRangeFilter: {operator: 'between', startTime, endTime},
   });
 
-  const sessions = healthData.records.map(record => ({
-    id: record.metadata?.id || '',
-    exerciseType: record.exerciseType,
-    clientRecordId: record.metadata?.clientRecordId || '',
-    dataOrigin: record.metadata?.dataOrigin || '',
-    startTime: record.startTime,
-    endTime: record.endTime,
-    routes: [],
-  }));
+  const sessions = await Promise.all(
+    healthData.records.map(async record => {
+      let routes: ExerciseRouteRecord[] = [];
+
+      try {
+        if (record.exerciseRoute?.type === 'CONSENT_REQUIRED') {
+          const {route} = await requestExerciseRoute(record.metadata?.id || '');
+          routes = route || [];
+        } else {
+          routes = record.exerciseRoute?.route || [];
+        }
+      } catch (error) {
+        console.error('Error fetching exercise route:', error);
+      }
+
+      return {
+        id: record.metadata?.id || '',
+        exerciseType: record.exerciseType,
+        dataOrigin: record.metadata?.dataOrigin || '',
+        startTime: record.startTime,
+        endTime: record.endTime,
+        routes: routes.map(route => ({
+          time: route.time,
+          latitude: route.latitude,
+          longitude: route.longitude,
+        })),
+      };
+    }),
+  );
 
   if (sessions.length > 0) {
     await Promise.all(
-      sessions.map(session =>
-        api.post('/record-exercise-session', {
+      sessions.map((session) => {
+        return api.post('/record-exercise-session', {
           exercise_type: session.exerciseType,
           record_id: session.id,
           data_origin: session.dataOrigin,
           start_time: session.startTime,
           end_time: session.endTime,
-          client_record_id: session.clientRecordId,
-          routes: [],
-        }),
-      ),
+          routes: session.routes,
+        });
+      }),
     );
   }
 };
@@ -311,7 +347,9 @@ const syncOxygenSaturationRecords = async (
     endTime: record.time,
   }));
 
-  if (records.length > 0) await api.post('/record-oxygen-saturation', records);
+  if (records.length > 0) {
+    await api.post('/record-oxygen-saturation', records);
+  }
 };
 
 const syncSleepRecords = async (startTime: string, endTime: string) => {
@@ -329,7 +367,9 @@ const syncSleepRecords = async (startTime: string, endTime: string) => {
     })),
   );
 
-  if (records.length > 0) await api.post('/record-sleep-session', records);
+  if (records.length > 0) {
+    await api.post('/record-sleep-session', records);
+  }
 };
 
 const syncRestingHeartRateRecords = async (
@@ -349,11 +389,13 @@ const syncRestingHeartRateRecords = async (
     dataOrigin: record.metadata?.dataOrigin || '',
   }));
 
-  if (records.length > 0) await api.post('/record-resting-heart-rate', records);
+  if (records.length > 0) {
+    await api.post('/record-resting-heart-rate', records);
+  }
 };
 
 export const fetchDetailRecords = async (
- id : string
+  id: string,
 ): Promise<ExerciseSession> => {
   try {
     const response = await api.get(`/record-exercise-session/${id}`);
@@ -481,39 +523,13 @@ export const fetchExerciseSessionRecords = async (
     return response.data.data.map((session: any) => ({
       id: session.id,
       exerciseType: session.exercise_type,
-      clientRecordId: session.client_record_id,
       dataOrigin: session.data_origin,
       startTime: session.start_time,
       endTime: session.end_time,
       total_distance: session.total_distance,
       duration_minutes: session.duration_minutes,
       total_steps: session.total_steps,
-      routes: [],
-    }));
-  } catch (error) {
-    console.error('Error fetching exercise sessions:', error);
-    return [];
-  }
-};
-export const fetchExerciseSessionRecordsbyIdOnly = async (
-  startTime: string,
-  endTime: string,
-): Promise<ExerciseSession[]> => {
-  try {
-    const response = await api.get('/record-exercise-session', {
-      params: {startTime, endTime},
-    });
-    return response.data.data.map((session: any) => ({
-      id: session.id,
-      exerciseType: session.exercise_type,
-      clientRecordId: session.client_record_id,
-      dataOrigin: session.data_origin,
-      startTime: session.start_time,
-      endTime: session.end_time,
-      total_distance: session.total_distance,
-      duration_minutes: session.duration_minutes,
-      total_steps: session.total_steps,
-      routes: [],
+      routes: session.routes || [],
     }));
   } catch (error) {
     console.error('Error fetching exercise sessions:', error);
@@ -525,28 +541,6 @@ export const fetchExerciseSessionByRecordId = async (
   recordId: string,
 ): Promise<ExerciseSession | null> => {
   try {
-    let routes: any = [];
-    
-    try {
-      const exercise = await readRecord('ExerciseSession', recordId);
-      if (exercise.exerciseRoute?.type == 'CONSENT_REQUIRED') {
-        const {route} = await requestExerciseRoute(recordId);
-        routes = route || [];
-      } else {
-        routes = exercise.exerciseRoute?.route || [];
-      }
-    } catch (error) {
-      console.error('Error fetching exercise session:', error);
-    }
-
-    await api.post(`/record-exercise-session/${recordId}/routes`, {
-      routes: routes.map((route: any) => ({
-        time: route.time,
-        latitude: route.latitude,
-        longitude: route.longitude,
-      })),
-    });
-
     const response = await api.get(
       `/record-exercise-session/record-id/${recordId}`,
     );
@@ -559,7 +553,7 @@ export const fetchExerciseSessionByRecordId = async (
         dataOrigin: session.data_origin,
         startTime: session.start_time,
         endTime: session.end_time,
-        routes: session.routes,
+        routes: session.routes || [],
         avgPace: session.avg_pace,
         durationMinutes: session.duration_minutes,
         heartRate: session.heart_rate,
