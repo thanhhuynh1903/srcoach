@@ -248,16 +248,16 @@ const RunnerProfileScreen = () => {
   const handleDeleteAvatar = () => {
     setAvatarOptionsModalVisible(false);
     Alert.alert(
-      'Xóa ảnh đại diện',
-      'Bạn có chắc chắn muốn xóa ảnh đại diện không?',
+      'Delete avatar?',
+      'Are you sure you want to delete your profile picture??',
       [
-        {text: 'Hủy', style: 'cancel'},
+        {text: 'Cancel', style: 'cancel'},
         {
-          text: 'Xóa',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             // Hiển thị loading
-            Alert.alert('Đang xử lý', 'Đang xóa ảnh đại diện...');
+            Alert.alert('Processing', 'Deleting profile picture...');
 
             // Gọi API xóa ảnh
             const success = await deleteImage();
@@ -267,11 +267,11 @@ const RunnerProfileScreen = () => {
               setAvatarUrl(
                 'data:image/jpeg;base64,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',
               );
-              Alert.alert('Thành công', 'Xóa ảnh đại diện thành công');
+              Alert.alert('Success', 'Deleted avatar successfully');
             } else {
               Alert.alert(
-                'Lỗi',
-                'Không thể xóa ảnh đại diện. Vui lòng thử lại.',
+                'Error',
+                'Unable to delete profile picture. Please try again..',
               );
             }
           },
@@ -739,7 +739,7 @@ const RunnerProfileScreen = () => {
           onPress={() => setAvatarModalVisible(false)}>
           <View style={styles.avatarModalContent}>
             <Image
-              source={{uri: avatarUrl}}
+              source={{uri: profile?.image?.url ? profile?.image?.url : avatarUrl}}
               style={styles.zoomedAvatar}
               resizeMode="contain"
             />
