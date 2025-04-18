@@ -145,21 +145,21 @@ const RiskWarningScreen = () => {
         await fetchHealthAlerts(); 
         // Hiển thị thông báo thành công
         Alert.alert(
-          "Thành công",
-          "Đã lưu báo cáo đánh giá sức khỏe",
+          "Success",
+          "Health assessment report saved.",
           [{ text: "OK", onPress: () => navigation.goBack() }]
         );
       } else {
         Alert.alert(
-          "Lỗi",
-          "Không thể lưu báo cáo. Vui lòng thử lại sau.",
+          "Error",
+          "Unable to save report. Please try again later.",
           [{ text: "OK" }]
         );
       }
     } catch (error) {
       Alert.alert(
-        "Lỗi",
-        "Đã xảy ra lỗi khi lưu báo cáo",
+        "Error",
+        "An error occurred while saving the report.",
         [{ text: "OK" }]
       );
     } 

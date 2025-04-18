@@ -60,6 +60,7 @@ import ChatsExpertMessageScreen from '../screens/ChatsScreen/ChatsExpertPOV/Chat
 import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsUserSearchScreen';
 import ChatsSearchAllMessagesScreen from '../screens/ChatsScreen/ChatsSearch/ChatsSearchAllMessagesScreen';
 import ChatsSearchSessionMessagesScreen from '../screens/ChatsScreen/ChatsSearch/ChatsSearchSessionMessagesScreen';
+import OtherProfileScreen from '../screens/OtherProfileScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -95,6 +96,7 @@ export const stackScreens = [
   {name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen},
   {name: 'AddScheduleScreen', component: AddScheduleScreen},
   {name: 'RunnerProfileScreen', component: RunnerProfileScreen},
+  {name: 'OtherProfileScreen', component: OtherProfileScreen},
   {name: 'LeaderBoardScreen', component: LeaderBoardScreen},
   //Authenciation Screens
   {name: 'PasswordRecoveryScreen', component: PasswordRecoveryScreen},

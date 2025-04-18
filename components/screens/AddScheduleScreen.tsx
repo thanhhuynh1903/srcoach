@@ -38,12 +38,12 @@ const AddScheduleScreen = () => {
   const handleCreateSchedule = async () => {
     // Kiểm tra dữ liệu đầu vào
     if (!title) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tiêu đề cho lịch tập');
+      Alert.alert('Error', 'Please enter a title for your workout schedule.');
       return;
     }
 
     if (getSelectedDatesCount() === 0) {
-      Alert.alert('Lỗi', 'Vui lòng chọn ít nhất một ngày');
+      Alert.alert('Error', 'Please select at least one date');
       return;
     }
 
@@ -72,10 +72,10 @@ const AddScheduleScreen = () => {
         Alert.alert('Error', message);
       }
     } catch (err) {
-      console.error('Lỗi khi tạo lịch tập:', err);
+      console.error('Error creating workout schedule:', err);
       Alert.alert(
-        'Lỗi',
-        'Đã xảy ra lỗi khi tạo lịch tập. Vui lòng thử lại sau.',
+        'Error',
+        'An error occurred while creating the workout schedule. Please try again later.',
       );
     } finally {
       // Kết thúc loading

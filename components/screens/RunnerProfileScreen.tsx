@@ -47,7 +47,7 @@ interface Tag {
 
 const RunnerProfileScreen = () => {
   const {myPosts, getMyPosts, isLoading, deletePost, likePost} = usePostStore();
-  const {profile} = useLoginStore();
+  const {profile, fetchUserProfile} = useLoginStore();
   const navigation = useNavigation();
   const currentUserId = profile?.id || '';
 
@@ -73,9 +73,11 @@ const RunnerProfileScreen = () => {
 
   // Cập nhật localPosts khi myPosts từ store thay đổi
   useEffect(() => {
+    console.log('myPosts', myPosts);
+    
     if (myPosts && myPosts.length > 0) {
       setLocalPosts(myPosts);
-    }else{
+    } else {
       setLocalPosts([]);
     }
   }, [myPosts]);
@@ -188,6 +190,7 @@ const RunnerProfileScreen = () => {
           if (result) {
             // Cập nhật UI
             setAvatarUrl(result.imageUrl || imageUri);
+            fetchUserProfile();
             Alert.alert('Thành công', 'Cập nhật ảnh đại diện thành công');
           } else {
             Alert.alert(
@@ -485,6 +488,10 @@ const RunnerProfileScreen = () => {
               </TouchableOpacity>
             </View>
             <Text style={styles.profileName}>{profile?.name}</Text>
+            <Text style={styles.profileUsername}>
+              @{profile?.username || 'username'}
+            </Text>
+
             <Text style={styles.profileBio}>
               Fitness enthusiast | Marathon runner | Helping others achieve
               their fitness goals
@@ -744,7 +751,6 @@ const RunnerProfileScreen = () => {
           </View>
         </TouchableOpacity>
       </Modal>
-      
     </SafeAreaView>
   );
 };
@@ -817,6 +823,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
     marginBottom: 8,
+  },
+  profileUsername: {
+    fontSize: 16,
+    color: '#64748B',
+    marginBottom: 12,
   },
   profileBio: {
     fontSize: 16,

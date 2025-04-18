@@ -42,7 +42,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
       Alert.alert('Error', 'Please select your gender.');
       return false;
     }
-
+  
     // Date of birth validation (yyyy-mm-dd format)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dob.trim() || !dateRegex.test(dob)) {
@@ -52,7 +52,16 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
       );
       return false;
     }
-
+  
+    // Calculate age based on date of birth
+    const dobDate = new Date(dob);
+    const age = Math.floor((new Date() - dobDate) / 31536000000); // 31536000000 is the number of milliseconds in a year
+  
+    if (age < 13) {
+      Alert.alert('Error', 'You must be at least 13 years old to register.');
+      return false;
+    }
+  
     if (!email.trim()) {
       Alert.alert('Error', 'Please enter a valid email address.');
       return false;

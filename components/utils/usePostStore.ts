@@ -1,6 +1,34 @@
 import {create} from 'zustand';
 import useApiStore from './zustandfetchAPI';
 
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  birth_date: string | null;
+  gender: string;
+  address1: string | null;
+  address2: string | null;
+  image?: {
+    id: string;
+    url: string;
+    public_id: string;
+    user_id: string;
+    created_at: string;
+  };
+  Post?: Post[];
+  UserPoint?: any[];
+  PostComment?: any[];
+  PostVote?: any[];
+  counts?: {
+    Post: number;
+    PostComment: number;
+    PostVote: number;
+  };
+}
+
 interface Post {
   id: string;
   title: string;
@@ -62,6 +90,10 @@ interface PostState {
     },
   ) => Promise<void>;
 
+  userByPost: User | null;
+  userLoading: boolean;
+  userError: string | null;
+
   searchResults: Post[];
   searchLoading: boolean;
 
@@ -72,13 +104,16 @@ interface PostState {
     pageSize?: number;
     pageIndex?: number;
   }) => Promise<void>;
+  getUserByPostId: (postId: string) => Promise<User | null>;
+  clearUserByPost: () => void;
+
 }
 
 const api = useApiStore.getState();
 
 export const usePostStore = create<PostState>((set, get) => ({
   posts: [],
-  myPosts: [], // Khởi tạo rỗng
+  myPosts: [],
   currentPost: null,
   isLoading: false,
   message: null,
@@ -87,6 +122,10 @@ export const usePostStore = create<PostState>((set, get) => ({
   searchResults: [],
   searchLoading: false,
   searchError: null,
+
+  userByPost: null,
+  userLoading: false,
+  userError: null,
 
   getAll: async () => {
     set({isLoading: true, status: null});
@@ -499,6 +538,42 @@ export const usePostStore = create<PostState>((set, get) => ({
       return false;
     }
   },
+  getUserByPostId: async (postId: string) => {
+    set({userLoading: true, userError: null});
+    
+    try {
+      const response = await api.fetchData<ApiResponse<User>>(`/posts/${postId}/user`);
+      console.log('response', response);
+      
+      if (response && response?.status === true && response.data) {
+        set({
+          userByPost: response.data,
+          userLoading: false,
+          userError: null,
+        });
+        return response.data;
+      } else {
+        const errorMessage = response?.message || 'Không thể lấy thông tin người dùng';
+        set({
+          userByPost: null,
+          userLoading: false,
+          userError: errorMessage,
+        });
+        return null;
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Đã xảy ra lỗi khi lấy thông tin người dùng';
+      set({
+        userByPost: null,
+        userLoading: false,
+        userError: errorMessage,
+      });
+      return null;
+    }
+  },
+  
+  // Thêm hàm clearUserByPost để xóa thông tin người dùng
+  clearUserByPost: () => set({userByPost: null, userError: null}),
 
   clearCurrent: () => set({currentPost: null}),
 }));

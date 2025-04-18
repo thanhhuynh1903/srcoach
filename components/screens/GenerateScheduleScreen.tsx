@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import {useState, useEffect, useMemo} from 'react';
 import {
   View,
   Text,
@@ -8,95 +8,105 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
-} from "react-native"
-import Icon from "@react-native-vector-icons/ionicons"
-import EnhancedScheduleCard from "./EnhancedScheduleCard"
-import { useNavigation } from "@react-navigation/native"
-import BackButton from "../BackButton"
-import useScheduleStore from "../utils/useScheduleStore"
+} from 'react-native';
+import Icon from '@react-native-vector-icons/ionicons';
+import EnhancedScheduleCard from './EnhancedScheduleCard';
+import {useNavigation} from '@react-navigation/native';
+import BackButton from '../BackButton';
+import useScheduleStore from '../utils/useScheduleStore';
 
 const GenerateScheduleScreen = () => {
-  const [activeTab, setActiveTab] = useState("All")
-  const navigation = useNavigation()
-  const { schedules, isLoading, error, fetchSelfSchedules } = useScheduleStore()
+  const [activeTab, setActiveTab] = useState('All');
+  const navigation = useNavigation();
+  const {schedules, isLoading, error, fetchSelfSchedules} = useScheduleStore();
 
   const hasActiveSchedule = useMemo(() => {
     return schedules?.some(
-      (schedule) => schedule.status === "IN_PROGRESS" || schedule.status === "PENDING" || schedule.status === "ONGOING",
-    )
-  }, [schedules])
+      schedule =>
+        schedule.status === 'IN_PROGRESS' ||
+        schedule.status === 'PENDING' ||
+        schedule.status === 'ONGOING',
+    );
+  }, [schedules]);
 
   useEffect(() => {
-    fetchSelfSchedules()
-  }, [])
+    fetchSelfSchedules();
+  }, []);
 
   // Logic lọc dựa trên tab đang chọn
   const filteredSchedules = useMemo(() => {
-    if (!schedules || schedules.length === 0) return []
+    if (!schedules || schedules.length === 0) return [];
 
     switch (activeTab) {
       case "Expert's Choice":
-        return schedules.filter((schedule) => schedule.schedule_type === "EXPERT")
-      case "My Schedules":
-        return schedules.filter((schedule) => schedule.schedule_type !== "EXPERT")
+        return schedules.filter(
+          schedule => schedule.schedule_type === 'EXPERT',
+        );
+      case 'My Schedules':
+        return schedules.filter(
+          schedule => schedule.schedule_type !== 'EXPERT',
+        );
       default: // "All"
-        return schedules
+        return schedules;
     }
-  }, [schedules, activeTab])
+  }, [schedules, activeTab]);
 
-  const formatScheduleData = (schedule) => {
-    if (!schedule || !schedule.ScheduleDay) return null
+  const formatScheduleData = schedule => {
+    if (!schedule || !schedule.ScheduleDay) return null;
 
     // Sắp xếp các ngày theo thứ tự tăng dần
-    const sortedDays = [...schedule.ScheduleDay].sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
+    const sortedDays = [...schedule.ScheduleDay].sort(
+      (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+    );
 
     // Lấy danh sách ngày để hiển thị
-    const days = sortedDays.map((day) => new Date(day.day).getDate())
+    const days = sortedDays.map(day => new Date(day.day).getDate());
 
     // Lấy ngày bắt đầu
-    const startDate = sortedDays.length > 0 ? new Date(sortedDays[0].day) : new Date()
+    const startDate =
+      sortedDays.length > 0 ? new Date(sortedDays[0].day) : new Date();
 
     // Định dạng ngày bắt đầu
-    const formattedStartDate = startDate.toLocaleDateString("vi-VN", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
+    const formattedStartDate = startDate.toLocaleDateString('vi-VN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
 
     // Tạo daySchedules cho mỗi ngày
-    const daySchedules = sortedDays.map((day) => {
-      const date = new Date(day.day)
+    const daySchedules = sortedDays.map(day => {
+      const date = new Date(day.day);
       return {
         day: date.getDate(),
-        workouts: day.ScheduleDetail.map((detail) => {
-          const startTime = new Date(detail.start_time)
-          const endTime = new Date(detail.end_time)
+        workouts: day.ScheduleDetail.map(detail => {
+          const startTime = new Date(detail.start_time);
+          const endTime = new Date(detail.end_time);
 
           // Định dạng thời gian
-          const formattedStartTime = startTime.toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
+          const formattedStartTime = startTime.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
             hour12: false,
-          })
+          });
 
-          const formattedEndTime = endTime.toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
+          const formattedEndTime = endTime.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
             hour12: false,
-          })
+          });
 
           return {
             time: `${formattedStartTime} - ${formattedEndTime}`,
-            name: detail.description || "Session",
+            name: detail.description || 'Session',
             steps: detail.goal_steps || 0,
             distance: detail.goal_distance || 0,
             calories: detail.goal_calories || 0,
             status: detail.status,
             id: detail.id,
-          }
+          };
         }),
-      }
-    })
+      };
+    });
 
     return {
       id: schedule.id,
@@ -105,10 +115,10 @@ const GenerateScheduleScreen = () => {
       startDate: formattedStartDate,
       days: days,
       daySchedules: daySchedules,
-      isExpertChoice: schedule.schedule_type === "EXPERT",
+      isExpertChoice: schedule.schedule_type === 'EXPERT',
       status: schedule.status,
-    }
-  }
+    };
+  };
 
   // Hiển thị màn hình loading
   if (isLoading) {
@@ -126,7 +136,7 @@ const GenerateScheduleScreen = () => {
           <Text style={styles.loadingText}>Loading schedules...</Text>
         </View>
       </SafeAreaView>
-    )
+    );
   }
 
   // Hiển thị thông báo lỗi
@@ -135,7 +145,9 @@ const GenerateScheduleScreen = () => {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" />
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
             <BackButton size={24} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Schedule</Text>
@@ -143,12 +155,14 @@ const GenerateScheduleScreen = () => {
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={60} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => fetchSelfSchedules()}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => fetchSelfSchedules()}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    )
+    );
   }
 
   return (
@@ -165,13 +179,18 @@ const GenerateScheduleScreen = () => {
 
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
-        {["All", "Expert's Choice", "My Schedules"].map((tab) => (
+        {['All', "Expert's Choice", 'My Schedules'].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.activeTab]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+            onPress={() => setActiveTab(tab)}>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab && styles.activeTabText,
+              ]}>
+              {tab}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -181,30 +200,30 @@ const GenerateScheduleScreen = () => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => {
-            navigation.navigate("CalendarScreen" as never)
-          }}
-        >
+            navigation.navigate('CalendarScreen' as never);
+          }}>
           <Icon name="calendar-outline" size={24} color="#555" />
-          <Text style={styles.actionButtonText}>Full{"\n"}Calendar</Text>
+          <Text style={styles.actionButtonText}>Full{'\n'}Calendar</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: hasActiveSchedule ? "#f3f4f6" : "#F9FAFB" }]}
+          style={[
+            styles.actionButton,
+            {backgroundColor: hasActiveSchedule ? '#f3f4f6' : '#F9FAFB'},
+          ]}
           onPress={() => {
-            navigation.navigate("AddScheduleScreen" as never)
+            navigation.navigate('AddScheduleScreen' as never);
           }}
-          disabled={hasActiveSchedule}
-        >
+          disabled={hasActiveSchedule}>
           <Icon name="add-circle-outline" size={24} color="#555" />
-          <Text style={styles.actionButtonText}>Add{"\n"}Schedule</Text>
+          <Text style={styles.actionButtonText}>Add{'\n'}Schedule</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => {
-            navigation.navigate("ScheduleHistoryScreen" as never)
-          }}
-        >
+            navigation.navigate('ScheduleHistoryScreen' as never);
+          }}>
           <Icon name="time-outline" size={24} color="#555" />
           <Text style={styles.actionButtonText}>History</Text>
         </TouchableOpacity>
@@ -214,9 +233,9 @@ const GenerateScheduleScreen = () => {
       <ScrollView style={styles.scrollView}>
         {filteredSchedules && filteredSchedules.length > 0 ? (
           <>
-            {filteredSchedules.map((schedule) => {
-              const formattedSchedule = formatScheduleData(schedule)
-              if (!formattedSchedule) return null
+            {filteredSchedules.map(schedule => {
+              const formattedSchedule = formatScheduleData(schedule);
+              if (!formattedSchedule) return null;
 
               return (
                 <EnhancedScheduleCard
@@ -232,16 +251,21 @@ const GenerateScheduleScreen = () => {
                   daySchedules={formattedSchedule.daySchedules}
                   status={formattedSchedule.status}
                 />
-              )
+              );
             })}
 
             {/* Thông báo giới hạn lịch chạy */}
             <View style={styles.limitNoteContainer}>
-              <Icon name="information-circle-outline" size={22} color="#0F2B5B" />
+              <Icon
+                name="information-circle-outline"
+                size={22}
+                color="#0F2B5B"
+              />
               <Text style={styles.limitNoteText}>
-                Để đảm bảo hiệu quả tập luyện, mỗi người dùng chỉ được phép duy trì một lịch chạy. Hãy hoàn thành mục
-                tiêu hiện tại hoặc điều chỉnh lịch trình sẵn có để phù hợp với nhu cầu của bạn. Khi hoàn thành, bạn có
-                thể tạo lịch mới với những thách thức mới!
+                To ensure effective training, each user is only allowed to
+                maintain one running schedule. Complete your current goals or
+                adjust your existing schedule to suit your needs. When you are
+                done, you can create a new schedule with new challenges!
               </Text>
             </View>
           </>
@@ -249,26 +273,27 @@ const GenerateScheduleScreen = () => {
           <View style={styles.emptyContainer}>
             <Icon name="calendar-outline" size={60} color="#94A3B8" />
             <Text style={styles.emptyText}>
-              {activeTab === "All"
-                ? "Bạn chưa có lịch tập nào"
+              {activeTab === 'All'
+                ? 'You do not have any training schedule yet.'
                 : activeTab === "Expert's Choice"
-                  ? "Không có lịch tập nào từ chuyên gia"
-                  : "Bạn chưa tạo lịch tập nào"}
+                ? 'No workout schedule from the expert'
+                : 'You have not created any workout schedule yet.'}
             </Text>
-            {activeTab === "My Schedules" && (
+            {activeTab === 'My Schedules' && (
               <TouchableOpacity
                 style={styles.createButton}
-                onPress={() => navigation.navigate("AddScheduleScreen" as never)}
-              >
-                <Text style={styles.createButtonText}>Tạo lịch tập mới</Text>
+                onPress={() =>
+                  navigation.navigate('AddScheduleScreen' as never)
+                }>
+                <Text style={styles.createButtonText}>Create new workout schedule</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
       </ScrollView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 // Update the styles to make the UI more modern and user-friendly
 // Add subtle animations and improved visual hierarchy
@@ -278,97 +303,97 @@ const GenerateScheduleScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: '#F9FAFB',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: '#F1F5F9',
     elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
   backButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F8FAFC',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '700',
     marginLeft: 12,
-    color: "#0F172A",
+    color: '#0F172A',
   },
 
   // Improved tab navigation
   tabContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: '#F1F5F9',
   },
   tab: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginRight: 10,
     borderRadius: 20,
-    backgroundColor: "#F1F5F9",
+    backgroundColor: '#F1F5F9',
   },
   activeTab: {
-    backgroundColor: "#EBF3FF",
+    backgroundColor: '#EBF3FF',
     borderWidth: 1,
-    borderColor: "#DBEAFE",
+    borderColor: '#DBEAFE',
   },
   tabText: {
     fontSize: 14,
-    color: "#64748B",
-    fontWeight: "500",
+    color: '#64748B',
+    fontWeight: '500',
   },
   activeTabText: {
-    color: "#0F2B5B",
-    fontWeight: "600",
+    color: '#0F2B5B',
+    fontWeight: '600',
   },
 
   // Enhanced action buttons
   actionButtonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    borderBottomColor: '#F1F5F9',
   },
   actionButton: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     width: 90,
     height: 90,
-    backgroundColor: "#F9FAFB",
+    backgroundColor: '#F9FAFB',
     borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: '#F1F5F9',
   },
   actionButtonText: {
     fontSize: 13,
-    color: "#4B5563",
+    color: '#4B5563',
     marginTop: 8,
-    textAlign: "center",
-    fontWeight: "500",
+    textAlign: 'center',
+    fontWeight: '500',
   },
 
   // Improved scroll view
@@ -381,102 +406,102 @@ const styles = StyleSheet.create({
   // Enhanced empty state
   emptyContainer: {
     padding: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     marginTop: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
   emptyText: {
     fontSize: 16,
-    color: "#64748B",
+    color: '#64748B',
     marginTop: 16,
     marginBottom: 24,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 22,
   },
   createButton: {
-    backgroundColor: "#0F2B5B",
+    backgroundColor: '#0F2B5B',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    shadowColor: "#0F2B5B",
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F2B5B',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
   },
   createButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 15,
   },
 
   // Enhanced loading state
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#0F172A",
+    fontWeight: '500',
+    color: '#0F172A',
     marginTop: 16,
   },
 
   // Enhanced error state
   errorContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
   },
   errorText: {
     fontSize: 16,
-    color: "#0F172A",
-    textAlign: "center",
+    color: '#0F172A',
+    textAlign: 'center',
     marginTop: 16,
     marginBottom: 24,
     lineHeight: 22,
   },
   retryButton: {
-    backgroundColor: "#0F2B5B",
+    backgroundColor: '#0F2B5B',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    shadowColor: "#0F2B5B",
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#0F2B5B',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
   },
   retryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 15,
   },
 
   // Enhanced limit note
   limitNoteContainer: {
-    backgroundColor: "#EBF3FF",
+    backgroundColor: '#EBF3FF',
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
     marginBottom: 24,
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     borderLeftWidth: 4,
-    borderLeftColor: "#0F2B5B",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    borderLeftColor: '#0F2B5B',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
@@ -484,10 +509,10 @@ const styles = StyleSheet.create({
   limitNoteText: {
     flex: 1,
     fontSize: 14,
-    color: "#334155",
+    color: '#334155',
     lineHeight: 20,
     marginLeft: 10,
   },
-})
+});
 
-export default GenerateScheduleScreen
+export default GenerateScheduleScreen;

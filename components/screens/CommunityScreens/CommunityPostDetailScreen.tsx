@@ -61,7 +61,8 @@ interface Post {
 }
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, getAll, deletePost, likePost,getMyPosts} = usePostStore();
+  const {getDetail, currentPost, getAll, deletePost, likePost, getMyPosts} =
+    usePostStore();
   const [localPost, setLocalPost] = useState<Post[]>([]);
   const {profile} = useLoginStore();
   const {
@@ -86,7 +87,7 @@ const CommunityPostDetailScreen = () => {
   const [selectedCommentId, setSelectedCommentId] = useState(null);
 
   const [isEditingComment, setIsEditingComment] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);;
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingParentCommentId, setEditingParentCommentId] = useState<
     string | null
   >(null);
@@ -112,7 +113,7 @@ const CommunityPostDetailScreen = () => {
     }
   }, [id]);
 
-  const handleEditComment = async (commentId : string) => {
+  const handleEditComment = async (commentId: string) => {
     setCommentText('');
     // Tìm comment cần edit trong danh sách comments
     const findComment = (comments: any[], targetId: string): any => {
@@ -199,13 +200,13 @@ const CommunityPostDetailScreen = () => {
       if (!success) {
         // Nếu API thất bại, khôi phục lại danh sách comments ban đầu
         await getCommentsByPostId(id);
-        Alert.alert('Lỗi', 'Không thể thích bình luận. Vui lòng thử lại sau.');
+        Alert.alert('Error', 'Cannot like comment. Please try again later.');
       }
     } catch (error) {
       console.error('Error liking comment:', error);
       // Khôi phục lại danh sách comments ban đầu nếu có lỗi
       await getCommentsByPostId(id);
-      Alert.alert('Lỗi', 'Không thể thích bình luận. Vui lòng thử lại sau.');
+      Alert.alert('Error', 'Cannot like comment. Please try again later.');
     }
   };
 
@@ -252,7 +253,6 @@ const CommunityPostDetailScreen = () => {
           await getDetail(id);
           await getAll();
           await getMyPosts();
-
         } else {
           Alert.alert('Error', 'Failed to post comment');
         }
@@ -421,12 +421,7 @@ const CommunityPostDetailScreen = () => {
           <View style={styles.commentActions}>
             <View style={styles.commentVotes}>
               <TouchableOpacity
-                onPress={() =>
-                  handleLikeComment(
-                    comment.id,
-                    comment.is_upvote,
-                  )
-                }
+                onPress={() => handleLikeComment(comment.id, comment.is_upvote)}
                 style={styles.likeButton}>
                 <Icon
                   name={
@@ -493,8 +488,8 @@ const CommunityPostDetailScreen = () => {
   const handleLikePost = async (id: string, isLike: boolean) => {
     if (!profile) {
       // Kiểm tra người dùng đã đăng nhập chưa
-      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bài viết', [
-        {text: 'Đóng', style: 'cancel'},
+      Alert.alert('Success', 'Please login to like this post', [
+        {text: 'Close', style: 'cancel'},
       ]);
       return;
     }
@@ -517,7 +512,7 @@ const CommunityPostDetailScreen = () => {
           : currentPost?.upvote_count,
       };
       console.log('updatedPost', updatedPost);
-      
+
       // Cập nhật currentPost trong store
       usePostStore.setState({currentPost: updatedPost});
 
@@ -527,11 +522,11 @@ const CommunityPostDetailScreen = () => {
       if (!success) {
         // Nếu API thất bại, khôi phục lại trạng thái cũ
         usePostStore.setState({currentPost: oldPostState});
-        Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
+        Alert.alert('Error', 'Unable to like this post. Please try again later.');
       }
     } catch (error) {
       console.error('Error liking post:', error);
-      Alert.alert('Lỗi', 'Không thể thích bài viết. Vui lòng thử lại sau.');
+      Alert.alert('Error', 'Unable to like this post. Please try again later.');
     }
   };
 
@@ -549,27 +544,30 @@ const CommunityPostDetailScreen = () => {
       <ScrollView style={styles.scrollView}>
         {/* User info section */}
         <View style={styles.userInfoContainer}>
-          <View style={styles.userInfo}>
-            <Image
-              source={{
-                uri:
-                  localPost?.user?.image?.url ||
-                  'https://randomuser.me/api/portraits/men/32.jpg',
-              }}
-              style={styles.avatar}
-            />
-            <View style={styles.userTextInfo}>
-              <Text style={styles.userName}>{localPost?.user?.username}</Text>
-              <View style={styles.postMetaInfo}>
-                <Text style={styles.postTime}>
-                  {formatTimeAgo(localPost?.created_at)}
-                </Text>
-                <Text style={styles.postTime}> • </Text>
-                <Icon name="location-outline" size={14} color="#666" />
-                <Text style={styles.postTime}>Central Park</Text>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('OtherProfileScreen', {postId: currentPost?.id})
+            }>
+            <View style={styles.userInfo}>
+              <Image
+                source={{
+                  uri:
+                    localPost?.user?.image?.url ||
+                    'https://randomuser.me/api/portraits/men/32.jpg',
+                }}
+                style={styles.avatar}
+              />
+              <View style={styles.userTextInfo}>
+                <Text style={styles.userName}>{localPost?.user?.username}</Text>
+                <View style={styles.postMetaInfo}>
+                  <Text style={styles.postTime}>
+                    {formatTimeAgo(localPost?.created_at)}
+                  </Text>
+                
+                </View>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
             <Icon name="ellipsis-horizontal" size={20} color="#000" />
           </TouchableOpacity>
@@ -603,7 +601,7 @@ const CommunityPostDetailScreen = () => {
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    scrollEnabled={false}                    
+                    scrollEnabled={false}
                     contentContainerStyle={{paddingHorizontal: 2}}>
                     {localPost.images.slice(1).map((imageUri, index) => (
                       <TouchableOpacity
@@ -707,7 +705,9 @@ const CommunityPostDetailScreen = () => {
             </>
           )}
 
-         <CommunityPostDetailMap exerciseSessionRecordId={currentPost?.exercise_session_record_id} />
+          <CommunityPostDetailMap
+            exerciseSessionRecordId={currentPost?.exercise_session_record_id}
+          />
 
           {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
             <View style={styles.tagsContainer}>
@@ -790,14 +790,14 @@ const CommunityPostDetailScreen = () => {
       {/* Input container cho bình luận */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
-        <Image
-          source={{
-            uri:
-              profile.image.url ||
-              'https://randomuser.me/api/portraits/women/32.jpg',
-          }}
-          style={styles.commentAvatar}
-        />
+          <Image
+            source={{
+              uri:
+                profile.image.url ||
+                'https://randomuser.me/api/portraits/women/32.jpg',
+            }}
+            style={styles.commentAvatar}
+          />
         </TouchableOpacity>
         <TextInput
           ref={inputRef}
@@ -995,7 +995,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth:1,
+    borderWidth: 1,
     borderColor: '#4285F4',
   },
   userTextInfo: {
