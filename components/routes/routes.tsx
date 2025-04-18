@@ -15,7 +15,6 @@ import HeartRateScreen from '../screens/DashboardScreens/RecordHeartRateScreen';
 import RecordDetailScreen from '../screens/RecordDetailScreen';
 import ChartDetailScreen from '../screens/ChartDetailScreen';
 import SetGoalsScreen from '../screens/SetGoalsScreen';
-import GoalListScreen from '../screens/GoalListScreen';
 import ScheduleScreen from '../screens/ScheduleScreen';
 import RateScheduleScreen from '../screens/RateScheduleScreen';
 import RiskWarningListScreen from '../screens/RiskWarningListScreen';
@@ -60,6 +59,7 @@ import ChatsExpertMessageScreen from '../screens/ChatsScreen/ChatsExpertPOV/Chat
 import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsUserSearchScreen';
 import ChatsSearchAllMessagesScreen from '../screens/ChatsScreen/ChatsSearch/ChatsSearchAllMessagesScreen';
 import ChatsSearchSessionMessagesScreen from '../screens/ChatsScreen/ChatsSearch/ChatsSearchSessionMessagesScreen';
+import ExerciseRecordsFullMapScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsFullMapScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -80,7 +80,6 @@ export const stackScreens = [
   {name: 'RecordDetailScreen', component: RecordDetailScreen},
   {name: 'ChartDetailScreen', component: ChartDetailScreen},
   {name: 'SetGoalsScreen', component: SetGoalsScreen},
-  {name: 'GoalListScreen', component: GoalListScreen},
   {name: 'ScheduleScreen', component: ScheduleScreen},
   {name: 'RateScheduleScreen', component: RateScheduleScreen},
   {name: 'RiskWarningScreen', component: RiskWarningScreen},
@@ -104,6 +103,8 @@ export const stackScreens = [
     name: 'PasswordRecoverySuccessScreen',
     component: PasswordRecoverySuccessScreen,
   },
+
+  {name: 'ExerciseRecordsFullMapScreen', component: ExerciseRecordsFullMapScreen},
 
   // Community Screens
   {name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen},

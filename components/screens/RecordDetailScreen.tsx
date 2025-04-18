@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
@@ -14,55 +13,32 @@ import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import {hp, wp} from '../helpers/common';
 import MapView, {Polyline, Marker} from 'react-native-maps';
+import Geolocation from '@react-native-community/geolocation';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {
-  fetchExerciseSessionByRecordId,
+  fetchDetailRecords,
   ExerciseSession,
 } from '../utils/utils_healthconnect';
 import {getNameFromExerciseType} from '../contants/exerciseType';
-import {
-  format,
-  parseISO,
-  differenceInMinutes,
-  differenceInSeconds,
-} from 'date-fns';
+import {format, parseISO} from 'date-fns';
 import {theme} from '../contants/theme';
-import { useLoginStore } from '../utils/useLoginStore';
-import { RouteProp } from '@react-navigation/native';
+import {useLoginStore} from '../utils/useLoginStore';
 
-type RiskWarningScreenParams = {
-  userActivity: {
-    age: number;
-    gender: string;
-    heart_rate_min: number;
-    heart_rate_max: number;
-    heart_rate_avg: number;
-    avg_pace: number;
-    calories: number;
-    distance: number;
-    steps: number;
-    activity_name: string;
-  };
-};
-
-type RootStackParamList = {
-  RecordDetailScreen: {id: string};
-  RiskWarningScreen: RiskWarningScreenParams;
-};
 const RecordDetailScreen = () => {
   const route = useRoute();
   const {id} = route.params as {id: string};
-  const { profile } = useLoginStore();
+  const {profile} = useLoginStore();
   const [session, setSession] = useState<ExerciseSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mapRef, setMapRef] = useState<MapView | null>(null);
   const currentYear = new Date().getFullYear();
   const birthYear = new Date(profile.birth_date).getFullYear();
   const age = currentYear - birthYear;
-  
+
   const loadSession = async () => {
     try {
       setLoading(true);
-      const sessionData = await fetchExerciseSessionByRecordId(id);
+      const sessionData = await fetchDetailRecords(id);
       setSession(sessionData);
     } catch (error) {
       console.error('Error loading session:', error);
@@ -76,21 +52,22 @@ const RecordDetailScreen = () => {
   }, [id]);
 
   const calculateDuration = () => {
-    if (!session?.startTime || !session?.endTime) return 'N/A';
+    if (!session?.start_time || !session?.end_time) return 'N/A';
 
-    const start = parseISO(session.startTime);
-    const end = parseISO(session.endTime);
-    const minutes = differenceInMinutes(end, start);
-    const seconds = differenceInSeconds(end, start) % 60;
+    const minutes = session.duration_minutes || 0;
+    const remainingSeconds = Math.round((minutes - Math.floor(minutes)) * 60);
 
-    return `${minutes} min ${seconds} sec`;
+    return `${Math.floor(minutes)} min ${remainingSeconds} sec`;
   };
 
   const prepareHeartRateData = () => {
-    if (!session?.heartRate?.records || session.heartRate.records.length === 0)
+    if (
+      !session?.heart_rate?.records ||
+      session.heart_rate.records.length === 0
+    )
       return [];
 
-    const sortedRecords = [...session.heartRate.records].sort(
+    const sortedRecords = [...session.heart_rate.records].sort(
       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
     );
 
@@ -146,13 +123,28 @@ const RecordDetailScreen = () => {
     };
   };
 
+  const handleCurrentLocation = () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        const {latitude, longitude} = position.coords;
+        mapRef?.animateToRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+      },
+      error => console.log(error),
+      {enableHighAccuracy: true, timeout: 15000, maximumAge: 10000},
+    );
+  };
+
   const navigate = useNavigation();
 
   return (
     <ScreenWrapper bg={'#f9fafb'}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Session Details</Text>
@@ -168,11 +160,11 @@ const RecordDetailScreen = () => {
         ) : (
           <>
             <Text style={styles.title}>
-              {getNameFromExerciseType(session?.exerciseType || 0)}
+              {getNameFromExerciseType(session?.exercise_type || 0)}
             </Text>
-            {session?.startTime && (
+            {session?.start_time && (
               <Text style={styles.dateTime}>
-                {format(parseISO(session.startTime), 'EEEE, MMMM d, yyyy')}
+                {format(parseISO(session.start_time), 'EEEE, MMMM d, yyyy')}
               </Text>
             )}
 
@@ -182,8 +174,8 @@ const RecordDetailScreen = () => {
                 <Icon name="walk-sharp" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Distance</Text>
                 <Text style={styles.metricValue}>
-                  {session?.totalDistance
-                    ? (session.totalDistance / 1000).toFixed(2) + ' km'
+                  {session?.total_distance
+                    ? (session.total_distance / 1000).toFixed(2) + ' km'
                     : 'N/A'}
                 </Text>
               </View>
@@ -198,8 +190,8 @@ const RecordDetailScreen = () => {
                 <Icon name="flame-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Calories</Text>
                 <Text style={styles.metricValue}>
-                  {session?.totalCalories
-                    ? session.totalCalories.toFixed(2) + ' cal'
+                  {session?.total_calories
+                    ? session.total_calories.toFixed(2) + ' cal'
                     : 'N/A'}
                 </Text>
               </View>
@@ -208,9 +200,9 @@ const RecordDetailScreen = () => {
                 <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Avg. Pace</Text>
                 <Text style={styles.metricValue}>
-                  {session?.avgPace
-                    ? `${Math.floor(session.avgPace)}:${Math.round(
-                        (session.avgPace - Math.floor(session.avgPace)) * 60,
+                  {session?.avg_pace
+                    ? `${Math.floor(session.avg_pace)}:${Math.round(
+                        (session.avg_pace - Math.floor(session.avg_pace)) * 60,
                       )
                         .toString()
                         .padStart(2, '0')} min/km`
@@ -222,54 +214,53 @@ const RecordDetailScreen = () => {
             {/* Heart Rate Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Icon name="heart" size={20} color="#1E3A8A" />
+                <Icon name="heart" size={20} color="#DC2626" />
                 <Text style={styles.sectionTitle}>Heart Rate</Text>
               </View>
 
-              {session?.heartRate ? (
+              {session?.heart_rate ? (
                 <>
                   <View style={styles.heartRateStats}>
                     <View>
                       <Text style={styles.heartRateLabel}>Min</Text>
                       <Text style={styles.heartRateValue}>
-                        {session.heartRate.min} BPM
+                        {session.heart_rate.min} BPM
                       </Text>
                     </View>
                     <View>
                       <Text style={styles.heartRateLabel}>Average</Text>
                       <Text style={styles.heartRateValue}>
-                        {session.heartRate.avg} BPM
+                        {session.heart_rate.avg} BPM
                       </Text>
                     </View>
                     <View>
                       <Text style={styles.heartRateLabel}>Max</Text>
                       <Text style={styles.heartRateValue}>
-                        {session.heartRate.max} BPM
+                        {session.heart_rate.max} BPM
                       </Text>
                     </View>
                   </View>
 
-                  {session.heartRate.records?.length > 0 && (
+                  {session.heart_rate.records?.length > 0 && (
                     <View style={styles.chartContainer}>
                       <LineChart
                         data={prepareHeartRateData()}
                         height={150}
                         width={wp(70)}
                         spacing={60}
-                        color={theme.colors.primaryDark}
+                        color="#DC2626" // Red color for heart rate
                         thickness={3}
                         curved
                         areaChart
                         yAxisOffset={20}
                         noOfSections={4}
-                        maxValue={session.heartRate.max + 20}
+                        maxValue={session.heart_rate.max + 20}
                         initialSpacing={20}
                         endSpacing={20}
-
                         yAxisLabelWidth={40}
                         xAxisLabelTextStyle={{width: 60}}
-                        startFillColor="#387199"
-                        endFillColor="#d9f6ff"
+                        startFillColor="#FECACA" // Light red
+                        endFillColor="#FEE2E2" // Very light red
                         adjustToWidth
                       />
                     </View>
@@ -284,9 +275,31 @@ const RecordDetailScreen = () => {
 
             {/* Route Map Section */}
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Icon name="location-outline" size={20} color="#1E3A8A" />
-                <Text style={styles.sectionTitle}>Route Map</Text>
+              <View
+                style={[
+                  styles.sectionHeader,
+                  {justifyContent: 'space-between'},
+                ]}>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <Icon name="location-outline" size={20} color="#1E3A8A" />
+                  <Text style={styles.sectionTitle}>Route Map</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    navigate.navigate('ExerciseRecordsFullMapScreen', {
+                      routes: session?.routes || [],
+                      distance: session?.total_distance
+                        ? (session.total_distance / 1000).toFixed(2) + ' km'
+                        : 'N/A',
+                      duration: calculateDuration(),
+                      steps: session?.total_steps
+                        ? session.total_steps.toLocaleString()
+                        : 'N/A',
+                    })
+                  }
+                  style={styles.fullScreenButton}>
+                  <Icon name="expand-outline" size={20} color="#1E3A8A" />
+                </TouchableOpacity>
               </View>
 
               {routeCoordinates.length === 0 ? (
@@ -294,6 +307,7 @@ const RecordDetailScreen = () => {
               ) : (
                 <View style={{borderRadius: 16, overflow: 'hidden'}}>
                   <MapView
+                    ref={ref => setMapRef(ref)}
                     style={styles.map}
                     initialRegion={getMapRegion()}
                     region={getMapRegion()}
@@ -320,6 +334,11 @@ const RecordDetailScreen = () => {
                       </Marker>
                     )}
                   </MapView>
+                  <TouchableOpacity
+                    style={styles.currentLocationButton}
+                    onPress={handleCurrentLocation}>
+                    <Icon name="locate" size={20} color="#1E3A8A" />
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -329,8 +348,8 @@ const RecordDetailScreen = () => {
                   <View>
                     <Text style={styles.mapStatLabel}>Distance</Text>
                     <Text style={styles.mapStatValue}>
-                      {session?.totalDistance
-                        ? (session.totalDistance / 1000).toFixed(2) + ' km'
+                      {session?.total_distance
+                        ? (session.total_distance / 1000).toFixed(2) + ' km'
                         : 'N/A'}
                     </Text>
                   </View>
@@ -340,8 +359,8 @@ const RecordDetailScreen = () => {
                   <View>
                     <Text style={styles.mapStatLabel}>Steps</Text>
                     <Text style={styles.mapStatValue}>
-                      {session?.totalSteps
-                        ? session.totalSteps.toLocaleString()
+                      {session?.total_steps
+                        ? session.total_steps.toLocaleString()
                         : 'N/A'}
                     </Text>
                   </View>
@@ -351,22 +370,28 @@ const RecordDetailScreen = () => {
 
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => navigate.navigate('RiskWarningScreen', {
-                params: {
-                  userActivity: {
-                    "age": age,
-                    "gender": profile.gender,
-                    "heart_rate_min": session.heartRate.min,
-                    "heart_rate_max": session.heartRate.max,
-                    "heart_rate_avg": session.heartRate?.avg,
-                    "avg_pace": parseFloat(session?.avgPace),
-                    "calories": parseFloat(session.totalCalories.toFixed(2)),
-                    "distance": parseFloat((session.totalDistance / 1000).toFixed(2)),
-                    "steps": parseInt(session.totalSteps),
-                    "activity_name": `${getNameFromExerciseType(session?.exerciseType || 0)}`
-                  }
-                }
-              })} >              
+              onPress={() =>
+                navigate.navigate('RiskWarningScreen', {
+                  params: {
+                    userActivity: {
+                      age: age,
+                      gender: profile.gender,
+                      heart_rate_min: session.heart_rate?.min || 0,
+                      heart_rate_max: session.heart_rate?.max || 0,
+                      heart_rate_avg: session.heart_rate?.avg || 0,
+                      avg_pace: session.avg_pace || 0,
+                      calories: session.total_calories || 0,
+                      distance: session.total_distance
+                        ? session.total_distance / 1000
+                        : 0,
+                      steps: session.total_steps || 0,
+                      activity_name: `${getNameFromExerciseType(
+                        session?.exercise_type || 0,
+                      )}`,
+                    },
+                  },
+                })
+              }>
               <Icon name="document-text-outline" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>Risk Analysis</Text>
             </TouchableOpacity>
@@ -580,6 +605,21 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+  },
+  currentLocationButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 15,
+    backgroundColor: '#FFFFFF',
+    padding: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  fullScreenButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
   },
 });
 

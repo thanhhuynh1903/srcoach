@@ -139,14 +139,6 @@ export default function ExerciseRecordsScreen() {
       setLoading(true);
       setError(null);
 
-      const isInitialized = await initializeHealthConnect();
-      if (!isInitialized) {
-        ToastUtil.error(
-          'Failed to load health data',
-          'Please check Health Connect permissions.',
-        );
-      }
-
       const data = await fetchExerciseSessionRecords(
         startDate || new Date('2025-01-01T00:00:00.000Z').toISOString(),
         endDate || new Date().toISOString(),
