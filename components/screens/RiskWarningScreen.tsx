@@ -16,7 +16,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
-const getSeverityColor = (severity : any ) => {
+const getSeverityColor = (severity: any) => {
   switch (severity?.toLowerCase()) {
     case 'high':
       return '#EF4444'; // Đỏ
@@ -32,7 +32,7 @@ const getSeverityColor = (severity : any ) => {
 };
 
 // Hàm lấy giá trị tiến trình dựa trên mức độ
-const getLevelProgress = (level :  any) => {
+const getLevelProgress = (level: any) => {
   switch (level?.toLowerCase()) {
     case 'high':
       return 0.9;
@@ -79,7 +79,7 @@ const RiskWarningScreen = () => {
     } else {
       console.error('Không có dữ liệu hoạt động hoặc ID cảnh báo');
     }
-    
+
     // Xóa dữ liệu đánh giá khi rời khỏi màn hình
     return () => clearAssessment();
   }, []);
@@ -99,12 +99,10 @@ const RiskWarningScreen = () => {
           <Text style={styles.errorText}>
             An error occurred while parsing data.
           </Text>
-          <Text style={styles.errorMessage}>{error}</Text>
+          <Text style={styles.errorMessage}>{message}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() =>
-              navigation.goBack()
-            }>
+            onPress={() => navigation.goBack()}>
             <Text style={styles.retryButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -132,44 +130,38 @@ const RiskWarningScreen = () => {
       </SafeAreaView>
     );
   }
-  
+
   const handleSaveResult = async () => {
     if (!activityData || !assessment) return;
-    
+
     try {
       console.log('assessment', assessment);
-      
+
       const updatedActivityData = {
         ...activityData,
-        heart_rate_danger: assessment.heart_rate_danger, 
+        heart_rate_danger: assessment.heart_rate_danger,
       };
       console.log('Updated activity data:', updatedActivityData);
-      
+
       const success = await saveFullAiResult(updatedActivityData);
       console.log('saveFullAiResult response:', success);
-      
+
       if (success) {
-        await fetchHealthAlerts(); 
+        await fetchHealthAlerts();
         // Hiển thị thông báo thành công
-        Alert.alert(
-          "Success",
-          "Health assessment report saved.",
-          [{ text: "OK" }]
-        );
+        Alert.alert('Success', 'Health assessment report saved.', [
+          {text: 'OK'},
+        ]);
       } else {
-        Alert.alert(
-          "Error",
-          "Unable to save report. Please try again later.",
-          [{ text: "OK",onPress: () => navigation.goBack() }]
-        );
+        Alert.alert('Error', 'Unable to save report. Please try again later.', [
+          {text: 'OK', onPress: () => navigation.goBack()},
+        ]);
       }
     } catch (error) {
-      Alert.alert(
-        "Error",
-        "An error occurred while saving the report.",
-        [{ text: "OK" }]
-      );
-    } 
+      Alert.alert('Error', 'An error occurred while saving the report.', [
+        {text: 'OK'},
+      ]);
+    }
   };
 
   // Lấy màu dựa trên mức độ nghiêm trọng
@@ -207,7 +199,9 @@ const RiskWarningScreen = () => {
   const metrics = [
     {
       icon: 'heart-outline',
-      value: activityData?.heart_rate_max ? activityData.heart_rate_max : assessment.heart_rate_max ,
+      value: activityData?.heart_rate_max
+        ? activityData.heart_rate_max
+        : assessment.heart_rate_max,
       unit: ' BPM',
       status: heartRiskFactor ? heartRiskFactor.level : 'Normal',
       color: heartRiskFactor
@@ -216,7 +210,9 @@ const RiskWarningScreen = () => {
     },
     {
       icon: 'heart-half-outline',
-      value: activityData?.heart_rate_min ? activityData.heart_rate_min : assessment.heart_rate_min,
+      value: activityData?.heart_rate_min
+        ? activityData.heart_rate_min
+        : assessment.heart_rate_min,
       unit: ' BPM',
       status: lowestHeartRiskFactor ? lowestHeartRiskFactor.level : 'Normal',
       color: lowestHeartRiskFactor
@@ -225,7 +221,9 @@ const RiskWarningScreen = () => {
     },
     {
       icon: 'speedometer-outline',
-      value: activityData?.avg_pace ? activityData.avg_pace : assessment.pace  || '0:00',
+      value: activityData?.avg_pace
+        ? activityData.avg_pace
+        : assessment.pace || '0:00',
       unit: '/km',
       status: paceRiskFactor ? paceRiskFactor.level : 'Normal',
       color: paceRiskFactor
@@ -256,10 +254,8 @@ const RiskWarningScreen = () => {
               centerLabelComponent={() => {
                 return (
                   <View style={styles.centerLabel}>
-                    <Text style={styles.scoreValue}>
-                      {assessment.score} </Text>
-                      <Text style={styles.scoreMax}>/100</Text>
-                   
+                    <Text style={styles.scoreValue}>{assessment.score} </Text>
+                    <Text style={styles.scoreMax}>/100</Text>
                   </View>
                 );
               }}
@@ -272,7 +268,24 @@ const RiskWarningScreen = () => {
           </Text>
           <Text style={styles.riskMessage}>{assessment.alert_message}</Text>
         </View>
-
+        {/* Heart Rate Danger Warning */}
+        {assessment.heart_rate_danger && (
+          <View style={styles.dangerWarningContainer}>
+            <View style={styles.dangerHeader}>
+              <Icon name="warning-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.dangerTitle}>Heart Rate Danger Warning</Text>
+            </View>
+            <Text style={styles.dangerValue}>
+              <Icon name="fitness" size={24} color="#FF5252" />
+              <Text>{assessment.heart_rate_danger}</Text>
+              <Text style={styles.dangerUnit}>{" "}BPM</Text>
+            </Text>
+            <Text style={styles.dangerDescription}>
+              Your heart rate reached a potentially dangerous level during this
+              activity. Consider consulting with a healthcare professional.
+            </Text>
+          </View>
+        )}
         {/* Activity Info */}
         <View style={styles.activityInfoContainer}>
           <Text style={styles.activityName}>
@@ -288,7 +301,7 @@ const RiskWarningScreen = () => {
             <View style={styles.activityStat}>
               <Icon name="footsteps-outline" size={16} color="#64748B" />
               <Text style={styles.activityStatText}>
-                {activityData?.steps || assessment?.step ||  '0'} Steps
+                {activityData?.steps || assessment?.step || '0'} Steps
               </Text>
             </View>
           </View>
@@ -388,9 +401,14 @@ const RiskWarningScreen = () => {
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => {
-                navigation.navigate('HomeTabs', { screen: 'Risk', params: { screen: 'HomeMain' } });
+                navigation.navigate('HomeTabs', {
+                  screen: 'Risk',
+                  params: {screen: 'HomeMain'},
+                });
               }}>
-              <Text style={styles.deleteButtonText}>Return list of risk warning</Text>
+              <Text style={styles.deleteButtonText}>
+                Return list of risk warning
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -404,6 +422,45 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  dangerWarningContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#FECACA', // Nền đỏ nhạt
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444', // Viền đỏ đậm
+    borderRadius: 12,
+  },
+  dangerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#EF4444',
+    padding: 8,
+    borderRadius: 8,
+  },
+  dangerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  dangerValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#B91C1C', // Đỏ đậm
+    marginBottom: 8,
+  },
+  dangerUnit: {
+    fontSize: 16,
+    fontWeight: '400',
+  },
+  dangerDescription: {
+    fontSize: 14,
+    color: '#7F1D1D', // Đỏ tối
+    lineHeight: 20,
+  },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
