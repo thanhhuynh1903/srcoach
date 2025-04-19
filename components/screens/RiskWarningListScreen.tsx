@@ -115,6 +115,7 @@ const RiskWarningListScreen = () => {
       year: "numeric",
     })
   }
+console.log('filteredRiskItems', filteredRiskItems);
 
   // Hiển thị loading
   if (isLoadingAlerts) {
@@ -214,8 +215,8 @@ const RiskWarningListScreen = () => {
 
       {/* Risk List */}
       <ScrollView style={styles.riskList}>
-        {filteredRiskItems.length > 0 ? (
-          filteredRiskItems.map((item) => (
+      {filteredRiskItems.filter((item) => !item.is_deleted).length > 0 ? (
+           filteredRiskItems.filter((item) => !item.is_deleted).map((item) => (
             <View key={item.id} style={styles.riskItemContainer}>
               <TouchableOpacity
                 style={styles.riskItem}
@@ -390,13 +391,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: verticalScale(8),
+    marginRight:12,
   },
   riskTitle: {
     fontSize: moderateScale(16),
     fontWeight: "600",
     color: "#000000",
     flex: 1,
-    marginRight: moderateScale(12),
+    marginRight: moderateScale(20),
   },
   statusDot: {
     width: moderateScale(8),

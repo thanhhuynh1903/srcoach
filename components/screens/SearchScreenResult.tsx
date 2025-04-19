@@ -347,8 +347,8 @@ const SearchResultsScreen = ({}) => {
                     <Icon name="search-outline" size={40} color="#94A3B8" />
                     <Text style={styles.emptyText}>
                       {debouncedQuery
-                        ? 'Không tìm thấy bài viết nào phù hợp'
-                        : 'Nhập từ khóa để tìm kiếm bài viết'}
+                        ? 'No matching articles found'
+                        : 'Enter keywords to search for articles'}
                     </Text>
                   </View>
                 )}

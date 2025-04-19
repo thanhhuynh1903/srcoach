@@ -775,7 +775,7 @@ const CommunityPostDetailScreen = () => {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color="#4285F4" />
             </View>
-          ) : comments && comments.length > 0 ? (
+          ) : comments && comments.filter((item) => !item.is_deleted).length > 0 ? (
             comments
               .filter(comment => comment?.is_deleted === false)
               .map(comment => renderComment(comment))

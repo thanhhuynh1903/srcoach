@@ -16,7 +16,7 @@ interface HealthAlert {
     type_name: string;
     description: string;
   }
-
+  is_deleted : boolean
 }
 
 // Định nghĩa interface cho chi tiết cảnh báo sức khỏe
@@ -71,6 +71,7 @@ interface RiskAssessment {
   heart_rate_max: number;
   heart_rate_min: number;
   activity_name: string;
+  heart_rate_danger : number;
   distance: number;
   step: number;
   score: number;
@@ -133,6 +134,7 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
             score: response.result.data.score,
             severity: response.result.data.severity,
             alert_type: response.result.data.alert_type,
+            heart_rate_danger : response.result.data.heart_rate_danger,
             alert_message: response.result.data.alert_message,
             risk_factors: response.result.data.risk_factors.map((factor: any) => ({
               name: factor.name,
@@ -142,11 +144,12 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
             recommendations: response.result.data.recommendations
           },
           isLoading: false,
-          message: 'Assessment completed successfully'
+          message: response?.result?.message
         });
       } else {
         set({
-          error: response?.message || 'Failed to evaluate activity health',
+          error: response?.result?.status || 'Failed to evaluate activity health',
+          message: response?.result?.message,
           isLoading: false
         });
       }
@@ -289,8 +292,8 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
       set({isLoading: true, });
 
       // Sử dụng PATCH để soft delete thay vì xóa hoàn toàn
-      const response = await api.patchData(
-        `/ai/ai-health-alert/${alertId}/soft-delete`,
+      const response = await api.deleteData(
+        `/ai/ai-health-alerts-soft/${alertId}`,
       );
       console.log('Delete health alert response:', response);
 

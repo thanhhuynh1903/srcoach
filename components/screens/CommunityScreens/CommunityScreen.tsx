@@ -307,88 +307,85 @@ const CommunityScreen = () => {
   );
 
   const renderPostItem = ({item}: {item: Post}) => (
-
-    (
-      <TouchableOpacity
-        style={styles.postItem}
-        onPress={() =>
-          navigation.navigate('CommunityPostDetailScreen', {id: item.id})
-        }>
-        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-          <TouchableOpacity
-            onPress={() =>
-              profile.id === item.user_id
-                ? navigation.navigate('RunnerProfileScreen' as never)
-                : navigation.navigate('OtherProfileScreen', {postId: item?.id})
-            }>
-            <View style={styles.postHeader}>
-              <Image
-                source={{uri: item?.user.image?.url || undefined}}
-                style={styles.avatar}
-              />
-              <View>
-                <Text style={styles.name}>{item.user.username}</Text>
-                <Text style={styles.postTime}>
-                  {formatTimeAgo(item.created_at)}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.moreButton}
-            onPress={() => handleMorePress(item)}>
-            <Icon name="ellipsis-horizontal" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
-        {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
-        <Text style={styles.postText}>{item.content}</Text>
-        {item.images && item.images.length > 0 && (
-          <View style={styles.postImageContainer}>
+    <TouchableOpacity
+      style={styles.postItem}
+      onPress={() =>
+        navigation.navigate('CommunityPostDetailScreen', {id: item.id})
+      }>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+        <TouchableOpacity
+          onPress={() =>
+            profile.id === item.user_id
+              ? navigation.navigate('RunnerProfileScreen' as never)
+              : navigation.navigate('OtherProfileScreen', {postId: item?.id})
+          }>
+          <View style={styles.postHeader}>
             <Image
-              source={{uri: item.images[0]}}
-              style={styles.postImage}
-              resizeMode="cover"
+              source={{uri: item?.user.image?.url || undefined}}
+              style={styles.avatar}
             />
-            {item.images.length > 1 && (
-              <View style={styles.remainingImagesIndicator}>
-                <Icon
-                  name="images-outline"
-                  size={14}
-                  color="#FFFFFF"
-                  style={styles.imageIcon}
-                />
-                <Text style={styles.remainingImagesText}>
-                  +{item.images.length - 1}
-                </Text>
-              </View>
-            )}
+            <View>
+              <Text style={styles.name}>{item.user.username}</Text>
+              <Text style={styles.postTime}>
+                {formatTimeAgo(item.created_at)}
+              </Text>
+            </View>
           </View>
-        )}
-        <View style={styles.postActions}>
-          <TouchableOpacity
-            style={styles.postActionButton}
-            onPress={() => handleLikePost(item.id, !item.is_upvoted)}>
-            <Icon
-              name={item.is_upvoted ? 'heart' : 'heart-outline'}
-              size={20}
-              color={item.is_upvoted ? theme.colors.primary : '#666'}
-            />
-            <Text style={styles.postActionText}>{item.upvote_count}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.postActionButton}
-            onPress={() =>
-              navigation.navigate('CommunityPostDetailScreen', {id: item.id})
-            }>
-            <Icon name="chatbubble-outline" size={20} />
-            <Text style={styles.postActionText}>{item?.comment_count}</Text>
-          </TouchableOpacity>
-          {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
-          {renderTags(item?.tags)}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.moreButton}
+          onPress={() => handleMorePress(item)}>
+          <Icon name="ellipsis-horizontal" size={20} color="#000" />
+        </TouchableOpacity>
+      </View>
+      {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
+      <Text style={styles.postText}>{item.content}</Text>
+      {item.images && item.images.length > 0 && (
+        <View style={styles.postImageContainer}>
+          <Image
+            source={{uri: item.images[0]}}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+          {item.images.length > 1 && (
+            <View style={styles.remainingImagesIndicator}>
+              <Icon
+                name="images-outline"
+                size={14}
+                color="#FFFFFF"
+                style={styles.imageIcon}
+              />
+              <Text style={styles.remainingImagesText}>
+                +{item.images.length - 1}
+              </Text>
+            </View>
+          )}
         </View>
-      </TouchableOpacity>
-    )
+      )}
+      <View style={styles.postActions}>
+        <TouchableOpacity
+          style={styles.postActionButton}
+          onPress={() => handleLikePost(item.id, !item.is_upvoted)}>
+          <Icon
+            name={item.is_upvoted ? 'heart' : 'heart-outline'}
+            size={20}
+            color={item.is_upvoted ? theme.colors.primary : '#666'}
+          />
+          <Text style={styles.postActionText}>{item.upvote_count}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.postActionButton}
+          onPress={() =>
+            navigation.navigate('CommunityPostDetailScreen', {id: item.id})
+          }>
+          <Icon name="chatbubble-outline" size={20} />
+          <Text style={styles.postActionText}>{item?.comment_count}</Text>
+        </TouchableOpacity>
+        {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
+        {renderTags(item?.tags)}
+      </View>
+    </TouchableOpacity>
   );
 
   const renderPostsContent = () => {
@@ -513,7 +510,7 @@ const CommunityScreen = () => {
         }>
         <View style={styles.searchContainer}>
           <Image
-            source={require('../../assets/logo.png')}
+            source={{uri : profile?.image?.url}}
             style={styles.avatar}
           />
           <TouchableOpacity
@@ -521,7 +518,7 @@ const CommunityScreen = () => {
             onPress={() =>
               navigation.navigate('CommunityCreatePostScreen' as never)
             }>
-            <Text style={{color: '#999'}}>Create posts</Text>
+            <Text style={{color: '#999'}}>Sharing your wonderful running record</Text>
           </TouchableOpacity>
         </View>
         {/* <Text style={styles.sectionTitle}>Official News</Text>

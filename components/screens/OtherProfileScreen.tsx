@@ -126,7 +126,7 @@ const OtherProfileScreen = ({route}) => {
         }
       }
     } catch (error) {
-      console.error('Lỗi khi tải dữ liệu người dùng:', error);
+      console.error('Error loading user data:', error);
     }
   };
 
@@ -252,9 +252,9 @@ const OtherProfileScreen = ({route}) => {
   if (userError) {
     return (
       <SafeAreaView style={styles.errorContainer}>
-        <Text style={styles.errorText}>Lỗi: {userError}</Text>
+        <Text style={styles.errorText}>Error: {userError}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
-          <Text style={styles.retryText}>Thử lại</Text>
+          <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -301,7 +301,7 @@ const OtherProfileScreen = ({route}) => {
               <Text style={styles.locationText}>
                 {userData?.user?.address1 
                   ? `${userData.user.address1}${userData.user.address2 ? `, ${userData.user.address2}` : ''}` 
-                  : 'Chưa cập nhật địa chỉ'}
+                  : 'Address not updated yet'}
               </Text>
             </View>
           </View>
@@ -384,7 +384,7 @@ const OtherProfileScreen = ({route}) => {
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>Chưa có bài viết nào.</Text>
+              <Text style={styles.emptyText}>No posts yet.</Text>
             )}
           </View>
         </ScrollView>

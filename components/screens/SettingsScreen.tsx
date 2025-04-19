@@ -111,7 +111,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
             <CommonAvatar
               mode={isExpert ? 'expert' : 'runner'}
               size={100}
-              uri={profile?.avatar}
+              uri={profile?.image?.url}
             />
             <Text style={styles.profileName}>{profile?.username}</Text>
 

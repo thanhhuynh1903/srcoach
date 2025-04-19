@@ -3,9 +3,9 @@ import { useState, useEffect } from "react"
 import { TouchableOpacity, Text, StyleSheet, Alert, View } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
 import RecordSelectionModal, { type ExerciseRecord } from "./RecordSelectionModal"
-import { fetchExerciseSessionRecordsbyIdOnly, initializeHealthConnect } from "../../utils/utils_healthconnect"
+import { fetchExerciseSessionRecords, initializeHealthConnect } from "../../utils/utils_healthconnect"
 import { format, parseISO } from "date-fns"
-
+import { getNameFromExerciseType } from "../../contants/exerciseType"
 interface RecordSelectionButtonProps {
   onSelectRecord?: (record: ExerciseRecord) => void
   buttonStyle?: object
@@ -33,7 +33,6 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
     }
   }, [selectedRecord]);
   
-  console.log("record", record);
   
   const fetchRecords = async (): Promise<ExerciseRecord[]> => {
     try {
@@ -44,20 +43,19 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
   
       const startDate = new Date("2025-01-01T00:00:00.000Z").toISOString()
       const endDate = new Date().toISOString()
-      const data = await fetchExerciseSessionRecordsbyIdOnly(startDate, endDate);
-  
+      const data = await fetchExerciseSessionRecords(startDate, endDate);
+      
       // Map ExerciseSession objects to ExerciseRecord objects
       const records: ExerciseRecord[] = data.map(session => ({
         id: session.id,
         clientRecordId: session.clientRecordId,
-        exerciseType: getNameFromExerciseType(session.exerciseType.toString()), // Convert exerciseType to string
+        exerciseType: getNameFromExerciseType(session.exerciseType), // Convert exerciseType to string
         startTime: session.startTime,
         endTime: session.endTime,
-        duration_minutes: session.durationMinutes,
-        total_distance: session.totalDistance,
-        total_steps: session.totalSteps,
+        duration_minutes: session.duration_minutes,
+        total_distance: session.total_distance,
+        total_steps: session.total_steps,
       }));
-      console.log("Fetched exercise records:", records);
       
       return records;
     } catch (error) {
@@ -75,17 +73,16 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
     setModalVisible(false)
   }
 
-  const getNameFromExerciseType = (type: string): string => {
-    const typeMap: Record<string, string> = {
-      "com.google.walking": "Walking",
-      "com.google.running": "Running",
-      "com.google.cycling": "Cycling",
-      "com.google.hiking": "Hiking",
-      "com.google.workout": "Workout",
+  const getIconFromExerciseType = (type: string): string => {
+    const iconMap: Record<string, string> = {
+      "Walking": "walk",
+      "Biking": "bicycle",
+      "Running": "walk",
+      "Hiking": "trail-sign",
+      "Workout": "fitness"
     }
-    return typeMap[type] || "Exercise"
+    return iconMap[type] || "fitness"
   }
-
   // Thêm hàm xử lý lỗi khi hiển thị thông tin record
   const renderRecordInfo = () => {
     if (!record) {
@@ -93,13 +90,12 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
     }
     
     try {
-      const exerciseTypeName = getNameFromExerciseType(record.exerciseType);
       const formattedDate = format(parseISO(record.startTime), "MMM d, yyyy");
       
       return (
         <View style={styles.selectedRecordContainer}>
           <Text style={[styles.runRecordText, textStyle]}>
-            {exerciseTypeName} • {formattedDate}
+            {record?.exerciseType} • {formattedDate}
           </Text>
           <TouchableOpacity
             style={styles.removeButton}
@@ -123,7 +119,7 @@ const RecordSelectionButton: React.FC<RecordSelectionButtonProps> = ({
   return (
     <>
       <TouchableOpacity style={[styles.runRecordButton, buttonStyle]} onPress={() => setModalVisible(true)}>
-        <Icon name="fitness-outline" size={20} color={iconColor} />
+        <Icon name={getIconFromExerciseType(record?.exerciseType as never) as any} size={20} color={iconColor} />
         {renderRecordInfo()}
         <Icon name="chevron-forward" size={20} color="#999" style={styles.chevronIcon} />
       </TouchableOpacity>

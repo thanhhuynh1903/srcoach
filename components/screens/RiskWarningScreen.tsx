@@ -79,7 +79,6 @@ const RiskWarningScreen = () => {
     } else {
       console.error('Không có dữ liệu hoạt động hoặc ID cảnh báo');
     }
-    console.log('Assessment data:', assessment);
     
     // Xóa dữ liệu đánh giá khi rời khỏi màn hình
     return () => clearAssessment();
@@ -104,9 +103,9 @@ const RiskWarningScreen = () => {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={() =>
-              activityData && evaluateActivityHealth(activityData)
+              navigation.goBack()
             }>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -138,7 +137,15 @@ const RiskWarningScreen = () => {
     if (!activityData || !assessment) return;
     
     try {
-      const success = await saveFullAiResult(activityData);
+      console.log('assessment', assessment);
+      
+      const updatedActivityData = {
+        ...activityData,
+        heart_rate_danger: assessment.heart_rate_danger, 
+      };
+      console.log('Updated activity data:', updatedActivityData);
+      
+      const success = await saveFullAiResult(updatedActivityData);
       console.log('saveFullAiResult response:', success);
       
       if (success) {
@@ -147,13 +154,13 @@ const RiskWarningScreen = () => {
         Alert.alert(
           "Success",
           "Health assessment report saved.",
-          [{ text: "OK", onPress: () => navigation.goBack() }]
+          [{ text: "OK" }]
         );
       } else {
         Alert.alert(
           "Error",
           "Unable to save report. Please try again later.",
-          [{ text: "OK" }]
+          [{ text: "OK",onPress: () => navigation.goBack() }]
         );
       }
     } catch (error) {

@@ -38,6 +38,7 @@ interface Post {
   comment_count: number;
   is_upvoted: boolean;
   is_downvoted: boolean;
+  is_deleted: boolean;
   tags: string[];
 }
 
@@ -525,7 +526,7 @@ const RunnerProfileScreen = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>My Posts</Text>
 
-            {localPosts && localPosts.length > 0 ? (
+            {localPosts && localPosts.filter((item) => !item.is_deleted).length > 0 ? (
               localPosts.map(post => (
                 <View key={post.id} style={styles.postCard}>
                   <Text style={styles.postTime}>

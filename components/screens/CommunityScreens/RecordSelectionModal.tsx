@@ -4,12 +4,12 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, Dimensions, 
 import Icon from "@react-native-vector-icons/ionicons"
 import { format, parseISO } from "date-fns"
 import ContentLoader, { Rect } from "react-content-loader/native"
-
+import { ExerciseType } from "../../contants/exerciseType"
 // Types
 export interface ExerciseRecord {
   id: string
   clientRecordId: string
-  exerciseType: string
+  exerciseType: ExerciseType
   startTime: string
   endTime: string
   duration_minutes?: number
@@ -47,7 +47,7 @@ const RecordSelectionModal: React.FC<RecordSelectionModalProps> = ({
       setLoading(true)
       setError(null)
       const data = await fetchRecords()
-  
+      
       setRecords(data)
     } catch (error) {
       console.error("Error loading exercise records:", error)
@@ -57,24 +57,13 @@ const RecordSelectionModal: React.FC<RecordSelectionModalProps> = ({
     }
   }
 
-  const getNameFromExerciseType = (type: string): string => {
-    const typeMap: Record<string, string> = {
-      "com.google.walking": "Walking",
-      "com.google.running": "Running",
-      "com.google.cycling": "Cycling",
-      "com.google.hiking": "Hiking",
-      "com.google.workout": "Workout",
-    }
-    return typeMap[type] || "Exercise"
-  }
-
   const getIconFromExerciseType = (type: string): string => {
     const iconMap: Record<string, string> = {
-      "com.google.walking": "walk",
-      "com.google.running": "walk",
-      "com.google.cycling": "bicycle",
-      "com.google.hiking": "trail-sign",
-      "com.google.workout": "fitness",
+      "Walking": "walk",
+      "Biking": "bicycle",
+      "Running": "walk",
+      "Hiking": "trail-sign",
+      "Workout": "fitness"
     }
     return iconMap[type] || "fitness"
   }
@@ -132,14 +121,14 @@ const RecordSelectionModal: React.FC<RecordSelectionModalProps> = ({
         <Text style={styles.timeText}>{timeStr}</Text>
         <View style={styles.iconContainer}>
           <Icon
-            name={getIconFromExerciseType(item.exerciseType) as any}
+            name={getIconFromExerciseType(item.exerciseType as never) as any}
             size={32}
             color="#052658"
             style={styles.exerciseIcon}
           />
         </View>
         <View style={styles.recordDetails}>
-          <Text style={styles.recordType}>{getNameFromExerciseType(item.exerciseType)}</Text>
+          <Text style={styles.recordType}>{item.exerciseType} Exercise</Text>
           <Text style={styles.recordMetrics}>
             {duration} min • {(distance / 1000).toFixed(1)} km • {dateStr}
           </Text>

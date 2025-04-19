@@ -232,15 +232,15 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
       if (status !== 'error') {
         getAll();
-        Alert.alert('Thành công', 'Bài viết đã được cập nhật thành công', [
+        Alert.alert('Success', 'The article has been updated successfully.', [
           {text: 'OK', onPress: () => navigation.goBack()},
         ]);
       } else {
-        Alert.alert('Lỗi', message || 'Không thể cập nhật bài viết');
+        Alert.alert('Error', message || 'Unable to update post');
       }
     } catch (error: any) {
       console.error('Error updating post:', error);
-      Alert.alert('Lỗi', error.message || 'Không thể cập nhật bài viết');
+      Alert.alert('Error', error.message || 'Unable to update post');
     }
   };
 

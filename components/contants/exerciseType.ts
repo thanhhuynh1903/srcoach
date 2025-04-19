@@ -64,7 +64,7 @@ export const ExerciseType = {
 
 export type ExerciseType = (typeof ExerciseType)[keyof typeof ExerciseType];
 
-export function getNameFromExerciseType(num: ExerciseType): string {
+export function getNameFromExerciseType(num: ExerciseType): string {  
   const entries = Object.entries(ExerciseType);
   for (const [key, value] of entries) {
     if (value === num) {
