@@ -93,6 +93,7 @@ interface AiRiskState {
   isLoadingAlertDetail: boolean;
   error: string | null;
   message: string | null;
+  searchHealthAlerts: (query: string, severity?: string) => Promise<void>;
   saveFullAiResult: (activityData: ActivityData) => Promise<boolean>;
   evaluateActivityHealth: (activityData: ActivityData) => Promise<void>;
   fetchHealthAlerts: () => Promise<void>;
@@ -116,6 +117,47 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
   isLoadingAlertDetail: false,
   error: null,
   message: null,
+  
+  searchHealthAlerts: async (query: string, severity?: string) => {
+    set({ isLoadingAlerts: true, error: null });
+    try {
+      // Xây dựng params cho API request
+      const params: Record<string, string> = {};
+      if (query) params.alert_message = query;
+      if (severity && severity !== 'All') params.severity = severity;
+      
+      // Gọi API với params
+      const queryString = new URLSearchParams(params).toString();
+      const endpoint = `/ai/ai-health-alerts${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await api.fetchData(endpoint);
+      console.log('Search health alerts response:', response);
+      
+      if (response?.status === 'success') {
+        set({
+          healthAlerts: response.data || [],
+          isLoadingAlerts: false
+        });
+      } else if (response?.status === 'error' && response?.message === 'Không tìm thấy AIHealthAlert nào cho user này') {
+        // Trường hợp không có cảnh báo nào
+        set({
+          healthAlerts: [],
+          isLoadingAlerts: false,
+          message: 'No health alerts found for this user'
+        });
+      } else {
+        set({
+          error: response?.message || 'Failed to search health alerts',
+          isLoadingAlerts: false
+        });
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || 'Failed to search health alerts',
+        isLoadingAlerts: false
+      });
+    }
+  },
 
   evaluateActivityHealth: async (activityData) => {
     console.log('activityData from AI:', activityData);
