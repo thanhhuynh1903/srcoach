@@ -20,10 +20,10 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import {usePostStore} from '../../utils/usePostStore';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import RecordSelectionButton from './RecordSelectionButton';
-import { fetchDetailRecords } from '../../utils/utils_healthconnect';
-import type { ExerciseRecord } from './RecordSelectionModal';
-import type { ExerciseSession } from '../../utils/utils_healthconnect';
-import { format, parseISO } from "date-fns"
+import {fetchDetailRecords} from '../../utils/utils_healthconnect';
+import type {ExerciseRecord} from './RecordSelectionModal';
+import type {ExerciseSession} from '../../utils/utils_healthconnect';
+import {format, parseISO} from 'date-fns';
 
 interface CommunityPostUpdateScreenProps {
   route?: {
@@ -33,7 +33,9 @@ interface CommunityPostUpdateScreenProps {
   };
 }
 
-const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () => {
+const CommunityPostUpdateScreen: React.FC<
+  CommunityPostUpdateScreenProps
+> = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const postId = route.params?.postId;
@@ -70,18 +72,18 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
     loadPostData();
   }, [postId]);
-  
-  const loadSession = async (id : any) => {
+
+  const loadSession = async (id: any) => {
     try {
-      const sessionData : ExerciseSession = await fetchDetailRecords(id);
+      const sessionData: ExerciseSession = await fetchDetailRecords(id);
       console.log('sessionData', sessionData);
-      
+
       setSession(sessionData);
     } catch (error) {
       console.error('Error loading session:', error);
     }
   };
-  
+
   // Cập nhật state từ dữ liệu bài viết hiện tại
   useEffect(() => {
     console.log('currentPost', currentPost);
@@ -91,7 +93,11 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
       setContent(currentPost.content || '');
 
       // Xử lý tags
-      if (currentPost.tags && Array.isArray(currentPost.tags) && currentPost.tags.length > 0) {
+      if (
+        currentPost.tags &&
+        Array.isArray(currentPost.tags) &&
+        currentPost.tags.length > 0
+      ) {
         setTags(currentPost.tags.join(', '));
         setDisplayTags([...currentPost.tags]);
       } else {
@@ -124,9 +130,9 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
   // Cập nhật runRecord khi session thay đổi
   useEffect(() => {
     console.log('session', session);
-    
+
     if (session && currentPost?.exercise_session_record_id) {
-      try {        
+      try {
         const tempRecord = {
           id: currentPost.exercise_session_record_id,
           clientRecordId: '',
@@ -135,7 +141,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
           endTime: session.end_time,
           duration_minutes: session.duration_minutes,
           total_distance: session.total_distance,
-          total_steps: 0
+          total_steps: 0,
         };
         setRunRecord(tempRecord);
       } catch (error) {
@@ -147,7 +153,8 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
   // Cập nhật displayTags khi tags thay đổi
   useEffect(() => {
     if (tags && typeof tags === 'string') {
-      const tagsArray = tags.split(',')
+      const tagsArray = tags
+        .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
       if (tagsArray.length > 0) {
@@ -213,14 +220,18 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
 
     try {
       // Xử lý tags an toàn
-      const tagsArray = typeof tags === 'string' 
-        ? tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
-        : [];
+      const tagsArray =
+        typeof tags === 'string'
+          ? tags
+              .split(',')
+              .map(tag => tag.trim())
+              .filter(tag => tag !== '')
+          : [];
 
       // Tách riêng ảnh cũ và ảnh mới theo yêu cầu API
       const oldImageUrls = existingImages; // Mảng chứa các URL ảnh cũ muốn giữ lại
       const newImages = selectedImages; // Mảng chứa file ảnh mới upload lên
-      
+
       await updatePost(postId, {
         title: title.trim(),
         content: content.trim(),
@@ -384,7 +395,7 @@ const CommunityPostUpdateScreen: React.FC<CommunityPostUpdateScreenProps> = () =
               buttonStyle={styles.runRecordButton}
             />
           </View>
-          
+
           {/* Error message */}
           {status === 'error' && message && (
             <View style={styles.errorContainer}>

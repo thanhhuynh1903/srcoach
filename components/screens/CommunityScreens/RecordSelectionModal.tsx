@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, FlatList, Dimensions, 
 import Icon from "@react-native-vector-icons/ionicons"
 import { format, parseISO } from "date-fns"
 import ContentLoader, { Rect } from "react-content-loader/native"
-import { ExerciseType } from "../../contants/exerciseType"
+import { ExerciseType, getIconFromExerciseType, getNameFromExerciseType } from "../../contants/exerciseType"
 // Types
 export interface ExerciseRecord {
   id: string
@@ -55,17 +55,6 @@ const RecordSelectionModal: React.FC<RecordSelectionModalProps> = ({
     } finally {
       setLoading(false)
     }
-  }
-
-  const getIconFromExerciseType = (type: string): string => {
-    const iconMap: Record<string, string> = {
-      "Walking": "walk",
-      "Biking": "bicycle",
-      "Running": "walk",
-      "Hiking": "trail-sign",
-      "Workout": "fitness"
-    }
-    return iconMap[type] || "fitness"
   }
 
   const renderLoadingSkeleton = () => (
@@ -121,14 +110,14 @@ const RecordSelectionModal: React.FC<RecordSelectionModalProps> = ({
         <Text style={styles.timeText}>{timeStr}</Text>
         <View style={styles.iconContainer}>
           <Icon
-            name={getIconFromExerciseType(item.exerciseType as never) as any}
+            name={getIconFromExerciseType(item?.exerciseType)}
             size={32}
             color="#052658"
             style={styles.exerciseIcon}
           />
         </View>
         <View style={styles.recordDetails}>
-          <Text style={styles.recordType}>{item.exerciseType} Exercise</Text>
+          <Text style={styles.recordType}>{getNameFromExerciseType(item?.exerciseType)} Exercise</Text>
           <Text style={styles.recordMetrics}>
             {duration} min • {(distance / 1000).toFixed(1)} km • {dateStr}
           </Text>
