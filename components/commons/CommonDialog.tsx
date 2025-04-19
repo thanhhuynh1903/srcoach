@@ -88,10 +88,10 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
                         button.variant === 'outlined' && styles.outlinedButton,
                         button.variant === 'contained' && styles.containedButton,
                         button.variant === 'contained' && {
-                          backgroundColor: button.color || '#6200ee',
+                          backgroundColor: button.color || theme.colors.primaryDark,
                         },
                         button.variant === 'outlined' && {
-                          borderColor: button.color || '#6200ee',
+                          borderColor: button.color || theme.colors.primaryDark,
                         },
                       ]}
                     >
@@ -102,7 +102,7 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
                           color={
                             button.variant === 'contained'
                               ? 'white'
-                              : button.color || '#6200ee'
+                              : button.color || theme.colors.primaryDark
                           }
                           style={styles.buttonIcon}
                         />
@@ -111,7 +111,7 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
                         style={[
                           styles.buttonText,
                           (button.variant === 'outlined' || button.variant === 'contained') && {
-                            color: button.color || '#6200ee',
+                            color: button.color || theme.colors.primaryDark,
                           },
                           button.variant === 'contained' && { color: 'white' },
                           button.iconName && { marginLeft: 6 },

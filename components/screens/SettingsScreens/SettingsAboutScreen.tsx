@@ -8,11 +8,12 @@ import {
   SafeAreaView,
   Image,
   Dimensions,
+  Linking,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
-import LinearGradient from 'react-native-linear-gradient';
 import packageJson from '../../../package.json';
+import BackButton from '../../BackButton';
 
 const {width, height} = Dimensions.get('window');
 
@@ -20,30 +21,25 @@ const SettingsAboutScreen = ({navigation}) => {
   // Extract version from package.json
   const appVersion = packageJson.version;
 
+  const handleEmailPress = () => {
+    Linking.openURL('mailto:example@gmail.com');
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Fixed Header */}
-      <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primary]}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-
+      <View style={styles.header}>
+        <BackButton size={24} />
         <View style={styles.headerContent}>
           <Icon
             name="information-circle-outline"
             size={24}
-            color="white"
+            color={theme.colors.text}
             style={styles.headerIcon}
           />
           <Text style={styles.title}>About</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Scrollable Content */}
       <View style={styles.scrollContainer}>
@@ -114,7 +110,7 @@ const SettingsAboutScreen = ({navigation}) => {
 
             <TouchableOpacity
               style={styles.optionItem}
-              onPress={() => navigation.navigate('ContactUsScreen')}>
+              onPress={handleEmailPress}>
               <View style={styles.optionContent}>
                 <Icon
                   name="mail-outline"
@@ -125,32 +121,6 @@ const SettingsAboutScreen = ({navigation}) => {
                 <Text style={styles.optionText}>Contact Us</Text>
               </View>
               <Icon name="chevron-forward" size={20} color="#ccc" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>SOCIAL</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social Links */}
-          <View style={styles.socialContainer}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => navigation.navigate('TwitterScreen')}>
-              <Icon name="logo-twitter" size={24} color="#1DA1F2" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => navigation.navigate('InstagramScreen')}>
-              <Icon name="logo-instagram" size={24} color="#E1306C" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={() => navigation.navigate('FacebookScreen')}>
-              <Icon name="logo-facebook" size={24} color="#4267B2" />
             </TouchableOpacity>
           </View>
 
@@ -176,10 +146,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-  },
-  backButton: {
-    marginRight: 10,
-    zIndex: 1,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   headerContent: {
     flex: 1,
@@ -193,7 +165,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: theme.colors.text,
   },
   scrollContainer: {
     flex: 1,
@@ -268,15 +240,6 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#333',
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 15,
-  },
-  socialButton: {
-    marginHorizontal: 15,
-    padding: 10,
   },
   copyrightContainer: {
     marginTop: 30,

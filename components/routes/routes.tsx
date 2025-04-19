@@ -7,7 +7,7 @@ import SearchResultsScreen from '../screens/SearchScreenResult';
 import SettingsScreen from '../screens/SettingsScreen';
 import ErrorScreen from '../screens/ErrorScreen';
 import ManageNotification from '../screens/ManageNotification';
-import SettingsDevicesScreen from '../screens/SettingsDevicesScreen';
+import SettingsDevicesScreen from '../screens/SettingsScreens/SettingsDevicesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import SPo2Screen from '../screens/DashboardScreens/RecordSPo2Screen';
 import SleepScreen from '../screens/DashboardScreens/RecordSleepScreen';
