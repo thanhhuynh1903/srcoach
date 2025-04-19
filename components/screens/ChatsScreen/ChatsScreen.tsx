@@ -20,6 +20,8 @@ import {
 } from '../../utils/useChatsAPI';
 import {useNavigation} from '@react-navigation/native';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
+import { CommonAvatar } from '../../commons/CommonAvatar';
+import { capitalizeFirstLetter } from '../../utils/utils_format';
 
 type Session = {
   id: string;
@@ -42,6 +44,9 @@ type User = {
   points: number;
   user_level: string;
   roles: string[];
+  image?: {
+    url: string;
+  };
 };
 
 type FilterType = 'ALL' | 'ACCEPTED' | 'PENDING' | 'BLOCKED';
@@ -228,29 +233,6 @@ export default function ChatsScreen() {
     }
   };
 
-  const renderRoleBadge = (roles: string[]) => {
-    const isExpert = roles.includes('expert');
-    const isRunner = roles.includes('runner') && !isExpert;
-
-    if (isExpert) {
-      return (
-        <View style={[styles.roleBadge, styles.expertBadge]}>
-          <Icon name="trophy" size={12} color="white" />
-        </View>
-      );
-    }
-
-    if (isRunner) {
-      return (
-        <View style={[styles.roleBadge, styles.runnerBadge]}>
-          <Icon name="footsteps" size={12} color="white" />
-        </View>
-      );
-    }
-
-    return null;
-  };
-
   const renderItem = ({item}: {item: Session | User}) => {
     const isBlockedUser = !('status' in item);
     const session = item as Session;
@@ -270,14 +252,27 @@ export default function ChatsScreen() {
     const content = (
       <View style={styles.itemContainer}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatarPlaceholder}>
-            <Icon name="person" size={24} color="white" />
-          </View>
-          {renderRoleBadge(otherUser.roles)}
+          <CommonAvatar
+            mode={isExpert ? 'expert' : 'runner'}
+            uri={otherUser.image?.url}
+            size={40}
+          />
         </View>
         <View style={styles.textContainer}>
-          <Text style={styles.nameText}>{otherUser.name}</Text>
-          <Text style={styles.usernameText}>@{otherUser.username}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.nameText}>{otherUser.name}</Text>
+            <Text style={styles.usernameText}>@{otherUser.username}</Text>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Icon name="trophy" size={16} color={theme.colors.warning} />
+              <Text style={styles.statText}>{otherUser.points}</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Icon name="star" size={16} color={theme.colors.warning} />
+              <Text style={styles.statText}>{capitalizeFirstLetter(otherUser.user_level)}</Text>
+            </View>
+          </View>
         </View>
         {session.status === 'PENDING' && session.initiatedByYou && (
           <View style={styles.pendingBadge}>
@@ -574,46 +569,39 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   avatarContainer: {
-    position: 'relative',
     marginRight: 12,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  roleBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  runnerBadge: {
-    backgroundColor: theme.colors.success,
-  },
-  expertBadge: {
-    backgroundColor: theme.colors.warning,
   },
   textContainer: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   nameText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#000',
   },
   usernameText: {
     fontSize: 14,
     color: '#8E8E93',
+    marginLeft: 6,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  statText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginLeft: 4,
   },
   pendingBadge: {
     backgroundColor: theme.colors.warning,

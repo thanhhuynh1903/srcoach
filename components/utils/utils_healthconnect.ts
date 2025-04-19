@@ -537,6 +537,16 @@ export const fetchExerciseSessionRecords = async (
   }
 };
 
+export const fetchExerciseSessionById = async (id: string): Promise<any> => {
+  try {
+    const response = await api.get(`/record-exercise-session/${id}`);
+    return response.data
+  } catch (error) {
+    console.error('Error fetching exercise session:', error);
+    return null;
+  }
+};
+
 export const fetchExerciseSessionByRecordId = async (
   recordId: string,
 ): Promise<ExerciseSession | null> => {

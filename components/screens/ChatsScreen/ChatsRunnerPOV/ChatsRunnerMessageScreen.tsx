@@ -369,7 +369,6 @@ export default function ChatsRunnerMessageScreen() {
         }
       }, 100);
 
-      // Reset typing indicator when a message is received
       if (data.user_id !== userId) {
         setIsTyping(false);
         setTypingUser(null);

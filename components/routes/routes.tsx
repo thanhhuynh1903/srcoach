@@ -61,6 +61,7 @@ import ChatsSearchSessionMessagesScreen from '../screens/ChatsScreen/ChatsSearch
 import OtherProfileScreen from '../screens/OtherProfileScreen';
 import ExerciseRecordsFullMapScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsFullMapScreen';
 import ExerciseRecordsDetailScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsDetailScreen';
+import CRMessageItemExerciseRecordDetail from '../screens/ChatsScreen/ChatsMessageItems/CRMessageItemExerciseRecordDetail';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -122,6 +123,7 @@ export const stackScreens = [
   { name: 'ChatsExpertMessageScreen', component: ChatsExpertMessageScreen},
   { name: 'ChatsSearchAllMessagesScreen', component: ChatsSearchAllMessagesScreen},
   { name: 'ChatsSearchSessionMessagesScreen', component: ChatsSearchSessionMessagesScreen},
+  { name: 'CRMessageItemExerciseRecordDetail', component: CRMessageItemExerciseRecordDetail},
 
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},

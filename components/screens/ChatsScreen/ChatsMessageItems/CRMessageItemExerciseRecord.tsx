@@ -14,8 +14,9 @@ import {
   getNameFromExerciseType,
 } from '../../../contants/exerciseType';
 import CommonDialog from '../../../commons/CommonDialog';
-import { archiveMessage } from '../../../utils/useChatsAPI';
+import {archiveMessage} from '../../../utils/useChatsAPI';
 import ToastUtil from '../../../utils/utils_toast';
+import { useNavigation } from '@react-navigation/native';
 
 type Metrics = {
   distance: number;
@@ -58,12 +59,15 @@ export const ECMessageItemExerciseRecord = ({
   isCurrentUser: boolean;
   onMessageArchived?: (messageId: string) => void;
 }) => {
+  const navigation = useNavigation()
   const [showStats, setShowStats] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const isArchived = message.archive === true;
 
   const duration = moment
-    .duration(moment(message.metrics?.end_time).diff(message.metrics?.start_time))
+    .duration(
+      moment(message.metrics?.end_time).diff(message.metrics?.start_time),
+    )
     .asMinutes()
     .toFixed(0);
 
@@ -82,6 +86,10 @@ export const ECMessageItemExerciseRecord = ({
     if (!isArchived && isCurrentUser) {
       setShowDialog(true);
     }
+  };
+
+  const handleViewMap = () => {
+    navigation.navigate("CRMessageItemExerciseRecordDetail", { sessionId: message.exercise_session_record_id });
   };
 
   const handleArchiveMessage = async () => {
@@ -114,17 +122,21 @@ export const ECMessageItemExerciseRecord = ({
 
   return (
     <>
-      <TouchableOpacity 
+      <TouchableOpacity
         activeOpacity={0.7}
         onLongPress={handleLongPress}
-        delayLongPress={300}
-      >
+        delayLongPress={300}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Icon name={exerciseIcon} size={20} color={theme.colors.primaryDark} />
+            <Icon
+              name={exerciseIcon}
+              size={20}
+              color={theme.colors.primaryDark}
+            />
             <Text style={styles.headerText}>
-              <Text style={styles.userName}>@{message.User.username}</Text> shared a{' '}
-              <Text style={styles.exerciseName}>{exerciseName}</Text> record
+              <Text style={styles.userName}>@{message.User.username}</Text>{' '}
+              shared a <Text style={styles.exerciseName}>{exerciseName}</Text>{' '}
+              record
             </Text>
           </View>
 
@@ -185,7 +197,9 @@ export const ECMessageItemExerciseRecord = ({
               <View style={styles.statItem}>
                 <Icon name="footsteps-outline" size={20} color="#8E8E93" />
                 <Text style={styles.statLabel}>Steps</Text>
-                <Text style={styles.statValue}>{message.metrics?.steps || '0'}</Text>
+                <Text style={styles.statValue}>
+                  {message.metrics?.steps || '0'}
+                </Text>
               </View>
 
               <View style={styles.statItem}>
@@ -199,7 +213,10 @@ export const ECMessageItemExerciseRecord = ({
           )}
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.viewMapButton} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.viewMapButton}
+              onPress={handleViewMap}
+              activeOpacity={0.7}>
               <Icon name="map-outline" size={16} color={'#FFF'} />
               <Text style={styles.viewMapText}>View Details</Text>
             </TouchableOpacity>
@@ -214,7 +231,9 @@ export const ECMessageItemExerciseRecord = ({
         visible={showDialog}
         onClose={() => setShowDialog(false)}
         title="Exercise Record Options"
-        content={<Text>What would you like to do with this exercise record?</Text>}
+        content={
+          <Text>What would you like to do with this exercise record?</Text>
+        }
         actionButtons={[
           {
             label: 'Delete',
