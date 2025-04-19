@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/Ionicons';
+import Icon from '@react-native-vector-icons/ionicons';
 import MapView, {Polyline, Marker, Region} from 'react-native-maps';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../BackButton';

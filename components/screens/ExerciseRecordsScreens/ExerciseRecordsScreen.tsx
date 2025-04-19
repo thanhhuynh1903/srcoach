@@ -386,7 +386,7 @@ export default function ExerciseRecordsScreen() {
                     <TouchableOpacity
                       style={styles.activityRow}
                       onPress={() => {
-                        navigate.navigate('RecordDetailScreen' as never, {
+                        navigate.navigate('ExerciseRecordsDetailScreen' as never, {
                           id: activity.id,
                           clientRecordId: activity.clientRecordId,
                         });

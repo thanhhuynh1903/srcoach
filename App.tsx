@@ -1,9 +1,13 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {
+  createNativeStackNavigator,
+  NativeStackNavigationOptions,
+} from '@react-navigation/native-stack';
 import Icon from '@react-native-vector-icons/ionicons';
 import Toast from 'react-native-toast-message';
+
 import {
   homeStackScreens,
   tabScreens,
@@ -14,10 +18,19 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 
+const slideAnimation: NativeStackNavigationOptions = {
+  animation: 'slide_from_right',
+  animationDuration: 50
+};
+
 const HomeStackScreen = () => {
   return (
-    <HomeStack.Navigator screenOptions={{headerShown: false}}>
-      {homeStackScreens.map((screen: any) => (
+    <HomeStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        ...slideAnimation,
+      }}>
+      {homeStackScreens.map(screen => (
         <HomeStack.Screen
           key={screen.name}
           name={screen.name}
@@ -31,9 +44,17 @@ const HomeStackScreen = () => {
 const HomeTabs = () => {
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
-        tabBarIcon: ({focused, color, size}) => {
-          let iconName;
+      screenOptions={({route}): any => ({
+        tabBarIcon: ({
+          focused,
+          color,
+          size,
+        }: {
+          focused: boolean;
+          color: string;
+          size: number;
+        }) => {
+          let iconName: string;
           switch (route.name) {
             case 'Home':
               iconName = focused ? 'home' : 'home-outline';
@@ -56,14 +77,14 @@ const HomeTabs = () => {
             default:
               iconName = 'help-circle';
           }
-          return <Icon name={iconName as never} size={size} color={color} />;
+          return <Icon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#100077',
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
       })}>
       <Tab.Screen name="Home" component={HomeStackScreen} />
-      {tabScreens.slice(1).map((screen: any) => (
+      {tabScreens.slice(1).map(screen => (
         <Tab.Screen
           key={screen.name}
           name={screen.name}
@@ -78,8 +99,10 @@ const App = () => {
   return (
     <>
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="WelcomeScreen">
-          {stackScreens.map((screen: any) => (
+        <Stack.Navigator
+          initialRouteName="WelcomeScreen"
+          screenOptions={slideAnimation}>
+          {stackScreens.map(screen => (
             <Stack.Screen
               key={screen.name}
               name={screen.name}

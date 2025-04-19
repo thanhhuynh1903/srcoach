@@ -9,22 +9,22 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
-import BackButton from '../BackButton';
-import ScreenWrapper from '../ScreenWrapper';
-import {hp, wp} from '../helpers/common';
+import BackButton from '../../BackButton';
+import ScreenWrapper from '../../ScreenWrapper';
+import {hp, wp} from '../../helpers/common';
 import MapView, {Polyline, Marker} from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {
   fetchDetailRecords,
   ExerciseSession,
-} from '../utils/utils_healthconnect';
-import {getNameFromExerciseType} from '../contants/exerciseType';
+} from '../../utils/utils_healthconnect';
+import {getNameFromExerciseType} from '../../contants/exerciseType';
 import {format, parseISO} from 'date-fns';
-import {theme} from '../contants/theme';
-import {useLoginStore} from '../utils/useLoginStore';
+import {theme} from '../../contants/theme';
+import {useLoginStore} from '../../utils/useLoginStore';
 
-const RecordDetailScreen = () => {
+const ExerciseRecordsDetailScreen = () => {
   const route = useRoute();
   const {id} = route.params as {id: string};
   const {profile} = useLoginStore();
@@ -624,4 +624,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RecordDetailScreen;
+export default ExerciseRecordsDetailScreen;
