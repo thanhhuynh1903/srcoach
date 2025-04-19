@@ -23,6 +23,7 @@ import {useCommentStore} from '../../utils/useCommentStore';
 import ModalPoppup from '../../ModalPoppup';
 import {Dimensions} from 'react-native';
 import CommunityPostDetailMap from './CommunityPostDetailMap';
+import SkeletonPostDetail from './SkeletonPostDetail';
 
 interface User {
   id: string;
@@ -61,7 +62,7 @@ interface Post {
 }
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, getAll, deletePost, likePost, getMyPosts} =
+  const {getDetail, currentPost, getAll, deletePost, likePost, getMyPosts,isLoading: isLoadingPost} =
     usePostStore();
   const [localPost, setLocalPost] = useState<Post[]>([]);
   const {profile} = useLoginStore();
@@ -88,12 +89,12 @@ const CommunityPostDetailScreen = () => {
 
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingParentCommentId, setEditingParentCommentId] = useState<
-    string | null
-  >(null);
+  const [editingParentCommentId, setEditingParentCommentId] = useState<string | null>(null);
 
   const [zoomModalVisible, setZoomModalVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const isLoading = isLoadingPost || isLoadingComments;
 
   // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
@@ -541,6 +542,10 @@ const CommunityPostDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
+    {isLoading ? (
+      <SkeletonPostDetail />
+    ) : (
+      <>
       <ScrollView style={styles.scrollView}>
         {/* User info section */}
         <View style={styles.userInfoContainer}>
@@ -946,6 +951,9 @@ const CommunityPostDetailScreen = () => {
         editComment={handleEditComment}
         commentId={selectedCommentId}
       />
+    </>
+
+    )}
     </SafeAreaView>
   );
 };
