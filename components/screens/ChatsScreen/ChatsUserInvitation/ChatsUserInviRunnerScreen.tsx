@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {createSession, getUserInfo} from '../../../utils/useChatsAPI';
 import {theme} from '../../../contants/theme';
 import Toast from 'react-native-toast-message';
 import { CommonAvatar } from '../../../commons/CommonAvatar';
+import BackButton from '../../../BackButton';
 
 interface UserInfo {
   name: string;
@@ -77,9 +77,7 @@ const ChatsUserInviRunnerScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.headerTitle}>Runner Invitation</Text>
         </View>
         <View style={styles.loadingContainer}>
@@ -106,9 +104,7 @@ const ChatsUserInviRunnerScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.headerTitle}>Runner Invitation</Text>
         </View>
         <View style={styles.errorContainer}>
@@ -125,25 +121,19 @@ const ChatsUserInviRunnerScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.headerTitle}>Runner Invitation</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileCard}>
-          <LinearGradient
-            colors={['#4CAF50', '#2E7D32']}
-            style={styles.avatarWrapper}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 1}}>
+          <View style={styles.avatarWrapper}>
             <CommonAvatar
               mode={isRunner ? 'runner' : isExpert ? 'expert' : undefined}
               size={140}
               uri={userInfo.profile_picture}
             />
-          </LinearGradient>
+          </View>
 
           <View style={{alignItems: 'center', marginBottom: 15}}>
             <Text style={styles.userName}>{userInfo.name}</Text>
@@ -158,12 +148,10 @@ const ChatsUserInviRunnerScreen = () => {
               </View>
             )}
             {isRunner && (
-              <LinearGradient
-                colors={['#4CAF50', '#2E7D32']}
-                style={styles.runnerBadge}>
+              <View style={styles.runnerBadge}>
                 <Icon name="walk" size={18} color="white" />
                 <Text style={styles.badgeText}>Runner</Text>
-              </LinearGradient>
+              </View>
             )}
           </View>
 
@@ -292,23 +280,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     height: 60,
-    backgroundColor: theme.colors.primaryDark,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: 'transparent',
   },
   headerTitle: {
-    color: 'white',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 2,
-  },
-  backButton: {
-    marginRight: 15,
+    marginLeft: 10,
   },
   loadingContainer: {
     padding: 20,
@@ -329,11 +307,6 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.3)',
@@ -345,37 +318,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatarPlaceholder: {
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImage: {
-    backgroundColor: '#f0f0f0',
-    borderWidth: 3,
-    borderColor: 'white',
-  },
-  roleBadge: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  runnerBadge: {
-    backgroundColor: theme.colors.success,
-  },
-  expertBadge: {
-    backgroundColor: theme.colors.warning,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
   },
   userName: {
     fontSize: 24,
@@ -403,25 +346,16 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginHorizontal: 5,
     marginVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
   runnerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.primary,
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 6,
     marginHorizontal: 5,
     marginVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
   badgeText: {
     marginLeft: 8,
@@ -478,11 +412,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 15,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(76, 175, 80, 0.3)',
   },
@@ -531,12 +460,7 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primaryDark,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
+    backgroundColor: theme.colors.primary,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -546,9 +470,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 2,
   },
   scrollContent: {
     padding: 20,

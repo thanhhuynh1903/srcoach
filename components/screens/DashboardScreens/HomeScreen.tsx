@@ -1,6 +1,5 @@
 import React, {useCallback, useState, useEffect} from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,28 +10,11 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import HomeHeader from '../../HomeHeader';
 import WellnessAndMedication from '../../WellnessAndMedication';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  FadeIn,
-  FadeOut,
-  FadeInLeft,
-  FadeOutLeft,
-  FadeInRight,
-  FadeOutRight,
-  FadeInDown,
-  FadeOutDown,
-  Layout,
-} from 'react-native-reanimated';
 import {useNavigation} from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAuthStore from '../../utils/useAuthStore';
 import {wp} from '../../helpers/common';
-import {initializeHealthConnect} from '../../utils/utils_healthconnect';
+import {initializeHealthConnect, fetchSummaryRecord} from '../../utils/utils_healthconnect';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
-import axios from 'axios';
-import {MASTER_URL} from '../../utils/zustandfetchAPI';
 import {useLoginStore} from '../../utils/useLoginStore';
 import CommonDialog from '../../commons/CommonDialog';
 import {theme} from '../../contants/theme';
@@ -76,22 +58,7 @@ interface HealthScoreData {
   };
 }
 
-const api = axios.create({
-  baseURL: MASTER_URL,
-});
-
-api.interceptors.request.use(async config => {
-  const token = await AsyncStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-const AnimatedView = Animated.createAnimatedComponent(View);
-
 const HomeScreen = () => {
-  const opacity = useSharedValue(0);
   const navigation = useNavigation();
   const {token, loadToken} = useAuthStore();
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
@@ -155,12 +122,7 @@ const HomeScreen = () => {
       await loadToken();
     };
     loadUserToken();
-
-    opacity.value = withTiming(1, {duration: 1000});
-    return () => {
-      opacity.value = withTiming(0, {duration: 500});
-    };
-  }, [opacity, loadToken]);
+  }, [loadToken]);
 
   const getHealthData = async () => {
     setLoading(true);
@@ -173,14 +135,13 @@ const HomeScreen = () => {
       } catch (hcError) {
         console.log('Health Connect initialization error:', hcError);
         setHealthConnectError(true);
-        return;
       }
 
-      const response = await api.get('/record-summary');
+      const response = await fetchSummaryRecord();
 
-      if (response.data.status === 'success') {
-        setSummaryData(response.data.data.summaries);
-        setHealthScore(response.data.data.healthScore);
+      if (response && response.summaries && response.healthScore) {
+        setSummaryData(response.summaries);
+        setHealthScore(response.healthScore);
       }
     } catch (error) {
       console.log('Error fetching health data:', error);
@@ -210,19 +171,13 @@ const HomeScreen = () => {
     return unsubscribe;
   }, [navigation]);
 
-  const fadeInStyle = useAnimatedStyle(() => {
-    return {
-      opacity: opacity.value,
-    };
-  });
-
   const getHealthScoreColor = (score: number) => {
-    if (score === 0) return '#64748B'; // Gray for no data
-    if (score < 30) return '#EF4444'; // Red
-    if (score < 50) return '#F97316'; // Orange
-    if (score < 70) return '#F59E0B'; // Yellow
-    if (score < 85) return '#10B981'; // Green
-    return '#3B82F6'; // Blue for excellent
+    if (score === 0) return '#64748B';
+    if (score < 30) return '#EF4444';
+    if (score < 50) return '#F97316';
+    if (score < 70) return '#F59E0B';
+    if (score < 85) return '#10B981';
+    return '#3B82F6';
   };
 
   const MetricSkeleton = () => (
@@ -246,18 +201,11 @@ const HomeScreen = () => {
       <Text style={styles.healthMetricLabel}>
         {metricInfo[metric]?.title || metric}
       </Text>
-      <Text style={[styles.healthMetricPercentage, {color: '#64748B'}]}>
-        Error
-      </Text>
     </View>
   );
 
   const renderMainMetricsCard = () => (
-    <AnimatedView
-      entering={FadeInLeft.delay(600).duration(500)}
-      exiting={FadeOutLeft.duration(300)}
-      layout={Layout.springify()}
-      style={styles.mainMetricsCard}>
+    <View style={styles.mainMetricsCard}>
       {/* Steps */}
       {errors.steps ? (
         <MetricErrorCard metric="steps" />
@@ -350,15 +298,11 @@ const HomeScreen = () => {
           </View>
         </TouchableOpacity>
       )}
-    </AnimatedView>
+    </View>
   );
 
   const renderHealthMetricsCards = () => (
-    <AnimatedView
-      entering={FadeInRight.delay(900).duration(500)}
-      exiting={FadeOutRight.duration(300)}
-      layout={Layout.springify()}
-      style={styles.metricsGrid}>
+    <View style={styles.metricsGrid}>
       {/* Heart Rate */}
       {errors.heartRate ? (
         <MetricErrorCard metric="heartRate" />
@@ -382,9 +326,6 @@ const HomeScreen = () => {
             {summaryData?.heartRate.value.toFixed(0) || '--'} bpm
           </Text>
           <Text style={styles.healthMetricLabel}>Heart Rate</Text>
-          <Text style={[styles.healthMetricPercentage, {color: '#FF4D4F'}]}>
-            {summaryData?.heartRate.percentage.toFixed(0) || '--'}%
-          </Text>
         </TouchableOpacity>
       )}
 
@@ -411,9 +352,6 @@ const HomeScreen = () => {
             {summaryData?.oxygenSaturation.value.toFixed(0) || '--'}%
           </Text>
           <Text style={styles.healthMetricLabel}>SpO2</Text>
-          <Text style={[styles.healthMetricPercentage, {color: '#10B981'}]}>
-            {summaryData?.oxygenSaturation.percentage.toFixed(0) || '--'}%
-          </Text>
         </TouchableOpacity>
       )}
 
@@ -444,9 +382,6 @@ const HomeScreen = () => {
               : '--'}
           </Text>
           <Text style={styles.healthMetricLabel}>Sleep</Text>
-          <Text style={[styles.healthMetricPercentage, {color: '#6366F1'}]}>
-            {summaryData?.sleep.percentage.toFixed(0) || '--'}%
-          </Text>
         </TouchableOpacity>
       )}
 
@@ -473,22 +408,14 @@ const HomeScreen = () => {
             {summaryData?.totalCalories.value.toFixed(0) || '--'}
           </Text>
           <Text style={styles.healthMetricLabel}>Total Calories</Text>
-          <Text style={[styles.healthMetricPercentage, {color: '#FAAD14'}]}>
-            {summaryData?.totalCalories.percentage.toFixed(0) || '--'}%
-          </Text>
         </TouchableOpacity>
       )}
-    </AnimatedView>
+    </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AnimatedView
-        entering={FadeInDown.delay(300).duration(500)}
-        exiting={FadeOutDown.duration(300)}
-        layout={Layout.springify()}>
-        <HomeHeader navigation={navigation} />
-      </AnimatedView>
+    <View style={styles.container}>
+      <HomeHeader navigation={navigation} />
 
       <ScrollView
         style={styles.scrollView}
@@ -497,10 +424,7 @@ const HomeScreen = () => {
         }>
         {/* Health Connect Error Banner */}
         {healthConnectError && (
-          <AnimatedView
-            entering={FadeInDown.duration(300)}
-            exiting={FadeOutDown.duration(300)}
-            style={styles.errorBanner}>
+          <View style={styles.errorBanner}>
             <View style={styles.errorBannerContent}>
               <Icon name="warning" size={20} color="#FFF" />
               <Text style={styles.errorBannerText}>
@@ -510,15 +434,11 @@ const HomeScreen = () => {
             <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
               <Icon name="refresh" size={20} color="#FFF" />
             </TouchableOpacity>
-          </AnimatedView>
+          </View>
         )}
 
         {/* Health Score */}
-        <AnimatedView
-          entering={FadeIn.delay(300).duration(500)}
-          exiting={FadeOut.duration(300)}
-          layout={Layout.springify()}
-          style={[styles.section, fadeInStyle]}>
+        <View style={styles.section}>
           <View style={styles.cardHeader}>
             <Text style={styles.sectionTitle}>Health Score</Text>
             <TouchableOpacity
@@ -565,7 +485,7 @@ const HomeScreen = () => {
               </View>
             </View>
           </TouchableOpacity>
-        </AnimatedView>
+        </View>
 
         {loading ? (
           <View style={styles.skeletonContainer}>
@@ -589,32 +509,29 @@ const HomeScreen = () => {
         )}
 
         {/* Wellness and Goals */}
-        <AnimatedView
-          entering={FadeIn.delay(1200).duration(500)}
-          exiting={FadeOut.duration(300)}
-          layout={Layout.springify()}>
-          <WellnessAndMedication navigation={navigation} />
-        </AnimatedView>
+        <WellnessAndMedication navigation={navigation} />
       </ScrollView>
 
-      {/* Metric Info Dialog */}
-      <CommonDialog
-        visible={infoDialogVisible}
-        onClose={() => setInfoDialogVisible(false)}
-        title={currentMetricInfo.title}
-        content={
-          <Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>
-        }
-        actionButtons={[
-          {
-            label: 'Close',
-            variant: 'contained',
-            color: theme.colors.primaryDark,
-            handler: () => setInfoDialogVisible(false),
-          },
-        ]}
-      />
-    </SafeAreaView>
+      {/* Metric Info Dialog - rendered last to ensure proper z-index */}
+      {infoDialogVisible && (
+        <CommonDialog
+          visible={infoDialogVisible}
+          onClose={() => setInfoDialogVisible(false)}
+          title={currentMetricInfo.title}
+          content={
+            <Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>
+          }
+          actionButtons={[
+            {
+              label: 'Close',
+              variant: 'contained',
+              color: theme.colors.primaryDark,
+              handler: () => setInfoDialogVisible(false),
+            },
+          ]}
+        />
+      )}
+    </View>
   );
 };
 
@@ -760,10 +677,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginBottom: 4,
-  },
-  healthMetricPercentage: {
-    fontSize: 14,
-    fontWeight: '600',
   },
   dialogContent: {
     fontSize: 14,

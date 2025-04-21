@@ -51,11 +51,7 @@ const HomeHealthMetricCardInfo: React.FC<HomeHealthMetricCardInfoProps> = ({
         <View style={styles.metricHeader}>
           <Icon name={iconName} size={20} color={iconColor} />
           <TouchableOpacity onPress={onInfoPress} style={styles.infoButton}>
-            <Icon
-              name="information-circle-outline"
-              size={16}
-              color="#64748B"
-            />
+            <Icon name="information-circle-outline" size={16} color="#64748B" />
           </TouchableOpacity>
         </View>
         <Text style={styles.healthMetricValue}>{value}</Text>
