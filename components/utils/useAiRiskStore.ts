@@ -16,6 +16,8 @@ interface HealthAlert {
     type_name: string;
     description: string;
   }
+  distance: number,
+  step: number,
   is_deleted : boolean
 }
 
