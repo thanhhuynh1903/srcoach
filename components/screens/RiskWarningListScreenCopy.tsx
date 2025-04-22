@@ -1,0 +1,652 @@
+import {useState, useMemo, useEffect, useRef} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+  Dimensions,
+  Alert,
+  RefreshControl,
+} from 'react-native';
+import Icon from '@react-native-vector-icons/ionicons';
+import {useNavigation} from '@react-navigation/native';
+import useAiRiskStore from '../utils/useAiRiskStore';
+import {theme} from '../contants/theme';
+import CommonDialog from '../commons/CommonDialog';
+import ContentLoader, {Rect} from 'react-content-loader/native';
+
+const filters = ['All', 'High', 'Moderate', 'Normal'];
+const {width} = Dimensions.get('window');
+
+const RiskWarningListScreen = () => {
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const {
+    healthAlerts,
+    isLoadingAlerts,
+    error,
+    fetchHealthAlerts,
+    deleteHealthAlert,
+    isLoading,
+    status,
+    message,
+    searchHealthAlerts,
+  } = useAiRiskStore();
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      await fetchHealthAlerts();
+    };
+    fetchAlerts();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchHealthAlerts();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const debouncedSearch = (query: string, filter: string) => {
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+
+    searchTimeout.current = setTimeout(() => {
+      searchHealthAlerts(query, filter);
+    }, 500);
+  };
+
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    debouncedSearch(searchQuery, filter);
+  };
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    debouncedSearch(text, activeFilter);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) {
+        clearTimeout(searchTimeout.current);
+      }
+    };
+  }, []);
+
+  const handleDeleteAlert = (alertId: string) => {
+    Alert.alert(
+      'Delete Health Alert',
+      'Are you sure you want to delete this health alert? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const success = await deleteHealthAlert(alertId);
+              if (success) {
+                Alert.alert('Success', 'Health alert deleted successfully');
+              } else {
+                Alert.alert(
+                  'Error',
+                  message || 'Failed to delete health alert',
+                );
+              }
+            } catch (error) {
+              console.error('Error deleting health alert:', error);
+              Alert.alert('Error', 'An unexpected error occurred');
+            }
+          },
+        },
+      ],
+      {cancelable: true},
+    );
+  };
+
+  const getSeverityColor = (severity: string) => {
+    const severityLower = severity.toLowerCase();
+    if (severityLower.includes('high')) return theme.colors.error;
+    if (severityLower.includes('moderate')) return theme.colors.warning;
+    if (severityLower.includes('normal')) return theme.colors.success;
+    return theme.colors.gray;
+  };
+
+  const filteredRiskItems = useMemo(() => {
+    if (!healthAlerts || healthAlerts.length === 0) return [];
+
+    let filtered = healthAlerts.filter(
+      item =>
+        item.alert_message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.AIHealthAlertType.type_name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    );
+
+    if (activeFilter !== 'All') {
+      filtered = filtered.filter(
+        item => item.severity.toLowerCase() === activeFilter.toLowerCase(),
+      );
+    }
+
+    return filtered;
+  }, [activeFilter, searchQuery, healthAlerts]);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const renderLoadingSkeletons = () => {
+    return Array(5)
+      .fill(0)
+      .map((_, index) => (
+        <ContentLoader
+          key={index}
+          speed={1.5}
+          width={width - 32}
+          height={120}
+          viewBox={`0 0 ${width - 32} 120`}
+          backgroundColor="#f3f3f3"
+          foregroundColor="#ecebeb"
+          style={{marginBottom: 12}}>
+          <Rect x="0" y="0" rx="8" ry="8" width={width - 32} height={120} />
+          <Rect x={16} y={20} rx="4" ry="4" width={200} height={16} />
+          <Rect x={16} y={44} rx="4" ry="4" width={250} height={14} />
+          <Rect x={16} y={80} rx="4" ry="4" width={100} height={12} />
+          <Rect x={width - 132} y={80} rx="4" ry="4" width={80} height={12} />
+        </ContentLoader>
+      ));
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Icon name="warning" size={24} color={theme.colors.primaryDark} />
+          <Text style={styles.headerTitle}>Risk analysis</Text>
+          <TouchableOpacity
+            onPress={() => setShowInfoDialog(true)}
+            style={styles.infoButton}>
+            <Icon
+              name="information-circle-outline"
+              size={20}
+              color={theme.colors.primaryDark}
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ManageNotificationsScreen')}>
+            <Icon
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LeaderBoardScreen')}>
+            <Icon
+              name="trophy-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+              style={styles.headerIcon}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Info Dialog */}
+      <CommonDialog
+        visible={showInfoDialog}
+        onClose={() => setShowInfoDialog(false)}
+        title="AI Risk Analysis"
+        content={
+          <View>
+            <Text style={styles.dialogText}>
+              Our AI analyzes your running data to identify potential health
+              risks and performance insights.
+            </Text>
+            <Text style={[styles.dialogText, {marginTop: 12}]}>
+              <Text style={{fontWeight: 'bold'}}>Key factors analyzed:</Text>
+            </Text>
+            <View style={styles.dialogBullet}>
+              <Text style={styles.dialogText}>
+                • Distance and duration trends
+              </Text>
+              <Text style={styles.dialogText}>• Heart rate patterns</Text>
+              <Text style={styles.dialogText}>
+                • Step cadence and consistency
+              </Text>
+              <Text style={styles.dialogText}>• Average pace fluctuations</Text>
+              <Text style={styles.dialogText}>
+                • Route difficulty and elevation
+              </Text>
+              <Text style={styles.dialogText}>
+                • Recovery time between runs
+              </Text>
+            </View>
+          </View>
+        }
+        actionButtons={[
+          {
+            label: 'Got it',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setShowInfoDialog(false),
+          },
+        ]}
+      />
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Icon name="search" size={20} color="#64748B" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search health alerts"
+          placeholderTextColor="#64748B"
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+        />
+        {searchQuery ? (
+          <TouchableOpacity
+            onPress={() => {
+              setSearchQuery('');
+              handleSearchChange('');
+            }}>
+            <Icon name="close-circle" size={18} color="#64748B" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      {/* Filters */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filtersScrollView}
+        contentContainerStyle={styles.filtersContainer}>
+        {filters.map(filter => (
+          <TouchableOpacity
+            key={filter}
+            style={[
+              styles.filterTab,
+              activeFilter === filter && styles.filterTabActive,
+              activeFilter === filter &&
+                filter === 'High' && {
+                  backgroundColor: theme.colors.error,
+                },
+              activeFilter === filter &&
+                filter === 'Moderate' && {
+                  backgroundColor: theme.colors.warning,
+                },
+              activeFilter === filter &&
+                filter === 'Normal' && {
+                  backgroundColor: theme.colors.success,
+                },
+            ]}
+            onPress={() => handleFilterChange(filter)}>
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === filter && styles.filterTextActive,
+              ]}>
+              {filter}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Risk List */}
+      <ScrollView
+        style={styles.riskList}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }>
+        {isLoadingAlerts ? (
+          renderLoadingSkeletons()
+        ) : error ? (
+          <View style={styles.emptyState}>
+            <Icon name="alert-circle-outline" size={48} color="#EF4444" />
+            <Text style={styles.emptyStateTitle}>Error</Text>
+            <Text style={styles.emptyStateDescription}>{error}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchHealthAlerts}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredRiskItems.filter(item => !item.is_deleted).length > 0 ? (
+          filteredRiskItems
+            .filter(item => !item.is_deleted)
+            .map(item => (
+              <View
+                key={item.id}
+                style={[
+                  styles.riskItemContainer,
+                  {
+                    borderLeftWidth: 4,
+                    borderLeftColor: getSeverityColor(item.severity),
+                    shadowColor: '#000',
+                    shadowOffset: {
+                      width: 0,
+                      height: 1,
+                    },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 1.41,
+                    elevation: 2,
+                  },
+                ]}>
+                <TouchableOpacity
+                  style={styles.riskItem}
+                  onPress={() => {
+                    navigation.navigate(
+                      'RiskWarningScreen' as never,
+                      {alertId: item.id} as never,
+                    );
+                  }}>
+                  <View style={styles.riskHeader}>
+                    <Text style={styles.riskTitle}>{item.alert_message}</Text>
+                  </View>
+                  <Text style={styles.riskDescription}>
+                    {item.AIHealthAlertType.type_name} -{' '}
+                    {item.AIHealthAlertType.description}
+                  </Text>
+                  <View style={styles.riskFooter}>
+                    <Text style={styles.date}>
+                      {formatDate(item.alert_date)}
+                    </Text>
+                    <View style={styles.riskStatus}>
+                      <Text
+                        style={[
+                          styles.riskLevel,
+                          {color: getSeverityColor(item.severity)},
+                        ]}>
+                        {item.severity} Risk
+                      </Text>
+                      {item.score !== undefined && item.score !== null && (
+                        <Text
+                          style={[
+                            styles.score,
+                            {
+                              backgroundColor:
+                                Number(item.score) < 30
+                                  ? theme.colors.success
+                                  : Number(item.score) < 60
+                                  ? theme.colors.warning
+                                  : theme.colors.error,
+                            },
+                          ]}>
+                          {item.score}/100
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteAlert(item.id)}
+                  disabled={isLoading}>
+                  {isLoading && status === 'loading' ? (
+                    <ActivityIndicator size="small" color="#EF4444" />
+                  ) : (
+                    <Icon name="trash-outline" size={16} color="#EF4444" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Icon name="search-outline" size={48} color="#CBD5E1" />
+            <Text style={styles.emptyStateTitle}>No results found</Text>
+            <Text style={styles.emptyStateDescription}>
+              Try adjusting your search or filter to find what you're looking
+              for
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginLeft: 10,
+    color: '#000',
+  },
+  infoButton: {
+    marginLeft: 8,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginLeft: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000000',
+    paddingVertical: 5,
+  },
+  filtersScrollView: {
+    maxHeight: 40,
+  },
+  filtersContainer: {
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 25,
+    flexDirection: 'row',
+  },
+  filterTab: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    height: 28,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  filterTabActive: {
+    backgroundColor: theme.colors.primaryDark,
+    shadowColor: theme.colors.primaryDark,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 0,
+  },
+  filterText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  riskList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  riskItemContainer: {
+    marginBottom: 12,
+    position: 'relative',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 5,
+    padding: 16,
+    paddingLeft: 12,
+  },
+  riskItem: {
+    flex: 1,
+  },
+  riskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginRight: 12,
+  },
+  riskTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+    flex: 1,
+    marginRight: 20,
+  },
+  riskDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  riskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  date: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  riskStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  riskLevel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  score: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748B',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: theme.colors.primaryDark,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  dialogText: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 8,
+  },
+  dialogBullet: {
+    marginLeft: 16,
+    marginTop: 8,
+  },
+});
+
+export default RiskWarningListScreen;
