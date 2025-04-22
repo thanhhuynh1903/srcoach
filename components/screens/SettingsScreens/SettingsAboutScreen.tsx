@@ -7,18 +7,14 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-  Dimensions,
   Linking,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {theme} from '../../contants/theme';
+import { theme } from '../../contants/theme';
 import packageJson from '../../../package.json';
 import BackButton from '../../BackButton';
 
-const {width, height} = Dimensions.get('window');
-
-const SettingsAboutScreen = ({navigation}) => {
-  // Extract version from package.json
+const SettingsAboutScreen: React.FC = ({ navigation }) => {
   const appVersion = packageJson.version;
 
   const handleEmailPress = () => {
@@ -27,9 +23,8 @@ const SettingsAboutScreen = ({navigation}) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Fixed Header */}
       <View style={styles.header}>
-        <BackButton size={24} />
+        <BackButton size={24} style={styles.backButton} />
         <View style={styles.headerContent}>
           <Icon
             name="information-circle-outline"
@@ -148,16 +143,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: 'white',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    gap: 10,
+  },
+  backButton: {
+    marginRight: 15,
   },
   headerContent: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
   },
   headerIcon: {
     marginRight: 10,
@@ -216,7 +213,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
