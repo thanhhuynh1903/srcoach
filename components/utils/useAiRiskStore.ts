@@ -4,6 +4,7 @@ import useApiStore from './zustandfetchAPI';
 // Định nghĩa interface cho cảnh báo sức khỏe
 interface HealthAlert {
   id: string;
+  alert_date: string;
   alert_type: string;
   alert_message: string;
   severity: string;
@@ -267,7 +268,9 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
               level: factor.level,
               description: factor.description
             })),
-            recommendations: response.data.recommendations
+            recommendations: response.data.recommendations,
+            heart_rate_danger: response.data.heart_rate_danger, 
+
           },
           isLoading: false,
           message: 'Chi tiết cảnh báo đã được tải thành công'

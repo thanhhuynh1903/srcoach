@@ -87,17 +87,6 @@ const useApiStore = create<ApiState>((set) => ({
     }
   },
   
-//Khoan sử dụng từ function post này trở xuống
-  // postData: async (path: string, payload: any) => {
-  //   set((state) => ({ ...state, isLoading: true, error: null }));
-  //   try {
-  //     const response: AxiosResponse = await axiosInstance.post(path, payload);
-  //     set({ data: response.data, isLoading: false, status: null });
-  //   } catch (error: any) {
-  //     set({ data: null, isLoading: false, status: error.message });
-  //   }
-  // },
-
   postData: async (path: string, payload: any) => {
     set({ isLoading: true, status: null });
     try {

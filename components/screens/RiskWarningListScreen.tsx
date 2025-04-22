@@ -603,7 +603,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: moderateScale(16),
-    marginLeft: moderateScale(40),
     marginBottom: verticalScale(8),
   },
   metricItem: {

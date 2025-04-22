@@ -42,7 +42,7 @@ export const useImageUserStore = create<ImageUserState>((set, get) => ({
       // Cập nhật state nếu thành công
       set({
         isLoading: false,
-        message: response?.message || 'Cập nhật ảnh thành công',
+        message: response?.message || 'Update image successfully',
         userImage: response?.data?.imageUrl || get().userImage,
       });
       return response?.data;
