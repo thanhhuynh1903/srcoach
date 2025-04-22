@@ -316,7 +316,7 @@ const syncExerciseSessionRecords = async (
 
   if (sessions.length > 0) {
     await Promise.all(
-      sessions.map((session) => {
+      sessions.map(session => {
         return api.post('/record-exercise-session', {
           exercise_type: session.exerciseType,
           record_id: session.id,
@@ -540,7 +540,7 @@ export const fetchExerciseSessionRecords = async (
 export const fetchExerciseSessionById = async (id: string): Promise<any> => {
   try {
     const response = await api.get(`/record-exercise-session/${id}`);
-    return response.data
+    return response.data;
   } catch (error) {
     console.error('Error fetching exercise session:', error);
     return null;
@@ -637,6 +637,16 @@ export const fetchRestingHeartRateRecords = async (
     return response.data.data;
   } catch (error) {
     console.error('Error fetching resting heart rate:', error);
+    return [];
+  }
+};
+
+export const fetchSummaryRecord = async (): Promise<any> => {
+  try {
+    const response = await api.get('/record-summary');
+    return response.data.data;
+  } catch (error) {
+    console.error('Error fetching summary records:', error);
     return [];
   }
 };

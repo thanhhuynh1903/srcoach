@@ -20,8 +20,8 @@ import {
 } from '../../utils/useChatsAPI';
 import {useNavigation} from '@react-navigation/native';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
-import { CommonAvatar } from '../../commons/CommonAvatar';
-import { capitalizeFirstLetter } from '../../utils/utils_format';
+import {CommonAvatar} from '../../commons/CommonAvatar';
+import {capitalizeFirstLetter} from '../../utils/utils_format';
 
 type Session = {
   id: string;
@@ -270,7 +270,9 @@ export default function ChatsScreen() {
             </View>
             <View style={styles.statItem}>
               <Icon name="star" size={16} color={theme.colors.warning} />
-              <Text style={styles.statText}>{capitalizeFirstLetter(otherUser.user_level)}</Text>
+              <Text style={styles.statText}>
+                {capitalizeFirstLetter(otherUser.user_level)}
+              </Text>
             </View>
           </View>
         </View>
@@ -416,14 +418,12 @@ export default function ChatsScreen() {
           placeholderTextColor="#8E8E93"
         />
         <TouchableOpacity
-          style={[styles.searchButton, { backgroundColor: theme.colors.primaryDark }]}
-          onPress={() => navigation.navigate('ChatsSearchAllMessagesScreen')}
-        >
-          <Icon
-            name="search-outline"
-            size={20}
-            color="#FFF"
-          />
+          style={[
+            styles.searchButton,
+            {backgroundColor: theme.colors.primaryDark},
+          ]}
+          onPress={() => navigation.navigate('ChatsSearchAllMessagesScreen')}>
+          <Icon name="search-outline" size={20} color="#FFF" />
         </TouchableOpacity>
       </View>
 

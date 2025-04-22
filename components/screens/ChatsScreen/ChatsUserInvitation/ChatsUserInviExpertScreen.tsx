@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
@@ -11,16 +10,27 @@ import {
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {createSession, getUserInfo} from '../../../utils/useChatsAPI';
 import {theme} from '../../../contants/theme';
 import Toast from 'react-native-toast-message';
+import { CommonAvatar } from '../../../commons/CommonAvatar';
+import BackButton from '../../../BackButton';
+
+interface UserInfo {
+  name: string;
+  username: string;
+  roles: string[];
+  points: number;
+  user_level: string;
+  expert_badges?: string[];
+  profile_picture?: string;
+}
 
 const ChatsUserInviExpertScreen = () => {
   const {goBack} = useNavigation();
-  const {userId} = useRoute().params;
-  const [userInfo, setUserInfo] = useState(null);
+  const {userId} = useRoute().params as {userId: string};
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -67,9 +77,7 @@ const ChatsUserInviExpertScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.headerTitle}>Expert Invitation</Text>
         </View>
         <View style={styles.loadingContainer}>
@@ -96,9 +104,7 @@ const ChatsUserInviExpertScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
-            <Icon name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.headerTitle}>Expert Invitation</Text>
         </View>
         <View style={styles.errorContainer}>
@@ -115,29 +121,19 @@ const ChatsUserInviExpertScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.headerTitle}>Expert Invitation</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.profileCard}>
-          <LinearGradient
-            colors={['#FFD700', '#D4AF37']}
-            style={styles.avatarGradient}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 1}}>
-            <Image
-              source={{
-                uri: `https://ui-avatars.com/api/?name=${userInfo.name}&background=random`,
-              }}
-              style={styles.avatarImage}
+          <View style={styles.avatarWrapper}>
+            <CommonAvatar
+              mode={isExpert ? 'expert' : isRunner ? 'runner' : undefined}
+              size={140}
+              uri={userInfo.profile_picture}
             />
-            <View style={styles.avatarBadge}>
-              <Icon name="ribbon" size={14} color="white" />
-            </View>
-          </LinearGradient>
+          </View>
 
           <View style={{alignItems: 'center', marginBottom: 15}}>
             <Text style={styles.userName}>{userInfo.name}</Text>
@@ -146,12 +142,10 @@ const ChatsUserInviExpertScreen = () => {
 
           <View style={styles.badgeContainer}>
             {isExpert && (
-              <LinearGradient
-                colors={['#FFD700', '#D4AF37']}
-                style={styles.expertBadge}>
+              <View style={styles.expertBadge}>
                 <Icon name="trophy" size={18} color="white" />
                 <Text style={styles.badgeText}>Certified Expert</Text>
-              </LinearGradient>
+              </View>
             )}
             {isRunner && (
               <View style={styles.runnerBadge}>
@@ -286,23 +280,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     height: 60,
-    backgroundColor: theme.colors.primaryDark,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: 'transparent',
   },
   headerTitle: {
-    color: 'white',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 2,
-  },
-  backButton: {
-    marginRight: 15,
+    marginLeft: 10,
   },
   loadingContainer: {
     padding: 20,
@@ -323,47 +307,18 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(212, 175, 55, 0.3)',
   },
-  avatarGradient: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+  avatarWrapper: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  avatarImage: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    borderWidth: 3,
-    borderColor: 'white',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#D4AF37',
-    borderRadius: 15,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
   },
   userName: {
     fontSize: 24,
@@ -385,16 +340,12 @@ const styles = StyleSheet.create({
   expertBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#D4AF37',
     borderRadius: 20,
     paddingHorizontal: 15,
     paddingVertical: 6,
     marginHorizontal: 5,
     marginVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
   runnerBadge: {
     flexDirection: 'row',
@@ -405,11 +356,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginHorizontal: 5,
     marginVertical: 5,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
   badgeText: {
     marginLeft: 8,
@@ -466,11 +412,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 15,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(212, 175, 55, 0.3)',
   },
@@ -519,12 +460,7 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.primaryDark,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
+    backgroundColor: '#D4AF37',
   },
   buttonContent: {
     flexDirection: 'row',
@@ -534,9 +470,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: {width: 1, height: 1},
-    textShadowRadius: 2,
   },
   scrollContent: {
     padding: 20,

@@ -31,7 +31,7 @@ import ToastUtil from '../../utils/utils_toast';
 const {width} = Dimensions.get('window');
 
 export default function ExerciseRecordsScreen() {
-  const navigate = useNavigation();
+  const navigation = useNavigation();
   const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>(
     [],
   );
@@ -234,7 +234,8 @@ export default function ExerciseRecordsScreen() {
               style={styles.headerIcon}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ManageNotificationsScreen')}>
             <Icon
               name="notifications-outline"
               size={24}
@@ -242,7 +243,8 @@ export default function ExerciseRecordsScreen() {
               style={styles.headerIcon}
             />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LeaderBoardScreen')}>
             <Icon
               name="trophy-outline"
               size={24}
@@ -386,10 +388,13 @@ export default function ExerciseRecordsScreen() {
                     <TouchableOpacity
                       style={styles.activityRow}
                       onPress={() => {
-                        navigate.navigate('ExerciseRecordsDetailScreen' as never, {
-                          id: activity.id,
-                          clientRecordId: activity.clientRecordId,
-                        });
+                        navigation.navigate(
+                          'ExerciseRecordsDetailScreen' as never,
+                          {
+                            id: activity.id,
+                            clientRecordId: activity.clientRecordId,
+                          },
+                        );
                       }}>
                       <Text style={styles.timeText}>{activity.time}</Text>
                       <View style={styles.iconContainer}>
