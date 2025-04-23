@@ -315,7 +315,7 @@ const ManageNotification = () => {
         style={styles.manageButton}
         onPress={openNotificationSettings}
       >
-        <Text style={styles.manageButtonText}>Manage your notification</Text>
+        <Text style={styles.manageButtonText}>Manage Notifications</Text>
       </TouchableOpacity>
 
       <View style={styles.tabContainer}>
@@ -411,15 +411,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   manageButton: {
+    backgroundColor: '#052658',
     marginHorizontal: 16,
-    backgroundColor: '#F2F2F7',
-    padding: 12,
+    paddingVertical: 12,
+    marginBottom: 18,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 8,
   },
   manageButtonText: {
-    color: '#007AFF',
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   tabContainer: {
