@@ -16,7 +16,7 @@ import {useLoginStore} from '../utils/useLoginStore';
 import {CommonActions, useFocusEffect} from '@react-navigation/native';
 import CommonDialog from '../commons/CommonDialog';
 import {CommonAvatar} from '../commons/CommonAvatar';
-
+import NotificationService from '../services/NotificationService';
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
   const {clearAll, clear, profile} = useLoginStore();
@@ -25,6 +25,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
   const [showRecruitDialog, setShowRecruitDialog] = React.useState(false);
 
   async function handleLogout() {
+    await NotificationService.unregisterDevice();
     const currentUser = auth().currentUser;
     if (currentUser) {
       const isGoogleUser = currentUser.providerData.some(
@@ -40,6 +41,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
     await clear();
     await clearToken();
     await clearAll();
+    
     navigation.dispatch(
       CommonActions.reset({
         index: 0,

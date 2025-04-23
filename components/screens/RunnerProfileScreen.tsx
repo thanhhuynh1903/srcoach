@@ -22,7 +22,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useFocusEffect} from '@react-navigation/native';
 import {useImageUserStore} from '../utils/useImageUserStore';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-
+import { theme } from '../contants/theme';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -42,9 +42,6 @@ interface Post {
   tags: string[];
 }
 
-interface Tag {
-  tag_name: string;
-}
 
 const RunnerProfileScreen = () => {
   const {myPosts, getMyPosts, isLoading, deletePost, likePost} = usePostStore();
@@ -75,7 +72,7 @@ const RunnerProfileScreen = () => {
   // Cập nhật localPosts khi myPosts từ store thay đổi
   useEffect(() => {
     console.log('myPosts', myPosts);
-    
+
     if (myPosts && myPosts.length > 0) {
       setLocalPosts(myPosts);
     } else {
@@ -377,7 +374,6 @@ const RunnerProfileScreen = () => {
 
   // Xử lý chỉnh sửa bài viết
   const handleUpdate = () => {
-    console.log('Selected post:', selectedPost.id);
 
     setModalVisible(false);
     if (selectedPost) {
@@ -526,7 +522,8 @@ const RunnerProfileScreen = () => {
           <View style={styles.sectionContainer}>
             <Text style={styles.sectionTitle}>My Posts</Text>
 
-            {localPosts && localPosts.filter((item) => !item.is_deleted).length > 0 ? (
+            {localPosts &&
+            localPosts.filter(item => !item.is_deleted).length > 0 ? (
               localPosts.map(post => (
                 <View key={post.id} style={styles.postCard}>
                   <Text style={styles.postTime}>
@@ -581,6 +578,23 @@ const RunnerProfileScreen = () => {
                             </Text>
                           </View>
                         )}
+                      </View>
+                    )}
+
+                    {post.exercise_session_record_id && (
+                      <View style={styles.runDataIndicator}>
+                        <View style={styles.runDataIndicatorContent}>
+                          <Icon name="walk" size={20} color="#FFFFFF" />
+                          <Text style={styles.runDataText}>
+                            Runner record included
+                          </Text>
+                        </View>
+                        <Icon
+                          name="chevron-forward"
+                          size={20}
+                          color="#FFFFFF"
+                          style={{marginLeft: 4}}
+                        />
                       </View>
                     )}
                     {/* Engagement */}
@@ -740,7 +754,9 @@ const RunnerProfileScreen = () => {
           onPress={() => setAvatarModalVisible(false)}>
           <View style={styles.avatarModalContent}>
             <Image
-              source={{uri: profile?.image?.url ? profile?.image?.url : avatarUrl}}
+              source={{
+                uri: profile?.image?.url ? profile?.image?.url : avatarUrl,
+              }}
               style={styles.zoomedAvatar}
               resizeMode="contain"
             />
@@ -927,6 +943,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
+  runDataIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.colors.primaryDark,
+      padding: 8,
+      borderRadius: 8,
+      marginVertical: 8,
+    },
+    runDataIndicatorContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    runDataText: {
+      marginLeft: 8,
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '500',
+    },
   engagementItem: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,4 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.smartrunningcoach">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.smartrunningcoach">
 
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.BLUETOOTH"
@@ -29,6 +31,11 @@
   <uses-permission android:name="android.permission.CAMERA" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.VIBRATE" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
   <queries>
     <package android:name="com.google.android.apps.fitness" />
   </queries>
@@ -41,7 +48,23 @@
     android:allowBackup="false"
     android:theme="@style/AppTheme"
     android:supportsRtl="true">
+    <service
+      android:name=".MessagingService"
+      android:exported="false">
+ 
+      <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+      </intent-filter>
+    </service>
+    
+    <meta-data
+      android:name="com.google.firebase.messaging.default_notification_icon"
+      android:resource="@drawable/ic_notification" />
 
+   <meta-data
+      android:name="com.google.firebase.messaging.default_notification_channel_id"
+      android:value="default"
+      tools:replace="android:value" />
     <activity
       android:name=".MainActivity"
       android:label="@string/app_name"
@@ -85,7 +108,7 @@
     <meta-data
       android:name="com.google.android.gms.version"
       android:value="@integer/google_play_services_version" />
-
+ 
     <meta-data
       android:name="com.google.android.geo.API_KEY"
       android:value="AIzaSyBzdFIBJlpZJDpwIiIRhl6Zi9QCGHyguAc" />

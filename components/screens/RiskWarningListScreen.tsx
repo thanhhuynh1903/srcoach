@@ -17,7 +17,7 @@ import useAiRiskStore from '../utils/useAiRiskStore';
 import {theme} from '../contants/theme';
 import CommonDialog from '../commons/CommonDialog';
 import ContentLoader, {Rect} from 'react-content-loader/native';
-import { formatDate } from '../utils/utils_format';
+import {formatDate} from '../utils/utils_format';
 
 const filters = ['All', 'High', 'Moderate', 'Normal'];
 const {width} = Dimensions.get('window');
@@ -59,7 +59,10 @@ const RiskWarningListScreen = () => {
 
   const debouncedSearch = (query: string, filter: string) => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => searchHealthAlerts(query, filter), 500);
+    searchTimeout.current = setTimeout(
+      () => searchHealthAlerts(query, filter),
+      500,
+    );
   };
 
   const handleFilterChange = (filter: string) => {
@@ -79,11 +82,11 @@ const RiskWarningListScreen = () => {
 
   const confirmDeleteAlert = async () => {
     if (!selectedAlertId) return;
-    
+
     try {
       const success = await deleteHealthAlert(selectedAlertId);
       setShowDeleteDialog(false);
-      
+
       if (success) {
         setDialogMessage('Health alert deleted successfully');
         setShowSuccessDialog(true);
@@ -128,14 +131,15 @@ const RiskWarningListScreen = () => {
     if (!healthAlerts?.length) return [];
 
     const query = searchQuery.toLowerCase();
-    let filtered = healthAlerts.filter(item =>
-      item.alert_message.toLowerCase().includes(query) ||
-      item.AIHealthAlertType.type_name.toLowerCase().includes(query)
+    let filtered = healthAlerts.filter(
+      item =>
+        item.alert_message.toLowerCase().includes(query) ||
+        item.AIHealthAlertType.type_name.toLowerCase().includes(query),
     );
 
     if (activeFilter !== 'All') {
-      filtered = filtered.filter(item =>
-        item.severity.toLowerCase() === activeFilter.toLowerCase()
+      filtered = filtered.filter(
+        item => item.severity.toLowerCase() === activeFilter.toLowerCase(),
       );
     }
 
@@ -144,38 +148,51 @@ const RiskWarningListScreen = () => {
 
   const renderLoadingSkeletons = () => (
     <View style={styles.loadingContainer}>
-      {Array(5).fill(0).map((_, index) => (
-        <ContentLoader
-          key={index}
-          speed={1.5}
-          width={width - 32}
-          height={120}
-          viewBox={`0 0 ${width - 32} 120`}
-          backgroundColor="#f3f3f3"
-          foregroundColor="#ecebeb"
-          style={styles.skeletonItem}
-        >
-          <Rect x="0" y="0" rx="8" ry="8" width={width - 32} height={120} />
-          <Rect x={16} y={16} rx="4" ry="4" width="60%" height={20} />
-          <Rect x={16} y={44} rx="4" ry="4" width="80%" height={16} />
-          <Rect x={16} y={68} rx="4" ry="4" width="30%" height={14} />
-          <Rect x={16} y={90} rx="4" ry="4" width={100} height={16} />
-          <Rect x={width - 132} y={90} rx="4" ry="4" width={100} height={16} />
-        </ContentLoader>
-      ))}
+      {Array(5)
+        .fill(0)
+        .map((_, index) => (
+          <ContentLoader
+            key={index}
+            speed={1.5}
+            width={width - 32}
+            height={120}
+            viewBox={`0 0 ${width - 32} 120`}
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+            style={styles.skeletonItem}>
+            <Rect x="0" y="0" rx="8" ry="8" width={width - 32} height={120} />
+            <Rect x={16} y={16} rx="4" ry="4" width="60%" height={20} />
+            <Rect x={16} y={44} rx="4" ry="4" width="80%" height={16} />
+            <Rect x={16} y={68} rx="4" ry="4" width="30%" height={14} />
+            <Rect x={16} y={90} rx="4" ry="4" width={100} height={16} />
+            <Rect
+              x={width - 132}
+              y={90}
+              rx="4"
+              ry="4"
+              width={100}
+              height={16}
+            />
+          </ContentLoader>
+        ))}
     </View>
   );
 
   const renderRiskItem = (item: any) => (
-    <View key={item.id} style={[styles.riskItemContainer, {
-      borderLeftColor: getSeverityColor(item.severity)
-    }]}>
+    <View
+      key={item.id}
+      style={[
+        styles.riskItemContainer,
+        {
+          borderLeftColor: getSeverityColor(item.severity),
+        },
+      ]}>
       <View style={styles.riskHeader}>
         <View style={styles.activityTag}>
-          <Icon 
-            name={getActivityIcon(item.AIHealthAlertType.type_name)} 
-            size={14} 
-            color={theme.colors.primaryDark} 
+          <Icon
+            name={getActivityIcon(item.AIHealthAlertType.type_name)}
+            size={14}
+            color={theme.colors.primaryDark}
           />
           <Text style={styles.activityTagText}>
             {item.AIHealthAlertType.type_name}
@@ -195,15 +212,23 @@ const RiskWarningListScreen = () => {
 
       <TouchableOpacity
         style={styles.riskContent}
-        onPress={() => navigation.navigate('RiskWarningScreen' as never, {alertId: item.id} as never)}
-      >
+        onPress={() =>
+          navigation.navigate(
+            'RiskWarningScreen' as never,
+            {alertId: item.id} as never,
+          )
+        }>
         <Text style={styles.riskTitle} numberOfLines={2}>
           {item.alert_message}
         </Text>
 
         <View style={styles.metricsGrid}>
           <View style={styles.metricItem}>
-            <Icon name="map-outline" size={14} color={theme.colors.primaryDark} />
+            <Icon
+              name="map-outline"
+              size={14}
+              color={theme.colors.primaryDark}
+            />
             <Text style={styles.metricText}>{item.distance} km</Text>
           </View>
           <View style={styles.metricItem}>
@@ -211,11 +236,19 @@ const RiskWarningListScreen = () => {
             <Text style={styles.metricText}>{item.step} steps</Text>
           </View>
           <View style={styles.metricItem}>
-            <Icon name="speedometer-outline" size={14} color={theme.colors.primaryDark} />
+            <Icon
+              name="speedometer-outline"
+              size={14}
+              color={theme.colors.primaryDark}
+            />
             <Text style={styles.metricText}>{item.pace} min/km</Text>
           </View>
           <View style={styles.metricItem}>
-            <Icon name="heart-outline" size={14} color={theme.colors.primaryDark} />
+            <Icon
+              name="heart-outline"
+              size={14}
+              color={theme.colors.primaryDark}
+            />
             <Text style={styles.metricText}>{item.heart_rate_max} bpm</Text>
           </View>
         </View>
@@ -226,18 +259,26 @@ const RiskWarningListScreen = () => {
             <Text style={styles.dateText}>{formatDate(item.alert_date)}</Text>
           </View>
           <View style={styles.riskStatus}>
-            <Text style={[styles.riskLevel, {color: getSeverityColor(item.severity)}]}>
+            <Text
+              style={[
+                styles.riskLevel,
+                {color: getSeverityColor(item.severity)},
+              ]}>
               {item.severity} Risk
             </Text>
             {item.score !== undefined && item.score !== null && (
-              <Text style={[
-                styles.score,
-                {backgroundColor: 
-                  Number(item.score) < 30 ? theme.colors.success :
-                  Number(item.score) < 60 ? theme.colors.warning :
-                  theme.colors.error
-                }
-              ]}>
+              <Text
+                style={[
+                  styles.score,
+                  {
+                    backgroundColor:
+                      Number(item.score) < 30
+                        ? theme.colors.success
+                        : Number(item.score) < 60
+                        ? theme.colors.warning
+                        : theme.colors.error,
+                  },
+                ]}>
                 {item.score}/100
               </Text>
             )}
@@ -253,16 +294,34 @@ const RiskWarningListScreen = () => {
         <View style={styles.headerLeft}>
           <Icon name="warning" size={24} color={theme.colors.primaryDark} />
           <Text style={styles.headerTitle}>Risk analysis</Text>
-          <TouchableOpacity onPress={() => setShowInfoDialog(true)} style={styles.infoButton}>
-            <Icon name="information-circle-outline" size={20} color={theme.colors.primaryDark} />
+          <TouchableOpacity
+            onPress={() => setShowInfoDialog(true)}
+            style={styles.infoButton}>
+            <Icon
+              name="information-circle-outline"
+              size={20}
+              color={theme.colors.primaryDark}
+            />
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => navigation.navigate('ManageNotificationsScreen')}>
-            <Icon name="notifications-outline" size={24} color={theme.colors.primaryDark} />
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('ManageNotificationsScreen' as never)
+            }>
+            <Icon
+              name="notifications-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+            />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('LeaderBoardScreen')}>
-            <Icon name="trophy-outline" size={24} color={theme.colors.primaryDark} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
+            <Icon
+              name="trophy-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -274,27 +333,39 @@ const RiskWarningListScreen = () => {
         content={
           <View>
             <Text style={styles.dialogText}>
-              Our AI analyzes your running data to identify potential health risks and performance insights.
+              Our AI analyzes your running data to identify potential health
+              risks and performance insights.
             </Text>
-            <Text style={[styles.dialogText, {marginTop: 12, fontWeight: 'bold'}]}>
+            <Text
+              style={[styles.dialogText, {marginTop: 12, fontWeight: 'bold'}]}>
               Key factors analyzed:
             </Text>
             <View style={styles.dialogBullet}>
-              <Text style={styles.dialogText}>• Distance and duration trends</Text>
+              <Text style={styles.dialogText}>
+                • Distance and duration trends
+              </Text>
               <Text style={styles.dialogText}>• Heart rate patterns</Text>
-              <Text style={styles.dialogText}>• Step cadence and consistency</Text>
+              <Text style={styles.dialogText}>
+                • Step cadence and consistency
+              </Text>
               <Text style={styles.dialogText}>• Average pace fluctuations</Text>
-              <Text style={styles.dialogText}>• Route difficulty and elevation</Text>
-              <Text style={styles.dialogText}>• Recovery time between runs</Text>
+              <Text style={styles.dialogText}>
+                • Route difficulty and elevation
+              </Text>
+              <Text style={styles.dialogText}>
+                • Recovery time between runs
+              </Text>
             </View>
           </View>
         }
-        actionButtons={[{
-          label: 'Got it',
-          variant: 'contained',
-          color: theme.colors.primaryDark,
-          handler: () => setShowInfoDialog(false),
-        }]}
+        actionButtons={[
+          {
+            label: 'Got it',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setShowInfoDialog(false),
+          },
+        ]}
       />
 
       <CommonDialog
@@ -303,7 +374,8 @@ const RiskWarningListScreen = () => {
         title="Delete Health Alert"
         content={
           <Text style={styles.dialogText}>
-            Are you sure you want to delete this health alert? This action cannot be undone.
+            Are you sure you want to delete this health alert? This action
+            cannot be undone.
           </Text>
         }
         actionButtons={[
@@ -327,12 +399,14 @@ const RiskWarningListScreen = () => {
         onClose={() => setShowSuccessDialog(false)}
         title="Success"
         content={<Text style={styles.dialogText}>{dialogMessage}</Text>}
-        actionButtons={[{
-          label: 'OK',
-          variant: 'contained',
-          color: theme.colors.primaryDark,
-          handler: () => setShowSuccessDialog(false),
-        }]}
+        actionButtons={[
+          {
+            label: 'OK',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setShowSuccessDialog(false),
+          },
+        ]}
       />
 
       <CommonDialog
@@ -340,12 +414,14 @@ const RiskWarningListScreen = () => {
         onClose={() => setShowErrorDialog(false)}
         title="Error"
         content={<Text style={styles.dialogText}>{dialogMessage}</Text>}
-        actionButtons={[{
-          label: 'OK',
-          variant: 'contained',
-          color: theme.colors.error,
-          handler: () => setShowErrorDialog(false),
-        }]}
+        actionButtons={[
+          {
+            label: 'OK',
+            variant: 'contained',
+            color: theme.colors.error,
+            handler: () => setShowErrorDialog(false),
+          },
+        ]}
       />
 
       <View style={styles.searchContainer}>
@@ -363,60 +439,75 @@ const RiskWarningListScreen = () => {
           </TouchableOpacity>
         )}
       </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filtersScrollView}
-        contentContainerStyle={styles.filtersContainer}
-      >
-        {filters.map(filter => (
-          <TouchableOpacity
-            key={filter}
-            style={[
-              styles.filterTab,
-              activeFilter === filter && styles.filterTabActive,
-              activeFilter === filter && filter === 'High' && {backgroundColor: theme.colors.error},
-              activeFilter === filter && filter === 'Moderate' && {backgroundColor: theme.colors.warning},
-              activeFilter === filter && filter === 'Normal' && {backgroundColor: theme.colors.success},
-            ]}
-            onPress={() => handleFilterChange(filter)}
-          >
-            {filter !== 'All' && (
-              <Icon
-                name={getSeverityIcon(filter)}
-                size={16}
-                color={activeFilter === filter ? '#FFFFFF' : getSeverityColor(filter)}
-                style={styles.filterIcon}
-              />
-            )}
-            <Text style={[
-              styles.filterText,
-              activeFilter === filter && styles.filterTextActive,
-            ]}>
-              {filter}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.filtersWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContainer}>
+          {filters.map(filter => (
+            <TouchableOpacity
+              key={filter}
+              style={[
+                styles.filterTab,
+                activeFilter === filter && styles.filterTabActive,
+                filter === 'High' && styles.highRiskFilter,
+                filter === 'Moderate' && styles.moderateRiskFilter,
+                filter === 'Normal' && styles.normalRiskFilter,
+                activeFilter === filter &&
+                  filter === 'High' &&
+                  styles.highRiskFilterActive,
+                activeFilter === filter &&
+                  filter === 'Moderate' &&
+                  styles.moderateRiskFilterActive,
+                activeFilter === filter &&
+                  filter === 'Normal' &&
+                  styles.normalRiskFilterActive,
+              ]}
+              onPress={() => handleFilterChange(filter)}>
+              {filter !== 'All' && (
+                <Icon
+                  name={getSeverityIcon(filter)}
+                  size={16}
+                  color={
+                    activeFilter === filter
+                      ? '#FFFFFF'
+                      : getSeverityColor(filter)
+                  }
+                  style={styles.filterIcon}
+                />
+              )}
+              <Text
+                style={[
+                  styles.filterText,
+                  activeFilter === filter && styles.filterTextActive,
+                ]}>
+                {filter}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       <ScrollView
         style={styles.riskList}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             colors={[theme.colors.primaryDark]}
             tintColor={theme.colors.primaryDark}
           />
-        }
-      >
-        {isLoadingAlerts ? renderLoadingSkeletons() : error ? (
+        }>
+        {isLoadingAlerts ? (
+          renderLoadingSkeletons()
+        ) : error ? (
           <View style={styles.emptyState}>
             <Icon name="alert-circle-outline" size={48} color="#EF4444" />
             <Text style={styles.emptyStateTitle}>Error</Text>
             <Text style={styles.emptyStateDescription}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchHealthAlerts}>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={fetchHealthAlerts}>
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
           </View>
@@ -427,7 +518,8 @@ const RiskWarningListScreen = () => {
             <Icon name="search-outline" size={48} color="#CBD5E1" />
             <Text style={styles.emptyStateTitle}>No results found</Text>
             <Text style={styles.emptyStateDescription}>
-              Try adjusting your search or filter to find what you're looking for
+              Try adjusting your search or filter to find what you're looking
+              for
             </Text>
           </View>
         )}
@@ -481,7 +573,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5EA',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
@@ -492,38 +584,54 @@ const styles = StyleSheet.create({
     color: '#000000',
     paddingVertical: 0,
   },
-  filtersScrollView: {
-    maxHeight: 35,
-    marginBottom: 8,
+  filtersWrapper: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   filtersContainer: {
     paddingHorizontal: 16,
     gap: 12,
+    flexDirection: 'row',
   },
   filterTab: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     borderRadius: 20,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    height: 32,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minWidth: 80,
   },
   filterTabActive: {
-    backgroundColor: theme.colors.primaryDark,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
-    borderWidth: 0,
+  },
+  highRiskFilter: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  moderateRiskFilter: {
+    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+  },
+  normalRiskFilter: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  highRiskFilterActive: {
+    backgroundColor: '#EF4444',
+  },
+  moderateRiskFilterActive: {
+    backgroundColor: '#F97316',
+  },
+  normalRiskFilterActive: {
+    backgroundColor: '#22C55E',
+  },
+  filterIcon: {
+    marginRight: 6,
   },
   filterText: {
     fontSize: 14,
@@ -533,9 +641,6 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: '#FFFFFF',
     fontWeight: '600',
-  },
-  filterIcon: {
-    marginRight: 4,
   },
   riskList: {
     flex: 1,
@@ -553,7 +658,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,

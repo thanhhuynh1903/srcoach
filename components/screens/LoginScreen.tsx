@@ -20,6 +20,7 @@ import auth from '@react-native-firebase/auth';
 import Toast from 'react-native-toast-message';
 import {useLoginStore} from '../utils/useLoginStore';
 import useAuthStore from '../utils/useAuthStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RootStackParamList = {
   HomeTabs: undefined;
@@ -81,7 +82,7 @@ const LoginScreen: React.FC<{
     }
 
     setLoading(true);
-    try {
+    try {      
       await login(email, password);
       console.log('status after logout', status);
       

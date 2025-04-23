@@ -19,8 +19,8 @@ import {useNavigation} from '@react-navigation/native';
 import {usePostStore} from '../../utils/usePostStore';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
-import { formatTimeAgo } from '../../utils/utils_format';
-
+import {formatTimeAgo} from '../../utils/utils_format';
+import {CommonAvatar} from '../../commons/CommonAvatar';
 // Interface cho User
 interface User {
   id: string;
@@ -451,14 +451,15 @@ const CommunityScreen = () => {
         <View style={styles.searchContainer}>
           <TouchableOpacity
             onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
-            <Image source={{uri: profile?.image?.url}} style={styles.avatar} />
+            <CommonAvatar mode={null} size={40} uri={profile?.image?.url} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.postCreateInput}
             onPress={() =>
               navigation.navigate('CommunityCreatePostScreen' as never)
             }>
-            <Animated.Text style={[styles.placeholderText, {opacity: fadeAnim}]}>
+            <Animated.Text
+              style={[styles.placeholderText, {opacity: fadeAnim}]}>
               {PLACEHOLDER_TEXTS[currentPlaceholderIndex]}
             </Animated.Text>
           </TouchableOpacity>
@@ -599,6 +600,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     justifyContent: 'center',
+    marginLeft: 10,
   },
   placeholderText: {
     color: '#999',

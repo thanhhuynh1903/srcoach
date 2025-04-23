@@ -84,6 +84,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        multiDexEnabled true
+
     }
     signingConfigs {
         debug {
@@ -109,10 +111,13 @@ android {
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
+    implementation 'com.android.support:multidex:1.0.3'
     implementation("com.facebook.react:react-android")
+    implementation project(':notifee_react-native')
     implementation project(':react-native-reanimated')
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
     implementation platform('com.google.firebase:firebase-bom:33.1.0')
+    implementation 'com.google.firebase:firebase-messaging:23.2.1'
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

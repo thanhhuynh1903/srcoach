@@ -1,4 +1,5 @@
 import React from 'react';
+import {useEffect, useRef} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {NavigationContainer} from '@react-navigation/native';
 import {
@@ -7,12 +8,13 @@ import {
 } from '@react-navigation/native-stack';
 import Icon from '@react-native-vector-icons/ionicons';
 import Toast from 'react-native-toast-message';
-
 import {
   homeStackScreens,
   tabScreens,
   stackScreens,
 } from './components/routes/routes';
+import NotificationService from './components/services/NotificationService';
+import useAuthStore from './components/utils/useAuthStore';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -20,7 +22,7 @@ const HomeStack = createNativeStackNavigator();
 
 const slideAnimation: NativeStackNavigationOptions = {
   animation: 'slide_from_right',
-  animationDuration: 50
+  animationDuration: 50,
 };
 
 const HomeStackScreen = () => {
@@ -77,7 +79,7 @@ const HomeTabs = () => {
             default:
               iconName = 'help-circle';
           }
-          return <Icon name={iconName} size={size} color={color} />;
+          return <Icon name={iconName as never} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#100077',
         tabBarInactiveTintColor: 'gray',
@@ -96,6 +98,53 @@ const HomeTabs = () => {
 };
 
 const App = () => {
+  const {token, loadToken} = useAuthStore();
+  const navigationRef = useRef(null);
+  const isNotificationInitialized = useRef(false);
+
+  // Tải token xác thực khi ứng dụng khởi động
+  useEffect(() => {
+    loadToken();
+  }, []);
+
+  // Xử lý khởi tạo và hủy thông báo dựa trên trạng thái đăng nhập
+  useEffect(() => {
+    const setupNotifications = async () => {
+      try {
+        if (token) {
+          // Chỉ khởi tạo notification service khi người dùng đã đăng nhập
+          if (!isNotificationInitialized.current) {
+            console.log('Đang khởi tạo dịch vụ thông báo...');
+            await NotificationService.init();
+
+            // Thiết lập xử lý khi nhấn vào thông báo
+            if (navigationRef.current) {
+              NotificationService.setupNotificationOpenHandlers(
+                navigationRef.current,
+              );
+            }
+
+            isNotificationInitialized.current = true;
+            console.log('Đã khởi tạo dịch vụ thông báo thành công');
+          }
+        } else {
+          // Nếu người dùng đăng xuất và notification service đã được khởi tạo trước đó
+          if (isNotificationInitialized.current) {
+            console.log('Đang hủy đăng ký dịch vụ thông báo...');
+            await NotificationService.unregisterDevice();
+            isNotificationInitialized.current = false;
+            console.log('Đã hủy đăng ký dịch vụ thông báo thành công');
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi khi thiết lập thông báo:', error);
+      }
+    };
+
+    setupNotifications();
+   
+  }, [token]);
+
   return (
     <>
       <NavigationContainer>
@@ -106,7 +155,7 @@ const App = () => {
             <Stack.Screen
               key={screen.name}
               name={screen.name}
-              component={screen.component}
+              component={screen.component as any}
               options={{headerShown: false}}
             />
           ))}

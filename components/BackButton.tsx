@@ -32,8 +32,11 @@ const BackButton = ({size = 26}: {size?: number}) => {
 
 const styles = StyleSheet.create({
   button: {
+    alignSelf: "flex-start",
     padding: 5,
     borderRadius: theme.radius.md,
+    backgroundColor: "rgba(0,0,0,0.07)",
+
   },
 });
 
