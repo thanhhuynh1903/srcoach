@@ -18,11 +18,15 @@ import ScreenWrapper from '../ScreenWrapper';
 import NotificationService from '../services/NotificationService';
 import useApiStore from '../utils/zustandfetchAPI';
 import { useNavigation } from '@react-navigation/native';
-
+interface Notification {
+  unread: boolean;
+  type: string;
+  // Add other properties here
+}
 const ManageNotification = () => {
   const [isSwitchOn, setIsSwitchOn] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notificationStats, setNotificationStats] = useState({
@@ -63,7 +67,7 @@ const ManageNotification = () => {
   }, []);
 
   // Xử lý khi người dùng bật/tắt thông báo
-  const handleToggleNotifications = async (value) => {
+  const handleToggleNotifications = async (value : any) => {
     try {
       setIsSwitchOn(value);
       await AsyncStorage.setItem('notificationsEnabled', value.toString());
@@ -99,7 +103,7 @@ const ManageNotification = () => {
     setIsLoading(true);
     try {
       const response = await api.fetchData('/devices/notifications/self');
-      console.log('Danh sách thông báo:', response.data);
+      console.log('response', response);
       
       if (response && response.data) {
         // Chuyển đổi dữ liệu API thành định dạng hiển thị
@@ -166,7 +170,7 @@ const ManageNotification = () => {
   };
 
   // Đánh dấu thông báo đã đọc
-  const markAsRead = async (notificationId) => {
+  const markAsRead = async (notificationId : any) => {
     try {
       await api.putData(`/notifications/${notificationId}/read`);
       
@@ -190,7 +194,7 @@ const ManageNotification = () => {
   };
 
   // Xử lý khi nhấn vào thông báo
-  const handleNotificationPress = (notification) => {
+  const handleNotificationPress = (notification : any) => {
     // Đánh dấu thông báo đã đọc
     if (notification.unread) {
       markAsRead(notification.id);
@@ -200,7 +204,7 @@ const ManageNotification = () => {
     if (notification.targetType && notification.targetId) {
       switch (notification.targetType) {
         case 'post':
-          navigation.navigate('PostDetailScreen', {postId: notification.targetId});
+          navigation.navigate('CommunityPostDetailScreen', {id: notification.targetId});
           break;
         case 'schedule':
           navigation.navigate('ScheduleDetailScreen', {scheduleId: notification.targetId});
@@ -265,7 +269,7 @@ const ManageNotification = () => {
   const filteredNotifications = getFilteredNotifications();
 
   // Tạo biểu tượng thông báo dựa trên loại
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = (type : any) => {
     switch (type) {
       case 'post_like':
         return <Icon name="heart" size={16} color="#FF3B30" />;

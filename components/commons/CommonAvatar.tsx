@@ -4,12 +4,12 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../contants/theme';
 
 type CommonAvatarProps = {
-  mode?: 'runner' | 'expert';
+  mode?: 'runner' | 'expert' | null;
   size?: number;
   uri?: string;
 };
 
-export const CommonAvatar = ({mode, size = 36, uri}: CommonAvatarProps) => {
+export const CommonAvatar = ({mode , size = 36, uri}: CommonAvatarProps) => {
   const badgeSize = size * 0.4;
   return (
     <View style={styles.avatarContainer}>

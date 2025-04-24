@@ -24,7 +24,7 @@ import ModalPoppup from '../../ModalPoppup';
 import {Dimensions} from 'react-native';
 import CommunityPostDetailMap from './CommunityPostDetailMap';
 import SkeletonPostDetail from './SkeletonPostDetail';
-
+import { CommonAvatar } from '../../commons/CommonAvatar';
 interface User {
   id: string;
   username: string;
@@ -107,6 +107,8 @@ const CommunityPostDetailScreen = () => {
     if (id) {
       // Tải thông tin bài viết
       getDetail(id);
+      console.log('id', id);
+      
       // Tải bình luận
       getCommentsByPostId(id);
     } else {
@@ -398,14 +400,7 @@ const CommunityPostDetailScreen = () => {
             setShowModal(true);
           }
         }}>
-        <Image
-          source={{
-            uri:
-              comment.User?.image.url ||
-              'https://randomuser.me/api/portraits/women/32.jpg',
-          }}
-          style={styles.commentAvatar}
-        />
+           <CommonAvatar mode={null} size={36} uri={comment.User?.image?.url} />
         <View style={styles.commentContent}>
           <View style={styles.commentHeader}>
             <Text style={styles.commentUserName}>
@@ -554,14 +549,7 @@ const CommunityPostDetailScreen = () => {
               navigation.navigate('OtherProfileScreen', {postId: currentPost?.id})
             }>
             <View style={styles.userInfo}>
-              <Image
-                source={{
-                  uri:
-                    localPost?.user?.image?.url ||
-                    'https://randomuser.me/api/portraits/men/32.jpg',
-                }}
-                style={styles.avatar}
-              />
+                <CommonAvatar mode={null} size={40} uri={localPost?.user?.image?.url} />
               <View style={styles.userTextInfo}>
                 <Text style={styles.userName}>{localPost?.user?.username}</Text>
                 <View style={styles.postMetaInfo}>
@@ -795,14 +783,7 @@ const CommunityPostDetailScreen = () => {
       {/* Input container cho bình luận */}
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
-          <Image
-            source={{
-              uri:
-                profile?.image?.url ||
-                'data:image/png;base64,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',
-            }}
-            style={styles.commentAvatar}
-          />
+          <CommonAvatar mode={null} size={36} uri={profile?.image?.url} />
         </TouchableOpacity>
         <TextInput
           ref={inputRef}
