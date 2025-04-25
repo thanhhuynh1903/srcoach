@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import ToastUtil from '../utils/utils_toast';
 import { theme } from '../contants/theme';
+import NotificationService from '../services/NotificationService';
 
 const WelcomeScreen = () => {
   const navigation = useNavigation();
@@ -106,6 +107,7 @@ const WelcomeScreen = () => {
               setLoadingStatus('Success');
               setShowSuccess(true);
 
+              await setupNotifications();
               // Wait a moment to show success state before navigating
               await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -155,6 +157,18 @@ const WelcomeScreen = () => {
       isMounted = false;
     };
   }, [navigation, setUserData, fetchUserProfile]);
+
+  const setupNotifications = async () => {
+    try {
+     
+        console.log('Đang khởi tạo dịch vụ thông báo...');
+        await NotificationService.init();
+        console.log('Đã khởi tạo dịch vụ thông báo thành công');
+      
+    } catch (error) {
+      console.error('Lỗi khi thiết lập thông báo:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>

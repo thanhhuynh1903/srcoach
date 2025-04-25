@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect,useRef} from 'react';
 import {
   Image,
   View,
@@ -21,6 +21,7 @@ import Toast from 'react-native-toast-message';
 import {useLoginStore} from '../utils/useLoginStore';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NotificationService from '../services/NotificationService';
 
 type RootStackParamList = {
   HomeTabs: undefined;
@@ -41,6 +42,8 @@ const LoginScreen: React.FC<{
   const {login, message, status, clear} = useLoginStore();
   const canGoBack = navigation.canGoBack();
   const {loadToken} = useAuthStore();
+  const prevStatusRef = useRef('');
+
   useEffect(() => {
     clear();
     GoogleSignin.configure({
@@ -51,21 +54,43 @@ const LoginScreen: React.FC<{
 
   useEffect(() => {
     console.log('status', status);
-
-    if (status === 'success') {
-      showToast('success', message, 'Welcome back!');
-      navigation.navigate('HomeTabs');
-      clear();
-    } else if (status === 'wait') {
-      navigation.navigate('VerifyLoginScreen', {emailLabel: email,password: password});
-      clear();
-    } else if (status === 'error' && message) {
-      console.log('message', message);
-      showToast('error', message.toString());
-      //If error, clear the clear() function
-      clear();
+    
+    // Nếu status không thay đổi, không làm gì cả
+    if (status === prevStatusRef.current) return;
+    
+    // Cập nhật ref với status hiện tại
+    prevStatusRef.current = status;
+    
+    const handleAuthStatus = async () => {
+      if (status === 'success') {
+        await loadToken();
+        await setupNotifications();
+        showToast('success', message, 'Welcome back!');
+        navigation.navigate('HomeTabs');
+        // Không gọi clear() ở đây để tránh trigger useEffect lại
+      } else if (status === 'wait') {
+        navigation.navigate('VerifyLoginScreen', {
+          emailLabel: email,
+          password: password,
+        });
+      } else if (status === 'error' && message) {
+        console.log('message', message);
+        showToast('error', message.toString());
+        // Không gọi clear() ở đây
+      }
+    };
+    
+    handleAuthStatus();
+  }, [status, message, email, password, navigation, loadToken]);
+  
+  useEffect(() => {
+    if (status === 'success' && prevStatusRef.current === 'success') {
+      // Chỉ clear sau khi đã xử lý thành công
+      setTimeout(() => {
+        clear();
+      }, 500);
     }
-  }, [status, message, navigation,loadToken]);
+  }, [status, clear]);
 
   const showToast = (type: string, text1: string, text2?: string) => {
     Toast.show({
@@ -82,18 +107,23 @@ const LoginScreen: React.FC<{
     }
 
     setLoading(true);
-    try {      
+    try {
       await login(email, password);
-      console.log('status after logout', status);
-      
-      if (status === 'success') {
-        // Đợi cho quá trình lưu token hoàn tất
-        await loadToken();
-      }
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const setupNotifications = async () => {
+    try {
+      console.log('Đang khởi tạo dịch vụ thông báo...');
+      await NotificationService.init();
+      await NotificationService.setupNotificationOpenHandlers(navigation);
+      console.log('Đã khởi tạo dịch vụ thông báo thành công');
+    } catch (error) {
+      console.error('Lỗi khi thiết lập thông báo:', error);
     }
   };
 

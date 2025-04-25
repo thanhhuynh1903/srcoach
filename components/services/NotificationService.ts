@@ -15,10 +15,16 @@ class NotificationService {
 
   setupBackgroundHandler() {
     messaging().setBackgroundMessageHandler(async remoteMessage => {
-      console.log('Nhận thông báo khi app ở nền/đóng:', remoteMessage);
-      await this.displayNotification(remoteMessage);
+      console.log('Nhận thông báo nền:', remoteMessage);
+      try {
+        // Đảm bảo không có thao tác UI ở đây
+        await this.displayNotification(remoteMessage);
+      } catch (error) {
+        console.error('Lỗi xử lý thông báo nền:', error);
+      }
     });
   }
+  
   async init() {
     try {
       // Yêu cầu quyền thông báo
@@ -57,7 +63,7 @@ class NotificationService {
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
+      
       if (!enabled) {
         console.log('Quyền thông báo bị từ chối!');
       }
@@ -84,7 +90,6 @@ class NotificationService {
       }
     }
   }
-  
 
   async getToken() {
     try {
@@ -97,8 +102,8 @@ class NotificationService {
       const savedToken = await AsyncStorage.getItem('fcmToken');
 
       if (savedToken) {
-        console.log('Đang lấy FCM token từ bộ nhớ...',savedToken);
-        
+        console.log('Đang lấy FCM token từ bộ nhớ...', savedToken);
+
         this.token = savedToken;
         return savedToken;
       }
@@ -107,7 +112,7 @@ class NotificationService {
       const newToken = await messaging().getToken();
       if (newToken) {
         this.token = newToken;
-        console.log('Đang lấy FCM token từ bộ nhớ...',this.token);
+        console.log('Đang lấy FCM token từ bộ nhớ...', this.token);
 
         // Lưu token vào bộ nhớ cục bộ
         await AsyncStorage.setItem('fcmToken', newToken);
@@ -150,7 +155,7 @@ class NotificationService {
       await api.deleteNotification(`/devices`, {
         device_token: tokenDevice,
       });
-  
+
       // Sau khi xóa thiết bị thành công, xóa token khỏi bộ nhớ
       await AsyncStorage.removeItem('fcmToken');
       this.token = null;
@@ -161,11 +166,11 @@ class NotificationService {
         this.messageUnsubscribe();
         this.messageUnsubscribe = null;
       }
-  
+
       console.log('Token đã được xóa khỏi bộ nhớ');
       return true;
     } catch (error) {
-      console.error('Lỗi khi xóa thiết bị:', error);    
+      console.error('Lỗi khi xóa thiết bị:', error);
     }
   }
 
@@ -199,21 +204,27 @@ class NotificationService {
     try {
       const { notification, data } = remoteMessage;
   
+      // Kiểm tra thông báo hợp lệ
+      if (!notification || !notification.title) {
+        console.log('Thông báo không hợp lệ');
+        return;
+      }
+  
+      // Hiển thị thông báo với Notifee
       await notifee.displayNotification({
-        title: notification?.title,
-        body: notification?.body,
+        title: notification.title,
+        body: notification.body,
+        data: data,
         android: {
           channelId: 'default',
-          smallIcon: 'ic_notification', // Tên file không cần đuôi .png
-          color: '#4A6FA5', // Màu nền icon
+          smallIcon: 'ic_notification',
           pressAction: {
             id: 'default',
           },
         },
-        data: data,
       });
     } catch (error) {
-      console.error('Lỗi khi hiển thị thông báo:', error);
+      console.error('Lỗi hiển thị thông báo:', error);
     }
   }
   
