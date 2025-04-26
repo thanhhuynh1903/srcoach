@@ -1,9 +1,16 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import useApiStore from './zustandfetchAPI';
 
 interface PointsData {
+  id: string;
+  username: string;
+  name: string;
   points: number;
   level: string;
+  nextLevel: string | null;
+  pointsToNextLevel: number;
+  pointsPercentage: number;
+  avatar?: string | null;
 }
 
 interface PointsHistoryItem {
@@ -20,10 +27,10 @@ interface LeaderboardItem {
   name: string;
   totalPoints: number;
   currentLevel: string;
-  nextLevel: string;
+  nextLevel: string | null;
   pointsToNextLevel: number;
   pointsPercentage: number;
-  avatar: string | null;
+  avatar?: string | null;
 }
 
 interface PointsHistoryResponse {
@@ -38,7 +45,7 @@ interface PointsHistoryResponse {
 
 interface LeaderboardResponse {
   data: LeaderboardItem[];
-  meta: {
+  meta?: {
     total: number;
     page: number;
     limit: number;
@@ -49,7 +56,16 @@ interface LeaderboardResponse {
 interface UserPointsState {
   pointsData: PointsData | null;
   pointsHistory: PointsHistoryItem[];
+  historyMeta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  } | null;
   leaderboard: LeaderboardItem[];
+  dailyLeaderboard: LeaderboardItem[];
+  weeklyLeaderboard: LeaderboardItem[];
+  monthlyLeaderboard: LeaderboardItem[];
   isLoading: boolean;
   error: string | null;
   message: string | null;
@@ -57,30 +73,36 @@ interface UserPointsState {
   // Points operations
   getMyPoints: () => Promise<void>;
   getMyPointsHistory: (page?: number, limit?: number) => Promise<void>;
-  getLeaderboard: (
-    levelFilter?: string,
-    page?: number,
-    limit?: number,
-  ) => Promise<void>;
+  getLeaderboard: (levelFilter?: string, page?: number, limit?: number) => Promise<void>;
+  getDailyLeaderboard: () => Promise<void>;
+  getWeeklyLeaderboard: () => Promise<void>;
+  getMonthlyLeaderboard: () => Promise<void>;
 
   // Clear state
   clearPointsData: () => void;
   clearPointsHistory: () => void;
   clearLeaderboard: () => void;
+  clearDailyLeaderboard: () => void;
+  clearWeeklyLeaderboard: () => void;
+  clearMonthlyLeaderboard: () => void;
   clearError: () => void;
   clearMessage: () => void;
 }
 
-const useUserPointsStore = create<UserPointsState>(set => ({
+const useUserPointsStore = create<UserPointsState>((set) => ({
   pointsData: null,
   pointsHistory: [],
+  historyMeta: null,
   leaderboard: [],
+  dailyLeaderboard: [],
+  weeklyLeaderboard: [],
+  monthlyLeaderboard: [],
   isLoading: false,
   error: null,
   message: null,
 
   getMyPoints: async () => {
-    set({isLoading: true, error: null});
+    set({ isLoading: true, error: null });
     try {
       const response = await useApiStore.getState().fetchData('/user-points/me');
 
@@ -94,8 +116,8 @@ const useUserPointsStore = create<UserPointsState>(set => ({
             level: response.data.level,
             nextLevel: response.data.nextLevel,
             pointsToNextLevel: response.data.pointsToNextLevel,
-            pointsPercentage: response.data.pointsPercentage
-            ,
+            pointsPercentage: response.data.pointsPercentage,
+            avatar: response.data.avatar || null,
           },
           isLoading: false,
         });
@@ -114,7 +136,7 @@ const useUserPointsStore = create<UserPointsState>(set => ({
   },
 
   getMyPointsHistory: async (page = 1, limit = 10) => {
-    set({isLoading: true, error: null});
+    set({ isLoading: true, error: null });
     try {
       const response = await useApiStore
         .getState()
@@ -129,6 +151,7 @@ const useUserPointsStore = create<UserPointsState>(set => ({
             description: item.PointReason?.description,
             created_at: item.created_at,
           })),
+          historyMeta: response.data.meta,
           isLoading: false,
         });
       } else {
@@ -146,7 +169,7 @@ const useUserPointsStore = create<UserPointsState>(set => ({
   },
 
   getLeaderboard: async (levelFilter = '', page = 1, limit = 10) => {
-    set({isLoading: true, error: null});
+    set({ isLoading: true, error: null });
     try {
       let url = `/user-points/leaderboard?page=${page}&limit=${limit}`;
       if (levelFilter) {
@@ -157,7 +180,17 @@ const useUserPointsStore = create<UserPointsState>(set => ({
 
       if (response?.status === 'success') {
         set({
-          leaderboard: response.data,
+          leaderboard: response.data.map((item: any) => ({
+            id: item.id,
+            username: item.username,
+            name: item.name,
+            totalPoints: item.totalPoints,
+            currentLevel: item.currentLevel,
+            nextLevel: item.nextLevel,
+            pointsToNextLevel: item.pointsToNextLevel,
+            pointsPercentage: item.pointsPercentage,
+            avatar: item.avatar || null,
+          })),
           isLoading: false,
         });
       } else {
@@ -174,11 +207,116 @@ const useUserPointsStore = create<UserPointsState>(set => ({
     }
   },
 
-  clearPointsData: () => set({pointsData: null}),
-  clearPointsHistory: () => set({pointsHistory: []}),
-  clearLeaderboard: () => set({leaderboard: []}),
-  clearError: () => set({error: null}),
-  clearMessage: () => set({message: null}),
+  getDailyLeaderboard: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await useApiStore.getState().fetchData('/user-points/leaderboard/daily');
+
+      if (response?.status === 'success') {
+        set({
+          dailyLeaderboard: response.data.map((item: any) => ({
+            id: item.id,
+            username: item.username,
+            name: item.name,
+            totalPoints: item.totalPoints,
+            currentLevel: item.currentLevel,
+            nextLevel: item.nextLevel,
+            pointsToNextLevel: item.pointsToNextLevel,
+            pointsPercentage: item.pointsPercentage,
+            avatar: item.avatar || null,
+          })),
+          isLoading: false,
+        });
+      } else {
+        set({
+          error: response?.message || 'Failed to fetch daily leaderboard',
+          isLoading: false,
+        });
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || 'Failed to fetch daily leaderboard',
+        isLoading: false,
+      });
+    }
+  },
+
+  getWeeklyLeaderboard: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await useApiStore.getState().fetchData('/user-points/leaderboard/weekly');
+
+      if (response?.status === 'success') {
+        set({
+          weeklyLeaderboard: response.data.map((item: any) => ({
+            id: item.id,
+            username: item.username,
+            name: item.name,
+            totalPoints: item.totalPoints,
+            currentLevel: item.currentLevel,
+            nextLevel: item.nextLevel,
+            pointsToNextLevel: item.pointsToNextLevel,
+            pointsPercentage: item.pointsPercentage,
+            avatar: item.avatar || null,
+          })),
+          isLoading: false,
+        });
+      } else {
+        set({
+          error: response?.message || 'Failed to fetch weekly leaderboard',
+          isLoading: false,
+        });
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || 'Failed to fetch weekly leaderboard',
+        isLoading: false,
+      });
+    }
+  },
+
+  getMonthlyLeaderboard: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await useApiStore.getState().fetchData('/user-points/leaderboard/monthly');
+
+      if (response?.status === 'success') {
+        set({
+          monthlyLeaderboard: response.data.map((item: any) => ({
+            id: item.id,
+            username: item.username,
+            name: item.name,
+            totalPoints: item.totalPoints,
+            currentLevel: item.currentLevel,
+            nextLevel: item.nextLevel,
+            pointsToNextLevel: item.pointsToNextLevel,
+            pointsPercentage: item.pointsPercentage,
+            avatar: item.avatar || null,
+          })),
+          isLoading: false,
+        });
+      } else {
+        set({
+          error: response?.message || 'Failed to fetch monthly leaderboard',
+          isLoading: false,
+        });
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || 'Failed to fetch monthly leaderboard',
+        isLoading: false,
+      });
+    }
+  },
+
+  clearPointsData: () => set({ pointsData: null }),
+  clearPointsHistory: () => set({ pointsHistory: [], historyMeta: null }),
+  clearLeaderboard: () => set({ leaderboard: [] }),
+  clearDailyLeaderboard: () => set({ dailyLeaderboard: [] }),
+  clearWeeklyLeaderboard: () => set({ weeklyLeaderboard: [] }),
+  clearMonthlyLeaderboard: () => set({ monthlyLeaderboard: [] }),
+  clearError: () => set({ error: null }),
+  clearMessage: () => set({ message: null }),
 }));
 
 export default useUserPointsStore;

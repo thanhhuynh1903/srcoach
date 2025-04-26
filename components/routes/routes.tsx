@@ -38,7 +38,7 @@ import PasswordRecoveryCodeScreen from '../screens/AuthenciationScreens/Password
 import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordRecoveryNewScreen';
 import PasswordRecoverySuccessScreen from '../screens/AuthenciationScreens/PasswordRecoverySuccessScreen';
 import RunnerProfileScreen from '../screens/RunnerProfileScreen';
-import LeaderBoardScreen from '../screens/LeaderBoardScreen';
+import LeaderBoardScreen from '../screens/LeaderboardScreens/LeaderBoardScreen';
 import RecordStepsScreen from '../screens/DashboardScreens/RecordStepsScreen';
 import RecordDistanceScreen from '../screens/DashboardScreens/RecordDistanceScreen';
 import UserCertificatesIntroScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesIntroScreen';

@@ -1,11 +1,8 @@
-'use client';
-
-import {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
@@ -13,54 +10,122 @@ import {
   Animated,
   Dimensions,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {PieChart} from 'react-native-gifted-charts';
-import BackButton from '../BackButton';
-import useUserPointsStore from '../utils/useUserPointsStore';
-import {useLoginStore} from '../utils/useLoginStore';
-import {capitalizeFirstLetter} from '../utils/utils_format';
+import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
+import LinearGradient from 'react-native-linear-gradient';
+import BackButton from '../../BackButton';
+import useUserPointsStore from '../../utils/useUserPointsStore';
+import {useLoginStore} from '../../utils/useLoginStore';
+import {capitalizeFirstLetter} from '../../utils/utils_format';
+import {theme} from '../../contants/theme';
+import {CommonAvatar} from '../../commons/CommonAvatar';
 
 const {width} = Dimensions.get('window');
 
-const LeaderBoardScreen = ({navigation}) => {
-  const [activeTab, setActiveTab] = useState('All Time');
-  const [profileRank, setprofileRank] = useState(0);
+type LeaderboardItem = {
+  id: string;
+  name: string;
+  username: string;
+  currentLevel: string;
+  nextLevel: string | null;
+  pointsPercentage: number;
+  pointsToNextLevel: number;
+  totalPoints: number;
+  avatar?: string | null;
+};
+
+const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
+  const [activeTab, setActiveTab] = useState<
+    'All Time' | 'Daily' | 'Weekly' | 'Monthly'
+  >('All Time');
+  const [profileRank, setProfileRank] = useState(0);
   const [showFloatingCard, setShowFloatingCard] = useState(false);
-  const {pointsData, leaderboard, isLoading, getMyPoints, getLeaderboard} =
-    useUserPointsStore();
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+
+  const {
+    pointsData,
+    leaderboard,
+    dailyLeaderboard,
+    weeklyLeaderboard,
+    monthlyLeaderboard,
+    isLoading,
+    getMyPoints,
+    getLeaderboard,
+    getDailyLeaderboard,
+    getWeeklyLeaderboard,
+    getMonthlyLeaderboard,
+  } = useUserPointsStore();
+
   const {profile} = useLoginStore();
   const scrollY = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    getMyPoints();
-    getLeaderboard();
-  }, []);
-
-  useEffect(() => {
-    if (leaderboard.length > 0 && profile?.id) {
-      const rank = leaderboard.findIndex(user => user.id === profile.id) + 1;
-      setprofileRank(rank || leaderboard.length + 1);
+  const currentLeaderboard = () => {
+    switch (activeTab) {
+      case 'Daily':
+        return dailyLeaderboard;
+      case 'Weekly':
+        return weeklyLeaderboard;
+      case 'Monthly':
+        return monthlyLeaderboard;
+      default:
+        return leaderboard;
     }
-  }, [leaderboard, profile]);
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      await getMyPoints();
+      switch (activeTab) {
+        case 'Daily':
+          await getDailyLeaderboard();
+          break;
+        case 'Weekly':
+          await getWeeklyLeaderboard();
+          break;
+        case 'Monthly':
+          await getMonthlyLeaderboard();
+          break;
+        default:
+          await getLeaderboard('', page, limit);
+      }
+    } catch (error) {
+      console.error('Error loading leaderboard data:', error);
+    }
+  }, [activeTab, page, limit]);
 
   useEffect(() => {
-    console.log(pointsData);
-  }, [pointsData, profile]);
+    loadData();
+  }, [loadData]);
 
-  // Set up scroll listener to show/hide floating card
+  useEffect(() => {
+    if (currentLeaderboard().length > 0 && profile?.id) {
+      const rank =
+        currentLeaderboard().findIndex(user => user.id === profile.id) + 1;
+      setProfileRank(rank || currentLeaderboard().length + 1);
+    }
+  }, [currentLeaderboard(), profile]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
+
   useEffect(() => {
     const listenerId = scrollY.addListener(({value}) => {
-      // Show floating card when scrolled past a certain point
       const threshold = 500;
       const shouldShow = value > threshold;
 
       if (shouldShow !== showFloatingCard) {
         setShowFloatingCard(shouldShow);
 
-        // Animate the floating card
         Animated.parallel([
           Animated.timing(translateY, {
             toValue: shouldShow ? 0 : 100,
@@ -81,12 +146,19 @@ const LeaderBoardScreen = ({navigation}) => {
     };
   }, [showFloatingCard]);
 
-  // Circular progress component with pie chart
-  const CircularProgress = ({percentage}) => {
+  const handlePageChange = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && page > 1) {
+      setPage(prev => prev - 1);
+    } else if (direction === 'next' && currentLeaderboard().length === limit) {
+      setPage(prev => prev + 1);
+    }
+  };
+
+  const CircularProgress = ({percentage}: {percentage: number}) => {
     const pieData = [
       {
         value: percentage,
-        color: '#7E3AF2',
+        color: theme.colors.primaryDark,
         gradientCenterColor: '#9F7AEA',
       },
       {
@@ -111,8 +183,7 @@ const LeaderBoardScreen = ({navigation}) => {
     );
   };
 
-  // Render rank indicator with cool icons
-  const renderRankIndicator = index => {
+  const renderRankIndicator = (index: number) => {
     const rank = index + 1;
     if (rank === 1) {
       return <Icon name="trophy" size={24} color="#F59E0B" />;
@@ -129,60 +200,60 @@ const LeaderBoardScreen = ({navigation}) => {
     }
   };
 
-  // Render leaderboard item with animated styling
-  const renderLeaderboardItem = ({item, index}) => {
-    const isprofile = item.id === profile?.id;
+  const renderLeaderboardItem = ({
+    item,
+    index,
+  }: {
+    item: LeaderboardItem;
+    index: number;
+  }) => {
+    const isProfile = item.id === profile?.id;
     return (
-      <View style={[styles.leaderboardItem, isprofile && styles.profileItem]}>
+      <View style={[styles.leaderboardItem, isProfile && styles.profileItem]}>
         <View style={styles.leaderboardItemLeft}>
           <View style={styles.rankIndicator}>{renderRankIndicator(index)}</View>
-          <Image
-            source={{
-              uri: `https://randomuser.me/api/portraits/${
-                index % 2 === 0 ? 'men' : 'women'
-              }/${index + 10}.jpg`,
-            }}
-            style={styles.avatar}
-          />
+          <CommonAvatar uri={item?.avatar || undefined} size={35} />
           <View style={styles.userInfo}>
             <Text style={styles.userName}>
-              {isprofile ? 'You' : item.name || item.username || 'Anonymous'}
+              {isProfile ? 'You' : item.name || item.username || 'Anonymous'}
             </Text>
-            <View style={styles.totalPointsContainer}>
-              <Icon name="trophy" size={14} color="#F59E0B" />
-              <Text style={styles.userStats}>
-                {item.totalPoints?.toLocaleString() || 0} pts
+            <View style={styles.levelContainer}>
+              <Icon name="star" size={14} color="#F59E0B" />
+              <Text style={styles.levelText}>
+                {capitalizeFirstLetter(item.currentLevel)}
               </Text>
             </View>
           </View>
         </View>
-        <CircularProgress
-          percentage={Math.min(
-            100,
-            Math.floor(
-              (item.totalPoints / (leaderboard[0]?.totalPoints || 1)) * 100,
-            ),
-          )}
-        />
+        <View style={styles.pointsContainer}>
+          <View style={styles.totalPointsContainer}>
+            <Icon name="trophy" size={14} color="#F59E0B" />
+            <Text style={styles.userStats}>
+              {item.totalPoints?.toLocaleString() || 0} pts
+            </Text>
+          </View>
+          <CircularProgress percentage={item.pointsPercentage} />
+        </View>
       </View>
     );
   };
 
-  // Time filter tabs with smooth animation
-  const renderTab = tab => (
+  const renderTab = (tab: 'All Time' | 'Daily' | 'Weekly' | 'Monthly') => (
     <TouchableOpacity
       key={tab}
       style={[styles.tab, activeTab === tab && styles.activeTab]}
-      onPress={() => setActiveTab(tab)}>
+      onPress={() => {
+        setActiveTab(tab);
+        setPage(1);
+      }}>
       <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
         {tab}
       </Text>
     </TouchableOpacity>
   );
 
-  // Floating position card component
   const FloatingPositionCard = () => {
-    if (!profile) return null;
+    if (!profile || !pointsData) return null;
 
     return (
       <Animated.View
@@ -193,19 +264,22 @@ const LeaderBoardScreen = ({navigation}) => {
             opacity,
           },
         ]}>
-        <Text style={styles.floatingCardTitle}>Your Position</Text>
-        <View style={styles.floatingCardContent}>
-          <Text style={styles.floatingCardRank}>{profileRank}</Text>
-          <Image
-            source={{
-              uri:
-                profile.avatar ||
-                'https://randomuser.me/api/portraits/men/1.jpg',
-            }}
-            style={styles.floatingCardAvatar}
-          />
-          <View style={styles.floatingCardUserInfo}>
-            <Text style={styles.floatingCardUserName}>You</Text>
+        <LinearGradient
+          colors={['#F5F3FF', '#EDE9FE']}
+          style={styles.floatingCardGradient}>
+          <Text style={styles.floatingCardTitle}>Your Position</Text>
+          <View style={styles.floatingCardContent}>
+            <Text style={styles.floatingCardRank}>{profileRank}</Text>
+            <CommonAvatar uri={pointsData?.avatar || undefined} size={40} />
+            <View style={styles.floatingCardUserInfo}>
+              <Text style={styles.floatingCardUserName}>You</Text>
+              <View style={styles.levelContainer}>
+                <Icon name="star" size={14} color="#F59E0B" />
+                <Text style={styles.levelText}>
+                  {capitalizeFirstLetter(pointsData.currentLevel)}
+                </Text>
+              </View>
+            </View>
             <View style={styles.floatingCardAchievements}>
               <Icon name="trophy" size={14} color="#F59E0B" />
               <Text style={styles.userStats}>
@@ -213,31 +287,78 @@ const LeaderBoardScreen = ({navigation}) => {
               </Text>
             </View>
           </View>
-          <View>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>
-                {capitalizeFirstLetter(pointsData?.level) || 'Unknown'}
-              </Text>
-            </View>
-          </View>
-        </View>
+        </LinearGradient>
       </Animated.View>
     );
   };
+
+  const renderLoader = () => (
+    <View style={styles.leaderboardContainer}>
+      {[...Array(5)].map((_, i) => (
+        <ContentLoader
+          key={i}
+          speed={1.5}
+          width={width - 32}
+          height={72}
+          viewBox={`0 0 ${width - 32} 72`}
+          backgroundColor="#f3f3f3"
+          foregroundColor="#ecebeb">
+          <Circle cx="36" cy="36" r="24" />
+          <Rect x="72" y="18" rx="4" ry="4" width="120" height="16" />
+          <Rect x="72" y="40" rx="4" ry="4" width="80" height="12" />
+          <Circle cx={width - 60} cy="36" r="20" />
+        </ContentLoader>
+      ))}
+    </View>
+  );
+
+  const renderPagination = () => (
+    <View style={styles.paginationContainer}>
+      <TouchableOpacity
+        style={[styles.paginationButton, page === 1 && styles.disabledButton]}
+        onPress={() => handlePageChange('prev')}
+        disabled={page === 1}>
+        <Icon
+          name="chevron-back"
+          size={20}
+          color={page === 1 ? '#9CA3AF' : '#4B5563'}
+        />
+      </TouchableOpacity>
+
+      <Text style={styles.pageText}>Page {page}</Text>
+
+      <TouchableOpacity
+        style={[
+          styles.paginationButton,
+          currentLeaderboard().length < limit && styles.disabledButton,
+        ]}
+        onPress={() => handlePageChange('next')}
+        disabled={currentLeaderboard().length < limit}>
+        <Icon
+          name="chevron-forward"
+          size={20}
+          color={currentLeaderboard().length < limit ? '#9CA3AF' : '#4B5563'}
+        />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
-      {/* Header with gradient background */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
-          <BackButton size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
-      </View>
+      <LinearGradient
+        colors={['#FFFFFF', '#F9FAFB']}
+        style={styles.headerGradient}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}>
+            <BackButton size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Leaderboard</Text>
+        </View>
+      </LinearGradient>
 
       <Animated.ScrollView
         style={styles.scrollView}
@@ -246,17 +367,20 @@ const LeaderBoardScreen = ({navigation}) => {
           [{nativeEvent: {contentOffset: {y: scrollY}}}],
           {useNativeDriver: true},
         )}
-        scrollEventThrottle={16}>
-        <View style={styles.profileCard}>
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primaryDark]}
+            tintColor={theme.colors.primaryDark}
+          />
+        }>
+        <LinearGradient
+          colors={[theme.colors.primary, theme.colors.primaryDark]}
+          style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            <Image
-              source={{
-                uri:
-                  profile?.avatar ||
-                  'https://randomuser.me/api/portraits/men/1.jpg',
-              }}
-              style={styles.profileAvatar}
-            />
+            <CommonAvatar uri={profile?.image?.url || undefined} size={64} />
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
                 {profile?.name || 'Anonymous'}
@@ -274,7 +398,7 @@ const LeaderBoardScreen = ({navigation}) => {
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <View style={styles.statIcon}>
-                <Icon name="trophy" size={20} color="#7E3AF2" />
+                <Icon name="trophy" size={20} color={'#FFF'} />
               </View>
               <Text style={styles.statValue}>
                 {pointsData?.points?.toLocaleString() || '0'} pts
@@ -282,53 +406,41 @@ const LeaderBoardScreen = ({navigation}) => {
             </View>
             <View style={styles.statItem}>
               <View style={styles.statIcon}>
-                <Icon name="star" size={20} color="#7E3AF2" />
+                <Icon name="star" size={20} color="#FFFFFF" />
               </View>
               <Text style={styles.statValue}>
-                Level:{' '}
-                {capitalizeFirstLetter(pointsData?.level || '') || 'Unknown'}
+                Level: {capitalizeFirstLetter(pointsData?.level || 'Unknown')}
               </Text>
             </View>
           </View>
 
-          {/* Animated progress bar */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBar}>
               <View
                 style={[
                   styles.progressFill,
                   {
-                    width: `${Math.min(
-                      100,
-                      Math.floor(
-                        (pointsData?.points /
-                          (pointsData?.points + pointsData?.pointsToNextLevel ||
-                            1)) *
-                          100,
-                      ),
-                    )}%`,
+                    width: `${pointsData?.pointsPercentage || 0}%`,
                   },
                 ]}
               />
             </View>
             <Text style={styles.progressLabel}>
-              {pointsData?.pointsToNextLevel || 0} pts to next level
+              {pointsData?.pointsToNextLevel || 0} pts to rank up to next level
             </Text>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Time Filter Tabs */}
         <View style={styles.tabsContainer}>
-          {['All Time', 'This Week', 'This Month'].map(renderTab)}
+          {['All Time', 'Daily', 'Weekly', 'Monthly'].map(renderTab)}
         </View>
 
-        {/* Leaderboard List */}
-        <View style={styles.leaderboardContainer}>
-          {isLoading && leaderboard.length === 0 ? (
-            <Text style={styles.loadingText}>Loading leaderboard...</Text>
-          ) : (
+        {isLoading ? (
+          renderLoader()
+        ) : (
+          <View style={styles.leaderboardContainer}>
             <FlatList
-              data={leaderboard}
+              data={currentLeaderboard()}
               renderItem={renderLeaderboardItem}
               keyExtractor={item => item.id}
               scrollEnabled={false}
@@ -338,13 +450,12 @@ const LeaderBoardScreen = ({navigation}) => {
                 </Text>
               }
             />
-          )}
-        </View>
-        {/* Add extra space at the bottom for the floating card */}
+            {activeTab === 'All Time' && renderPagination()}
+          </View>
+        )}
         <View style={{height: 80}} />
       </Animated.ScrollView>
 
-      {/* Floating position card */}
       <FloatingPositionCard />
     </SafeAreaView>
   );
@@ -358,15 +469,16 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  headerGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#F9FAFB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   backButton: {
     padding: 8,
@@ -378,12 +490,11 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   profileCard: {
-    backgroundColor: '#7E3AF2',
     borderRadius: 20,
     padding: 24,
     margin: 16,
     marginTop: 8,
-    shadowColor: '#7E3AF2',
+    shadowColor: theme.colors.primaryDark,
     shadowOffset: {width: 0, height: 8},
     shadowOpacity: 0.2,
     shadowRadius: 16,
@@ -393,13 +504,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
-  },
-  profileAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   profileInfo: {
     marginLeft: 16,
@@ -479,13 +583,13 @@ const styles = StyleSheet.create({
   },
   tab: {
     paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 20,
     marginRight: 8,
     backgroundColor: '#E5E7EB',
   },
   activeTab: {
-    backgroundColor: '#7E3AF2',
+    backgroundColor: theme.colors.primaryDark,
   },
   tabText: {
     fontSize: 14,
@@ -546,16 +650,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4B5563',
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-  },
   userInfo: {
     flex: 1,
+    marginLeft: 15,
   },
   userName: {
     fontSize: 16,
@@ -563,9 +660,23 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 4,
   },
+  levelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  levelText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
   pointsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  totalPointsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
   },
   userStats: {
     fontSize: 14,
@@ -583,112 +694,42 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 10,
     fontWeight: '700',
-    color: '#7E3AF2',
+    color: theme.colors.primaryDark,
   },
-  yourPositionContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    margin: 16,
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  yourPositionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#7E3AF2',
-    marginBottom: 16,
-  },
-  yourPositionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flex: 1,
-  },
-  yourPositionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
-    overflow: 'hidden',
-  },
-  yourRank: {
-    width: 28,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4B5563',
-    textAlign: 'center',
-    marginRight: 12,
-  },
-  levelBadge: {
-    backgroundColor: '#EDE9FE',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    flexShrink: 0,
-    marginLeft: 8,
-  },
-  levelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7E3AF2',
-  },
-  loadingText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    padding: 16,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    padding: 16,
-  },
-
-  // Floating card styles
   floatingCard: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 20 : 16,
     left: 16,
     right: 16,
-    backgroundColor: '#F0F7FF',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 4,
     zIndex: 999,
+    overflow: 'hidden',
+  },
+  floatingCardGradient: {
+    padding: 16,
   },
   floatingCardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: theme.colors.primaryDark,
     marginBottom: 12,
   },
   floatingCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   floatingCardRank: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111827',
-    marginRight: 12,
     width: 24,
     textAlign: 'center',
-  },
-  floatingCardAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
   },
   floatingCardUserInfo: {
     flex: 1,
@@ -701,17 +742,34 @@ const styles = StyleSheet.create({
   floatingCardAchievements: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
   },
-  floatingCardAchievementsText: {
-    fontSize: 12,
+  emptyText: {
+    textAlign: 'center',
     color: '#6B7280',
-    marginLeft: 4,
+    padding: 16,
   },
-  floatingCardPoints: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4F46E5',
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  paginationButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 8,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  pageText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginHorizontal: 8,
   },
 });
 
