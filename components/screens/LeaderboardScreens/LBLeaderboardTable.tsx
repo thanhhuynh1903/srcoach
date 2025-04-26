@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: 11,
   },
   nameContainer: {
     flexDirection: 'row',
