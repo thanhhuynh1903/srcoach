@@ -147,7 +147,8 @@ const LoginScreen: React.FC<{
         signInResult.data.idToken,
       );
       await auth().signInWithCredential(googleCredential);
-
+      console.log(      'Google Sign-In successful:', signInResult);
+      
       showToast('success', 'Login Successful', 'Welcome to the homepage!');
       navigation.navigate('HomeTabs');
     } catch (error) {
