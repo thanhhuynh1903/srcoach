@@ -11,7 +11,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {useLoginStore} from './utils/useLoginStore';
 import {CommonAvatar} from './commons/CommonAvatar';
-import { theme } from './contants/theme';
+import {theme} from './contants/theme';
 
 const HomeHeader = () => {
   const {profile} = useLoginStore();

@@ -6,36 +6,25 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  FlatList,
   Animated,
   Dimensions,
   Platform,
   RefreshControl,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
-import {PieChart} from 'react-native-gifted-charts';
-import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import LinearGradient from 'react-native-linear-gradient';
+import ContentLoader from 'react-content-loader/native';
 import BackButton from '../../BackButton';
 import useUserPointsStore from '../../utils/useUserPointsStore';
 import {useLoginStore} from '../../utils/useLoginStore';
-import {capitalizeFirstLetter} from '../../utils/utils_format';
 import {theme} from '../../contants/theme';
-import {CommonAvatar} from '../../commons/CommonAvatar';
+import {LBSelfCard} from './LBSelfCard';
+import {LBLeaderboardTable} from './LBLeaderboardTable';
+import { CommonAvatar } from '../../commons/CommonAvatar';
+import Icon from '@react-native-vector-icons/ionicons';
+import { capitalizeFirstLetter } from '../../utils/utils_format';
+import {Rect, Circle} from 'react-content-loader/native';
 
 const {width} = Dimensions.get('window');
-
-type LeaderboardItem = {
-  id: string;
-  name: string;
-  username: string;
-  currentLevel: string;
-  nextLevel: string | null;
-  pointsPercentage: number;
-  pointsToNextLevel: number;
-  totalPoints: number;
-  avatar?: string | null;
-};
 
 const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
   const [activeTab, setActiveTab] = useState<
@@ -154,89 +143,25 @@ const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
     }
   };
 
-  const CircularProgress = ({percentage}: {percentage: number}) => {
-    const pieData = [
-      {
-        value: percentage,
-        color: theme.colors.primaryDark,
-        gradientCenterColor: '#9F7AEA',
-      },
-      {
-        value: 100 - percentage,
-        color: '#E5E7EB',
-      },
-    ];
-
-    return (
-      <View style={styles.progressCircleContainer}>
-        <PieChart
-          data={pieData}
-          donut
-          radius={20}
-          innerRadius={15}
-          innerCircleColor={'#F9FAFB'}
-          showText={false}
-          focusOnPress={false}
-        />
-        <Text style={styles.progressText}>{percentage}%</Text>
-      </View>
-    );
-  };
-
-  const renderRankIndicator = (index: number) => {
-    const rank = index + 1;
-    if (rank === 1) {
-      return <Icon name="trophy" size={24} color="#F59E0B" />;
-    } else if (rank === 2) {
-      return <Icon name="medal" size={24} color="#9CA3AF" />;
-    } else if (rank === 3) {
-      return <Icon name="ribbon" size={24} color="#F97316" />;
-    } else {
-      return (
-        <View style={styles.rankNumberContainer}>
-          <Text style={styles.rankNumber}>{rank}</Text>
-        </View>
-      );
-    }
-  };
-
-  const renderLeaderboardItem = ({
-    item,
-    index,
-  }: {
-    item: LeaderboardItem;
-    index: number;
-  }) => {
-    const isProfile = item.id === profile?.id;
-    return (
-      <View style={[styles.leaderboardItem, isProfile && styles.profileItem]}>
-        <View style={styles.leaderboardItemLeft}>
-          <View style={styles.rankIndicator}>{renderRankIndicator(index)}</View>
-          <CommonAvatar uri={item?.avatar || undefined} size={35} />
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>
-              {isProfile ? 'You' : item.name || item.username || 'Anonymous'}
-            </Text>
-            <View style={styles.levelContainer}>
-              <Icon name="star" size={14} color="#F59E0B" />
-              <Text style={styles.levelText}>
-                {capitalizeFirstLetter(item.currentLevel)}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <View style={styles.pointsContainer}>
-          <View style={styles.totalPointsContainer}>
-            <Icon name="trophy" size={14} color="#F59E0B" />
-            <Text style={styles.userStats}>
-              {item.totalPoints?.toLocaleString() || 0} pts
-            </Text>
-          </View>
-          <CircularProgress percentage={item.pointsPercentage} />
-        </View>
-      </View>
-    );
-  };
+  const renderLoader = () => (
+    <View style={styles.leaderboardContainer}>
+      {[...Array(5)].map((_, i) => (
+        <ContentLoader
+          key={i}
+          speed={1.5}
+          width={width - 32}
+          height={72}
+          viewBox={`0 0 ${width - 32} 72`}
+          backgroundColor="#f3f3f3"
+          foregroundColor="#ecebeb">
+          <Circle cx="36" cy="36" r="24" />
+          <Rect x="72" y="18" rx="4" ry="4" width="120" height="16" />
+          <Rect x="72" y="40" rx="4" ry="4" width="80" height="12" />
+          <Circle cx={width - 60} cy="36" r="20" />
+        </ContentLoader>
+      ))}
+    </View>
+  );
 
   const renderTab = (tab: 'All Time' | 'Daily' | 'Weekly' | 'Monthly') => (
     <TouchableOpacity
@@ -292,57 +217,6 @@ const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
     );
   };
 
-  const renderLoader = () => (
-    <View style={styles.leaderboardContainer}>
-      {[...Array(5)].map((_, i) => (
-        <ContentLoader
-          key={i}
-          speed={1.5}
-          width={width - 32}
-          height={72}
-          viewBox={`0 0 ${width - 32} 72`}
-          backgroundColor="#f3f3f3"
-          foregroundColor="#ecebeb">
-          <Circle cx="36" cy="36" r="24" />
-          <Rect x="72" y="18" rx="4" ry="4" width="120" height="16" />
-          <Rect x="72" y="40" rx="4" ry="4" width="80" height="12" />
-          <Circle cx={width - 60} cy="36" r="20" />
-        </ContentLoader>
-      ))}
-    </View>
-  );
-
-  const renderPagination = () => (
-    <View style={styles.paginationContainer}>
-      <TouchableOpacity
-        style={[styles.paginationButton, page === 1 && styles.disabledButton]}
-        onPress={() => handlePageChange('prev')}
-        disabled={page === 1}>
-        <Icon
-          name="chevron-back"
-          size={20}
-          color={page === 1 ? '#9CA3AF' : '#4B5563'}
-        />
-      </TouchableOpacity>
-
-      <Text style={styles.pageText}>Page {page}</Text>
-
-      <TouchableOpacity
-        style={[
-          styles.paginationButton,
-          currentLeaderboard().length < limit && styles.disabledButton,
-        ]}
-        onPress={() => handlePageChange('next')}
-        disabled={currentLeaderboard().length < limit}>
-        <Icon
-          name="chevron-forward"
-          size={20}
-          color={currentLeaderboard().length < limit ? '#9CA3AF' : '#4B5563'}
-        />
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
@@ -376,60 +250,11 @@ const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
             tintColor={theme.colors.primaryDark}
           />
         }>
-        <LinearGradient
-          colors={[theme.colors.primary, theme.colors.primaryDark]}
-          style={styles.profileCard}>
-          <View style={styles.profileHeader}>
-            <CommonAvatar uri={profile?.image?.url || undefined} size={64} />
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>
-                {profile?.name || 'Anonymous'}
-              </Text>
-              <Text style={styles.profileUsername}>
-                @{profile?.username || 'anonymous'}
-              </Text>
-              <View style={styles.rankContainer}>
-                <Icon name="stats-chart" size={16} color="#fff" />
-                <Text style={styles.rankText}>Rank #{profileRank || '--'}</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <View style={styles.statIcon}>
-                <Icon name="trophy" size={20} color={'#FFF'} />
-              </View>
-              <Text style={styles.statValue}>
-                {pointsData?.points?.toLocaleString() || '0'} pts
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <View style={styles.statIcon}>
-                <Icon name="star" size={20} color="#FFFFFF" />
-              </View>
-              <Text style={styles.statValue}>
-                Level: {capitalizeFirstLetter(pointsData?.level || 'Unknown')}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${pointsData?.pointsPercentage || 0}%`,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressLabel}>
-              {pointsData?.pointsToNextLevel || 0} pts to rank up to next level
-            </Text>
-          </View>
-        </LinearGradient>
+        <LBSelfCard
+          profile={profile}
+          pointsData={pointsData}
+          profileRank={profileRank}
+        />
 
         <View style={styles.tabsContainer}>
           {['All Time', 'Daily', 'Weekly', 'Monthly'].map(renderTab)}
@@ -438,20 +263,14 @@ const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
         {isLoading ? (
           renderLoader()
         ) : (
-          <View style={styles.leaderboardContainer}>
-            <FlatList
-              data={currentLeaderboard()}
-              renderItem={renderLeaderboardItem}
-              keyExtractor={item => item.id}
-              scrollEnabled={false}
-              ListEmptyComponent={
-                <Text style={styles.emptyText}>
-                  No leaderboard data available
-                </Text>
-              }
-            />
-            {activeTab === 'All Time' && renderPagination()}
-          </View>
+          <LBLeaderboardTable
+            data={currentLeaderboard()}
+            currentUserId={profile?.id}
+            activeTab={activeTab}
+            page={page}
+            limit={limit}
+            onPageChange={handlePageChange}
+          />
         )}
         <View style={{height: 80}} />
       </Animated.ScrollView>
@@ -489,93 +308,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginLeft: 12,
   },
-  profileCard: {
-    borderRadius: 20,
-    padding: 24,
-    margin: 16,
-    marginTop: 8,
-    shadowColor: theme.colors.primaryDark,
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  profileInfo: {
-    marginLeft: 16,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 1,
-  },
-  profileUsername: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 5,
-  },
-  rankContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  rankText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 24,
-  },
-  statIcon: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  progressContainer: {
-    marginTop: 8,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-  },
-  progressLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '500',
-  },
   tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -612,89 +344,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     marginBottom: 50,
-  },
-  leaderboardItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  profileItem: {
-    backgroundColor: '#F5F3FF',
-    borderRadius: 12,
-    marginHorizontal: -8,
-    paddingHorizontal: 8,
-  },
-  leaderboardItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  rankIndicator: {
-    width: 32,
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  rankNumberContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rankNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-  },
-  userInfo: {
-    flex: 1,
-    marginLeft: 15,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  levelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  levelText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 4,
-  },
-  pointsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  totalPointsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  userStats: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 4,
-  },
-  progressCircleContainer: {
-    position: 'relative',
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressText: {
-    position: 'absolute',
-    fontSize: 10,
-    fontWeight: '700',
-    color: theme.colors.primaryDark,
   },
   floatingCard: {
     position: 'absolute',
@@ -743,33 +392,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  emptyText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    padding: 16,
-  },
-  paginationContainer: {
+  levelContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
   },
-  paginationButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 8,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  pageText: {
+  levelText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginHorizontal: 8,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  userStats: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 4,
   },
 });
 
