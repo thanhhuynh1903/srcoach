@@ -600,7 +600,6 @@ const RunnerProfileScreen = () => {
                     {/* Engagement */}
                     <View style={styles.postEngagement}>
                       <View style={styles.engagementItem}>
-                        {/* Thêm chức năng like vào đây */}
                         <TouchableOpacity
                           onPress={() =>
                             handleLikePost(post.id, !post.is_upvoted)
@@ -779,7 +778,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  postTime: {color: '#999', fontSize: 14, marginLeft: 14, marginTop: 10},
+  postTime: {color: '#999', fontSize: 14, marginTop: 10},
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -905,7 +904,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    padding:16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   postHeader: {
     flexDirection: 'row',
@@ -920,7 +925,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#0F172A',
-    padding: 16,
     paddingBottom: 8,
     flex: 1,
   },
@@ -928,7 +932,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#334155',
     lineHeight: 20,
-    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   postImage: {
@@ -938,8 +941,7 @@ const styles = StyleSheet.create({
   },
   postEngagement: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 6,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
@@ -965,7 +967,8 @@ const styles = StyleSheet.create({
   engagementItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
+    justifyContent: 'flex-start',
+    marginRight: 12,
   },
   engagementItemRight: {
     flexDirection: 'row',
@@ -1035,6 +1038,7 @@ const styles = StyleSheet.create({
     color: '#0F2B5B',
   },
   tagsContainer: {
+    marginLeft:8,
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignContent: 'flex-start',

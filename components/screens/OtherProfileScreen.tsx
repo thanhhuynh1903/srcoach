@@ -17,9 +17,9 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import { usePostStore } from '../utils/usePostStore';
-import { useLoginStore } from '../utils/useLoginStore';
-
+import {usePostStore} from '../utils/usePostStore';
+import {useLoginStore} from '../utils/useLoginStore';
+import {theme} from '../contants/theme';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -100,9 +100,10 @@ interface UserData {
 const OtherProfileScreen = ({route}) => {
   const {postId} = route.params;
   const navigation = useNavigation();
-  const {userByPost, userLoading, userError, getUserByPostId, likePost} = usePostStore();
+  const {userByPost, userLoading, userError, getUserByPostId, likePost} =
+    usePostStore();
   const {profile} = useLoginStore();
-  
+
   const [refreshing, setRefreshing] = useState(false);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
@@ -148,7 +149,7 @@ const OtherProfileScreen = ({route}) => {
     useCallback(() => {
       onRefresh();
       return () => {};
-    }, [onRefresh])
+    }, [onRefresh]),
   );
 
   const formatTimeAgo = (dateString: string) => {
@@ -158,11 +159,11 @@ const OtherProfileScreen = ({route}) => {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
-    if (diffDays > 0) return `${diffDays}d trước`;
-    if (diffHours > 0) return `${diffHours}h trước`;
-    if (diffMins > 0) return `${diffMins}m trước`;
-    return 'Vừa xong';
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMins > 0) return `${diffMins}m ago`;
+    return 'Just now';
   };
 
   const handleLikePost = async (postId: string, isLike: boolean) => {
@@ -172,8 +173,8 @@ const OtherProfileScreen = ({route}) => {
       ]);
       return;
     }
-    console.log("isLike",isLike);
-    
+    console.log('isLike', isLike);
+
     // Cập nhật UI ngay lập tức (optimistic update)
     setLocalPosts(prevPosts =>
       prevPosts.map(post => {
@@ -266,7 +267,9 @@ const OtherProfileScreen = ({route}) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Personal Page</Text>
@@ -280,7 +283,11 @@ const OtherProfileScreen = ({route}) => {
         <ScrollView
           style={styles.scrollView}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1E3A8A']} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#1E3A8A']}
+            />
           }>
           {/* Profile Section */}
           <View style={styles.profileSection}>
@@ -289,18 +296,28 @@ const OtherProfileScreen = ({route}) => {
               onPress={() => setAvatarModalVisible(true)}>
               <Image
                 source={{
-                  uri: userData?.user?.image?.url || 'https://via.placeholder.com/150',
+                  uri:
+                    userData?.user?.image?.url ||
+                    'https://via.placeholder.com/150',
                 }}
                 style={styles.profilePhoto}
               />
             </TouchableOpacity>
-            <Text style={styles.profileName}>{userData?.user?.name || 'Người dùng'}</Text>
-            <Text style={styles.profileUsername}>@{userData?.user?.username || 'username'}</Text>
+            <Text style={styles.profileName}>
+              {userData?.user?.name || 'Người dùng'}
+            </Text>
+            <Text style={styles.profileUsername}>
+              @{userData?.user?.username || 'username'}
+            </Text>
             <View style={styles.locationContainer}>
               <Icon name="location-outline" size={16} color="#64748B" />
               <Text style={styles.locationText}>
-                {userData?.user?.address1 
-                  ? `${userData.user.address1}${userData.user.address2 ? `, ${userData.user.address2}` : ''}` 
+                {userData?.user?.address1
+                  ? `${userData.user.address1}${
+                      userData.user.address2
+                        ? `, ${userData.user.address2}`
+                        : ''
+                    }`
                   : 'Address not updated yet'}
               </Text>
             </View>
@@ -314,12 +331,16 @@ const OtherProfileScreen = ({route}) => {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{userData?.counts?.Post || 0}</Text>
+              <Text style={styles.statValue}>
+                {userData?.counts?.Post || 0}
+              </Text>
               <Text style={styles.statLabel}>Posts</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{userData?.counts?.PostVote || 0}</Text>
+              <Text style={styles.statValue}>
+                {userData?.counts?.PostVote || 0}
+              </Text>
               <Text style={styles.statLabel}>Liked</Text>
             </View>
           </View>
@@ -331,12 +352,20 @@ const OtherProfileScreen = ({route}) => {
             {localPosts && localPosts.length > 0 ? (
               localPosts.map(post => (
                 <View key={post.id} style={styles.postCard}>
-                  <Text style={styles.postTime}>{formatTimeAgo(post.created_at)}</Text>
+                  <Text style={styles.postTime}>
+                    {formatTimeAgo(post.created_at)}
+                  </Text>
                   <TouchableOpacity
-                    onPress={() => navigation.navigate('CommunityPostDetailScreen', { id: post.id })}>
+                    onPress={() =>
+                      navigation.navigate('CommunityPostDetailScreen', {
+                        id: post.id,
+                      })
+                    }>
                     <Text style={styles.postTitle}>{post.title}</Text>
-                    <Text style={styles.postContent} numberOfLines={3}>{post.content}</Text>
-                    
+                    <Text style={styles.postContent} numberOfLines={3}>
+                      {post.content}
+                    </Text>
+
                     {/* Hiển thị ảnh bài viết */}
                     {post.images && post.images.length > 0 && (
                       <View style={styles.postImageContainer}>
@@ -360,24 +389,51 @@ const OtherProfileScreen = ({route}) => {
                         )}
                       </View>
                     )}
+                    {post.exercise_session_record_id && (
+                      <View style={styles.runDataIndicator}>
+                        <View style={styles.runDataIndicatorContent}>
+                          <Icon name="walk" size={20} color="#FFFFFF" />
+                          <Text style={styles.runDataText}>
+                            Runner record included
+                          </Text>
+                        </View>
+                        <Icon
+                          name="chevron-forward"
+                          size={20}
+                          color="#FFFFFF"
+                          style={{marginLeft: 4}}
+                        />
+                      </View>
+                    )}
                   </TouchableOpacity>
-                  
+
                   <View style={styles.postEngagement}>
                     <View style={styles.engagementItem}>
-                      <TouchableOpacity onPress={() => handleLikePost(post.id, !post.is_upvoted)}>
-                        <Icon 
-                          name={post.is_upvoted ? 'heart' : 'heart-outline'} 
-                          size={20} 
-                          color={post.is_upvoted ? '#4285F4' : '#64748B'} 
+                      <TouchableOpacity
+                        onPress={() =>
+                          handleLikePost(post.id, !post.is_upvoted)
+                        }>
+                        <Icon
+                          name={post.is_upvoted ? 'heart' : 'heart-outline'}
+                          size={20}
+                          color={post.is_upvoted ? '#4285F4' : '#64748B'}
                         />
                       </TouchableOpacity>
-                      <Text style={styles.engagementText}>{post.upvote_count || 0}</Text>
+                      <Text style={styles.engagementText}>
+                        {post.upvote_count || 0}
+                      </Text>
                     </View>
                     <View style={styles.engagementItem}>
-                      <Icon name="chatbubble-outline" size={20} color="#64748B" />
-                      <Text style={styles.engagementText}>{post.comment_count || 0}</Text>
+                      <Icon
+                        name="chatbubble-outline"
+                        size={20}
+                        color="#64748B"
+                      />
+                      <Text style={styles.engagementText}>
+                        {post.comment_count || 0}
+                      </Text>
                     </View>
-                    
+
                     {/* Hiển thị tags */}
                     {renderTags(post.tags)}
                   </View>
@@ -401,7 +457,10 @@ const OtherProfileScreen = ({route}) => {
           activeOpacity={1}
           onPress={() => setAvatarModalVisible(false)}>
           <Image
-            source={{ uri: userData?.user?.image?.url || 'https://via.placeholder.com/150' }}
+            source={{
+              uri:
+                userData?.user?.image?.url || 'https://via.placeholder.com/150',
+            }}
             style={styles.zoomedAvatar}
             resizeMode="contain"
           />
@@ -482,6 +541,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
   },
+  runDataIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.primaryDark,
+    padding: 8,
+    paddingVertical:8,
+    borderRadius: 8,
+  },
+  runDataIndicatorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  runDataText: {
+    marginLeft: 8,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   photoWrapper: {
     width: 100,
     height: 100,
@@ -561,6 +639,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
     overflow: 'hidden',
+    paddingHorizontal:12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   postTime: {
     fontSize: 12,
@@ -573,14 +657,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#0F172A',
-    padding: 16,
+    paddingVertical: 16,
     paddingBottom: 8,
   },
   postContent: {
     fontSize: 14,
     color: '#475569',
     lineHeight: 20,
-    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   postEngagement: {
@@ -676,8 +759,8 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   tagText: {
-    fontSize: 12, 
-    color: '#666'
+    fontSize: 12,
+    color: '#666',
   },
 });
 

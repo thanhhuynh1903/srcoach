@@ -138,6 +138,7 @@ class NotificationService {
       const api = useApiStore.getState();
       await api.postData(`/devices`, {
         device_token: token,
+        device_type: "android",
       });
 
       console.log('Đã đăng ký thiết bị thành công');

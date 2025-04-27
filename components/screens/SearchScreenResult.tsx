@@ -21,7 +21,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
 import React from 'react';
-
+import {theme} from '../contants/theme';
 interface Tag {
   tag_name: string;
 }
@@ -306,6 +306,22 @@ const SearchResultsScreen = ({}) => {
                               )}
                             </View>
                           )}
+                          {post.exercise_session_record_id && (
+                            <View style={styles.runDataIndicator}>
+                              <View style={styles.runDataIndicatorContent}>
+                                <Icon name="walk" size={20} color="#FFFFFF" />
+                                <Text style={styles.runDataText}>
+                                  Runner record included
+                                </Text>
+                              </View>
+                              <Icon
+                                name="chevron-forward"
+                                size={20}
+                                color="#FFFFFF"
+                                style={{marginLeft: 4}}
+                              />
+                            </View>
+                          )}
                           <View style={styles.postStats}>
                             <View style={styles.postStats}>
                               <TouchableOpacity
@@ -526,6 +542,26 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   tagText: {fontSize: 12, color: '#666'},
+  runDataIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.primaryDark,
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  runDataIndicatorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  runDataText: {
+    marginLeft: 8,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
   postStats: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
@@ -658,7 +694,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
   },
-
 });
 
 export default SearchResultsScreen;
