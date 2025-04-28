@@ -315,8 +315,8 @@ export default function CommunityPostDetailMap({ exerciseSessionRecordId }) {
         <View style={styles.mainStatsContainer}>
           {mainStats.map((stat, index) => (
             <View key={index} style={styles.mainStatItem}>
-              <View style={styles.mainStatIconContainer}>
-                <Icon name={stat.icon} size={20} color="#3B82F6" />
+              <View>
+                <Icon name={stat.icon as never} size={20} color="#3B82F6" />
               </View>
               <View style={styles.mainStatContent}>
                 <Text style={styles.mainStatValue}>
