@@ -2,7 +2,7 @@ import messaging from '@react-native-firebase/messaging';
 import notifee, {AndroidImportance} from '@notifee/react-native';
 import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { PermissionsAndroid } from 'react-native';
 import useApiStore from '../utils/zustandfetchAPI';
 
 class NotificationService {
@@ -15,12 +15,12 @@ class NotificationService {
 
   setupBackgroundHandler() {
     messaging().setBackgroundMessageHandler(async remoteMessage => {
-      console.log('Nhận thông báo nền:', remoteMessage);
+      console.log('Get background notifications', remoteMessage);
       try {
         // Đảm bảo không có thao tác UI ở đây
         await this.displayNotification(remoteMessage);
       } catch (error) {
-        console.error('Lỗi xử lý thông báo nền:', error);
+        console.error('Background notification processing error:', error);
       }
     });
   }
@@ -52,41 +52,57 @@ class NotificationService {
 
       return true;
     } catch (error) {
-      console.error('Lỗi khi khởi tạo dịch vụ thông báo:', error);
+      console.error('Error initializing notification service:', error);
       return false;
     }
   }
 
   async requestPermission() {
     try {
+      // Xử lý quyền cho Android 13+
+      if (Platform.OS === 'android') {
+        // Kiểm tra phiên bản Android (API level 33+)
+        if (Platform.Version >= 33) {
+          const status = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+          );
+          
+          if (status !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.log('Android notification permission denied');
+            return false;
+          }
+        }
+      }
+
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-      
+
       if (!enabled) {
-        console.log('Quyền thông báo bị từ chối!');
+        console.log('Firebase Notification Permission Denied!');
       }
       return enabled;
     } catch (error) {
-      console.error('Lỗi khi yêu cầu quyền thông báo:', error);
+      console.error('Error requesting notification permission:', error);
       return false;
     }
   }
+
 
   async createNotificationChannel() {
     if (Platform.OS === 'android') {
       try {
         await notifee.createChannel({
           id: 'default',
-          name: 'Thông báo mặc định',
+          name: 'Default notification',
           importance: AndroidImportance.HIGH,
           sound: 'default', // Thêm âm thanh mặc định
           vibration: true,
           lights: true,
         });
       } catch (error) {
-        console.error('Lỗi khi tạo kênh thông báo:', error);
+        console.error('Error creating notification channel:', error);
       }
     }
   }
@@ -102,8 +118,6 @@ class NotificationService {
       const savedToken = await AsyncStorage.getItem('fcmToken');
 
       if (savedToken) {
-        console.log('Đang lấy FCM token từ bộ nhớ...', savedToken);
-
         this.token = savedToken;
         return savedToken;
       }
@@ -112,7 +126,6 @@ class NotificationService {
       const newToken = await messaging().getToken();
       if (newToken) {
         this.token = newToken;
-        console.log('Đang lấy FCM token từ bộ nhớ...', this.token);
 
         // Lưu token vào bộ nhớ cục bộ
         await AsyncStorage.setItem('fcmToken', newToken);
@@ -128,10 +141,10 @@ class NotificationService {
   async registerDevice() {
     try {
       const token = await this.getToken();
-      console.log('Đang đăng ký thiết bị...', token);
+      console.log('Registering device...', token);
 
       if (!token) {
-        console.log('Không thể đăng ký thiết bị: Không có token');
+        console.log('Unable to register device: No token');
         return false;
       }
 
@@ -141,10 +154,10 @@ class NotificationService {
         device_type: "android",
       });
 
-      console.log('Đã đăng ký thiết bị thành công');
+      console.log('Device registered successfully');
       return true;
     } catch (error) {
-      console.error('Lỗi khi đăng ký thiết bị:', error);
+      console.error('Error while registering device:', error);
       return false;
     }
   }
@@ -160,7 +173,6 @@ class NotificationService {
       // Sau khi xóa thiết bị thành công, xóa token khỏi bộ nhớ
       await AsyncStorage.removeItem('fcmToken');
       this.token = null;
-      console.log('Token hiện tại:', this.token);
 
       // Hủy đăng ký sự kiện lắng nghe thông báo nếu có
       if (this.messageUnsubscribe) {
@@ -168,17 +180,17 @@ class NotificationService {
         this.messageUnsubscribe = null;
       }
 
-      console.log('Token đã được xóa khỏi bộ nhớ');
+      console.log('Token has been cleared from memory');
       return true;
     } catch (error) {
-      console.error('Lỗi khi xóa thiết bị:', error);
+      console.error('Error while deleting device:', error);
     }
   }
 
   onTokenRefresh() {
     // Lắng nghe khi token FCM thay đổi
     return messaging().onTokenRefresh(async token => {
-      console.log('FCM token đã được làm mới:', token);
+      console.log('FCM token has been refreshed:', token);
 
       // Lưu token mới
       this.token = token;
@@ -205,33 +217,46 @@ class NotificationService {
     try {
       const { notification, data } = remoteMessage;
   
-      // Kiểm tra thông báo hợp lệ
-      if (!notification || !notification.title) {
-        console.log('Thông báo không hợp lệ');
-        return;
+      // Validate mạnh mẽ hơn
+      if (!notification || typeof notification !== 'object') {
+        console.log('Thông báo không hợp lệ: Không có notification object');
+      }
+  
+      // Fallback cho các trường quan trọng
+      const safeNotification = {
+        title: notification?.title || 'Thông báo mới',
+        body: notification?.body || 'Bạn có thông báo mới'
+      };
+  
+      // Xử lý data an toàn
+      const safeData = data || {};
+      if (!safeData?.postId) {
+        console.warn('Thông báo không có postId');
       }
   
       // Hiển thị thông báo với Notifee
       await notifee.displayNotification({
-        title: notification.title,
-        body: notification.body,
-        data: data,
+        title: safeNotification?.title,
+        body: safeNotification?.body,
+        data: safeData,
         android: {
           channelId: 'default',
-          smallIcon: 'ic_notification',
+          smallIcon: 'ic_launcher',
           pressAction: {
             id: 'default',
+            launchActivity: 'default',
           },
+          sound: 'default',
         },
       });
+  
     } catch (error) {
       console.error('Lỗi hiển thị thông báo:', error);
+      // Gửi lỗi đến crash reporting nếu cần
     }
   }
-  
-
   // Xử lý khi nhấn vào thông báo
-  setupNotificationOpenHandlers(navigation) {
+  setupNotificationOpenHandlers(navigation : any) {
     // Khi ứng dụng đang chạy nền và người dùng nhấn vào thông báo
     messaging().onNotificationOpenedApp(remoteMessage => {
       console.log('Thông báo đã được mở khi app đang chạy nền:', remoteMessage);
@@ -252,25 +277,25 @@ class NotificationService {
   }
 
   // Hàm xử lý điều hướng khi nhấn vào thông báo
-  handleNotificationNavigation(remoteMessage, navigation) {
+  handleNotificationNavigation(remoteMessage: any, navigation : any) {
     if (!navigation || !remoteMessage.data) return;
 
     const {data} = remoteMessage;
 
     // Điều hướng dựa trên loại thông báo
     // Ví dụ:
-    switch (data.type) {
+    switch (data?.type) {
       case 'post':
-        navigation.navigate('PostDetailScreen', {postId: data.postId});
+        navigation.navigate('CommunityPostDetailScreen', {postId: data.postId});
         break;
       case 'schedule':
-        navigation.navigate('ScheduleDetailScreen', {
-          scheduleId: data.scheduleId,
+        navigation.navigate('GenerateScheduleScreen', {
+          scheduleId: data?.scheduleId,
         });
         break;
       default:
         // Mặc định điều hướng đến màn hình thông báo
-        navigation.navigate('NotificationsScreen');
+        navigation.navigate('ManageNotificationsScreen');
         break;
     }
   }
