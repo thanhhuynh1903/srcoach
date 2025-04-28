@@ -647,10 +647,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   postTime: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#94A3B8',
-    marginBottom: 8,
-    marginLeft: 14,
     marginTop: 10,
   },
   postTitle: {

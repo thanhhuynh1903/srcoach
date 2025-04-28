@@ -22,7 +22,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useFocusEffect} from '@react-navigation/native';
 import {useImageUserStore} from '../utils/useImageUserStore';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import { theme } from '../contants/theme';
+import {theme} from '../contants/theme';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -41,7 +41,6 @@ interface Post {
   is_deleted: boolean;
   tags: string[];
 }
-
 
 const RunnerProfileScreen = () => {
   const {myPosts, getMyPosts, isLoading, deletePost, likePost} = usePostStore();
@@ -374,7 +373,6 @@ const RunnerProfileScreen = () => {
 
   // Xử lý chỉnh sửa bài viết
   const handleUpdate = () => {
-
     setModalVisible(false);
     if (selectedPost) {
       navigation.navigate('CommunityUpdatePostScreen', {
@@ -778,7 +776,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  postTime: {color: '#999', fontSize: 14, marginTop: 10},
+  postTime: {fontSize: 14, color: '#94A3B8', marginBottom: 12,},
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -904,7 +902,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    padding:16,
+    padding: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
@@ -946,24 +944,24 @@ const styles = StyleSheet.create({
     borderTopColor: '#F1F5F9',
   },
   runDataIndicator: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: theme.colors.primaryDark,
-      padding: 8,
-      borderRadius: 8,
-      marginVertical: 8,
-    },
-    runDataIndicatorContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    runDataText: {
-      marginLeft: 8,
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '500',
-    },
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.primaryDark,
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  runDataIndicatorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  runDataText: {
+    marginLeft: 8,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   engagementItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1038,7 +1036,7 @@ const styles = StyleSheet.create({
     color: '#0F2B5B',
   },
   tagsContainer: {
-    marginLeft:8,
+    marginLeft: 8,
     flexDirection: 'row',
     justifyContent: 'flex-start',
     alignContent: 'flex-start',

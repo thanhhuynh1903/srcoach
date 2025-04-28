@@ -44,7 +44,7 @@ interface ExerciseSessionData {
 const { width, height } = Dimensions.get("window")
 const CHART_WIDTH = width - 40
 
-export default function CommunityPostDetailMap({ exerciseSessionRecordId }) {
+export default function CommunityPostDetailMap({ exerciseSessionRecordId }: { exerciseSessionRecordId: string }) {
   const [exerciseData, setExerciseData] = useState<ExerciseSessionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("stats")
@@ -133,7 +133,7 @@ export default function CommunityPostDetailMap({ exerciseSessionRecordId }) {
 
   // Fit map to route coordinates
   useEffect(() => {
-    if (mapReady && exerciseData?.routes?.length > 0 && mapRef.current) {
+    if (mapReady && exerciseData?.routes && exerciseData.routes.length > 0 && mapRef.current) {
       const coordinates = exerciseData.routes.map((route) => ({
         latitude: route.latitude,
         longitude: route.longitude,
@@ -333,7 +333,7 @@ export default function CommunityPostDetailMap({ exerciseSessionRecordId }) {
           {detailedStats.map((stat, index) => (
             <View key={index} style={styles.detailedStatItem}>
               <View style={styles.detailedStatIconContainer}>
-                <Icon name={stat.icon} size={16} color="#3B82F6" />
+                <Icon name={stat.icon as never} size={16} color="#3B82F6" />
               </View>
               <Text style={styles.detailedStatLabel}>{stat.label}</Text>
               <Text style={styles.detailedStatValue}>
@@ -447,15 +447,7 @@ export default function CommunityPostDetailMap({ exerciseSessionRecordId }) {
           yAxisOffset={minHR > 50 ? minHR - 10 : 0}
           maxValue={maxHR + 10}
           noOfSections={5}
-          yAxisLabelWidth={30} // Giảm khoảng cách trục Y
-          chartConfig={{
-            paddingLeft: 0, // Giảm padding trái
-            paddingRight: 10
-          }}
-          style={{
-            marginLeft: -12, // Kéo chart sang trái
-            paddingLeft: -10 // Hiệu chỉnh padding nhãn trục X
-          }}
+          yAxisLabelWidth={30} 
         />
         </View>
         <View style={styles.hrZonesContainer}>
