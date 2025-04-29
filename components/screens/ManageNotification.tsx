@@ -97,31 +97,9 @@ const ManageNotification = () => {
 
   // Tải trạng thái thông báo từ AsyncStorage khi component mount
   useEffect(() => {
-    const loadNotificationState = async () => {
-      try {
-        const notificationEnabled = await AsyncStorage.getItem('fcmToken');
-        console.log('Trang thái thông báo:', notificationEnabled);
-
-        setIsSwitchOn(notificationEnabled ? true : false);
-
-        // Kiểm tra quyền thông báo
-        const permissionEnabled = await NotificationService.requestPermission();
-        if (!permissionEnabled && notificationEnabled === 'true') {
-          setIsSwitchOn(false);
-          await AsyncStorage.setItem('notificationsEnabled', 'false');
-          Alert.alert(
-            'Quyền thông báo bị từ chối',
-            'Vui lòng cấp quyền thông báo trong cài đặt thiết bị để nhận thông báo.',
-          );
-        }
-      } catch (error) {
-        console.error('Lỗi khi tải trạng thái thông báo:', error);
-      }
-    };
-
-    loadNotificationState();
     fetchNotifications();
   }, []);
+
   // Lấy danh sách thông báo từ API
   const fetchNotifications = async () => {
     setIsLoading(true);
