@@ -72,7 +72,7 @@ export const CRMessageHeader = ({
               <Text style={styles.statText}>{sessionInfo.other_user.points}</Text>
             </View>
             <View style={styles.statItem}>
-              <Icon name="star" size={14} color={theme.colors.warning} />
+              <Icon name="medal" size={14} color={theme.colors.warning} />
               <Text style={styles.statText}>
                 {capitalizeFirstLetter(sessionInfo.other_user.user_level)}
               </Text>

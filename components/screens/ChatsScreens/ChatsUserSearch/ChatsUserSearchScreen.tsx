@@ -96,7 +96,7 @@ const ExpertItem = ({item}: {item: any}) => {
       : null;
 
   const userLevel = item.user_level
-    ? item.user_level.charAt(0).toUpperCase() + item.user_level.slice(1)
+    ? capitalizeFirstLetter(item.user_level)
     : '';
 
   const onPress = () => {

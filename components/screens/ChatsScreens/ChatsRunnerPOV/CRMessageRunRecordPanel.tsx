@@ -4,9 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  Animated,
-  Platform,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
@@ -15,6 +12,9 @@ import {theme} from '../../../contants/theme';
 import {fetchExerciseSessionRecords} from '../../../utils/utils_healthconnect';
 import {sendExerciseRecord} from '../../../utils/useChatsAPI';
 import ToastUtil from '../../../utils/utils_toast';
+import CommonPanel from '../../../commons/CommonPanel';
+import { formatTimestampAgo } from '../../../utils/utils_format';
+import { ExerciseType, getIconFromExerciseType, getNameFromExerciseType } from '../../../contants/exerciseType';
 
 interface CRMessageRunRecordPanelProps {
   visible: boolean;
@@ -25,7 +25,7 @@ interface CRMessageRunRecordPanelProps {
 
 type ExerciseSession = {
   id: string;
-  exerciseType: string;
+  exerciseType: number;
   clientRecordId: string;
   dataOrigin: string;
   startTime: string;
@@ -43,33 +43,18 @@ export const CRMessageRunRecordPanel: React.FC<
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const slideAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      Animated.timing(slideAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
       loadSessions();
     } else {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
       setSelectedSession(null);
     }
-  }, [visible, slideAnim]);
+  }, [visible]);
 
   const loadSessions = async () => {
     setIsLoading(true);
     try {
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setMonth(endDate.getMonth() - 5, 1);
-
       const records = await fetchExerciseSessionRecords();
       setSessions(records);
     } catch (error) {
@@ -99,21 +84,6 @@ export const CRMessageRunRecordPanel: React.FC<
     }
   };
 
-  const translateY = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [300, 0],
-  });
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString([], {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const formatDuration = (minutes?: number) => {
     if (!minutes) return 'N/A';
     const hrs = Math.floor(minutes / 60);
@@ -130,7 +100,7 @@ export const CRMessageRunRecordPanel: React.FC<
       onPress={() => setSelectedSession(item.id)}>
       <View style={styles.sessionHeader}>
         <Icon
-          name="walk"
+          name={getIconFromExerciseType(item.exerciseType)}
           size={20}
           color={
             selectedSession === item.id
@@ -138,13 +108,16 @@ export const CRMessageRunRecordPanel: React.FC<
               : theme.colors.primaryDark
           }
         />
-        <Text style={styles.sessionDate}>{formatDate(item.startTime)}</Text>
+        <Text style={styles.sessionExerciseName}>
+          {getNameFromExerciseType(item?.exerciseType)}
+        </Text>
+        <Text style={styles.sessionDate}>at {formatTimestampAgo(item.startTime)}</Text>
       </View>
       <View style={styles.sessionDetails}>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Distance</Text>
           <Text style={styles.detailValue}>
-            {item.total_distance ? `${item.total_distance} km` : 'N/A'}
+            {item.total_distance ? `${(item.total_distance / 1000).toFixed(2)} km` : 'N/A'}
           </Text>
         </View>
         <View style={styles.detailItem}>
@@ -161,105 +134,89 @@ export const CRMessageRunRecordPanel: React.FC<
     </TouchableOpacity>
   );
 
-  return (
-    <Modal
-      transparent
-      visible={visible}
-      animationType="none"
-      onRequestClose={onClose}>
-      <View style={styles.modalContainer}>
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <Animated.View
-          style={[styles.panelContainer, {transform: [{translateY}]}]}>
-          <View style={styles.panelHeader}>
-            <Text style={styles.panelTitle}>Select Run Record</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="close" size={24} color={theme.colors.primaryDark} />
-            </TouchableOpacity>
-          </View>
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      );
+    }
 
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
-          ) : sessions.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Icon name="sad" size={40} color="#8E8E93" />
-              <Text style={styles.emptyText}>No run records found</Text>
-              <Text style={styles.emptySubtext}>
-                Your recent runs will appear here
-              </Text>
-            </View>
+    if (sessions.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Icon name="sad" size={40} color="#8E8E93" />
+          <Text style={styles.emptyText}>No run records found</Text>
+          <Text style={styles.emptySubtext}>
+            Your recent runs will appear here
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        <FlatList
+          data={sessions}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+        />
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            !selectedSession && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={!selectedSession || isSubmitting}>
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="white" />
           ) : (
-            <>
-              <FlatList
-                data={sessions}
-                renderItem={renderItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContainer}
-              />
-              <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  !selectedSession && styles.submitButtonDisabled,
-                ]}
-                onPress={handleSubmit}
-                disabled={!selectedSession || isSubmitting}>
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Submit Run Record</Text>
-                )}
-              </TouchableOpacity>
-            </>
+            <Text style={styles.submitButtonText}>Submit Run Record</Text>
           )}
-        </Animated.View>
-      </View>
-    </Modal>
+        </TouchableOpacity>
+      </>
+    );
+  };
+
+  return (
+    <CommonPanel
+      visible={visible}
+      onClose={onClose}
+      title="Select Run Record"
+      content={renderContent()}
+      direction="bottom"
+      height="80%"
+      closeOnBackdropPress={true}
+      swipeToClose={true}
+      contentStyle={styles.panelContent}
+      titleStyle={styles.panelTitle}
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  modalContainer: {
+  panelContent: {
+    padding: 0,
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  panelContainer: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    maxHeight: '80%',
-  },
-  panelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
   },
   panelTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: theme.colors.primaryDark,
+    color: '#FFF',
   },
   loadingContainer: {
     padding: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    flex: 1,
   },
   emptyContainer: {
     padding: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    flex: 1,
   },
   emptyText: {
     fontSize: 16,
@@ -272,7 +229,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   listContainer: {
+    paddingTop: 16,
     paddingBottom: 16,
+    paddingHorizontal: 16,
   },
   sessionItem: {
     backgroundColor: '#F5F5F5',
@@ -290,11 +249,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  sessionExerciseName: {
+    fontSize: 14,
+    color: theme.colors.primaryDark,
+    fontWeight: 'bold',
+    marginLeft: 8,
+    marginRight: 4,
   },
   sessionDate: {
     fontSize: 14,
     color: '#757575',
-    marginLeft: 8,
   },
   sessionDetails: {
     flexDirection: 'row',
@@ -302,6 +268,7 @@ const styles = StyleSheet.create({
   },
   detailItem: {
     alignItems: 'center',
+    minWidth: 80,
   },
   detailLabel: {
     fontSize: 12,
@@ -315,11 +282,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   submitButton: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryDark,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
-    marginTop: 8,
+    margin: 16,
   },
   submitButtonDisabled: {
     backgroundColor: '#CCCCCC',

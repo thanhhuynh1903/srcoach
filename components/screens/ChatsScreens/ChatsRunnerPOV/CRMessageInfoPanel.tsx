@@ -1,8 +1,19 @@
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Modal, Animated} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Animated,
+  Dimensions,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import { theme } from '../../../contants/theme';
+import {theme} from '../../../contants/theme';
 import {capitalizeFirstLetter} from '../../../utils/utils_format';
+import {Easing} from 'react-native';
+
+const {width} = Dimensions.get('window');
 
 type User = {
   id: string;
@@ -29,7 +40,8 @@ const RoleBadge = ({roles}: {roles: string[]}) => {
   if (isExpert) {
     return (
       <View style={[styles.roleBadge, styles.expertBadge]}>
-        <Icon name="trophy" size={12} color="white" />
+        <Icon name="trophy" size={14} color="white" />
+        <Text style={styles.roleBadgeText}>Expert</Text>
       </View>
     );
   }
@@ -37,7 +49,8 @@ const RoleBadge = ({roles}: {roles: string[]}) => {
   if (isRunner) {
     return (
       <View style={[styles.roleBadge, styles.runnerBadge]}>
-        <Icon name="footsteps" size={12} color="white" />
+        <Icon name="footsteps" size={14} color="white" />
+        <Text style={styles.roleBadgeText}>Runner</Text>
       </View>
     );
   }
@@ -54,23 +67,38 @@ export const CRMessageInfoPanel = ({
   visible: boolean;
   onClose: () => void;
 }) => {
-  const slideAnim = React.useRef(new Animated.Value(300)).current;
+  const slideAnim = React.useRef(new Animated.Value(width * 0.8)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     if (visible) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     } else {
-      Animated.timing(slideAnim, {
-        toValue: 300,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: width * 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-
   }, [visible]);
 
   if (!sessionInfo) return null;
@@ -81,7 +109,7 @@ export const CRMessageInfoPanel = ({
       visible={visible}
       animationType="none"
       onRequestClose={onClose}>
-      <View style={styles.modalContainer}>
+      <Animated.View style={[styles.modalContainer, {opacity: opacityAnim}]}>
         <TouchableOpacity
           style={styles.backdrop}
           activeOpacity={1}
@@ -92,12 +120,19 @@ export const CRMessageInfoPanel = ({
             styles.panel,
             {
               transform: [{translateX: slideAnim}],
+              shadowOpacity: opacityAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.2],
+              }),
             },
           ]}>
           <View style={styles.header}>
-            <Text style={styles.headerText}>User Information</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="close" size={24} color={theme.colors.primaryDark} />
+            <Text style={styles.headerText}>User Profile</Text>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}>
+              <Icon name="close" size={24} color={'#000'} />
             </TouchableOpacity>
           </View>
 
@@ -110,29 +145,49 @@ export const CRMessageInfoPanel = ({
             </View>
 
             <Text style={styles.userName}>{sessionInfo.other_user.name}</Text>
-            <Text style={styles.username}>@{sessionInfo.other_user.username}</Text>
+            <Text style={styles.username}>
+              @{sessionInfo.other_user.username}
+            </Text>
 
-            <View style={styles.infoRow}>
-              <View style={styles.infoItem}>
-                <Icon name="trophy" size={20} color="#FFD700" />
-                <Text style={styles.infoText}>
-                  {sessionInfo.other_user.points} points
-                </Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Icon name="star" size={20} color="#FFD700" />
-                <Text style={styles.infoText}>
-                  {capitalizeFirstLetter(sessionInfo.other_user.user_level)}
-                </Text>
+            <View style={styles.divider} />
+
+            <View style={styles.infoSection}>
+              <Text style={styles.sectionTitle}>User Stats</Text>
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <View style={styles.infoIconContainer}>
+                    <Icon name="trophy" size={18} color="#FFD700" />
+                  </View>
+                  <Text style={styles.infoLabel}>Points</Text>
+                  <Text style={styles.infoValue}>
+                    {sessionInfo.other_user.points}
+                  </Text>
+                </View>
+
+                <View style={styles.infoItem}>
+                  <View style={styles.infoIconContainer}>
+                    <Icon name="medal" size={18} color="#FFD700" />
+                  </View>
+                  <Text style={styles.infoLabel}>Level</Text>
+                  <Text style={styles.infoValue}>
+                    {capitalizeFirstLetter(sessionInfo.other_user.user_level)}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.archiveButton} onPress={() => {}}>
-            <Text style={styles.archiveButtonText}>Archive this chat</Text>
-          </TouchableOpacity>
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.archiveButton]}
+              onPress={() => {}}>
+              <Icon name="archive" size={18} color="white" />
+              <Text style={styles.archiveButtonText}>Archive Chat</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 };
@@ -140,61 +195,79 @@ export const CRMessageInfoPanel = ({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     justifyContent: 'flex-end',
   },
   backdrop: {
     flex: 1,
   },
   panel: {
-    width: '80%',
+    width: '85%',
     height: '100%',
     backgroundColor: 'white',
     position: 'absolute',
     right: 0,
     borderLeftWidth: 1,
-    borderLeftColor: '#E5E5EA',
+    borderLeftColor: '#F0F0F0',
+    shadowColor: '#000',
+    shadowOffset: {width: -2, height: 0},
+    shadowRadius: 10,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 24,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#F5F5F5',
   },
   headerText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#000',
+    letterSpacing: 0.5,
+  },
+  closeButton: {
+    padding: 4,
   },
   content: {
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
   },
   roleBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 24,
-    height: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 12,
     justifyContent: 'center',
-    alignItems: 'center',
     borderWidth: 2,
     borderColor: 'white',
+    elevation: 2,
+  },
+  roleBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   runnerBadge: {
     backgroundColor: theme.colors.success,
@@ -203,44 +276,91 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.warning,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#767676',
     marginBottom: 4,
+    textAlign: 'center',
   },
   username: {
     fontSize: 16,
-    color: '#8E8E93',
-    marginBottom: 20,
+    color: '#767676',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  divider: {
+    height: 1,
+    width: '100%',
+    backgroundColor: '#F0F0F0',
+    marginVertical: 16,
+  },
+  infoSection: {
+    width: '100%',
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#767676',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   infoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
-    marginTop: 16,
+    marginTop: 8,
   },
   infoItem: {
     alignItems: 'center',
+    flex: 1,
   },
-  infoText: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 4,
+  infoIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8F8F8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#767676',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primaryDark,
+    textAlign: 'center',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 24,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#F5F5F5',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
   },
   archiveButton: {
     backgroundColor: theme.colors.error,
-    padding: 16,
-    margin: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 0,
-    left: 20,
-    right: 20,
   },
   archiveButtonText: {
     color: 'white',
     fontWeight: '600',
     fontSize: 16,
+    marginLeft: 8,
   },
 });

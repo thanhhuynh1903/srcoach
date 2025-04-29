@@ -78,10 +78,9 @@ const MessageItem = ({item, searchQuery}: {item: any; searchQuery: string}) => {
       <View style={styles.listItemContent}>
         <CommonAvatar
           mode={item.User.roles.includes('expert') ? 'expert' : 'runner'}
-          size={52}
+          size={45}
           uri={
-            item.User.profile_picture ||
-            `https://ui-avatars.com/api/?name=${item.User.name}&background=random`
+            item.User?.image?.url
           }
         />
 
