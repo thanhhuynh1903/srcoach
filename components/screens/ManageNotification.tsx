@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,15 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Switch } from 'react-native-paper';
+import {Switch} from 'react-native-paper';
 import Icon from '@react-native-vector-icons/ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import NotificationService from '../services/NotificationService';
 import useApiStore from '../utils/zustandfetchAPI';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
+import {EventRegister} from 'react-native-event-listeners';
 interface Notification {
   unread: boolean;
   type: string;
@@ -37,6 +38,62 @@ const ManageNotification = () => {
   });
   const navigation = useNavigation();
   const api = useApiStore(state => state);
+  useEffect(() => {
+    // Đăng ký lắng nghe sự kiện thông báo mới
+    const newNotificationListener = EventRegister.addEventListener(
+      'newNotification',
+      remoteMessage => {
+        console.log(
+          'Nhận thông báo mới trong ManageNotification:',
+          remoteMessage,
+        );
+        // Refresh danh sách thông báo khi có thông báo mới
+        fetchNotifications();
+      },
+    );
+
+    // Đăng ký lắng nghe sự kiện mở thông báo
+    const notificationOpenedListener = EventRegister.addEventListener(
+      'notificationOpened',
+      remoteMessage => {
+        console.log(
+          'Thông báo được mở trong ManageNotification:',
+          remoteMessage,
+        );
+        fetchNotifications();
+
+        // Xử lý điều hướng nếu cần
+        if (
+          remoteMessage.data &&
+          remoteMessage.data.targetType &&
+          remoteMessage.data.targetId
+        ) {
+          handleNotificationNavigation(remoteMessage.data);
+        }
+      },
+    );
+
+    const handleNotificationNavigation = data => {
+      switch (data.targetType) {
+        case 'post':
+          navigation.navigate('CommunityPostDetailScreen', {id: data.targetId});
+          break;
+        case 'schedule':
+          navigation.navigate('ScheduleDetailScreen', {
+            scheduleId: data.targetId,
+          });
+          break;
+        default:
+          break;
+      }
+    };
+
+    // Dọn dẹp khi component unmount
+    return () => {
+      EventRegister.removeEventListener(newNotificationListener);
+      EventRegister.removeEventListener(notificationOpenedListener);
+    };
+  }, []);
 
   // Tải trạng thái thông báo từ AsyncStorage khi component mount
   useEffect(() => {
@@ -44,9 +101,9 @@ const ManageNotification = () => {
       try {
         const notificationEnabled = await AsyncStorage.getItem('fcmToken');
         console.log('Trang thái thông báo:', notificationEnabled);
-        
+
         setIsSwitchOn(notificationEnabled ? true : false);
-        
+
         // Kiểm tra quyền thông báo
         const permissionEnabled = await NotificationService.requestPermission();
         if (!permissionEnabled && notificationEnabled === 'true') {
@@ -65,53 +122,20 @@ const ManageNotification = () => {
     loadNotificationState();
     fetchNotifications();
   }, []);
-
-  // Xử lý khi người dùng bật/tắt thông báo
-  const handleToggleNotifications = async (value : any) => {
-    try {
-      setIsSwitchOn(value);
-      await AsyncStorage.setItem('notificationsEnabled', value.toString());
-      
-      if (value) {
-        // Bật thông báo
-        const permissionEnabled = await NotificationService.requestPermission();
-        if (permissionEnabled) {
-          await NotificationService.init();
-          await NotificationService.registerDevice();
-          console.log('Đã bật thông báo và đăng ký thiết bị');
-        } else {
-          setIsSwitchOn(false);
-          await AsyncStorage.setItem('notificationsEnabled', 'false');
-          Alert.alert(
-            'Quyền thông báo bị từ chối',
-            'Vui lòng cấp quyền thông báo trong cài đặt thiết bị để nhận thông báo.',
-          );
-        }
-      } else {
-        // Tắt thông báo
-        await NotificationService.unregisterDevice();
-        console.log('Đã tắt thông báo và hủy đăng ký thiết bị');
-      }
-    } catch (error) {
-      console.error('Lỗi khi thay đổi trạng thái thông báo:', error);
-      setIsSwitchOn(!value);
-    }
-  };
-
   // Lấy danh sách thông báo từ API
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
       const response = await api.fetchData('/devices/notifications/self');
       console.log('response', response);
-      
+
       if (response && response.data) {
         // Chuyển đổi dữ liệu API thành định dạng hiển thị
         const formattedNotifications = response.data.map(notification => {
           // Xác định avatar dựa trên loại thông báo
           let avatar = 'https://i.pravatar.cc/100';
           let name = 'Hệ thống';
-          
+
           // Trích xuất tên từ tiêu đề nếu có
           if (notification.title) {
             const nameMatch = notification.title.match(/([A-Za-z\s]+) đã/);
@@ -119,7 +143,7 @@ const ManageNotification = () => {
               name = nameMatch[1].trim();
             }
           }
-          
+
           // Xác định loại icon dựa trên loại thông báo
           let iconType = 'notifications-outline';
           if (notification.type === 'post_like') {
@@ -127,7 +151,7 @@ const ManageNotification = () => {
           } else if (notification.type === 'post_comment') {
             iconType = 'chatbubble-outline';
           }
-          
+
           return {
             id: notification.id,
             avatar: avatar,
@@ -139,18 +163,21 @@ const ManageNotification = () => {
             targetId: notification.target_id,
             targetType: notification.target_type,
             title: notification.title,
-            iconType: iconType
+            iconType: iconType,
           };
         });
-        
+
         setNotifications(formattedNotifications);
-        
+
         // Tính toán số lượng thông báo cho từng tab
         const stats = {
           all: formattedNotifications.length,
           unread: formattedNotifications.filter(n => n.unread).length,
-          likes: formattedNotifications.filter(n => n.type === 'post_like').length,
-          comments: formattedNotifications.filter(n => n.type === 'post_comment').length,
+          likes: formattedNotifications.filter(n => n.type === 'post_like')
+            .length,
+          comments: formattedNotifications.filter(
+            n => n.type === 'post_comment',
+          ).length,
         };
         setNotificationStats(stats);
       }
@@ -170,23 +197,23 @@ const ManageNotification = () => {
   };
 
   // Đánh dấu thông báo đã đọc
-  const markAsRead = async (notificationId : any) => {
+  const markAsRead = async (notificationId: any) => {
     try {
       await api.putData(`/notifications/${notificationId}/read`);
-      
+
       // Cập nhật UI
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => 
-          notification.id === notificationId 
-            ? {...notification, unread: false} 
-            : notification
-        )
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notification =>
+          notification.id === notificationId
+            ? {...notification, unread: false}
+            : notification,
+        ),
       );
-      
+
       // Cập nhật số lượng thông báo chưa đọc
       setNotificationStats(prev => ({
         ...prev,
-        unread: prev.unread - 1
+        unread: prev.unread - 1,
       }));
     } catch (error) {
       console.error('Lỗi khi đánh dấu thông báo đã đọc:', error);
@@ -194,20 +221,24 @@ const ManageNotification = () => {
   };
 
   // Xử lý khi nhấn vào thông báo
-  const handleNotificationPress = (notification : any) => {
+  const handleNotificationPress = (notification: any) => {
     // Đánh dấu thông báo đã đọc
     if (notification.unread) {
       markAsRead(notification.id);
     }
-    
+
     // Điều hướng dựa trên loại thông báo
     if (notification.targetType && notification.targetId) {
       switch (notification.targetType) {
         case 'post':
-          navigation.navigate('CommunityPostDetailScreen', {id: notification.targetId});
+          navigation.navigate('CommunityPostDetailScreen', {
+            id: notification.targetId,
+          });
           break;
         case 'schedule':
-          navigation.navigate('ScheduleDetailScreen', {scheduleId: notification.targetId});
+          navigation.navigate('ScheduleDetailScreen', {
+            scheduleId: notification.targetId,
+          });
           break;
         default:
           // Không làm gì nếu không có hành động cụ thể
@@ -217,25 +248,25 @@ const ManageNotification = () => {
   };
 
   // Chuyển đổi thời gian thành định dạng "X ago"
-  const formatTimeAgo = (dateString) => {
+  const formatTimeAgo = dateString => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
-    
+
     if (diffInSeconds < 60) {
       return `${diffInSeconds}s ago`;
     }
-    
+
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     if (diffInMinutes < 60) {
       return `${diffInMinutes}m ago`;
     }
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) {
       return `${diffInHours}h ago`;
     }
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d ago`;
   };
@@ -246,9 +277,13 @@ const ManageNotification = () => {
       case 'unread':
         return notifications.filter(notification => notification.unread);
       case 'likes':
-        return notifications.filter(notification => notification.type === 'post_like');
+        return notifications.filter(
+          notification => notification.type === 'post_like',
+        );
       case 'comments':
-        return notifications.filter(notification => notification.type === 'post_comment');
+        return notifications.filter(
+          notification => notification.type === 'post_comment',
+        );
       default:
         return notifications;
     }
@@ -269,7 +304,7 @@ const ManageNotification = () => {
   const filteredNotifications = getFilteredNotifications();
 
   // Tạo biểu tượng thông báo dựa trên loại
-  const getNotificationIcon = (type : any) => {
+  const getNotificationIcon = (type: any) => {
     switch (type) {
       case 'post_like':
         return <Icon name="heart" size={16} color="#FF3B30" />;
@@ -298,27 +333,9 @@ const ManageNotification = () => {
         </View>
       </View>
 
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View
-            style={{backgroundColor: '#007AFF', padding: 5, borderRadius: 50}}>
-            <Icon name="notifications-outline" size={24} color="#FFF" />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>Push Notifications</Text>
-            <Text style={styles.subtitle}>Manage your notifications</Text>
-          </View>
-        </View>
-        <Switch
-          value={isSwitchOn}
-          onValueChange={handleToggleNotifications}
-        />
-      </View>
-
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.manageButton}
-        onPress={openNotificationSettings}
-      >
+        onPress={openNotificationSettings}>
         <Text style={styles.manageButtonText}>Manage Notifications</Text>
       </TouchableOpacity>
 
@@ -334,7 +351,14 @@ const ManageNotification = () => {
                 activeTab === tab.id && styles.activeTabText,
               ]}>
               {tab.label}
-              {tab.count > 0 && <Text style={styles.tabCount}> {"("}{tab.count}{")"}</Text>}
+              {tab.count > 0 && (
+                <Text style={styles.tabCount}>
+                  {' '}
+                  {'('}
+                  {tab.count}
+                  {')'}
+                </Text>
+              )}
             </Text>
           </TouchableOpacity>
         ))}
@@ -344,17 +368,20 @@ const ManageNotification = () => {
         style={[styles.notificationList, {backgroundColor: '#F2F2F7'}]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+        }>
         {isLoading && !refreshing ? (
-          <ActivityIndicator style={styles.loader} size="large" color="#007AFF" />
+          <ActivityIndicator
+            style={styles.loader}
+            size="large"
+            color="#007AFF"
+          />
         ) : filteredNotifications.length > 0 ? (
           filteredNotifications.map(notification => (
             <TouchableOpacity
               key={notification.id}
               style={[
-                styles.notificationItem, 
-                notification.unread && styles.unreadItem
+                styles.notificationItem,
+                notification.unread && styles.unreadItem,
               ]}
               onPress={() => handleNotificationPress(notification)}>
               <View style={styles.iconContainer}>
@@ -418,7 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#052658',
     marginHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 18,
+    marginVertical: 18,
     borderRadius: 8,
     alignItems: 'center',
   },

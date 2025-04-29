@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch
 import Icon from "@react-native-vector-icons/ionicons"
 import { format } from "date-fns"
 import { US } from "date-fns/locale"
+
 interface TrainingSession {
   description: string
   start_time: string
@@ -10,6 +11,8 @@ interface TrainingSession {
   goal_steps: number
   goal_distance: number
   goal_calories: number
+  goal_minbpms: number  
+  goal_maxbpms: number  
 }
 
 interface DailySchedule {
@@ -34,7 +37,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       end_time: "08:00",
       goal_steps: 5000,
       goal_distance: 5,
-      goal_calories: 300
+      goal_calories: 300,
+      goal_minbpms: 120,  
+      goal_maxbpms: 150  
     },
     afternoon: {
       description: "afternoon",
@@ -42,7 +47,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       end_time: "17:00",
       goal_steps: 8000,
       goal_distance: 8,
-      goal_calories: 500
+      goal_calories: 500,
+      goal_minbpms: 130, 
+      goal_maxbpms: 160   
     },
     evening: {
       description: "evening",
@@ -50,7 +57,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       end_time: "20:00",
       goal_steps: 6000,
       goal_distance: 6,
-      goal_calories: 400
+      goal_calories: 400,
+      goal_minbpms: 125, 
+      goal_maxbpms: 155  
     }
   }
 
@@ -66,7 +75,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
             end_time: session.end_time,
             goal_steps: typeof session.goal_steps === 'string' ? parseInt(session.goal_steps) : session.goal_steps,
             goal_distance: typeof session.goal_distance === 'string' ? parseFloat(session.goal_distance) : session.goal_distance,
-            goal_calories: typeof session.goal_calories === 'string' ? parseInt(session.goal_calories) : session.goal_calories
+            goal_calories: typeof session.goal_calories === 'string' ? parseInt(session.goal_calories) : session.goal_calories,
+            goal_minbpms: typeof session.goal_minbpms === 'string' ? parseInt(session.goal_minbpms) : session.goal_minbpms,
+            goal_maxbpms: typeof session.goal_maxbpms === 'string' ? parseInt(session.goal_maxbpms) : session.goal_maxbpms
           };
         })
       };
@@ -129,7 +140,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       end_time: `${date}T${defaultSessions.afternoon.end_time}:00.000Z`,
       goal_steps: Number(defaultSessions.afternoon.goal_steps),
       goal_distance: Number(defaultSessions.afternoon.goal_distance),
-      goal_calories: Number(defaultSessions.afternoon.goal_calories)
+      goal_calories: Number(defaultSessions.afternoon.goal_calories),
+      goal_minbpms: Number(defaultSessions.afternoon.goal_minbpms),
+      goal_maxbpms: Number(defaultSessions.afternoon.goal_maxbpms)
     })
     
     setDailySchedule(newSchedule)
@@ -159,7 +172,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       const [hours, minutes] = value.split(':')
       const timeString = `${date}T${hours}:${minutes}:00.000Z`
       session[field] = timeString
-    } else if (field === 'goal_steps' || field === 'goal_calories') {
+    } else if (field === 'goal_steps' || field === 'goal_calories' || field === 'goal_minbpms' || field === 'goal_maxbpms') {
       // Đảm bảo các giá trị số nguyên được lưu dưới dạng số, không phải chuỗi
       session[field] = parseInt(value) || 0
     } else if (field === 'goal_distance') {
@@ -314,6 +327,39 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
                           keyboardType="numeric"
                         />
                         <Text style={styles.goalUnit}>Step</Text>
+                      </View>
+                    </View>
+                    
+                    {/* Heart Rate BPM Range */}
+                    <View style={styles.goalRow}>
+                      <View style={styles.goalIconContainer}>
+                        <Icon name="heart" size={16} color="#0F2B5B" />
+                      </View>
+                      <Text style={styles.goalLabel}>Min Heart Rate</Text>
+                      <View style={styles.goalInputWrapper}>
+                        <TextInput
+                          style={styles.goalInput}
+                          value={session.goal_minbpms.toString()}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'goal_minbpms', parseInt(value) || 0)}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.goalUnit}>bpm</Text>
+                      </View>
+                    </View>
+                    
+                    <View style={styles.goalRow}>
+                      <View style={styles.goalIconContainer}>
+                        <Icon name="heart-half" size={16} color="#0F2B5B" />
+                      </View>
+                      <Text style={styles.goalLabel}>Max Heart Rate</Text>
+                      <View style={styles.goalInputWrapper}>
+                        <TextInput
+                          style={styles.goalInput}
+                          value={session.goal_maxbpms.toString()}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, 'goal_maxbpms', parseInt(value) || 0)}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.goalUnit}>bpm</Text>
                       </View>
                     </View>
                     

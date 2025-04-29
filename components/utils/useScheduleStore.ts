@@ -13,6 +13,8 @@ export interface TrainingSession {
   goal_steps: number;
   goal_distance: number;
   goal_calories: number;
+  goal_minbpms: number;
+  goal_maxbpms: number;
 }
 
 export interface DailySchedule {
@@ -103,7 +105,7 @@ const useScheduleStore = create<ScheduleState>()(
           const payload = scheduleData?.user_id ? {
             title: scheduleData.title || '',
             description: scheduleData.description || '',
-            user_id: scheduleData.user_id, // Sẽ được cập nhật bởi backend
+            user_id: scheduleData.user_id,
             days: scheduleData.days || [], 
           } : {
             title: scheduleData.title || '',

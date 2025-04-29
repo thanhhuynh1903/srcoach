@@ -103,6 +103,8 @@ const GenerateScheduleScreen = () => {
             calories: detail.goal_calories || 0,
             status: detail.status,
             id: detail.id,
+            minbpm: detail.goal_minbpms || 0,
+            maxbpm: detail.goal_maxbpms || 0,
           };
         }),
       };
@@ -295,11 +297,7 @@ const GenerateScheduleScreen = () => {
   );
 };
 
-// Update the styles to make the UI more modern and user-friendly
-// Add subtle animations and improved visual hierarchy
-// Enhance the tab navigation, action buttons, and schedule cards
-
-// Update the header styling
+// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

@@ -9,7 +9,9 @@ interface Workout {
   steps: number;
   distance: number;
   calories: number;
-  status: string; // Added status property
+  status: string;
+  minbpm?: number;
+  maxbpm?: number;
 }
 
 interface DaySchedule {
@@ -26,8 +28,8 @@ interface ScheduleCardProps {
   selectedDay: number;
   alarmEnabled: boolean;
   isExpertChoice: boolean;
-  daySchedules?: DaySchedule[]; // Added daySchedules prop
-  status :  string;
+  daySchedules?: DaySchedule[];
+  status: string;
 }
 
 const EnhancedScheduleCard = ({
@@ -39,7 +41,7 @@ const EnhancedScheduleCard = ({
   selectedDay: initialSelectedDay,
   alarmEnabled: initialAlarmEnabled,
   isExpertChoice,
-  daySchedules = [], // Default to empty array
+  daySchedules = [],
   status,
 }: ScheduleCardProps) => {
   const navigation = useNavigation();
@@ -63,7 +65,6 @@ const EnhancedScheduleCard = ({
   };
 
   const getMonthFromStartDate = () => {
-    172 / 5.0;
     const months = [
       'January',
       'February',
@@ -87,6 +88,7 @@ const EnhancedScheduleCard = ({
 
     return 'Current month';
   };
+
   const getStatusColor = () => {
     switch (status) {
       case 'COMPLETED':
@@ -98,6 +100,18 @@ const EnhancedScheduleCard = ({
       default:
         return '#64748B'; // Xám
     }
+  };
+
+  // Get heart rate zone color
+  const getHeartRateColor = (minbpm?: number, maxbpm?: number) => {
+    if (!minbpm || !maxbpm) return '#3B82F6';
+    
+    const avgBpm = (minbpm + maxbpm) / 2;
+    
+    if (avgBpm < 120) return '#22C55E'; // Light - Green
+    if (avgBpm < 140) return '#3B82F6'; // Moderate - Blue
+    if (avgBpm < 160) return '#F59E0B'; // Vigorous - Orange
+    return '#EF4444'; // Maximum - Red
   };
 
   return (
@@ -177,6 +191,54 @@ const EnhancedScheduleCard = ({
                   }}>
                   <Text style={styles.sessionName}>{workout.name}</Text>
                 </View>
+
+                {/* Enhanced Heart Rate Target Section */}
+                {(workout.minbpm || workout.maxbpm) && (
+                  <View style={styles.heartRateContainer}>
+                    <View style={styles.heartRateHeader}>
+                      <View style={[
+                        styles.heartRateIconContainer,
+                        {backgroundColor: `${getHeartRateColor(workout.minbpm, workout.maxbpm)}20`}
+                      ]}>
+                        <Icon 
+                          name="heart" 
+                          size={16} 
+                          color={getHeartRateColor(workout.minbpm, workout.maxbpm)} 
+                        />
+                      </View>
+                      <Text style={styles.heartRateTitle}>Heart Rate Target</Text>
+                    </View>
+
+                    {/* Improved BPM Range Display */}
+                    <View style={styles.bpmCardContainer}>
+                      <View style={[
+                        styles.bpmCard, 
+                        styles.minBpmCard,
+                        {borderColor: getHeartRateColor(workout.minbpm, workout.maxbpm)}
+                      ]}>
+                        <Text style={styles.bpmValue}>{workout.minbpm || 100}</Text>
+                        <Text style={styles.bpmLabel}>Min BPM</Text>
+                      </View>
+                      
+                      <View style={styles.bpmConnector}>
+                        <View style={[
+                          styles.bpmConnectorLine,
+                          {backgroundColor: getHeartRateColor(workout.minbpm, workout.maxbpm)}
+                        ]} />
+                      </View>
+                      
+                      <View style={[
+                        styles.bpmCard, 
+                        styles.maxBpmCard,
+                        {borderColor: getHeartRateColor(workout.minbpm, workout.maxbpm)}
+                      ]}>
+                        <Text style={styles.bpmValue}>{workout.maxbpm || 180}</Text>
+                        <Text style={styles.bpmLabel}>Max BPM</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
                 {/* Stats */}
                 <View style={styles.statsContainer}>
                   {/* Steps */}
@@ -425,6 +487,86 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '500',
+  },
+
+  // Enhanced styles for heart rate section
+  heartRateContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#EF4444',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  heartRateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  heartRateIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  heartRateTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    flex: 1,
+  },
+  
+  // New improved BPM display
+  bpmCardContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  bpmCard: {
+    width: '40%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  minBpmCard: {
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+  },
+  maxBpmCard: {
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+  },
+  bpmValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  bpmLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  bpmConnector: {
+    width: '20%',
+    height: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bpmConnectorLine: {
+    height: 2,
+    width: '100%',
+    backgroundColor: '#3B82F6',
   },
 });
 

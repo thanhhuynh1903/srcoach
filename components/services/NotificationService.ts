@@ -4,7 +4,7 @@ import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid } from 'react-native';
 import useApiStore from '../utils/zustandfetchAPI';
-
+import { EventRegister } from 'react-native-event-listeners';
 class NotificationService {
   private token: string | null = null;
   private messageUnsubscribe: any = null;
@@ -205,9 +205,10 @@ class NotificationService {
     // Xử lý thông báo khi ứng dụng đang mở
     this.messageUnsubscribe = messaging().onMessage(async remoteMessage => {
       console.log('Nhận thông báo khi app đang mở:', remoteMessage);
-
+      EventRegister.emit('newNotification', remoteMessage);
       // Hiển thị thông báo bằng notifee
       await this.displayNotification(remoteMessage);
+
     });
 
     return this.messageUnsubscribe;
@@ -260,6 +261,7 @@ class NotificationService {
     // Khi ứng dụng đang chạy nền và người dùng nhấn vào thông báo
     messaging().onNotificationOpenedApp(remoteMessage => {
       console.log('Thông báo đã được mở khi app đang chạy nền:', remoteMessage);
+      EventRegister.emit('notificationOpened', remoteMessage);
       // Xử lý điều hướng dựa trên dữ liệu thông báo
       this.handleNotificationNavigation(remoteMessage, navigation);
     });
@@ -270,6 +272,7 @@ class NotificationService {
       .then(remoteMessage => {
         if (remoteMessage) {
           console.log('Ứng dụng được mở từ thông báo:', remoteMessage);
+          EventRegister.emit('notificationOpened', remoteMessage);
           // Xử lý điều hướng dựa trên dữ liệu thông báo
           this.handleNotificationNavigation(remoteMessage, navigation);
         }
