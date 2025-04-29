@@ -22,7 +22,13 @@ import {EventRegister} from 'react-native-event-listeners';
 interface Notification {
   unread: boolean;
   type: string;
-  // Add other properties here
+  message: string
+  time: string;
+  targetId: string;
+  targetType: string;
+  title: string;
+  iconType: string;
+  id: string;
 }
 const ManageNotification = () => {
   const [isSwitchOn, setIsSwitchOn] = useState(false);
@@ -367,7 +373,7 @@ const ManageNotification = () => {
               </View>
               <View style={styles.notificationContent}>
                 <Text style={styles.notificationTitle} numberOfLines={1}>
-                  {notification.title || 'Thông báo mới'}
+                  {notification.title || 'New announcement'}
                 </Text>
                 <Text style={styles.notificationText} numberOfLines={2}>
                   {notification.message}
@@ -383,9 +389,9 @@ const ManageNotification = () => {
         ) : (
           <View style={styles.emptyContainer}>
             <Icon name="notifications-off-outline" size={50} color="#C7C7CC" />
-            <Text style={styles.emptyText}>Chưa có thông báo nào</Text>
+            <Text style={styles.emptyText}>No announcements yet</Text>
             <Text style={styles.emptySubtext}>
-              Chúng tôi sẽ thông báo cho bạn khi có điều gì đó quan trọng xảy ra
+            We will notify you when something important happens.
             </Text>
           </View>
         )}
