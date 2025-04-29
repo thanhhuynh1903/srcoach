@@ -178,7 +178,7 @@ const DeviceNotificationScreen = ({ navigation }) => {
                 onValueChange={() => toggleSwitch('overall')}
                 trackColor={{ false: "#767577", true: theme.colors.primaryLight }}
                 thumbColor={notificationSettings.overall && hasNotificationPermission ? theme.colors.primary : "#f4f3f4"}
-                disabled={!hasNotificationPermission}
+                disabled={true}
               />
             </View>
 
