@@ -17,6 +17,7 @@ import {CommonActions, useFocusEffect} from '@react-navigation/native';
 import CommonDialog from '../commons/CommonDialog';
 import {CommonAvatar} from '../commons/CommonAvatar';
 import NotificationService from '../services/NotificationService';
+import { capitalizeFirstLetter } from '../utils/utils_format';
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
   const {clearAll, clear, profile} = useLoginStore();
@@ -57,9 +58,6 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       setShowRecruitDialog(true);
     }
   };
-
-  const capitalizeFirstLetter = (str: string) =>
-    str.charAt(0).toUpperCase() + str.slice(1);
 
   const logoutButtons = [
     {

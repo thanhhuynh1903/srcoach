@@ -49,19 +49,19 @@ import UserCertificatesAlreadyExistsScreen from '../screens/SettingsScreens/User
 import UserCertificatesExpertScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesExpertsScreen';
 import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen';
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
-import ChatsScreen from '../screens/ChatsScreen/ChatsScreen';
+import ChatsScreen from '../screens/ChatsScreens/ChatsHome/ChatsScreen';
 import ExerciseRecordsScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsScreen';
-import ChatsUserInviRunnerScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviRunnerScreen';
-import ChatsUserInviExpertScreen from '../screens/ChatsScreen/ChatsUserInvitation/ChatsUserInviExpertScreen';
-import ChatsRunnerMessageScreen from '../screens/ChatsScreen/ChatsRunnerPOV/ChatsRunnerMessageScreen';
-import ChatsExpertMessageScreen from '../screens/ChatsScreen/ChatsExpertPOV/ChatsExpertMessageScreen';
-import ChatsUserSearchScreen from '../screens/ChatsScreen/ChatsUserSearch/ChatsUserSearchScreen';
-import ChatsSearchAllMessagesScreen from '../screens/ChatsScreen/ChatsSearch/ChatsSearchAllMessagesScreen';
-import ChatsSearchSessionMessagesScreen from '../screens/ChatsScreen/ChatsSearch/ChatsSearchSessionMessagesScreen';
+import ChatsUserInviRunnerScreen from '../screens/ChatsScreens/ChatsUserInvitation/ChatsUserInviRunnerScreen';
+import ChatsUserInviExpertScreen from '../screens/ChatsScreens/ChatsUserInvitation/ChatsUserInviExpertScreen';
+import ChatsRunnerMessageScreen from '../screens/ChatsScreens/ChatsRunnerPOV/ChatsRunnerMessageScreen';
+import ChatsExpertMessageScreen from '../screens/ChatsScreens/ChatsExpertPOV/ChatsExpertMessageScreen';
+import ChatsUserSearchScreen from '../screens/ChatsScreens/ChatsUserSearch/ChatsUserSearchScreen';
+import ChatsSearchAllMessagesScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchAllMessagesScreen';
+import ChatsSearchSessionMessagesScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchSessionMessagesScreen';
 import OtherProfileScreen from '../screens/OtherProfileScreen';
 import ExerciseRecordsFullMapScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsFullMapScreen';
 import ExerciseRecordsDetailScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsDetailScreen';
-import CRMessageItemExerciseRecordDetail from '../screens/ChatsScreen/ChatsMessageItems/CRMessageItemExerciseRecordDetail';
+import CRMessageItemExerciseRecordDetail from '../screens/ChatsScreens/ChatsMessageItems/CRMessageItemExerciseRecordDetail';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [

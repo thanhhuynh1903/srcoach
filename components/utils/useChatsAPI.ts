@@ -160,7 +160,7 @@ export const unblockUser = async (userIdToUnblock: any): Promise<any> => {
 // Get blocked users
 export const getBlockedUsers = async (): Promise<any> => {
   try {
-    const response = await api.get('/chats/blocked-users');
+    const response = await api.get('/chats/blocked');
     return response.data;
   } catch (error: any) {
     return {

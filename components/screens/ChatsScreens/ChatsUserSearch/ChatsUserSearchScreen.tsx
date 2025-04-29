@@ -15,6 +15,7 @@ import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {searchUsers, searchExperts} from '../../../utils/useChatsAPI';
 import {theme} from '../../../contants/theme';
 import { CommonAvatar } from '../../../commons/CommonAvatar';
+import { capitalizeFirstLetter } from '../../../utils/utils_format';
 
 const RunnerItem = ({item}: {item: any}) => {
   const navigation = useNavigation();
@@ -28,7 +29,7 @@ const RunnerItem = ({item}: {item: any}) => {
       : null;
 
   const userLevel = item.user_level
-    ? item.user_level.charAt(0).toUpperCase() + item.user_level.slice(1)
+    ? capitalizeFirstLetter(item.user_level)
     : '';
 
   const onPress = () => {
@@ -46,7 +47,7 @@ const RunnerItem = ({item}: {item: any}) => {
         <CommonAvatar 
           mode="runner" 
           size={52} 
-          uri={item.profile_picture || `https://ui-avatars.com/api/?name=${item.name}&background=random`}
+          uri={item.User?.image?.url}
         />
 
         <View style={styles.textContainer}>
@@ -63,41 +64,21 @@ const RunnerItem = ({item}: {item: any}) => {
 
             {userLevel && (
               <View style={styles.metaItem}>
-                <Icon name="star" size={14} color="#FFD700" />
+                <Icon name="medal" size={14} color="#FFD700" />
                 <Text style={styles.metaText}>{userLevel}</Text>
-              </View>
-            )}
-
-            {item.status && (
-              <View style={styles.metaItem}>
-                <Icon name="checkmark-circle" size={14} color={statusColor} />
-                <Text style={styles.metaText}>
-                  {item.status.charAt(0).toUpperCase() +
-                    item.status.slice(1).toLowerCase()}
-                </Text>
               </View>
             )}
           </View>
         </View>
 
-        <View style={styles.rightContainer}>
-          {statusColor && (
-            <View style={[styles.statusChip, {backgroundColor: statusColor}]}>
-              <Text style={styles.statusText}>
-                {item.status.charAt(0).toUpperCase() +
-                  item.status.slice(1).toLowerCase()}
-              </Text>
-            </View>
-          )}
-          {item.archived && (
-            <Icon
-              name="archive-outline"
-              size={18}
-              color="#9E9E9E"
-              style={styles.archiveIcon}
-            />
-          )}
-        </View>
+        {statusColor && (
+          <View style={[styles.statusChip, {backgroundColor: statusColor}]}>
+            <Text style={styles.statusText}>
+              {item.status.charAt(0).toUpperCase() +
+                item.status.slice(1).toLowerCase()}
+            </Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -126,20 +107,23 @@ const ExpertItem = ({item}: {item: any}) => {
 
   return (
     <TouchableOpacity
-      style={styles.listItem}
+      style={[styles.listItem, styles.expertItem]}
       onPress={onPress}
       disabled={item.status !== null}>
       <View style={styles.listItemContent}>
         <CommonAvatar 
           mode="expert" 
           size={52} 
-          uri={item.profile_picture || `https://ui-avatars.com/api/?name=${item.name}&background=random`}
+          uri={item.User?.image?.url || `https://ui-avatars.com/api/?name=${item.name}&background=random`}
+          borderColor="#FFD700"
+          borderWidth={2}
         />
 
         <View style={styles.textContainer}>
           <View style={styles.nameRow}>
-            <Text style={styles.name}>{item.name}</Text>
+            <Text style={[styles.name, styles.expertName]}>{item.name}</Text>
             <Text style={styles.username}>@{item.username}</Text>
+            <Icon name="trophy" size={16} color="#FFD700" style={styles.expertBadge} />
           </View>
 
           <View style={styles.metaContainer}>
@@ -150,41 +134,21 @@ const ExpertItem = ({item}: {item: any}) => {
 
             {userLevel && (
               <View style={styles.metaItem}>
-                <Icon name="star" size={14} color="#FFD700" />
+                <Icon name="medal" size={14} color="#FFD700" />
                 <Text style={styles.metaText}>{userLevel}</Text>
-              </View>
-            )}
-
-            {item.status && (
-              <View style={styles.metaItem}>
-                <Icon name="checkmark-circle" size={14} color={statusColor} />
-                <Text style={styles.metaText}>
-                  {item.status.charAt(0).toUpperCase() +
-                    item.status.slice(1).toLowerCase()}
-                </Text>
               </View>
             )}
           </View>
         </View>
 
-        <View style={styles.rightContainer}>
-          {statusColor && (
-            <View style={[styles.statusChip, {backgroundColor: statusColor}]}>
-              <Text style={styles.statusText}>
-                {item.status.charAt(0).toUpperCase() +
-                  item.status.slice(1).toLowerCase()}
-              </Text>
-            </View>
-          )}
-          {item.archived && (
-            <Icon
-              name="archive-outline"
-              size={18}
-              color="#9E9E9E"
-              style={styles.archiveIcon}
-            />
-          )}
-        </View>
+        {statusColor && (
+          <View style={[styles.statusChip, {backgroundColor: statusColor}]}>
+            <Text style={styles.statusText}>
+              {item.status.charAt(0).toUpperCase() +
+                item.status.slice(1).toLowerCase()}
+            </Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -260,10 +224,11 @@ export default function ChatsUserSearchScreen() {
   );
 
   const renderItem = ({item}: {item: any}) => {
-    if (item.roles.includes('expert')) {
-      return <ExpertItem item={item} />;
-    }
-    return <RunnerItem item={item} />;
+    return item.roles.includes('expert') ? (
+      <ExpertItem item={item} />
+    ) : (
+      <RunnerItem item={item} />
+    );
   };
 
   return (
@@ -387,6 +352,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  expertItem: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
   listItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,6 +376,9 @@ const styles = StyleSheet.create({
     color: '#333',
     marginRight: 8,
   },
+  expertName: {
+    color: '#FFA000',
+  },
   username: {
     fontSize: 14,
     color: '#888',
@@ -426,23 +398,18 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: '500',
   },
-  rightContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   statusChip: {
     borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginRight: 8,
   },
   statusText: {
     fontSize: 12,
     color: 'white',
     fontWeight: 'bold',
   },
-  archiveIcon: {
-    marginLeft: 4,
+  expertBadge: {
+    marginLeft: 8,
   },
   skeletonContainer: {
     padding: 12,
