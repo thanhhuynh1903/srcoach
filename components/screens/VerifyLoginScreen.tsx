@@ -15,7 +15,7 @@ import BackButton from '../BackButton';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import useAuthStore from '../utils/useAuthStore';
-
+import NotificationService from '../services/NotificationService';
 interface VerifyParam {
   emailLabel: string;
   password: string;
@@ -39,8 +39,19 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
   const {loadToken, token} = useAuthStore();
   const {emailLabel, password} = route.params as VerifyParam;
 
+  const setupNotifications = async () => {
+    try {
+      console.log('Đang khởi tạo dịch vụ thông báo...');
+      await NotificationService.init();
+      await NotificationService.setupNotificationOpenHandlers(navigation);
+      console.log('Đã khởi tạo dịch vụ thông báo thành công');
+    } catch (error) {
+      console.error('Lỗi khi thiết lập thông báo:', error);
+    }
+  };
   // Initialize refs array
   useEffect(() => {
+    ResendCode(emailLabel); // Resend code when component mounts
     if (Array.isArray(inputRefs.current)) {
       inputRefs.current = inputRefs.current.slice(0, 6);
     }
@@ -86,8 +97,8 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
 
       // 3. Load token directly from storage
       const storedToken = await loadToken();
-
       if (storedToken) {
+        await setupNotifications(); 
         navigation.reset({
           index: 0,
           routes: [{name: 'HomeTabs' as never}],
@@ -124,8 +135,7 @@ const VerifyLoginScreen = ({navigation}: {navigation: any}) => {
 
       {/* Header with back button */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}>
+        <TouchableOpacity style={styles.backButton}>
           <BackButton size={26} />
         </TouchableOpacity>
       </View>
