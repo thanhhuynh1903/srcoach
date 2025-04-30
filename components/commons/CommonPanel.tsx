@@ -42,6 +42,7 @@ interface CommonPanelProps {
   backdropOpacity?: number;
   swipeToClose?: boolean;
   animationDuration?: number;
+  borderRadius?: number;
 }
 
 const CommonPanel: React.FC<CommonPanelProps> = ({
@@ -60,19 +61,24 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
   backdropOpacity = 0.5,
   swipeToClose = true,
   animationDuration = 300,
+  borderRadius = 16,
 }) => {
   const translateValue = React.useRef(new Animated.Value(0)).current;
   const [panelDimensions, setPanelDimensions] = React.useState({ width: 0, height: 0 });
 
-  const getPanelStyle = () => {
+  const getPanelStyle = (): Animated.WithAnimatedObject<ViewStyle> => {
     const isHorizontal = direction === 'left' || direction === 'right';
     const fullDimension = isHorizontal ? Dimensions.get('window').width : Dimensions.get('window').height;
 
-    const baseStyle = {
+    const baseStyle: ViewStyle = {
       width: isHorizontal ? width : '100%',
       height: isHorizontal ? '100%' : height,
-      position: 'absolute' as const,
+      position: 'absolute',
       backgroundColor: 'white',
+      borderTopLeftRadius: direction === 'bottom' ? borderRadius : 0,
+      borderTopRightRadius: direction === 'bottom' ? borderRadius : 0,
+      borderBottomLeftRadius: direction === 'top' ? borderRadius : 0,
+      borderBottomRightRadius: direction === 'top' ? borderRadius : 0,
     };
 
     const transformConfig = {
@@ -94,76 +100,117 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
     };
   };
 
-  const animatePanel = (show: boolean) => {
+  const animatePanel = React.useCallback((show: boolean) => {
     Animated.timing(translateValue, {
       toValue: show ? 1 : 0,
       duration: animationDuration,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  };
+  }, [animationDuration, translateValue]);
 
   React.useEffect(() => {
     if (visible) {
       animatePanel(true);
     }
-  }, [visible]);
+  }, [visible, animatePanel]);
 
-  const handleClose = () => {
+  const handleClose = React.useCallback(() => {
     animatePanel(false);
     setTimeout(() => onClose(), animationDuration);
-  };
+  }, [animatePanel, animationDuration, onClose]);
 
-  const handleBackdropPress = () => {
+  const handleBackdropPress = React.useCallback(() => {
     if (closeOnBackdropPress) {
       handleClose();
     }
-  };
+  }, [closeOnBackdropPress, handleClose]);
 
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => swipeToClose,
-      onPanResponderMove: (evt, gestureState) => {
-        if (!swipeToClose) return;
-        
-        const isHorizontal = direction === 'left' || direction === 'right';
-        const moveDistance = isHorizontal ? gestureState.dx : gestureState.dy;
-        
-        if (
-          (direction === 'top' && moveDistance > 0) ||
-          (direction === 'bottom' && moveDistance < 0) ||
-          (direction === 'left' && moveDistance > 0) ||
-          (direction === 'right' && moveDistance < 0)
-        ) {
-          const ratio = Math.min(Math.abs(moveDistance) / (isHorizontal ? panelDimensions.width : panelDimensions.height), 1);
-          translateValue.setValue(1 - ratio);
-        }
-      },
-      onPanResponderRelease: (evt, gestureState) => {
-        if (!swipeToClose) return;
-        
-        const isHorizontal = direction === 'left' || direction === 'right';
-        const moveDistance = isHorizontal ? gestureState.dx : gestureState.dy;
-        const threshold = 0.3 * (isHorizontal ? panelDimensions.width : panelDimensions.height);
-        
-        if (
-          (direction === 'top' && moveDistance > threshold) ||
-          (direction === 'bottom' && moveDistance < -threshold) ||
-          (direction === 'left' && moveDistance > threshold) ||
-          (direction === 'right' && moveDistance < -threshold)
-        ) {
-          handleClose();
-        } else {
-          animatePanel(true);
-        }
-      },
-    })
-  ).current;
+  const panResponder = React.useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => swipeToClose,
+    onPanResponderMove: (evt, gestureState) => {
+      if (!swipeToClose) return;
+      
+      const isHorizontal = direction === 'left' || direction === 'right';
+      const moveDistance = isHorizontal ? gestureState.dx : gestureState.dy;
+      
+      if (
+        (direction === 'top' && moveDistance > 0) ||
+        (direction === 'bottom' && moveDistance < 0) ||
+        (direction === 'left' && moveDistance > 0) ||
+        (direction === 'right' && moveDistance < 0)
+      ) {
+        const ratio = Math.min(Math.abs(moveDistance) / (isHorizontal ? panelDimensions.width : panelDimensions.height), 1);
+        translateValue.setValue(1 - ratio);
+      }
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      if (!swipeToClose) return;
+      
+      const isHorizontal = direction === 'left' || direction === 'right';
+      const moveDistance = isHorizontal ? gestureState.dx : gestureState.dy;
+      const threshold = 0.3 * (isHorizontal ? panelDimensions.width : panelDimensions.height);
+      
+      if (
+        (direction === 'top' && moveDistance > threshold) ||
+        (direction === 'bottom' && moveDistance < -threshold) ||
+        (direction === 'left' && moveDistance > threshold) ||
+        (direction === 'right' && moveDistance < -threshold)
+      ) {
+        handleClose();
+      } else {
+        animatePanel(true);
+      }
+    },
+  }), [swipeToClose, direction, panelDimensions, translateValue, handleClose, animatePanel]);
 
-  const onLayout = (event: any) => {
+  const onLayout = React.useCallback((event: any) => {
     const { width, height } = event.nativeEvent.layout;
     setPanelDimensions({ width, height });
-  };
+  }, []);
+
+  const renderActionButton = (button: ActionButton, index: number) => (
+    <TouchableOpacity
+      key={index}
+      onPress={() => button.handler()}
+      style={[
+        styles.button,
+        button.variant === 'outlined' && styles.outlinedButton,
+        button.variant === 'contained' && styles.containedButton,
+        button.variant === 'contained' && {
+          backgroundColor: button.color || theme.colors.primaryDark,
+        },
+        button.variant === 'outlined' && {
+          borderColor: button.color || theme.colors.primaryDark,
+        },
+      ]}
+    >
+      {button.iconName && (
+        <Ionicons
+          name={button.iconName}
+          size={16}
+          color={
+            button.variant === 'contained'
+              ? 'white'
+              : button.color || theme.colors.primaryDark
+          }
+          style={styles.buttonIcon}
+        />
+      )}
+      <Text
+        style={[
+          styles.buttonText,
+          (button.variant === 'outlined' || button.variant === 'contained') && {
+            color: button.color || theme.colors.primaryDark,
+          },
+          button.variant === 'contained' && { color: 'white' },
+          button.iconName && { marginLeft: 6 },
+        ]}
+      >
+        {button.label}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <Modal
@@ -179,66 +226,25 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
             onLayout={onLayout}
             {...panResponder.panHandlers}
           >
-            {/* Header */}
-            <View style={[styles.header, direction === 'bottom' ? { borderBottomWidth: 0 } : {}]}>
-              <Text style={[styles.title, titleStyle]}>{title}</Text>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Content */}
-            <View style={[styles.content, contentStyle]}>{content}</View>
-
-            {/* Action Buttons */}
-            {actionButtons.length > 0 && (
-              <View style={[styles.buttonContainer, buttonContainerStyle]}>
-                {actionButtons.map((button, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => {
-                      button.handler();
-                    }}
-                    style={[
-                      styles.button,
-                      button.variant === 'outlined' && styles.outlinedButton,
-                      button.variant === 'contained' && styles.containedButton,
-                      button.variant === 'contained' && {
-                        backgroundColor: button.color || theme.colors.primaryDark,
-                      },
-                      button.variant === 'outlined' && {
-                        borderColor: button.color || theme.colors.primaryDark,
-                      },
-                    ]}
-                  >
-                    {button.iconName && (
-                      <Ionicons
-                        name={button.iconName}
-                        size={16}
-                        color={
-                          button.variant === 'contained'
-                            ? 'white'
-                            : button.color || theme.colors.primaryDark
-                        }
-                        style={styles.buttonIcon}
-                      />
-                    )}
-                    <Text
-                      style={[
-                        styles.buttonText,
-                        (button.variant === 'outlined' || button.variant === 'contained') && {
-                          color: button.color || theme.colors.primaryDark,
-                        },
-                        button.variant === 'contained' && { color: 'white' },
-                        button.iconName && { marginLeft: 6 },
-                      ]}
-                    >
-                      {button.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            <View style={styles.panelContainer}>
+              {/* Header */}
+              <View style={[styles.header, direction === 'bottom' ? { borderBottomWidth: 0 } : {}]}>
+                <Text style={[styles.title, titleStyle]}>{title}</Text>
+                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+                  <Ionicons name="close" size={24} color="#ffffff" />
+                </TouchableOpacity>
               </View>
-            )}
+
+              {/* Content */}
+              <View style={[styles.content, contentStyle]}>{content}</View>
+
+              {/* Action Buttons */}
+              {actionButtons.length > 0 && (
+                <View style={[styles.buttonContainer, buttonContainerStyle]}>
+                  {actionButtons.map(renderActionButton)}
+                </View>
+              )}
+            </View>
           </Animated.View>
         </View>
       </TouchableWithoutFeedback>
@@ -250,6 +256,10 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
+  },
+  panelContainer: {
+    flex: 1,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,111 +6,189 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {useLoginStore} from './utils/useLoginStore';
 import {CommonAvatar} from './commons/CommonAvatar';
-import {theme} from './contants/theme';
 
 const HomeHeader = () => {
   const {profile} = useLoginStore();
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-  const currentTime = new Date().toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const [time, setTime] = useState({current: '', date: ''});
+  const [searchIndex, setSearchIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
 
-  const isExpert = profile?.roles?.includes('expert');
-  const isRunner = profile?.roles?.includes('runner') && !isExpert;
+  const searchPlaceholders = [
+    'Search for experts...',
+    'Search for posts...',
+    'Search for runners...',
+  ];
+  const roles = {
+    expert: {text: 'Expert', icon: 'trophy', color: '#FFD700'},
+    runner: {text: 'Runner', icon: 'walk', color: '#00FF00'},
+    default: {
+      text: profile?.roles[0]
+        ? `${profile.roles[0][0].toUpperCase()}${profile.roles[0].slice(1)}`
+        : 'Member',
+      icon: 'star',
+      color: '#FFFFFF',
+    },
+  };
 
-  const getRoleText = () => {
-    if (isExpert) return 'Expert';
-    if (isRunner) return 'Runner';
-    return (
-      profile?.roles[0]?.charAt(0)?.toUpperCase() +
-        profile?.roles[0]?.slice(1) || 'Member'
-    );
+  const role = profile?.roles?.includes('expert')
+    ? 'expert'
+    : profile?.roles?.includes('runner')
+    ? 'runner'
+    : 'default';
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setTime({
+        current: now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        date: now.toLocaleDateString('en-US', {
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      });
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setSearchIndex(prev => (prev + 1) % searchPlaceholders.length);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    const wave = () => {
+      Animated.sequence([
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+    wave();
+    const interval = setInterval(wave, 5000);
+    return () => clearInterval(interval);
+  }, [waveAnim]);
+
+  const waveStyle = {
+    transform: [
+      {
+        rotate: waveAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['0deg', '30deg'],
+        }),
+      },
+    ],
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={'light-content'} />
+      <StatusBar barStyle="light-content" />
 
-      {/* Date and Notification */}
       <View style={styles.topBar}>
         <Text style={styles.dateText}>
-          {currentDate} • {currentTime}
+          {time.date} • {time.current}
         </Text>
-        <View style={{flexDirection: 'row', gap: 16}}>
+        <View style={styles.icons}>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('ManageNotificationsScreen' as never)
             }>
-            <Icon name="notifications-outline" size={24} color={'#fff'} />
+            <Icon name="notifications-outline" size={24} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
-            <Icon name="trophy-outline" size={24} color={'#fff'} />
+            <Icon name="trophy-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* User Profile */}
       <TouchableOpacity
-        style={styles.profileSection}
+        style={styles.profile}
         onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
         <View style={styles.profileLeft}>
           <CommonAvatar
-            mode={isExpert ? 'expert' : isRunner ? 'runner' : undefined}
-            uri={
-              profile?.image?.url ||
-              'https://img.freepik.com/free-psd/3d-illustration-person-with-sunglasses_23-2149436188.jpg'
+            mode={
+              role === 'expert'
+                ? 'expert'
+                : role === 'runner'
+                ? 'runner'
+                : undefined
             }
+            uri={profile?.image?.url}
             size={45}
           />
           <View style={styles.userInfo}>
-            <Text style={styles.greeting}>Hi, {profile?.username}! 👋</Text>
-            <View
-              style={[
-                styles.membershipContainer,
-                isExpert && styles.expertMembershipContainer,
-                isRunner && styles.runnerMembershipContainer,
-              ]}>
+            <View style={styles.greeting}>
+              <Text style={styles.greetingText}>Hi, {profile?.username}! </Text>
+              <Animated.Text style={waveStyle}>👋</Animated.Text>
+            </View>
+            <View style={[styles.role, styles[`${role}Role`]]}>
               <Icon
-                name={isExpert ? 'trophy' : isRunner ? 'walk' : 'star'}
+                name={roles[role].icon}
                 size={14}
-                color={isExpert ? '#FFD700' : isRunner ? '#00FF00' : '#FFFFFF'}
-                style={{marginRight: 4}}
+                color={roles[role].color}
+                style={styles.roleIcon}
               />
-              <Text
-                style={[
-                  styles.membershipText,
-                  isExpert && styles.expertText,
-                  isRunner && styles.runnerText,
-                ]}>
-                {getRoleText()}
+              <Text style={[styles.roleText, styles[`${role}Text`]]}>
+                {roles[role].text}
               </Text>
             </View>
           </View>
         </View>
-        <Icon name="chevron-forward-outline" size={20} color={'#fff'} />
+        <Icon name="chevron-forward-outline" size={20} color="#fff" />
       </TouchableOpacity>
 
-      {/* Search Bar */}
       <TouchableOpacity
-        style={styles.searchContainer}
-        onPress={() => {
-          navigation.navigate('SearchScreen' as never);
-        }}>
-        <Icon name="search" size={20} color={'#FFFFFF'} />
-        <Text style={styles.searchInput}>Search Experts</Text>
+        style={styles.search}
+        onPress={() => navigation.navigate('SearchScreen' as never)}>
+        <Icon name="search" size={20} color="#FFFFFF" />
+        <Animated.Text style={[styles.searchText, {opacity: fadeAnim}]}>
+          {searchPlaceholders[searchIndex]}
+        </Animated.Text>
       </TouchableOpacity>
     </View>
   );
@@ -135,7 +213,11 @@ const styles = StyleSheet.create({
     color: '#e2e2e2',
     fontSize: 14,
   },
-  profileSection: {
+  icons: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  profile: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -151,32 +233,38 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   greeting: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  greetingText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 4,
   },
-  membershipContainer: {
+  role: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(107, 114, 128, 0.2)',
   },
-  expertMembershipContainer: {
+  expertRole: {
     backgroundColor: 'rgba(245, 158, 11, 0.2)',
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.5)',
   },
-  runnerMembershipContainer: {
+  runnerRole: {
     backgroundColor: 'rgba(16, 185, 129, 0.2)',
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.5)',
   },
-  membershipText: {
+  roleIcon: {
+    marginRight: 4,
+  },
+  roleText: {
     fontSize: 12,
     fontWeight: '500',
     color: '#FFFFFF',
@@ -187,7 +275,7 @@ const styles = StyleSheet.create({
   runnerText: {
     color: '#00FF00',
   },
-  searchContainer: {
+  search: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#374151',
@@ -196,11 +284,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 8,
   },
-  searchInput: {
+  searchText: {
     flex: 1,
     color: '#FFFFFF',
     fontSize: 14,
-    padding: 0,
   },
 });
 
