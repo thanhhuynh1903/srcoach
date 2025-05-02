@@ -67,16 +67,18 @@ const LoginScreen: React.FC<{
         await setupNotifications();
         showToast('success', message, 'Welcome back!');
         navigation.navigate('HomeTabs');
+        clear();
         // Không gọi clear() ở đây để tránh trigger useEffect lại
       } else if (status === 'wait') {
         navigation.navigate('VerifyLoginScreen', {
           emailLabel: email,
           password: password,
         });
+        clear();
       } else if (status === 'error' && message) {
         console.log('message', message);
         showToast('error', message.toString());
-        // Không gọi clear() ở đây
+        clear();
       }
     };
     
