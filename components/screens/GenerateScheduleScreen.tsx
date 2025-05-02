@@ -297,7 +297,6 @@ const GenerateScheduleScreen = () => {
   );
 };
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -307,7 +306,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 8,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
@@ -320,7 +319,6 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
   },
   headerTitle: {
     fontSize: 20,
@@ -328,8 +326,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     color: '#0F172A',
   },
-
-  // Improved tab navigation
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -359,8 +355,6 @@ const styles = StyleSheet.create({
     color: '#0F2B5B',
     fontWeight: '600',
   },
-
-  // Enhanced action buttons
   actionButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -393,15 +387,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-
-  // Improved scroll view
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
-
-  // Enhanced empty state
   emptyContainer: {
     padding: 40,
     justifyContent: 'center',
@@ -440,7 +430,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // Enhanced loading state
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -453,8 +442,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginTop: 16,
   },
-
-  // Enhanced error state
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -486,8 +473,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 15,
   },
-
-  // Enhanced limit note
   limitNoteContainer: {
     backgroundColor: '#EBF3FF',
     borderRadius: 16,

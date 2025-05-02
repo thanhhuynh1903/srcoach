@@ -34,11 +34,6 @@ interface User {
   };
 }
 
-// Interface cho Tag
-interface Tag {
-  tag_name: string;
-}
-
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -49,7 +44,7 @@ interface Post {
   updated_at: string | null;
   exercise_session_record_id: string | null;
   user: User;
-  tags: Tag[];
+  tags: string[];
   PostVote: any[];
   PostComment: any[];
   images: string[];
@@ -195,13 +190,13 @@ const CommunityScreen = () => {
     return (
       <View style={styles.tagsContainer}>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[0].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[0]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[1].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[1]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[2].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[2]}</Text>
         </View>
         <View style={styles.tag}>
           <Text style={styles.tagText}>more +{tags.length - 3}</Text>

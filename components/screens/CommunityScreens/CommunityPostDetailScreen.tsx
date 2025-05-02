@@ -34,11 +34,6 @@ interface User {
   updated_at: string | null;
 }
 
-// Interface cho Tag
-interface Tag {
-  tag_name: string;
-}
-
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -49,7 +44,7 @@ interface Post {
   updated_at: string | null;
   exercise_session_record_id: string | null;
   User: User;
-  postTags: Tag[];
+  postTags: string[];
   PostVote: any[];
   PostComment: any[];
   images: string[];
