@@ -18,22 +18,14 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
   const appVersion = packageJson.version;
 
   const handleEmailPress = () => {
-    Linking.openURL('mailto:example@gmail.com');
+    Linking.openURL('smartrunningcoach@gmail.com');
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <BackButton size={24} style={styles.backButton} />
-        <View style={styles.headerContent}>
-          <Icon
-            name="information-circle-outline"
-            size={24}
-            color={theme.colors.text}
-            style={styles.headerIcon}
-          />
-          <Text style={styles.title}>About</Text>
-        </View>
+        <Text style={styles.title}>About</Text>
       </View>
 
       {/* Scrollable Content */}

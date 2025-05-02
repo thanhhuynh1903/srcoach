@@ -62,6 +62,7 @@ import OtherProfileScreen from '../screens/OtherProfileScreen';
 import ExerciseRecordsFullMapScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsFullMapScreen';
 import ExerciseRecordsDetailScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsDetailScreen';
 import CRMessageItemExerciseRecordDetail from '../screens/ChatsScreens/ChatsMessageItems/CRMessageItemExerciseRecordDetail';
+import SettingsRecruitmentsScreen from '../screens/SettingsScreens/SettingsRecruitmentsScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -131,6 +132,7 @@ export const stackScreens = [
 
   //Settings
   {name: 'SettingsAboutScreen', component: SettingsAboutScreen},
+  {name: 'SettingsRecruitmentsScreen', component: SettingsRecruitmentsScreen},
 
   // Settings - Become Expert (Certificates)
   {name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen},
