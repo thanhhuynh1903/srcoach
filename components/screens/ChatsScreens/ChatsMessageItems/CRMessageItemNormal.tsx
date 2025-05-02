@@ -9,6 +9,7 @@ import { CRMessageItemExpertRecommendation } from './CRMessageItemExpertRecommen
 import CommonDialog from '../../../commons/CommonDialog';
 import { archiveMessage } from '../../../utils/useChatsAPI';
 import ToastUtil from '../../../utils/utils_toast';
+import { formatTimestampAgo } from '../../../utils/utils_format';
 
 type User = {
   id: string;
@@ -41,7 +42,7 @@ const UserAvatar = ({user}: {user: User}) => {
 
   return (
     <CommonAvatar
-      uri={user.avatar}
+      uri={user?.image?.url}
       mode={isExpert ? 'expert' : isRunner ? 'runner' : undefined}
     />
   );
@@ -117,7 +118,7 @@ const CRRegularMessage = ({
               !isCurrentUser && !isOtherExpert && styles.otherUserTime,
               isOtherExpert && styles.expertTime,
             ]}>
-            {moment(message.created_at).format('h:mm A')}
+            {formatTimestampAgo(message.created_at)}
           </Text>
         </>
       )}

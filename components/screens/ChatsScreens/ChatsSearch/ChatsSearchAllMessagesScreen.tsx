@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import {
   View,
   Text,
@@ -9,33 +9,12 @@ import {
   SafeAreaView,
   Image,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {getAllMessages} from '../../../utils/useChatsAPI';
 import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
-
-const formatMessageTime = (dateString: string) => {
-  const messageDate = new Date(dateString);
-  const now = new Date();
-  const diffInDays = Math.floor(
-    (now.getTime() - messageDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
-
-  const hours = messageDate.getHours().toString().padStart(2, '0');
-  const minutes = messageDate.getMinutes().toString().padStart(2, '0');
-
-  if (diffInDays === 0) {
-    return `${hours}:${minutes}`;
-  } else if (diffInDays === 1) {
-    return `Yesterday at ${hours}:${minutes}`;
-  } else {
-    const month = messageDate.toLocaleString('default', {month: 'short'});
-    const day = messageDate.getDate();
-    const year = messageDate.getFullYear();
-    return `${month} ${day}, ${year} at ${hours}:${minutes}`;
-  }
-};
+import {formatTimeAgo} from '../../../utils/utils_format';
 
 const MessageItem = ({item, searchQuery}: {item: any; searchQuery: string}) => {
   const navigation = useNavigation();
@@ -78,11 +57,8 @@ const MessageItem = ({item, searchQuery}: {item: any; searchQuery: string}) => {
       <View style={styles.listItemContent}>
         <CommonAvatar
           mode={item.User.roles.includes('expert') ? 'expert' : 'runner'}
-          size={52}
-          uri={
-            item.User.profile_picture ||
-            `https://ui-avatars.com/api/?name=${item.User.name}&background=random`
-          }
+          size={45}
+          uri={item?.User?.image?.url}
         />
 
         <View style={styles.textContainer}>
@@ -90,7 +66,7 @@ const MessageItem = ({item, searchQuery}: {item: any; searchQuery: string}) => {
             <Text style={styles.name}>{item.User.name}</Text>
             <Text style={styles.username}>@{item.User.username}</Text>
             <Text style={styles.timeText}>
-              {formatMessageTime(item.created_at)}
+              {formatTimeAgo(item.created_at)}
             </Text>
           </View>
 
@@ -121,6 +97,8 @@ const MessageItem = ({item, searchQuery}: {item: any; searchQuery: string}) => {
 
 export default function UserSearchAllMessagesScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const {query} = route.params;
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -154,6 +132,13 @@ export default function UserSearchAllMessagesScreen() {
   const renderItem = ({item}: {item: any}) => (
     <MessageItem item={item} searchQuery={searchQuery} />
   );
+
+  useEffect(() => {
+    if (query) {
+      setSearchQuery(query);
+      handleSearch();
+    }
+  }, [query, handleSearch]);
 
   return (
     <SafeAreaView style={styles.container}>

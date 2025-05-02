@@ -31,52 +31,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {CRMessageRunRecordPanel} from './CRMessageRunRecordPanel';
 import {getSocket, disconnectSocket} from '../../../utils/socket';
 
-type Message = {
-  id: string;
-  message?: string;
-  created_at: string;
-  user_id: string;
-  User: User;
-  type: 'MESSAGE' | 'EXPERT_RECOMMENDATION' | 'PROFILE' | 'EXERCISE_RECORD';
-  height?: number;
-  weight?: number;
-  running_level?: string;
-  running_goal?: string;
-  metrics?: {
-    distance: number;
-    calories: number;
-    steps: number;
-    avg_heart_rate: number;
-    min_heart_rate: number;
-    max_heart_rate: number;
-    start_time: string;
-    end_time: string;
-    exercise_type: number;
-  };
-  imageId?: string;
-  image_url?: string;
-  archive?: boolean;
-};
-
-type User = {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  points: number;
-  user_level: string;
-  roles: string[];
-};
-
-type SessionInfo = {
-  id: string;
-  status: string;
-  other_user: User;
-  initiated_by_you: boolean;
-  archived_by_you: boolean;
-};
-
-const SkeletonMessageItem = ({isCurrentUser}: {isCurrentUser: boolean}) => {
+const SkeletonMessageItem = ({isCurrentUser}: any) => {
   return (
     <View
       style={[
@@ -96,14 +51,8 @@ const MessageList = ({
   flatListRef,
   isLoading,
   onMessageArchived,
-}: {
-  messages: Message[];
-  userId: string;
-  flatListRef: React.RefObject<FlatList>;
-  isLoading: boolean;
-  onMessageArchived: (messageId: string) => void;
-}) => {
-  const renderItem = ({item}: {item: Message}) => (
+}: any) => {
+  const renderItem = ({item}: any) => (
     <CRMessageItemNormal
       message={item}
       isCurrentUser={item.user_id === userId}
@@ -128,16 +77,16 @@ const MessageList = ({
       ref={flatListRef}
       data={messages}
       renderItem={renderItem}
-      keyExtractor={item => item.id}
+      keyExtractor={(item: any) => item.id}
       contentContainerStyle={styles.messagesContainer}
       onContentSizeChange={() => {
-        if (!isLoading) {
-          flatListRef.current?.scrollToEnd({animated: true});
+        if (!isLoading && messages.length > 0) {
+          flatListRef.current?.scrollToEnd({animated: false});
         }
       }}
       onLayout={() => {
-        if (!isLoading) {
-          flatListRef.current?.scrollToEnd({animated: true});
+        if (!isLoading && messages.length > 0) {
+          flatListRef.current?.scrollToEnd({animated: false});
         }
       }}
       ListEmptyComponent={
@@ -153,7 +102,7 @@ const MessageList = ({
   );
 };
 
-const TypingIndicator = ({name}: {name: string}) => {
+const TypingIndicator = ({name}: any) => {
   return (
     <View style={styles.typingIndicatorContainer}>
       <View style={styles.typingIndicatorBubble}>
@@ -172,17 +121,8 @@ const MessageInput = ({
   onMenuPress,
   isInputDisabled,
   onTyping,
-}: {
-  inputMessage: string;
-  setInputMessage: (text: string) => void;
-  handleSend: () => void;
-  isSending: boolean;
-  isExpert: boolean;
-  onMenuPress: () => void;
-  isInputDisabled: boolean;
-  onTyping: () => void;
-}) => {
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+}: any) => {
+  const typingTimeoutRef = useRef<any>(null);
 
   const handleChangeText = (text: string) => {
     setInputMessage(text);
@@ -248,13 +188,13 @@ const MessageInput = ({
 export default function ChatsRunnerMessageScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const {sessionId} = route.params as {sessionId: string};
+  const {sessionId} = route.params as any;
   const {profile} = useLoginStore();
   const userId = profile?.id;
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
@@ -264,10 +204,10 @@ export default function ChatsRunnerMessageScreen() {
   const [isInputDisabled, setIsInputDisabled] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-  const [typingUser, setTypingUser] = useState<User | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [typingUser, setTypingUser] = useState<any>(null);
+  const typingTimeoutRef = useRef<any>(null);
 
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<any>(null);
 
   const fetchSessionInfo = async () => {
     try {
@@ -275,18 +215,10 @@ export default function ChatsRunnerMessageScreen() {
       if (response.status) {
         setSessionInfo(response.data);
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: response.message,
-        });
+        ToastUtil.error('Failed to fetch session info', response.message);
       }
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to fetch session info',
-      });
+      ToastUtil.error('Failed to fetch session info', 'An exception occured.');
     }
   };
 
@@ -295,19 +227,23 @@ export default function ChatsRunnerMessageScreen() {
       const response = await getMessages(sessionId);
       if (response.status) {
         setMessages(response.data.messages);
+        // Wait for layout to update and scroll to bottom
+        setTimeout(() => {
+          if (flatListRef.current) {
+            flatListRef.current.scrollToEnd({animated: false});
+          }
+          setIsLoading(false);
+          setIsInitialLoad(false);
+        }, 100);
       } else {
         ToastUtil.error('Failed to fetch messages', response.message);
+        setIsLoading(false);
+        setIsInitialLoad(false);
       }
     } catch (error) {
       ToastUtil.error('Failed to fetch messages', 'An exception occured.');
-    } finally {
       setIsLoading(false);
-      setTimeout(() => {
-        setIsInitialLoad(false);
-        if (flatListRef.current) {
-          flatListRef.current.scrollToEnd({animated: true});
-        }
-      }, 300);
+      setIsInitialLoad(false);
     }
   };
 
@@ -319,14 +255,14 @@ export default function ChatsRunnerMessageScreen() {
   };
 
   const handleMessageArchived = (messageId: string) => {
-    setMessages(prevMessages =>
-      prevMessages.map(msg =>
+    setMessages((prevMessages: any) =>
+      prevMessages.map((msg: any) =>
         msg.id === messageId ? {...msg, message: null, archive: true} : msg,
       ),
     );
   };
 
-  const handleTypingEvent = (data: {userId: string; user: User}) => {
+  const handleTypingEvent = (data: any) => {
     if (data.userId !== userId) {
       setTypingUser(data.user);
       setIsTyping(true);
@@ -362,7 +298,7 @@ export default function ChatsRunnerMessageScreen() {
     socket.emit('joinSession', sessionId);
 
     const handleNewMessage = (data: any) => {
-      setMessages(prevMessages => [...prevMessages, data]);
+      setMessages((prevMessages: any) => [...prevMessages, data]);
       setTimeout(() => {
         if (flatListRef.current) {
           flatListRef.current.scrollToEnd({animated: true});
@@ -375,7 +311,7 @@ export default function ChatsRunnerMessageScreen() {
       }
     };
 
-    const handleDeleteMessage = (data: {messageId: string}) => {
+    const handleDeleteMessage = (data: any) => {
       handleMessageArchived(data.messageId);
     };
 
@@ -408,7 +344,6 @@ export default function ChatsRunnerMessageScreen() {
         ToastUtil.error('Failed to send message', response.message);
       } else {
         setInputMessage('');
-        // Reset typing indicator when message is sent
         setIsTyping(false);
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
@@ -427,12 +362,7 @@ export default function ChatsRunnerMessageScreen() {
     setShowProfilePanel(true);
   };
 
-  const handleProfileSubmit = async (profileData: {
-    height: string;
-    weight: string;
-    running_level: string;
-    running_goal: string;
-  }) => {
+  const handleProfileSubmit = async (profileData: any) => {
     try {
       setIsInputDisabled(true);
       const response = await sendProfile(sessionId, profileData);
@@ -464,6 +394,7 @@ export default function ChatsRunnerMessageScreen() {
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Please wait...</Text>
         </View>
       </View>
     );
@@ -587,6 +518,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: theme.colors.primaryDark,
   },
   skeletonList: {
     padding: 16,

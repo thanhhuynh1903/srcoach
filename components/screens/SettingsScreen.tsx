@@ -17,12 +17,13 @@ import {CommonActions, useFocusEffect} from '@react-navigation/native';
 import CommonDialog from '../commons/CommonDialog';
 import {CommonAvatar} from '../commons/CommonAvatar';
 import NotificationService from '../services/NotificationService';
+import {capitalizeFirstLetter} from '../utils/utils_format';
+
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
   const {clearAll, clear, profile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
-  const [showRecruitDialog, setShowRecruitDialog] = React.useState(false);
 
   async function handleLogout() {
     await NotificationService.unregisterDevice();
@@ -41,7 +42,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
     await clear();
     await clearToken();
     await clearAll();
-    
+
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
@@ -51,15 +52,8 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
   }
 
   const handleRecruitPress = () => {
-    if (isExpert) {
-      navigation.navigate('UserCertificatesExpertsScreen');
-    } else {
-      setShowRecruitDialog(true);
-    }
+    navigation.navigate('SettingsRecruitmentsScreen');
   };
-
-  const capitalizeFirstLetter = (str: string) =>
-    str.charAt(0).toUpperCase() + str.slice(1);
 
   const logoutButtons = [
     {
@@ -76,31 +70,6 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
       iconName: 'log-out-outline',
     },
   ];
-
-  const recruitButtons = [
-    {
-      label: 'Cancel',
-      variant: 'text',
-      handler: () => setShowRecruitDialog(false),
-      iconName: 'close-circle-outline',
-    },
-    {
-      label: 'Continue',
-      color: '#4A6FA5',
-      variant: 'contained',
-      handler: () => {
-        setShowRecruitDialog(false);
-        navigation.navigate('UserCertificatesIntroScreen');
-      },
-      iconName: 'arrow-forward-outline',
-    },
-  ];
-
-  useFocusEffect(
-    useCallback(() => {
-      console.log(profile);
-    }, [])
-  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -156,20 +125,35 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
 
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{profile?.points || 0}</Text>
-                <Text style={styles.statLabel}>Points</Text>
+                <View style={styles.statIconContainer}>
+                  <Icon name="trophy" size={23} color="#2C3E50" />
+                </View>
+                <View>
+                  <Text style={styles.statNumber}>{profile?.points || 0}</Text>
+                  <Text style={styles.statLabel}>Points</Text>
+                </View>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {profile?.total_posts || 0}
-                </Text>
-                <Text style={styles.statLabel}>Posts</Text>
+                <View style={styles.statIconContainer}>
+                  <Icon name="document-text" size={23} color="#2C3E50" />
+                </View>
+                <View>
+                  <Text style={styles.statNumber}>
+                    {profile?.total_posts || 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Posts</Text>
+                </View>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {profile?.total_posts_liked || 0}
-                </Text>
-                <Text style={styles.statLabel}>Likes</Text>
+                <View style={styles.statIconContainer}>
+                  <Icon name="heart" size={23} color="#2C3E50" />
+                </View>
+                <View>
+                  <Text style={styles.statNumber}>
+                    {profile?.total_posts_liked || 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Likes</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -250,35 +234,42 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         actionButtons={logoutButtons}
         width="85%"
       />
-
-      {/* Recruit Dialog */}
-      <CommonDialog
-        visible={showRecruitDialog}
-        onClose={() => setShowRecruitDialog(false)}
-        title="Join Recruit Program"
-        content={
-          <View>
-            <Text style={{color: '#666', fontSize: 16}}>
-              This process requires submission of documents for verification.
-              Are you ready to proceed?
-            </Text>
-          </View>
-        }
-        actionButtons={recruitButtons}
-        width="85%"
-      />
     </SafeAreaView>
   );
 };
 
 const menuItems = [
-  {title: 'View Profile', subtitle: 'View your profile information', icon: 'person-circle-outline', screen: 'RunnerProfileScreen'},
-  {title: 'View schedules', subtitle: 'View your schedule information', icon: 'calendar-outline', screen: 'GenerateScheduleScreen'},
-  {title: 'Connect Accounts', subtitle: 'Manage your connect account', icon: 'construct-outline', screen: 'SettingsDevicesScreen'},
-  {title: 'Notifications', subtitle: 'Manage your notifications', icon: 'notifications-outline', screen: 'DeviceNotificationsScreen'},
-  {title: 'About', subtitle: 'App information and help', icon: 'information-circle-outline', screen: 'SettingsAboutScreen'},
+  {
+    title: 'View Profile',
+    subtitle: 'View your profile information',
+    icon: 'person-circle-outline',
+    screen: 'RunnerProfileScreen',
+  },
+  {
+    title: 'View schedules',
+    subtitle: 'View your schedule information',
+    icon: 'calendar-outline',
+    screen: 'GenerateScheduleScreen',
+  },
+  {
+    title: 'Connect Accounts',
+    subtitle: 'Manage your connect account',
+    icon: 'construct-outline',
+    screen: 'SettingsDevicesScreen',
+  },
+  {
+    title: 'Notifications',
+    subtitle: 'Manage your notifications',
+    icon: 'notifications-outline',
+    screen: 'DeviceNotificationsScreen',
+  },
+  {
+    title: 'About',
+    subtitle: 'App information and help',
+    icon: 'information-circle-outline',
+    screen: 'SettingsAboutScreen',
+  },
 ];
-
 
 const styles = StyleSheet.create({
   safeArea: {flex: 1, backgroundColor: '#fff'},
@@ -353,16 +344,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    marginTop: 10,
+    marginTop: 20,
   },
-  statItem: {alignItems: 'center', paddingHorizontal: 10},
+  statItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statIconContainer: {
+    backgroundColor: '#EFF3F9',
+    width: 38,
+    height: 38,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   statNumber: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#4A6FA5',
-    marginBottom: 2,
+    color: '#2C3E50',
   },
-  statLabel: {fontSize: 14, color: '#666'},
+  statLabel: {
+    fontSize: 13,
+    color: '#666',
+  },
   menuSection: {marginTop: 10},
   menuItem: {
     flexDirection: 'row',

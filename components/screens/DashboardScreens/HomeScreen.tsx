@@ -12,12 +12,13 @@ import HomeHeader from '../../HomeHeader';
 import WellnessAndMedication from '../../WellnessAndMedication';
 import {useNavigation} from '@react-navigation/native';
 import useAuthStore from '../../utils/useAuthStore';
-import {wp} from '../../helpers/common';
 import {initializeHealthConnect, fetchSummaryRecord} from '../../utils/utils_healthconnect';
-import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {useLoginStore} from '../../utils/useLoginStore';
 import CommonDialog from '../../commons/CommonDialog';
-import {theme} from '../../contants/theme';
+import HomeHealthScoreCard from './HomeHealthScoreCard';
+import { theme } from '../../contants/theme';
+import HomeHealthData from './HomeHealthData';
+import HomeFunFactCard from './HomeFunFactCard';
 
 interface SummaryData {
   steps: {
@@ -50,19 +51,11 @@ interface SummaryData {
   };
 }
 
-interface HealthScoreData {
-  score: number;
-  scoreInfo: {
-    scoreText: string;
-    scoreMessage: string;
-  };
-}
-
 const HomeScreen = () => {
   const navigation = useNavigation();
   const {token, loadToken} = useAuthStore();
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
-  const [healthScore, setHealthScore] = useState<HealthScoreData | null>(null);
+  const [healthScore, setHealthScore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const {profile} = useLoginStore();
@@ -171,248 +164,6 @@ const HomeScreen = () => {
     return unsubscribe;
   }, [navigation]);
 
-  const getHealthScoreColor = (score: number) => {
-    if (score === 0) return '#64748B';
-    if (score < 30) return '#EF4444';
-    if (score < 50) return '#F97316';
-    if (score < 70) return '#F59E0B';
-    if (score < 85) return '#10B981';
-    return '#3B82F6';
-  };
-
-  const MetricSkeleton = () => (
-    <ContentLoader
-      speed={1}
-      width={wp(30)}
-      height={120}
-      viewBox={`0 0 ${wp(30)} 120`}
-      backgroundColor="#f3f3f3"
-      foregroundColor="#ecebeb">
-      <Circle cx="25" cy="25" r="20" />
-      <Rect x="0" y="55" rx="4" ry="4" width="100%" height="16" />
-      <Rect x="0" y="80" rx="4" ry="4" width="60%" height="12" />
-    </ContentLoader>
-  );
-
-  const MetricErrorCard = ({metric}: {metric: string}) => (
-    <View style={[styles.healthMetricCard, {backgroundColor: '#F8FAFC'}]}>
-      <Icon name="warning" size={20} color="#64748B" />
-      <Text style={[styles.healthMetricValue, {color: '#64748B'}]}>--</Text>
-      <Text style={styles.healthMetricLabel}>
-        {metricInfo[metric]?.title || metric}
-      </Text>
-    </View>
-  );
-
-  const renderMainMetricsCard = () => (
-    <View style={styles.mainMetricsCard}>
-      {/* Steps */}
-      {errors.steps ? (
-        <MetricErrorCard metric="steps" />
-      ) : (
-        <TouchableOpacity
-          style={styles.mainMetricItem}
-          onPress={() => navigation.navigate('StepsScreen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="footsteps" size={20} color="#2563EB" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('steps')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.mainMetricValue}>
-            {summaryData?.steps.value.toLocaleString() || '--'}
-          </Text>
-          <Text style={styles.mainMetricLabel}>Steps</Text>
-          <View style={[styles.chip, {backgroundColor: '#EFF6FF'}]}>
-            <Text style={[styles.chipText, {color: '#2563EB'}]}>
-              {summaryData?.steps.percentage.toFixed(0) || '--'}%
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* Distance */}
-      {errors.distance ? (
-        <MetricErrorCard metric="distance" />
-      ) : (
-        <TouchableOpacity
-          style={styles.mainMetricItem}
-          onPress={() => navigation.navigate('DistanceScreen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="walk" size={20} color="#6366F1" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('distance')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.mainMetricValue}>
-            {summaryData?.distance.value.toFixed(1) || '--'} km
-          </Text>
-          <Text style={styles.mainMetricLabel}>Distance</Text>
-          <View style={[styles.chip, {backgroundColor: '#F0F5FF'}]}>
-            <Text style={[styles.chipText, {color: '#6366F1'}]}>
-              {summaryData?.distance.percentage.toFixed(0) || '--'}%
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* Calories */}
-      {errors.activeCalories ? (
-        <MetricErrorCard metric="calories" />
-      ) : (
-        <TouchableOpacity
-          style={styles.mainMetricItem}
-          onPress={() => navigation.navigate('CaloriesScreen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="flame" size={20} color="#EF4444" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('calories')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.mainMetricValue}>
-            {summaryData?.activeCalories.value.toFixed(0) || '--'} cal
-          </Text>
-          <Text style={styles.mainMetricLabel}>Calories</Text>
-          <View style={[styles.chip, {backgroundColor: '#FEE2E2'}]}>
-            <Text style={[styles.chipText, {color: '#EF4444'}]}>
-              {summaryData?.activeCalories.percentage.toFixed(0) || '--'}%
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
-  const renderHealthMetricsCards = () => (
-    <View style={styles.metricsGrid}>
-      {/* Heart Rate */}
-      {errors.heartRate ? (
-        <MetricErrorCard metric="heartRate" />
-      ) : (
-        <TouchableOpacity
-          style={[styles.healthMetricCard, {backgroundColor: '#FFF1F2'}]}
-          onPress={() => navigation.navigate('HeartRateScreen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="heart" size={20} color="#FF4D4F" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('heartRate')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.healthMetricValue}>
-            {summaryData?.heartRate.value.toFixed(0) || '--'} bpm
-          </Text>
-          <Text style={styles.healthMetricLabel}>Heart Rate</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Oxygen Saturation */}
-      {errors.oxygenSaturation ? (
-        <MetricErrorCard metric="oxygenSaturation" />
-      ) : (
-        <TouchableOpacity
-          style={[styles.healthMetricCard, {backgroundColor: '#ECFDF5'}]}
-          onPress={() => navigation.navigate('SPo2Screen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="water" size={20} color="#10B981" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('oxygenSaturation')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.healthMetricValue}>
-            {summaryData?.oxygenSaturation.value.toFixed(0) || '--'}%
-          </Text>
-          <Text style={styles.healthMetricLabel}>SpO2</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Sleep */}
-      {errors.sleep ? (
-        <MetricErrorCard metric="sleep" />
-      ) : (
-        <TouchableOpacity
-          style={[styles.healthMetricCard, {backgroundColor: '#EEF2FF'}]}
-          onPress={() => navigation.navigate('SleepScreen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="moon" size={20} color="#6366F1" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('sleep')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.healthMetricValue}>
-            {summaryData
-              ? `${Math.floor(summaryData.sleep.value)}h ${Math.round(
-                  (summaryData.sleep.value % 1) * 60,
-                )}m`
-              : '--'}
-          </Text>
-          <Text style={styles.healthMetricLabel}>Sleep</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Total Calories */}
-      {errors.totalCalories ? (
-        <MetricErrorCard metric="totalCalories" />
-      ) : (
-        <TouchableOpacity
-          style={[styles.healthMetricCard, {backgroundColor: '#FFF7E6'}]}
-          onPress={() => navigation.navigate('CaloriesScreen')}>
-          <View style={styles.metricHeader}>
-            <Icon name="nutrition" size={20} color="#FAAD14" />
-            <TouchableOpacity
-              onPress={() => showInfoDialog('totalCalories')}
-              style={styles.infoButton}>
-              <Icon
-                name="information-circle-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.healthMetricValue}>
-            {summaryData?.totalCalories.value.toFixed(0) || '--'}
-          </Text>
-          <Text style={styles.healthMetricLabel}>Total Calories</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
   return (
     <View style={styles.container}>
       <HomeHeader navigation={navigation} />
@@ -438,75 +189,18 @@ const HomeScreen = () => {
         )}
 
         {/* Health Score */}
-        <View style={styles.section}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.sectionTitle}>Health Score</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('HealthScoreDetail')}>
-              <Icon
-                name="ellipsis-horizontal-outline"
-                size={16}
-                color="#64748B"
-              />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('HealthScoreDetail')}>
-            <View style={styles.scoreCard}>
-              <View
-                style={[
-                  styles.scoreBox,
-                  {
-                    backgroundColor: healthScore
-                      ? getHealthScoreColor(healthScore.score) + '20'
-                      : '#E0E7FF',
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.scoreNumber,
-                    {
-                      color: healthScore
-                        ? getHealthScoreColor(healthScore.score)
-                        : '#4F46E5',
-                    },
-                  ]}>
-                  {healthScore?.score || '--'}
-                </Text>
-              </View>
-              <View style={styles.scoreInfo}>
-                <Text style={styles.scoreTitle}>
-                  {healthScore?.scoreInfo?.scoreText || 'Loading...'}
-                </Text>
-                <Text style={styles.scoreDescription}>
-                  {healthScore?.scoreInfo?.scoreMessage ||
-                    'Calculating your health score...'}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </View>
+        <HomeHealthScoreCard healthScore={healthScore} navigation={navigation} />
 
-        {loading ? (
-          <View style={styles.skeletonContainer}>
-            <View style={styles.highlightedRow}>
-              <MetricSkeleton />
-              <MetricSkeleton />
-              <MetricSkeleton />
-            </View>
-            <View style={styles.metricsGrid}>
-              <MetricSkeleton />
-              <MetricSkeleton />
-              <MetricSkeleton />
-              <MetricSkeleton />
-            </View>
-          </View>
-        ) : (
-          <>
-            {renderMainMetricsCard()}
-            {renderHealthMetricsCards()}
-          </>
-        )}
+        {/* Health Data */}
+        <HomeHealthData
+          summaryData={summaryData}
+          errors={errors}
+          loading={loading}
+          navigation={navigation}
+          showInfoDialog={showInfoDialog}
+        />
+
+        <HomeFunFactCard />
 
         {/* Wellness and Goals */}
         <WellnessAndMedication navigation={navigation} />
@@ -542,141 +236,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  section: {
-    padding: 16,
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  scoreCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  scoreBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scoreNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  scoreInfo: {
-    marginLeft: 16,
-    flex: 1,
-  },
-  scoreTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#334155',
-  },
-  scoreDescription: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  skeletonContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  highlightedRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  mainMetricsCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  mainMetricItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  infoButton: {
-    marginLeft: 4,
-  },
-  mainMetricValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  mainMetricLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 8,
-  },
-  chip: {
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  healthMetricCard: {
-    width: '48%',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  healthMetricValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginVertical: 8,
-  },
-  healthMetricLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
   },
   dialogContent: {
     fontSize: 14,
