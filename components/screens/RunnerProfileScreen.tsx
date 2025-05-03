@@ -381,12 +381,6 @@ const RunnerProfileScreen = () => {
     }
   };
 
-  // Xử lý ẩn bài viết
-  const handleHide = () => {
-    setModalVisible(false);
-    Alert.alert('Thông báo', 'Đã ẩn bài viết này');
-  };
-
   const renderTags = (tags: Tag[]) => {
     if (!tags || tags.length === 0) {
       return null;
@@ -509,7 +503,7 @@ const RunnerProfileScreen = () => {
             <View style={styles.levelContainer}>
               <View style={styles.levelHeader}>
                 <Text style={styles.levelTitle}>Level Progress</Text>
-                <Text style={styles.levelValue}>{profile?.user_level}</Text>
+                <Text style={styles.levelValue}>{profile?.user_level.charAt(0).toUpperCase() + profile?.user_level.slice(1)}</Text>
               </View>
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelProgress}>
@@ -523,11 +517,11 @@ const RunnerProfileScreen = () => {
                   />
                 </View>
                 <Text style={styles.levelText}>
-                  <Text style={styles.pointsHighlight}>{profile?.points}</Text>/{profile?.points_to_next_level} XP
+                  <Text style={styles.pointsHighlight}>{profile?.points}</Text>/{profile?.points_to_next_level + profile?.points} XP
                 </Text>
               </View>
               <Text style={styles.nextLevelText}>
-                Next: <Text style={styles.nextLevelHighlight}>{profile?.user_next_level}</Text>
+                Next: <Text style={styles.nextLevelHighlight}>{profile?.user_next_level.charAt(0).toUpperCase() + profile?.user_next_level.slice(1)}</Text>
               </Text>
             </View>
 
@@ -545,10 +539,7 @@ const RunnerProfileScreen = () => {
                 <Text style={styles.statBadgeText}>{profile?.points} Points</Text>
               </View>
 
-              <View style={styles.statBadge}>
-                <Icon name="ribbon" size={16} color="#EC4899" />
-                <Text style={styles.statBadgeText}>Active</Text>
-              </View>
+            
             </View>
           </View>
 
@@ -718,7 +709,7 @@ const RunnerProfileScreen = () => {
             )}
             <View style={styles.modalDivider} />
 
-            {selectedPost && selectedPost?.user_id === currentUserId ? (
+            {selectedPost && selectedPost?.user_id === currentUserId && (
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={handleDelete}>
@@ -727,12 +718,7 @@ const RunnerProfileScreen = () => {
                   Delete
                 </Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
-                <Icon name="eye-off-outline" size={24} color="#666" />
-                <Text style={styles.modalOptionText}>Hide</Text>
-              </TouchableOpacity>
-            )}
+            ) }
 
             <View style={styles.modalDivider} />
 

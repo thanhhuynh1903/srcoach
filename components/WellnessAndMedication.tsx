@@ -68,7 +68,7 @@ const WellnessAndMedication = () => {
               <Text style={styles.medicationNumber}>205</Text>
               <Text style={styles.medicationLabel}>Medications</Text>
             </View>
-            <TouchableOpacity style={styles.addButton} onPress={() => {navigation.navigate('SetGoalsScreen' as never);}}>
+            <TouchableOpacity style={styles.addButton}>
               <Icon name="add-circle-outline" size={24} color="#fff" />
             </TouchableOpacity>
           </View>

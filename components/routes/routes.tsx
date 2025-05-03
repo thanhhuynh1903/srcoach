@@ -54,6 +54,7 @@ import OtherProfileScreen from '../screens/OtherProfileScreen';
 import ExerciseRecordsFullMapScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsFullMapScreen';
 import ExerciseRecordsDetailScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsDetailScreen';
 import SettingsRecruitmentsScreen from '../screens/SettingsScreens/SettingsRecruitmentsScreen';
+import DraftScreen from '../screens/SettingsScreens/DraftScreen';
 import ChatsHomeScreen from '../screens/ChatsScreens/ChatsHome/ChatsHomeScreen';
 import ChatsSearchScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
@@ -122,6 +123,7 @@ export const stackScreens = [
   //Settings
   {name: 'SettingsAboutScreen', component: SettingsAboutScreen},
   {name: 'SettingsRecruitmentsScreen', component: SettingsRecruitmentsScreen},
+  {name: 'DraftScreen', component: DraftScreen},
 
   // Settings - Become Expert (Certificates)
   {name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen},

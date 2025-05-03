@@ -93,10 +93,11 @@ const LeaderboardItem = ({
             <Text style={styles.userName}>
               {isProfile ? 'You' : item.name || 'Anonymous'}
             </Text>
-            {!isProfile && (
+           
+          </View> 
+          {!isProfile && (
               <Text style={styles.userUsername}>@{item.username}</Text>
             )}
-          </View>
           <View style={styles.levelContainer}>
             <Icon name="star" size={14} color="#F59E0B" />
             <Text style={styles.levelText}>
@@ -226,9 +227,8 @@ const styles = StyleSheet.create({
     marginLeft: 11,
   },
   nameContainer: {
-    flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 4,
+    marginTop: 8,
   },
   userName: {
     fontSize: 16,
@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
   userUsername: {
     fontSize: 12,
     color: '#6B7280',
-    marginLeft: 8,
     fontWeight: '300',
   },
   levelContainer: {

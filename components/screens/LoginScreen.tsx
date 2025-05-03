@@ -241,6 +241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(5),
   },
   backButtonContainer: {
+    alignSelf: "flex-start",
     marginTop: 20,
   },
   header: {

@@ -21,6 +21,7 @@ import {useLoginStore} from '../../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
 import {formatTimeAgo} from '../../utils/utils_format';
 import {CommonAvatar} from '../../commons/CommonAvatar';
+import { SaveDraftButton } from './SaveDraftButton';
 // Interface cho User
 interface User {
   id: string;
@@ -34,11 +35,6 @@ interface User {
   };
 }
 
-// Interface cho Tag
-interface Tag {
-  tag_name: string;
-}
-
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -49,7 +45,7 @@ interface Post {
   updated_at: string | null;
   exercise_session_record_id: string | null;
   user: User;
-  tags: Tag[];
+  tags: string[];
   PostVote: any[];
   PostComment: any[];
   images: string[];
@@ -157,15 +153,6 @@ const CommunityScreen = () => {
     );
   };
 
-  const handleHide = () => {
-    if (selectedPost) {
-      setLocalPosts(prevPosts =>
-        prevPosts.filter(post => post.id !== selectedPost.id),
-      );
-    }
-    setModalVisible(false);
-  };
-
   const handleUpdate = () => {
     setModalVisible(false);
     if (selectedPost) {
@@ -195,13 +182,13 @@ const CommunityScreen = () => {
     return (
       <View style={styles.tagsContainer}>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[0].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[0]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[1].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[1]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[2].tag_name}</Text>
+          <Text style={styles.tagText}>{tags[2]}</Text>
         </View>
         <View style={styles.tag}>
           <Text style={styles.tagText}>more +{tags.length - 3}</Text>
@@ -491,18 +478,11 @@ const CommunityScreen = () => {
                 <Text style={styles.modalOptionText}>Update</Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity style={styles.modalOption}>
-                <Icon
-                  name="bookmark-outline"
-                  size={24}
-                  color={theme.colors.primaryDark}
-                />
-                <Text style={styles.modalOptionText}>Save draft</Text>
-              </TouchableOpacity>
+              <SaveDraftButton postId={selectedPost?.id ?? ''} onSave={() => setModalVisible(false)}/>
             )}
             <View style={styles.modalDivider} />
 
-            {selectedPost && selectedPost?.user?.id === currentUserId ? (
+            {selectedPost && selectedPost?.user?.id === currentUserId && (
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={handleDelete}>
@@ -510,11 +490,6 @@ const CommunityScreen = () => {
                 <Text style={[styles.modalOptionText, {color: 'red'}]}>
                   Delete
                 </Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
-                <Icon name="eye-off-outline" size={24} color="#666" />
-                <Text style={styles.modalOptionText}>Hide</Text>
               </TouchableOpacity>
             )}
 
