@@ -240,16 +240,22 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
 
 const menuItems = [
   {
-    title: 'View Profile',
+    title: 'Profile',
     subtitle: 'View your profile information',
     icon: 'person-circle-outline',
     screen: 'RunnerProfileScreen',
   },
   {
-    title: 'View schedules',
+    title: 'Schedules',
     subtitle: 'View your schedule information',
     icon: 'calendar-outline',
     screen: 'GenerateScheduleScreen',
+  },
+  {
+    title: 'Draft',
+    subtitle: 'View your saving posts',
+    icon: 'document-outline',
+    screen: 'DraftScreen',
   },
   {
     title: 'Connect Accounts',

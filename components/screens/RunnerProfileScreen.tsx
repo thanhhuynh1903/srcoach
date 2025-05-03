@@ -381,12 +381,6 @@ const RunnerProfileScreen = () => {
     }
   };
 
-  // Xử lý ẩn bài viết
-  const handleHide = () => {
-    setModalVisible(false);
-    Alert.alert('Thông báo', 'Đã ẩn bài viết này');
-  };
-
   const renderTags = (tags: Tag[]) => {
     if (!tags || tags.length === 0) {
       return null;
@@ -715,7 +709,7 @@ const RunnerProfileScreen = () => {
             )}
             <View style={styles.modalDivider} />
 
-            {selectedPost && selectedPost?.user_id === currentUserId ? (
+            {selectedPost && selectedPost?.user_id === currentUserId && (
               <TouchableOpacity
                 style={styles.modalOption}
                 onPress={handleDelete}>
@@ -724,12 +718,7 @@ const RunnerProfileScreen = () => {
                   Delete
                 </Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.modalOption} onPress={handleHide}>
-                <Icon name="eye-off-outline" size={24} color="#666" />
-                <Text style={styles.modalOptionText}>Hide</Text>
-              </TouchableOpacity>
-            )}
+            ) }
 
             <View style={styles.modalDivider} />
 

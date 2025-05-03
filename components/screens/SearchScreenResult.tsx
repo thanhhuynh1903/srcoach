@@ -22,9 +22,8 @@ import {useLoginStore} from '../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
 import React from 'react';
 import {theme} from '../contants/theme';
-interface Tag {
-  tag_name: string;
-}
+import {CommonAvatar} from '../commons/CommonAvatar';
+
 type SearchResult = {
   id: string;
   title: string;
@@ -43,60 +42,24 @@ type SearchResult = {
     avatar?: string;
   };
 };
-
+type User = {
+  id: number;
+  name: string;
+  username: string;
+  bio?: string;
+  image?: { url: string };
+};
 const SearchResultsScreen = ({}) => {
   // In a real app, you would get the query from route.params
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const navigate = useNavigation();
-  const {searchPost, searchResults, searchLoading, searchError, likePost} =
+  const {searchAll, searchPost,searchResults ,allSearchResults, searchLoading, searchError, likePost} =
     usePostStore();
 
   const {profile} = useLoginStore();
 
-  // Sample data for experts
-  const experts = [
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      image: 'https://randomuser.me/api/portraits/women/32.jpg',
-      specialty: 'UI/UX Designer',
-      rating: 4.8,
-      reviews: 128,
-      verified: true,
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      image: 'https://randomuser.me/api/portraits/men/44.jpg',
-      specialty: 'Product Designer',
-      rating: 4.9,
-      reviews: 93,
-      verified: true,
-    },
-    {
-      id: 3,
-      name: 'Emma Wilson',
-      image: 'https://randomuser.me/api/portraits/women/65.jpg',
-      specialty: 'UX Researcher',
-      rating: 4.7,
-      reviews: 156,
-      verified: false,
-    },
-  ];
-
-  const renderStars = rating => {
-    return [...Array(5)].map((_, index) => (
-      <Icon
-        key={index}
-        name={index < Math.floor(rating) ? 'star' : 'star-outline'}
-        size={16}
-        color={index < Math.floor(rating) ? '#FFB800' : '#E2E8F0'}
-        style={{marginRight: 2}}
-      />
-    ));
-  };
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -107,19 +70,32 @@ const SearchResultsScreen = ({}) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      // Nếu có debouncedQuery, thực hiện tìm kiếm lại khi màn hình được focus
       if (debouncedQuery) {
+        searchAll(debouncedQuery);
         searchPost({title: debouncedQuery});
       }
       return () => {};
-    }, [debouncedQuery, searchPost]),
+    }, [debouncedQuery, searchAll, searchPost]),
   );
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
+      searchAll({title: searchQuery});
       searchPost({title: searchQuery});
     }
   };
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Icon name="search-outline" size={40} color="#94A3B8" />
+      <Text style={styles.emptyText}>
+        {debouncedQuery
+          ? 'No matching articles found'
+          : 'Enter keywords to search for articles'}
+      </Text>
+    </View>
+  );
+
   const renderTags = (tags: Tag[]) => {
     if (!tags || tags.length === 0) {
       return null;
@@ -152,14 +128,116 @@ const SearchResultsScreen = ({}) => {
           <Text style={styles.tagText}>{tags[2]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[3]}</Text>
-        </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>+{tags.length - 4}</Text>
+          <Text style={styles.tagText}>more +{tags.length - 3}</Text>
         </View>
       </View>
     );
   };
+
+  const renderPostItem = (post: SearchResult) => (
+    <TouchableOpacity
+      key={post.id}
+      style={styles.postCard}
+      onPress={() =>
+        navigate.navigate('CommunityPostDetailScreen', {
+          id: post.id,
+        })
+      }>
+      <View style={styles.postHeader}>
+        <CommonAvatar mode={null} uri={post?.user?.image?.url} size={36} />
+        <View style={{marginLeft: 8}}>
+          <Text style={styles.authorName}>
+            {post?.user?.username || 'Người dùng'}
+          </Text>
+          <Text style={styles.postTime}>
+            {new Date(post.created_at).toLocaleDateString('vi-VN')}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.postTitle}>{post.title}</Text>
+      <Text style={styles.postExcerpt}>
+        {post.content.length > 150
+          ? post.content.substring(0, 150) + '...'
+          : post.content}
+      </Text>
+      {post.images && post.images.length > 0 && (
+        <View style={styles.postImageContainer}>
+          <Image
+            source={{uri: post.images[0]}}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+          {post.images.length > 1 && (
+            <View style={styles.remainingImagesIndicator}>
+              <Icon
+                name="images-outline"
+                size={14}
+                color="#FFFFFF"
+                style={styles.imageIcon}
+              />
+              <Text style={styles.remainingImagesText}>
+                +{post.images.length - 1}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+      {post.exercise_session_record_id && (
+        <View style={styles.runDataIndicator}>
+          <View style={styles.runDataIndicatorContent}>
+            <Icon name="walk" size={20} color="#FFFFFF" />
+            <Text style={styles.runDataText}>Runner record included</Text>
+          </View>
+          <Icon
+            name="chevron-forward"
+            size={20}
+            color="#FFFFFF"
+            style={{marginLeft: 4}}
+          />
+        </View>
+      )}
+      <View style={styles.postStats}>
+        <View style={styles.postStats}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={() => handleLikePost(post.id, !post.is_upvoted)}>
+            <Icon
+              name={post?.is_upvoted ? 'heart' : 'heart-outline'}
+              size={18}
+              color={post?.is_upvoted ? '#3B82F6' : '#000'}
+            />
+            <Text style={styles.statText}>{post?.upvote_count}</Text>
+          </TouchableOpacity>
+          <View style={[styles.statItem, {marginLeft: 16}]}>
+            <Icon name="chatbubble-outline" size={18} color="#000" />
+            <Text style={styles.statText}>{post.comment_count}</Text>
+          </View>
+        </View>
+        {renderTags(post.tags)}
+      </View>
+    </TouchableOpacity>
+  );
+  const renderUserItem = (user: User) => (
+    <TouchableOpacity key={user.id} style={styles.userCard}>
+      <CommonAvatar uri={user.image?.url} size={56} />
+      <View style={styles.userInfo}>
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userDetail}>@{user.username}</Text>
+        {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderExpertItem = (expert: User) => (
+    <TouchableOpacity key={expert.id} style={styles.userCard}>
+    <CommonAvatar uri={expert.image?.url} size={56} />
+    <View style={styles.userInfo}>
+      <Text style={styles.userName}>{expert.name}</Text>
+      <Text style={styles.userDetail}>@{expert.username}</Text>
+      {expert.bio && <Text style={styles.userBio}>{expert.bio}</Text>}
+    </View>
+  </TouchableOpacity>
+  );
 
   const handleLikePost = async (postId: string, isLike: boolean) => {
     if (!profile) {
@@ -211,7 +289,7 @@ const SearchResultsScreen = ({}) => {
 
       {/* Tab Navigation */}
       <View style={styles.tabsContainer}>
-        {['All', 'People', 'Posts', 'Experts'].map(tab => (
+        {['All', 'People', 'Posts', 'Experts', 'Runners'].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.activeTab]}
@@ -240,174 +318,59 @@ const SearchResultsScreen = ({}) => {
           </View>
         ) : (
           <>
-            {(activeTab === 'Posts' || activeTab === 'All') && (
+            {activeTab === 'All' && (
               <>
-                {activeTab === 'All' && (
-                  <Text style={styles.sectionTitle}>Post lists</Text>
+                {searchResults && searchResults.length > 0 && (
+                  <>
+                    <Text style={styles.sectionTitle}>Posts</Text>
+                    {searchResults.map(post => renderPostItem(post))}
+                  </>
                 )}
-                {searchResults && searchResults.length > 0 ? (
-                  searchResults.map(
-                    post => (
-                      console.log('post', post),
-                      (
-                        <TouchableOpacity
-                          key={post.id}
-                          style={styles.postCard}
-                          onPress={() =>
-                            navigate.navigate('CommunityPostDetailScreen', {
-                              id: post.id,
-                            })
-                          }>
-                          <View style={styles.postHeader}>
-                            <Image
-                              source={{
-                                uri:
-                                  post.user?.avatar ||
-                                  'https://randomuser.me/api/portraits/women/32.jpg',
-                              }}
-                              style={styles.authorImage}
-                            />
-                            <View>
-                              <Text style={styles.authorName}>
-                                {post?.user?.username || 'Người dùng'}
-                              </Text>
-                              <Text style={styles.postTime}>
-                                {new Date(post.created_at).toLocaleDateString(
-                                  'vi-VN',
-                                )}
-                              </Text>
-                            </View>
-                          </View>
-                          <Text style={styles.postTitle}>{post.title}</Text>
-                          <Text style={styles.postExcerpt}>
-                            {post.content.length > 150
-                              ? post.content.substring(0, 150) + '...'
-                              : post.content}
-                          </Text>
-                          {post.images && post.images.length > 0 && (
-                            <View style={styles.postImageContainer}>
-                              <Image
-                                source={{uri: post.images[0]}}
-                                style={styles.postImage}
-                                resizeMode="cover"
-                              />
-                              {post.images.length > 1 && (
-                                <View style={styles.remainingImagesIndicator}>
-                                  <Icon
-                                    name="images-outline"
-                                    size={14}
-                                    color="#FFFFFF"
-                                    style={styles.imageIcon}
-                                  />
-                                  <Text style={styles.remainingImagesText}>
-                                    +{post.images.length - 1}
-                                  </Text>
-                                </View>
-                              )}
-                            </View>
-                          )}
-                          {post.exercise_session_record_id && (
-                            <View style={styles.runDataIndicator}>
-                              <View style={styles.runDataIndicatorContent}>
-                                <Icon name="walk" size={20} color="#FFFFFF" />
-                                <Text style={styles.runDataText}>
-                                  Runner record included
-                                </Text>
-                              </View>
-                              <Icon
-                                name="chevron-forward"
-                                size={20}
-                                color="#FFFFFF"
-                                style={{marginLeft: 4}}
-                              />
-                            </View>
-                          )}
-                          <View style={styles.postStats}>
-                            <View style={styles.postStats}>
-                              <TouchableOpacity
-                                style={styles.statItem}
-                                onPress={() =>
-                                  handleLikePost(post.id, !post.is_upvoted)
-                                }>
-                                <Icon
-                                  name={
-                                    post?.is_upvoted ? 'heart' : 'heart-outline'
-                                  }
-                                  size={18}
-                                  color={post?.is_upvoted ? '#3B82F6' : '#000'}
-                                />
-                                <Text style={styles.statText}>
-                                  {post?.upvote_count}
-                                </Text>
-                              </TouchableOpacity>
-                              <View style={[styles.statItem, {marginLeft: 16}]}>
-                                <Icon
-                                  name="chatbubble-outline"
-                                  size={18}
-                                  color="#000"
-                                />
-                                <Text style={styles.statText}>
-                                  {post.comment_count}
-                                </Text>
-                              </View>
-                            </View>
-                            {renderTags(post.tags)}
-                          </View>
-                          {/* Sử dụng hàm renderTags thay vì render trực tiếp */}
-                        </TouchableOpacity>
-                      )
-                    ),
-                  )
-                ) : (
-                  <View style={styles.emptyContainer}>
-                    <Icon name="search-outline" size={40} color="#94A3B8" />
-                    <Text style={styles.emptyText}>
-                      {debouncedQuery
-                        ? 'No matching articles found'
-                        : 'Enter keywords to search for articles'}
-                    </Text>
-                  </View>
+                {allSearchResults.experts.length > 0 && (
+                  <>
+                    <Text style={styles.sectionTitle}>Experts</Text>
+                    {allSearchResults.experts.map(renderExpertItem)}
+                  </>
+                )}
+
+                {allSearchResults.runners.length > 0 && (
+                  <>
+                    <Text style={styles.sectionTitle}>Runners</Text>
+                    {allSearchResults.runners.map(renderUserItem)}
+                  </>
                 )}
               </>
             )}
 
-            {(activeTab === 'Experts' || activeTab === 'All') && (
+            {activeTab === 'Posts' && (
               <>
-                {activeTab === 'All' && (
-                  <Text style={styles.sectionTitle}>Expert</Text>
-                )}
-                {experts.map(expert => (
-                  <TouchableOpacity key={expert.id} style={styles.expertCard}>
-                    <Image
-                      source={{uri: expert.image}}
-                      style={styles.expertImage}
-                    />
-                    <View style={styles.expertInfo}>
-                      <View style={styles.expertNameRow}>
-                        <Text style={styles.expertName}>{expert.name}</Text>
-                        {expert.verified && (
-                          <Icon
-                            name="checkmark-circle"
-                            size={16}
-                            color="#3B82F6"
-                          />
-                        )}
-                      </View>
-                      <Text style={styles.expertSpecialty}>
-                        {expert.specialty}
-                      </Text>
-                      <View style={styles.ratingContainer}>
-                        {renderStars(expert.rating)}
-                        <Text style={styles.ratingText}>
-                          {expert.rating} ({expert.reviews})
-                        </Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity style={styles.followButton}>
-                      <Text style={styles.followButtonText}>Follow</Text>
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                ))}
+                {searchResults && searchResults.length > 0
+                  ? searchResults.map(post => renderPostItem(post))
+                  : renderEmptyState()}
+              </>
+            )}
+
+            {activeTab === 'People' && (
+              <>
+                {allSearchResults.users.length > 0
+                  ? allSearchResults.users.map(renderUserItem)
+                  : renderEmptyState()}
+              </>
+            )}
+
+            {activeTab === 'Experts' && (
+              <>
+                {allSearchResults.experts.length > 0
+                  ? allSearchResults.experts.map(renderExpertItem)
+                  : renderEmptyState()}
+              </>
+            )}
+
+            {activeTab === 'Runners' && (
+              <>
+                {allSearchResults.runners.length > 0
+                  ? allSearchResults.runners.map(renderUserItem)
+                  : renderEmptyState()}
               </>
             )}
           </>
@@ -694,6 +657,36 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 12,
   },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  userInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  userDetail: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  userBio: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 8,
+  },
+
 });
 
 export default SearchResultsScreen;

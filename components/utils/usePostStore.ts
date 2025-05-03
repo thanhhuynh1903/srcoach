@@ -1,7 +1,6 @@
 import {create} from 'zustand';
 import useApiStore from './zustandfetchAPI';
 
-
 interface User {
   id: string;
   username: string;
@@ -43,6 +42,7 @@ interface Post {
   comment_count: number;
   is_upvoted: boolean;
   is_downvoted: boolean;
+  is_deleted: boolean;
   images: string[];
   user?: {
     username: string;
@@ -60,7 +60,8 @@ interface ApiResponse<T> {
 
 interface PostState {
   posts: Post[];
-  myPosts: Post[]; // Thêm state để lưu danh sách bài đăng của chính user
+  postDraft: Post[];
+  myPosts: Post[];
   currentPost: Post | null;
   isLoading: boolean;
   message: string | null;
@@ -106,7 +107,23 @@ interface PostState {
   }) => Promise<void>;
   getUserByPostId: (postId: string) => Promise<User | null>;
   clearUserByPost: () => void;
-
+  userSearchResults: User[];
+  expertSearchResults: User[];
+  runnerSearchResults: User[];
+  allSearchResults: {
+    users: User[];
+    experts: User[];
+    runners: User[];
+  };
+  getDrafts: () => Promise<void>;
+  saveDraft: (postId: string) => Promise<boolean>;
+  deleteDraft: (postId: string) => Promise<boolean>;
+  userSearchError: string | null;
+  userSearchLoading: boolean;
+  // Thêm các methods mới
+  searchAll: (query: string) => Promise<void>;
+  searchExperts: (query: string) => Promise<void>;
+  searchRunners: (query: string) => Promise<void>;
 }
 
 const api = useApiStore.getState();
@@ -114,11 +131,12 @@ const api = useApiStore.getState();
 export const usePostStore = create<PostState>((set, get) => ({
   posts: [],
   myPosts: [],
+  postDraft: [],
   currentPost: null,
   isLoading: false,
   message: null,
   status: null,
-
+  postsDraft: [],
   searchResults: [],
   searchLoading: false,
   searchError: null,
@@ -126,12 +144,157 @@ export const usePostStore = create<PostState>((set, get) => ({
   userByPost: null,
   userLoading: false,
   userError: null,
+  userSearchResults: [],
+  expertSearchResults: [],
+  runnerSearchResults: [],
+  allSearchResults: {
+    posts: [],
+    users: [],
+    experts: [],
+    runners: [],
+  },
+  userSearchLoading: false,
+  userSearchError: null,
+  searchAll: async (query: string) => {
+    set({searchLoading: true, searchError: null});
+
+    try {
+      // Tìm kiếm song song tất cả các loại đối tượng
+      const [postsPromise, usersPromise, expertsPromise, runnersPromise] = [
+        api.fetchData<ApiResponse<User[]>>(
+          `/users/search/users?query=${encodeURIComponent(query)}`,
+        ),
+        api.fetchData<ApiResponse<User[]>>(
+          `/users/search/experts?query=${encodeURIComponent(query)}`,
+        ),
+        api.fetchData<ApiResponse<User[]>>(
+          `/users/search/runners?query=${encodeURIComponent(query)}`,
+        ),
+      ];
+
+      const [usersRes, expertsRes, runnersRes] = await Promise.all([
+        postsPromise,
+        usersPromise,
+        expertsPromise,
+        runnersPromise,
+      ]);
+
+      set({
+        allSearchResults: {
+          users: usersRes?.status === 'success' ? usersRes.data : [],
+          experts: expertsRes?.status === 'success' ? expertsRes.data : [],
+          runners: runnersRes?.status === 'success' ? runnersRes.data : [],
+        },
+        searchLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        searchLoading: false,
+        searchError: error.message || 'Đã xảy ra lỗi khi tìm kiếm',
+        allSearchResults: {users: [], experts: [], runners: []},
+      });
+    }
+  },
+
+  searchExperts: async query => {
+    set({userSearchLoading: true, userSearchError: null});
+
+    try {
+      const response = await api.fetchData<ApiResponse<User[]>>(
+        `/users/search/experts?query=${encodeURIComponent(query)}`,
+      );
+
+      if (response?.status === 'success' && Array.isArray(response.data)) {
+        set({
+          expertSearchResults: response.data,
+          userSearchLoading: false,
+        });
+      } else {
+        set({
+          expertSearchResults: [],
+          userSearchLoading: false,
+          userSearchError: response?.message || 'Không tìm thấy chuyên gia',
+        });
+      }
+    } catch (error: any) {
+      set({
+        expertSearchResults: [],
+        userSearchLoading: false,
+        userSearchError: error.message || 'Lỗi tìm kiếm chuyên gia',
+      });
+    }
+  },
+
+  searchRunners: async query => {
+    set({userSearchLoading: true, userSearchError: null});
+
+    try {
+      const response = await api.fetchData<ApiResponse<User[]>>(
+        `/users/search/runners?query=${encodeURIComponent(query)}`,
+      );
+
+      if (response?.status === 'success' && Array.isArray(response.data)) {
+        set({
+          runnerSearchResults: response.data,
+          userSearchLoading: false,
+        });
+      } else {
+        set({
+          runnerSearchResults: [],
+          userSearchLoading: false,
+          userSearchError: response?.message || 'Không tìm thấy runner',
+        });
+      }
+    } catch (error: any) {
+      set({
+        runnerSearchResults: [],
+        userSearchLoading: false,
+        userSearchError: error.message || 'Lỗi tìm kiếm runner',
+      });
+    }
+  },
+
+  // Cập nhật method searchUsers hiện có
+  searchUsers: async (query, role) => {
+    set({userSearchLoading: true, userSearchError: null});
+
+    try {
+      let endpoint = '/users/search/users';
+      if (role === 'runner') endpoint = '/users/search/runners';
+      if (role === 'expert') endpoint = '/users/search/experts';
+
+      const response = await api.fetchData<ApiResponse<User[]>>(
+        `${endpoint}?query=${encodeURIComponent(query)}`,
+      );
+
+      if (response?.status === 'success' && Array.isArray(response.data)) {
+        set({
+          userSearchResults: response.data,
+          userSearchLoading: false,
+        });
+      } else {
+        set({
+          userSearchResults: [],
+          userSearchLoading: false,
+          userSearchError: response?.message || 'Không tìm thấy người dùng',
+        });
+      }
+    } catch (error: any) {
+      set({
+        userSearchResults: [],
+        userSearchLoading: false,
+        userSearchError: error.message || 'Lỗi tìm kiếm người dùng',
+      });
+    }
+  },
 
   getAll: async () => {
     set({isLoading: true, status: null});
 
     try {
-      const response = await api.fetchData<ApiResponse<Post[]>>('/posts/filter');
+      const response = await api.fetchData<ApiResponse<Post[]>>(
+        '/posts/filter',
+      );
       console.log('Response:', response);
 
       if (
@@ -201,6 +364,53 @@ export const usePostStore = create<PostState>((set, get) => ({
       set({isLoading: false, status: error.message});
     }
   },
+
+  getDrafts: async () => {
+    set({isLoading: true, status: null});
+    try {
+      const response = await api.fetchData<ApiResponse<Post[]>>(
+        '/posts-save/saved',
+      );
+      console.log('response', response);
+      if (
+        response &&
+        response.status === 'success' &&
+        Array.isArray(response.data)
+      ) {
+        set({postDraft: response.data, isLoading: false, status: null});
+      } else {
+        set({
+          postDraft: [],
+          isLoading: false,
+          status: response?.status || 'Failed to fetch your posts',
+        });
+      }
+    } catch (error) {}
+  },
+
+  saveDraft: async (postId) => {
+    try {
+      await api.postData(
+        `/posts-save/${postId}/save/`,{}
+      );
+      return true;
+    } catch (error) {
+      console.error('Save draft failed:', error);
+      return false;
+    }
+  },
+  deleteDraft: async (postId) => {
+    try {
+      await api.deleteData(
+        `/posts-save/${postId}/save/`
+      );
+      return true;
+    } catch (error) {
+      console.error('Save draft failed:', error);
+      return false;
+    }
+  },
+
   createPost: async postData => {
     set({isLoading: true, status: null});
     console.log('postData', postData);
@@ -540,11 +750,13 @@ export const usePostStore = create<PostState>((set, get) => ({
   },
   getUserByPostId: async (postId: string) => {
     set({userLoading: true, userError: null});
-    
+
     try {
-      const response = await api.fetchData<ApiResponse<User>>(`/posts/${postId}/user`);
+      const response = await api.fetchData<ApiResponse<User>>(
+        `/posts/${postId}/user`,
+      );
       console.log('response', response);
-      
+
       if (response && response?.status === true && response.data) {
         set({
           userByPost: response.data,
@@ -553,7 +765,8 @@ export const usePostStore = create<PostState>((set, get) => ({
         });
         return response.data;
       } else {
-        const errorMessage = response?.message || 'Không thể lấy thông tin người dùng';
+        const errorMessage =
+          response?.message || 'Không thể lấy thông tin người dùng';
         set({
           userByPost: null,
           userLoading: false,
@@ -562,7 +775,8 @@ export const usePostStore = create<PostState>((set, get) => ({
         return null;
       }
     } catch (error: any) {
-      const errorMessage = error.message || 'Đã xảy ra lỗi khi lấy thông tin người dùng';
+      const errorMessage =
+        error.message || 'Đã xảy ra lỗi khi lấy thông tin người dùng';
       set({
         userByPost: null,
         userLoading: false,
@@ -571,7 +785,7 @@ export const usePostStore = create<PostState>((set, get) => ({
       return null;
     }
   },
-  
+
   // Thêm hàm clearUserByPost để xóa thông tin người dùng
   clearUserByPost: () => set({userByPost: null, userError: null}),
 

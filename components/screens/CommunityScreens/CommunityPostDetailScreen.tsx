@@ -96,7 +96,7 @@ const CommunityPostDetailScreen = () => {
 
   // Tham chiếu đến input để focus
   const inputRef = useRef(null);
-  console.log('currentPost', currentPost);
+  console.log('currentpost', currentPost);
 
   useEffect(() => {
     if (id) {
@@ -357,6 +357,7 @@ const CommunityPostDetailScreen = () => {
         // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
         await getCommentsByPostId(id);
         await getAll();
+        await getMyPosts();
         Alert.alert('Success', 'Comment deleted successfully');
       } else {
         Alert.alert('Error', 'Failed to delete comment');
@@ -374,16 +375,8 @@ const CommunityPostDetailScreen = () => {
     Alert.alert('Success', 'Post saved to drafts');
   };
 
-  // Xử lý ẩn bài viết
-  const handleHide = () => {
-    setModalVisible(false);
-    Alert.alert('Success', 'Post hidden from your feed');
-    navigation.goBack();
-  };
-
   // Trong CommunityPostDetailScreen
   const renderComment = (comment: any) => {
-    console.log('comment', comment);
     return (
       <TouchableOpacity
         key={comment.id}
@@ -476,51 +469,49 @@ const CommunityPostDetailScreen = () => {
     }
   }, [currentPost]);
 
-  const handleLikePost = async (id: string, isLike: boolean) => {
+  const handleLikePost = async (postId: string, isLike: boolean) => {
     if (!profile) {
-      // Kiểm tra người dùng đã đăng nhập chưa
-      Alert.alert('Success', 'Please login to like this post', [
-        {text: 'Close', style: 'cancel'},
-      ]);
+      Alert.alert('Success', 'Please login to like this post');
       return;
     }
 
     try {
-      // Cập nhật UI ngay lập tức (optimistic update)
-      // Lưu trạng thái cũ để khôi phục nếu API thất bại
-      const oldPostState = {...currentPost};
-
-      // Cập nhật trạng thái hiện tại của bài viết
+      // Optimistic update for current post
       const updatedPost = {
         ...currentPost,
         is_upvoted: isLike,
         upvote_count: isLike
-          ? currentPost?.is_upvoted
-            ? currentPost.upvote_count
-            : currentPost!.upvote_count + 1
-          : currentPost?.is_upvoted
-          ? currentPost.upvote_count - 1
-          : currentPost?.upvote_count,
+          ? currentPost.upvote_count + 1
+          : Math.max(0, currentPost.upvote_count - 1),
       };
-      console.log('updatedPost', updatedPost);
 
-      // Cập nhật currentPost trong store
+      // Update current post in store
       usePostStore.setState({currentPost: updatedPost});
 
-      // Gọi API để like/unlike bài viết
-      const success = await likePost(id, isLike);
-      await getMyPosts();
-      if (!success) {
-        // Nếu API thất bại, khôi phục lại trạng thái cũ
-        usePostStore.setState({currentPost: oldPostState});
-        Alert.alert('Error', 'Unable to like this post. Please try again later.');
-      }
+      // Update myPosts in store
+      usePostStore.setState(state => ({
+        myPosts: state.myPosts.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                is_upvoted: isLike,
+                upvote_count: isLike
+                  ? post.upvote_count + 1
+                  : Math.max(0, post.upvote_count - 1),
+              }
+            : post,
+        ),
+      }));
+
+      await likePost(postId, isLike);
     } catch (error) {
-      console.error('Error liking post:', error);
-      Alert.alert('Error', 'Unable to like this post. Please try again later.');
+      // Rollback both updates on error
+      usePostStore.setState({currentPost});
+      usePostStore.setState(state => ({
+        myPosts: state.myPosts, // restore original myPosts
+      }));
     }
   };
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -540,9 +531,11 @@ const CommunityPostDetailScreen = () => {
         {/* User info section */}
         <View style={styles.userInfoContainer}>
           <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('OtherProfileScreen', {postId: currentPost?.id})
-            }>
+             onPress={() => (
+              currentPost?.user?.id === profile.id ?
+                navigation.navigate('RunnerProfileScreen' as never) :
+                navigation.navigate('OtherProfileScreen', { postId: currentPost?.id })
+            )}>
             <View style={styles.userInfo}>
                 <CommonAvatar mode={null} size={40} uri={localPost?.user?.image?.url} />
               <View style={styles.userTextInfo}>
@@ -865,12 +858,6 @@ const CommunityPostDetailScreen = () => {
 
                 <View style={styles.modalDivider} />
 
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={handleHide}>
-                  <Icon name="eye-off-outline" size={24} color="#666" />
-                  <Text style={styles.modalOptionText}>Hide</Text>
-                </TouchableOpacity>
               </>
             )}
 
