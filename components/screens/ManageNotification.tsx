@@ -180,37 +180,7 @@ const ManageNotification = () => {
     fetchNotifications();
   };
 
-  // Đánh dấu thông báo đã đọc
-  const markAsRead = async (notificationId: any) => {
-    try {
-      await api.putData(`/notifications/${notificationId}/read`);
-
-      // Cập nhật UI
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notification =>
-          notification.id === notificationId
-            ? {...notification, unread: false}
-            : notification,
-        ),
-      );
-
-      // Cập nhật số lượng thông báo chưa đọc
-      setNotificationStats(prev => ({
-        ...prev,
-        unread: prev.unread - 1,
-      }));
-    } catch (error) {
-      console.error('Lỗi khi đánh dấu thông báo đã đọc:', error);
-    }
-  };
-
-  // Xử lý khi nhấn vào thông báo
   const handleNotificationPress = (notification: any) => {
-    // Đánh dấu thông báo đã đọc
-    if (notification.unread) {
-      markAsRead(notification.id);
-    }
-
     // Điều hướng dựa trên loại thông báo
     if (notification.targetType && notification.targetId) {
       switch (notification.targetType) {
@@ -258,8 +228,6 @@ const ManageNotification = () => {
   // Lọc thông báo dựa trên tab đang chọn
   const getFilteredNotifications = () => {
     switch (activeTab) {
-      case 'unread':
-        return notifications.filter(notification => notification.unread);
       case 'likes':
         return notifications.filter(
           notification => notification.type === 'post_like',
@@ -280,7 +248,6 @@ const ManageNotification = () => {
 
   const tabs = [
     {id: 'all', label: 'All', count: notificationStats.all},
-    {id: 'unread', label: 'Unread', count: notificationStats.unread},
     {id: 'likes', label: 'Likes', count: notificationStats.likes},
     {id: 'comments', label: 'Comments', count: notificationStats.comments},
   ];
