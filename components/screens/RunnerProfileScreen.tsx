@@ -489,6 +489,12 @@ const RunnerProfileScreen = () => {
                     <Text style={styles.roleBadgeText}>Runner</Text>
                   </View>
                 )}
+                {profile?.roles?.includes("expert") && (
+                  <View style={styles.roleBadgeEx}>
+                    <Icon name="ribbon" size={14} color="#fff" />
+                    <Text style={styles.roleBadgeText}>Expert</Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -900,6 +906,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#3B82F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  roleBadgeEx: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFB22C",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
