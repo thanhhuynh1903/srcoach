@@ -31,7 +31,7 @@ import Animated, {
   LinearTransition,
   Easing,
 } from 'react-native-reanimated';
-
+import CommonDialog from '../../commons/CommonDialog';
 const {width} = Dimensions.get('window');
 
 interface DraftItem {
@@ -40,6 +40,7 @@ interface DraftItem {
   content: string;
   images: {url: string}[];
   created_at: string;
+  is_deleted?: boolean;
 }
 
 // Animated TouchableOpacity component
@@ -52,8 +53,11 @@ const DraftsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const filteredDrafts = postDraft.filter((item) => !item.is_deleted);
-
+  const [localDrafts, setLocalDrafts] = useState<DraftItem[]>([]);
+  
+  // Sử dụng localDrafts thay vì lọc trực tiếp từ postDraft
+  // Điều này cho phép chúng ta cập nhật UI mà không cần reload từ API
+ 
   // Load drafts on mount
   useEffect(() => {
     const loadData = async () => {
@@ -67,6 +71,11 @@ const DraftsScreen: React.FC = () => {
 
     loadData();
   }, []);
+  
+  // Cập nhật localDrafts khi postDraft thay đổi
+  useEffect(() => {
+    setLocalDrafts(postDraft.filter(item => !item.is_deleted));
+  }, [postDraft]);
 
   const toggleEditMode = () => {
     setIsEditing(!isEditing);
@@ -81,7 +90,6 @@ const DraftsScreen: React.FC = () => {
         onPress: async () => {
           // Set the deleting ID to trigger animation
           setDeletingId(postId);
-
           // Actual deletion happens after animation in the item component
         },
       },
@@ -245,9 +253,13 @@ const DraftsScreen: React.FC = () => {
     try {
       const success = await deleteDraft(id);
       if (success) {
+        // Cập nhật localDrafts thay vì gọi getDrafts
+        setLocalDrafts(prevDrafts => prevDrafts.filter(draft => draft.id !== id));
+        
         // Reset the deleting ID
         setDeletingId(null);
-        await getDrafts();
+        
+        // Không cần gọi getDrafts() nữa
       } else {
         Alert.alert('Error', 'Failed to delete draft');
         setDeletingId(null);
@@ -346,7 +358,7 @@ const DraftsScreen: React.FC = () => {
         <Text style={styles.headerTitle}>Drafts</Text>
         <TouchableOpacity onPress={toggleEditMode}>
           <Text style={styles.editButton}>
-            {postDraft.length === 0 ? (
+            {localDrafts.length === 0 ? (
               <Text>Edit</Text>
             ) : isEditing ? (
               <Text>Done</Text>
@@ -360,13 +372,13 @@ const DraftsScreen: React.FC = () => {
       {/* Draft Count */}
       <Animated.View style={styles.countContainer} layout={Layout}>
         <Text style={styles.countText}>
-          {postDraft.length} {postDraft.length === 1 ? 'Draft' : 'Drafts'}
+          {localDrafts.length} {localDrafts.length === 1 ? 'Draft' : 'Drafts'}
         </Text>
       </Animated.View>
 
       {/* Drafts List */}
       <FlatList
-        data={filteredDrafts}
+        data={localDrafts}
         renderItem={({item}) => (
           <AnimatedDraftItem item={item} onDelete={performDelete} />
         )}
@@ -382,6 +394,7 @@ const DraftsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  // Styles không thay đổi
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

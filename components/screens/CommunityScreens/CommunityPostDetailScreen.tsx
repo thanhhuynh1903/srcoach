@@ -25,6 +25,7 @@ import {Dimensions} from 'react-native';
 import CommunityPostDetailMap from './CommunityPostDetailMap';
 import SkeletonPostDetail from './SkeletonPostDetail';
 import { CommonAvatar } from '../../commons/CommonAvatar';
+import { SaveDraftButton } from './SaveDraftButton';
 interface User {
   id: string;
   username: string;
@@ -366,13 +367,6 @@ const CommunityPostDetailScreen = () => {
       console.error('Error deleting comment:', error);
       Alert.alert('Error', 'An error occurred while deleting the comment');
     }
-  };
-
-  // Xử lý lưu nháp bài viết
-  const handleSaveDraft = () => {
-    setModalVisible(false);
-    // Thực hiện lưu nháp
-    Alert.alert('Success', 'Post saved to drafts');
   };
 
   // Trong CommunityPostDetailScreen
@@ -728,14 +722,6 @@ const CommunityPostDetailScreen = () => {
                 </TouchableOpacity>
               </View>
             </View>
-            <View style={styles.engagementRight}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Icon name="bookmark-outline" size={20} color="#666" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Icon name="share-social-outline" size={20} color="#666" />
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
 
@@ -849,12 +835,7 @@ const CommunityPostDetailScreen = () => {
               </>
             ) : (
               <>
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={handleSaveDraft}>
-                  <Icon name="bookmark-outline" size={24} color="#4285F4" />
-                  <Text style={styles.modalOptionText}>Save draft</Text>
-                </TouchableOpacity>
+               <SaveDraftButton postId={currentPost?.id ?? ''} onSave={() => setModalVisible(false)}/>
 
                 <View style={styles.modalDivider} />
 

@@ -168,6 +168,11 @@ const OtherProfileScreen = ({ route }) => {
     return "Just now"
   }
 
+  const formatFirstLetter = (str: string) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
   const handleLikePost = async (postId: string, isLike: boolean) => {
     if (!profile) {
       Alert.alert("Thông báo", "Vui lòng đăng nhập để thích bài viết", [{ text: "Đóng", style: "cancel" }])
@@ -299,6 +304,18 @@ const OtherProfileScreen = ({ route }) => {
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>{userData?.user?.name || "Người dùng"}</Text>
                 <Text style={styles.profileUsername}>@{userData?.user?.username || "username"}</Text>
+                {userData?.user.UserRole[0]?.Role?.role_name?.includes("runner") && (
+                  <View style={styles.roleBadge}>
+                    <Icon name="walk" size={14} color="#fff" />
+                    <Text style={styles.roleBadgeText}>Runner</Text>
+                  </View>
+                )}
+                {userData?.user.UserRole[0]?.Role?.role_name?.includes("expert") && (
+                  <View style={styles.roleBadgeEx}>
+                    <Icon name="ribbon" size={14} color="#fff" />
+                    <Text style={styles.roleBadgeText}>Expert</Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -318,7 +335,7 @@ const OtherProfileScreen = ({ route }) => {
             <View style={styles.levelContainer}>
               <View style={styles.levelHeader}>
                 <Text style={styles.levelTitle}>Level Progress</Text>
-                <Text style={styles.levelValue}>Beginner</Text>
+                <Text style={styles.levelValue}>{formatFirstLetter(userData?.user?.user_level)}</Text>
               </View>
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelProgress}>
@@ -336,7 +353,7 @@ const OtherProfileScreen = ({ route }) => {
                 </Text>
               </View>
               <Text style={styles.nextLevelText}>
-                Next: <Text style={styles.nextLevelHighlight}>Intermediate</Text>
+                Next: <Text style={styles.nextLevelHighlight}>{formatFirstLetter(userData?.user?.user_next_level)}</Text>
               </Text>
             </View>
 
@@ -344,12 +361,12 @@ const OtherProfileScreen = ({ route }) => {
             <View style={styles.statsRow}>
               <View style={styles.statBadge}>
                 <Icon name="trophy" size={16} color="#10B981" />
-                <Text style={styles.statBadgeText}>Beginner</Text>
+                <Text style={styles.statBadgeText}>{formatFirstLetter(userData?.user?.user_level)}</Text>
               </View>
 
               <View style={styles.statBadge}>
                 <Icon name="star" size={16} color="#F59E0B" />
-                <Text style={styles.statBadgeText}>0 Points</Text>
+                <Text style={styles.statBadgeText}>{userData?.user?.points || 0} Points</Text>
               </View>
 
             </View>
@@ -358,7 +375,7 @@ const OtherProfileScreen = ({ route }) => {
           {/* Stats Section */}
           <View style={styles.statsSection}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>0</Text>
+              <Text style={styles.statValue}>{userData?.user?.points}</Text>
               <Text style={styles.statLabel}>Point</Text>
             </View>
             <View style={styles.statDivider} />
@@ -575,6 +592,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
     marginBottom: 6,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  roleBadgeEx: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFB22C",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  roleBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 4,
   },
   infoRow: {
     flexDirection: "row",
