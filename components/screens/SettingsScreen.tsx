@@ -84,7 +84,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
               size={100}
               uri={profile?.image?.url}
             />
-            <Text style={styles.profileName}>{profile?.username}</Text>
+            <Text style={styles.profileName}>{profile?.name}</Text>
 
             <View style={styles.levelContainer}>
               <Text style={styles.levelText}>

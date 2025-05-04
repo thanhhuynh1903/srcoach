@@ -227,7 +227,7 @@ const LeaderBoardScreen = ({navigation}: {navigation: any}) => {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={styles.backButton}>
+            >
             <BackButton size={24} color="#111827" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Leaderboard</Text>
@@ -298,9 +298,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-  },
-  backButton: {
-    padding: 8,
   },
   headerTitle: {
     fontSize: 20,

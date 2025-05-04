@@ -24,8 +24,8 @@ import ModalPoppup from '../../ModalPoppup';
 import {Dimensions} from 'react-native';
 import CommunityPostDetailMap from './CommunityPostDetailMap';
 import SkeletonPostDetail from './SkeletonPostDetail';
-import { CommonAvatar } from '../../commons/CommonAvatar';
-import { SaveDraftButton } from './SaveDraftButton';
+import {CommonAvatar} from '../../commons/CommonAvatar';
+import {SaveDraftButton} from './SaveDraftButton';
 interface User {
   id: string;
   username: string;
@@ -45,6 +45,7 @@ interface Post {
   updated_at: string | null;
   exercise_session_record_id: string | null;
   User: User;
+  user: User;
   postTags: string[];
   PostVote: any[];
   PostComment: any[];
@@ -55,12 +56,21 @@ interface Post {
   is_upvote: boolean;
   is_upvoted: boolean;
   is_downvoted: boolean;
+  is_saved: boolean;
 }
 
 const CommunityPostDetailScreen = () => {
-  const {getDetail, currentPost, getAll, deletePost, likePost, getMyPosts,isLoading: isLoadingPost} =
-    usePostStore();
-  const [localPost, setLocalPost] = useState<Post[]>([]);
+  const {
+    getDetail,
+    currentPost,
+    getAll,
+    deletePost,
+    likePost,
+    getMyPosts,
+    isLoading: isLoadingPost,
+  } = usePostStore();
+  const [localPost, setLocalPost] = useState<Post | null>(null);
+
   const {profile} = useLoginStore();
   const {
     createComment,
@@ -85,7 +95,9 @@ const CommunityPostDetailScreen = () => {
 
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingParentCommentId, setEditingParentCommentId] = useState<string | null>(null);
+  const [editingParentCommentId, setEditingParentCommentId] = useState<
+    string | null
+  >(null);
 
   const [zoomModalVisible, setZoomModalVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -104,7 +116,7 @@ const CommunityPostDetailScreen = () => {
       // Tải thông tin bài viết
       getDetail(id);
       console.log('id', id);
-      
+
       // Tải bình luận
       getCommentsByPostId(id);
     } else {
@@ -382,7 +394,7 @@ const CommunityPostDetailScreen = () => {
             setShowModal(true);
           }
         }}>
-           <CommonAvatar mode={null} size={36} uri={comment.User?.image?.url} />
+        <CommonAvatar mode={null} size={36} uri={comment.User?.image?.url} />
         <View style={styles.commentContent}>
           <View style={styles.commentHeader}>
             <Text style={styles.commentUserName}>
@@ -517,387 +529,421 @@ const CommunityPostDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-    {isLoading ? (
-      <SkeletonPostDetail />
-    ) : (
-      <>
-      <ScrollView style={styles.scrollView}>
-        {/* User info section */}
-        <View style={styles.userInfoContainer}>
-          <TouchableOpacity
-             onPress={() => (
-              currentPost?.user?.id === profile.id ?
-                navigation.navigate('RunnerProfileScreen' as never) :
-                navigation.navigate('OtherProfileScreen', { postId: currentPost?.id })
-            )}>
-            <View style={styles.userInfo}>
-                <CommonAvatar mode={null} size={40} uri={localPost?.user?.image?.url} />
-              <View style={styles.userTextInfo}>
-                <Text style={styles.userName}>{localPost?.user?.username}</Text>
-                <View style={styles.postMetaInfo}>
-                  <Text style={styles.postTime}>
-                    {formatTimeAgo(localPost?.created_at)}
-                  </Text>
-                
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
-            <Icon name="ellipsis-horizontal" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Post content */}
-        <View style={styles.postContent}>
-          <Text style={styles.postTitle}>{localPost?.title}</Text>
-          <Text style={styles.postDescription}>{localPost?.content}</Text>
-
-          {/* Run photo */}
-          {localPost?.images && localPost?.images.length > 0 && (
-            <>
-              {localPost.images.length > 2 ? (
-                <View style={{marginBottom: 16}}>
-                  {/* First image shown larger */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedImageIndex(0);
-                      setZoomModalVisible(true);
-                    }}
-                    style={{marginBottom: 8}}>
-                    <Image
-                      source={{uri: localPost.images[0]}}
-                      style={[styles.runPhoto, {height: 180}]} // Slightly smaller than full runPhoto
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-
-                  {/* Remaining images in horizontal scroll */}
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    scrollEnabled={false}
-                    contentContainerStyle={{paddingHorizontal: 2}}>
-                    {localPost.images.slice(1).map((imageUri, index) => (
-                      <TouchableOpacity
-                        key={index + 1}
-                        onPress={() => {
-                          setSelectedImageIndex(index + 1);
-                          setZoomModalVisible(true);
-                        }}
-                        style={{marginRight: 8}}>
-                        <Image
-                          source={{uri: imageUri}}
-                          style={styles.postImagev2}
-                          resizeMode="cover"
-                        />
-
-                        {/* Show count on last visible image if there are many */}
-                        {localPost.images.length > 3 && index === 2 && (
-                          <View
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              backgroundColor: 'rgba(0,0,0,0.5)',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              borderRadius: 8,
-                            }}>
-                            <Text
-                              style={{
-                                color: 'white',
-                                fontSize: 18,
-                                fontWeight: 'bold',
-                              }}>
-                              +{localPost.images.length - 4}
-                            </Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : localPost.images.length === 2 ? (
-                // For exactly 2 images, show them side by side
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    marginBottom: 16,
-                    height: 180,
-                    gap: 8,
-                  }}>
-                  <TouchableOpacity
-                    style={{flex: 1}}
-                    onPress={() => {
-                      setSelectedImageIndex(0);
-                      setZoomModalVisible(true);
-                    }}>
-                    <Image
-                      source={{uri: localPost.images[0]}}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: 12,
-                      }}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{flex: 1}}
-                    onPress={() => {
-                      setSelectedImageIndex(1);
-                      setZoomModalVisible(true);
-                    }}>
-                    <Image
-                      source={{uri: localPost.images[1]}}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: 12,
-                      }}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                // For a single image
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedImageIndex(0);
-                    setZoomModalVisible(true);
-                  }}
-                  style={{marginBottom: 16}}>
-                  <Image
-                    source={{uri: localPost.images[0]}}
-                    style={styles.runPhoto}
-                    resizeMode="cover"
+      {isLoading ? (
+        <SkeletonPostDetail />
+      ) : (
+        <>
+          <ScrollView style={styles.scrollView}>
+            {/* User info section */}
+            <View style={styles.userInfoContainer}>
+              <TouchableOpacity
+                onPress={() =>
+                  currentPost?.user?.id === profile.id
+                    ? navigation.navigate('RunnerProfileScreen' as never)
+                    : navigation.navigate('OtherProfileScreen', {
+                        postId: currentPost?.id,
+                      })
+                }>
+                <View style={styles.userInfo}>
+                  <CommonAvatar
+                    mode={null}
+                    size={40}
+                    uri={localPost?.user?.image?.url}
                   />
+                  <View style={styles.userTextInfo}>
+                    <Text style={styles.userName}>
+                      {localPost?.user?.username}
+                    </Text>
+                    <View style={styles.postMetaInfo}>
+                      <Text style={styles.postTime}>
+                        {formatTimeAgo(localPost?.created_at)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              {currentPost?.user?.id !== currentUserId ? (
+                <SaveDraftButton
+                  postId={localPost?.id}
+                  isSaved={localPost?.is_saved}
+                  onSave={newSavedState => {
+                    // Update local post state
+                    setLocalPost(prev => ({
+                      ...prev,
+                      is_saved: newSavedState,
+                    }));
+
+                    usePostStore.setState(state => ({
+                      posts: state.posts.map(post =>
+                        post.id === localPost.id
+                          ? {...post, is_saved: newSavedState}
+                          : post,
+                      ),
+                    }));
+                  }}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={styles.moreButton}
+                  onPress={handleMorePress}>
+                  <Icon name="ellipsis-horizontal" size={20} color="#000" />
                 </TouchableOpacity>
               )}
-            </>
-          )}
-
-          <CommunityPostDetailMap
-            exerciseSessionRecordId={currentPost?.exercise_session_record_id}
-          />
-
-          {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              <Text style={{fontSize: 16, fontWeight: 'bold', marginRight: 5}}>
-                Tags :{' '}
-              </Text>
-              {currentPost.tags.map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
             </View>
-          )}
+            {/* Post content */}
+            <View style={styles.postContent}>
+              <Text style={styles.postTitle}>{localPost?.title}</Text>
+              <Text style={styles.postDescription}>{localPost?.content}</Text>
 
-          {/* Post engagement */}
-          <View style={styles.engagementContainer}>
-            <View style={styles.engagementLeft}>
-              <TouchableOpacity
-                style={styles.voteButton}
-                onPress={() =>
-                  handleLikePost(localPost?.id, !localPost?.is_upvoted)
-                }>
-                <Icon
-                  name={localPost?.is_upvoted ? 'heart' : 'heart-outline'}
-                  size={20}
-                  color={localPost?.is_upvoted ? '#4285F4' : '#666'}
-                />
-              </TouchableOpacity>
-              <Text style={styles.voteCount}>{localPost?.upvote_count}</Text>
+              {/* Run photo */}
+              {localPost?.images && localPost?.images.length > 0 && (
+                <>
+                  {localPost.images.length > 2 ? (
+                    <View style={{marginBottom: 16}}>
+                      {/* First image shown larger */}
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedImageIndex(0);
+                          setZoomModalVisible(true);
+                        }}
+                        style={{marginBottom: 8}}>
+                        <Image
+                          source={{uri: localPost.images[0]}}
+                          style={[styles.runPhoto, {height: 180}]} // Slightly smaller than full runPhoto
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
 
-              <View style={styles.engagementMiddle}>
-                <TouchableOpacity style={styles.commentButton}>
-                  <Icon name="chatbubble-outline" size={20} color="#666" />
-                  <Text style={styles.commentCount}>
-                    {FilterComment(comments)}
+                      {/* Remaining images in horizontal scroll */}
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        scrollEnabled={false}
+                        contentContainerStyle={{paddingHorizontal: 2}}>
+                        {localPost.images.slice(1).map((imageUri, index) => (
+                          <TouchableOpacity
+                            key={index + 1}
+                            onPress={() => {
+                              setSelectedImageIndex(index + 1);
+                              setZoomModalVisible(true);
+                            }}
+                            style={{marginRight: 8}}>
+                            <Image
+                              source={{uri: imageUri}}
+                              style={styles.postImagev2}
+                              resizeMode="cover"
+                            />
+
+                            {/* Show count on last visible image if there are many */}
+                            {localPost.images.length > 3 && index === 2 && (
+                              <View
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  backgroundColor: 'rgba(0,0,0,0.5)',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  borderRadius: 8,
+                                }}>
+                                <Text
+                                  style={{
+                                    color: 'white',
+                                    fontSize: 18,
+                                    fontWeight: 'bold',
+                                  }}>
+                                  +{localPost.images.length - 4}
+                                </Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  ) : localPost.images.length === 2 ? (
+                    // For exactly 2 images, show them side by side
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        marginBottom: 16,
+                        height: 180,
+                        gap: 8,
+                      }}>
+                      <TouchableOpacity
+                        style={{flex: 1}}
+                        onPress={() => {
+                          setSelectedImageIndex(0);
+                          setZoomModalVisible(true);
+                        }}>
+                        <Image
+                          source={{uri: localPost.images[0]}}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: 12,
+                          }}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{flex: 1}}
+                        onPress={() => {
+                          setSelectedImageIndex(1);
+                          setZoomModalVisible(true);
+                        }}>
+                        <Image
+                          source={{uri: localPost.images[1]}}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: 12,
+                          }}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    // For a single image
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedImageIndex(0);
+                        setZoomModalVisible(true);
+                      }}
+                      style={{marginBottom: 16}}>
+                      <Image
+                        source={{uri: localPost.images[0]}}
+                        style={styles.runPhoto}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
+              <CommunityPostDetailMap
+                exerciseSessionRecordId={
+                  currentPost?.exercise_session_record_id
+                }
+              />
+
+              {currentPost &&
+                currentPost.tags &&
+                currentPost.tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 'bold',
+                        marginRight: 5,
+                      }}>
+                      Tags :{' '}
+                    </Text>
+                    {currentPost.tags.map((tag, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Text style={styles.tagText}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+              {/* Post engagement */}
+              <View style={styles.engagementContainer}>
+                <View style={styles.engagementLeft}>
+                  <TouchableOpacity
+                    style={styles.voteButton}
+                    onPress={() =>
+                      handleLikePost(localPost?.id, !localPost?.is_upvoted)
+                    }>
+                    <Icon
+                      name={localPost?.is_upvoted ? 'heart' : 'heart-outline'}
+                      size={20}
+                      color={localPost?.is_upvoted ? '#4285F4' : '#666'}
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.voteCount}>
+                    {localPost?.upvote_count}
                   </Text>
-                </TouchableOpacity>
+
+                  <View style={styles.engagementMiddle}>
+                    <TouchableOpacity style={styles.commentButton}>
+                      <Icon name="chatbubble-outline" size={20} color="#666" />
+                      <Text style={styles.commentCount}>
+                        {FilterComment(comments)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             </View>
-          </View>
-        </View>
 
-        {/* Comments section */}
-        <View style={styles.commentsSection}>
-          <View style={styles.commentsSectionHeader}>
-            <Text style={styles.commentsSectionTitle}>
-              Comments ({FilterComment(comments)})
-            </Text>
-            <TouchableOpacity style={styles.sortButton}>
-              <Text style={styles.sortButtonText}>Sort by: Best</Text>
-              <Icon name="chevron-down" size={16} color="#666" />
-            </TouchableOpacity>
-          </View>
+            {/* Comments section */}
+            <View style={styles.commentsSection}>
+              <View style={styles.commentsSectionHeader}>
+                <Text style={styles.commentsSectionTitle}>
+                  Comments ({FilterComment(comments)})
+                </Text>
+                <TouchableOpacity style={styles.sortButton}>
+                  <Text style={styles.sortButtonText}>Sort by: Best</Text>
+                  <Icon name="chevron-down" size={16} color="#666" />
+                </TouchableOpacity>
+              </View>
 
-          {/* Comments */}
-          {isLoadingComments ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#4285F4" />
+              {/* Comments */}
+              {isLoadingComments ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#4285F4" />
+                </View>
+              ) : comments &&
+                comments.filter(item => !item.is_deleted).length > 0 ? (
+                comments
+                  .filter(comment => comment?.is_deleted === false)
+                  .map(comment => renderComment(comment))
+              ) : (
+                <Text style={styles.noCommentsText}>
+                  No comments yet. Be the first to comment!
+                </Text>
+              )}
             </View>
-          ) : comments && comments.filter((item) => !item.is_deleted).length > 0 ? (
-            comments
-              .filter(comment => comment?.is_deleted === false)
-              .map(comment => renderComment(comment))
-          ) : (
-            <Text style={styles.noCommentsText}>
-              No comments yet. Be the first to comment!
-            </Text>
-          )}
-        </View>
-      </ScrollView>
+          </ScrollView>
 
-      {/* Input container cho bình luận */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.attachButton}>
-          <CommonAvatar mode={null} size={36} uri={profile?.image?.url} />
-        </TouchableOpacity>
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          placeholder={
-            isEditingComment
-              ? 'Edit your comment...'
-              : replyingTo
-              ? 'Write a reply...'
-              : 'Type your message...'
-          }
-          placeholderTextColor="#64748B"
-          value={commentText}
-          onChangeText={setCommentText}
-          multiline
-        />
-
-        {isEditingComment && (
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancelEdit}>
-            <Icon name="close" size={20} color="#A1A1AA" />
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            commentText.trim() ? styles.activeSendButton : null,
-          ]}
-          onPress={handleSendComment}
-          disabled={!commentText.trim() || isSubmittingComment}>
-          {isSubmittingComment ? (
-            <ActivityIndicator size="small" color="#4285F4" />
-          ) : (
-            <Icon
-              name={isEditingComment ? 'checkmark' : 'send'}
-              size={20}
-              color={commentText.trim() ? '#4285F4' : '#A1A1AA'}
+          {/* Input container cho bình luận */}
+          <View style={styles.inputContainer}>
+            <TouchableOpacity style={styles.attachButton}>
+              <CommonAvatar mode={null} size={36} uri={profile?.image?.url} />
+            </TouchableOpacity>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder={
+                isEditingComment
+                  ? 'Edit your comment...'
+                  : replyingTo
+                  ? 'Write a reply...'
+                  : 'Type your message...'
+              }
+              placeholderTextColor="#64748B"
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
             />
-          )}
-        </TouchableOpacity>
-      </View>
 
-      {/* Modal hiển thị các tùy chọn */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setModalVisible(false)}>
-          <View style={styles.modalContainer}>
-            {currentPost && currentPost?.user?.id === currentUserId ? (
-              <>
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={handleUpdate}>
-                  <Icon name="create-outline" size={24} color="#4285F4" />
-                  <Text style={styles.modalOptionText}>Update</Text>
-                </TouchableOpacity>
-
-                <View style={styles.modalDivider} />
-
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={handleDelete}>
-                  <Icon name="trash-outline" size={24} color="red" />
-                  <Text style={[styles.modalOptionText, {color: 'red'}]}>
-                    Delete
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-               <SaveDraftButton postId={currentPost?.id ?? ''} onSave={() => setModalVisible(false)}/>
-
-                <View style={styles.modalDivider} />
-
-              </>
+            {isEditingComment && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCancelEdit}>
+                <Icon name="close" size={20} color="#A1A1AA" />
+              </TouchableOpacity>
             )}
-
-            <View style={styles.modalDivider} />
 
             <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setModalVisible(false)}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              style={[
+                styles.sendButton,
+                commentText.trim() ? styles.activeSendButton : null,
+              ]}
+              onPress={handleSendComment}
+              disabled={!commentText.trim() || isSubmittingComment}>
+              {isSubmittingComment ? (
+                <ActivityIndicator size="small" color="#4285F4" />
+              ) : (
+                <Icon
+                  name={isEditingComment ? 'checkmark' : 'send'}
+                  size={20}
+                  color={commentText.trim() ? '#4285F4' : '#A1A1AA'}
+                />
+              )}
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
 
-      <Modal
-        visible={zoomModalVisible}
-        transparent={true}
-        onRequestClose={() => setZoomModalVisible(false)}>
-        <View style={styles.zoomModalContainer}>
-          <FlatList
-            data={localPost?.images || []}
-            horizontal
-            pagingEnabled
-            initialScrollIndex={selectedImageIndex}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({item}) => (
-              <ScrollView
-                style={styles.zoomScrollView}
-                maximumZoomScale={3}
-                minimumZoomScale={1}
-                contentContainerStyle={styles.zoomContentContainer}>
-                <Image
-                  source={{uri: item}}
-                  style={styles.zoomImage}
-                  resizeMode="contain"
-                />
-              </ScrollView>
-            )}
-            // Giúp FlatList scroll đúng vị trí đã chọn khi modal mở
-            onScrollToIndexFailed={() => {}}
+          {/* Modal hiển thị các tùy chọn */}
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setModalVisible(false)}>
+              <View style={styles.modalContainer}>
+                {currentPost && currentPost?.user?.id === currentUserId && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.modalOption}
+                      onPress={handleUpdate}>
+                      <Icon name="create-outline" size={24} color="#4285F4" />
+                      <Text style={styles.modalOptionText}>Update</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.modalDivider} />
+
+                    <TouchableOpacity
+                      style={styles.modalOption}
+                      onPress={handleDelete}>
+                      <Icon name="trash-outline" size={24} color="red" />
+                      <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                        Delete
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                <View style={styles.modalDivider} />
+
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={() => setModalVisible(false)}>
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          <Modal
+            visible={zoomModalVisible}
+            transparent={true}
+            onRequestClose={() => setZoomModalVisible(false)}>
+            <View style={styles.zoomModalContainer}>
+              <FlatList
+                data={localPost?.images || []}
+                horizontal
+                pagingEnabled
+                initialScrollIndex={selectedImageIndex}
+                keyExtractor={(_, index) => index.toString()}
+                renderItem={({item}) => (
+                  <ScrollView
+                    style={styles.zoomScrollView}
+                    maximumZoomScale={3}
+                    minimumZoomScale={1}
+                    contentContainerStyle={styles.zoomContentContainer}>
+                    <Image
+                      source={{uri: item}}
+                      style={styles.zoomImage}
+                      resizeMode="contain"
+                    />
+                  </ScrollView>
+                )}
+                // Giúp FlatList scroll đúng vị trí đã chọn khi modal mở
+                onScrollToIndexFailed={() => {}}
+              />
+              <TouchableOpacity
+                style={styles.zoomModalCloseButton}
+                onPress={() => setZoomModalVisible(false)}>
+                <Icon name="close" size={30} color="white" />
+              </TouchableOpacity>
+            </View>
+          </Modal>
+
+          <ModalPoppup
+            visible={showModal}
+            onClose={() => setShowModal(false)}
+            deleteComment={handleDeleteComment}
+            editComment={handleEditComment}
+            commentId={selectedCommentId}
           />
-          <TouchableOpacity
-            style={styles.zoomModalCloseButton}
-            onPress={() => setZoomModalVisible(false)}>
-            <Icon name="close" size={30} color="white" />
-          </TouchableOpacity>
-        </View>
-      </Modal>
-
-      <ModalPoppup
-        visible={showModal}
-        onClose={() => setShowModal(false)}
-        deleteComment={handleDeleteComment}
-        editComment={handleEditComment}
-        commentId={selectedCommentId}
-      />
-    </>
-
-    )}
+        </>
+      )}
     </SafeAreaView>
   );
 };

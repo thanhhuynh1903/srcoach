@@ -53,6 +53,7 @@ interface Post {
   downvote_count: number;
   comment_count: number;
   is_upvoted: boolean;
+  is_saved: boolean;
   is_downvoted: boolean;
 }
 
@@ -242,11 +243,23 @@ const CommunityScreen = () => {
             </View>
           </View>
         </TouchableOpacity>
+        {item.user.id !== profile?.id ? (
+        <SaveDraftButton 
+          postId={item.id}
+          isSaved={item.is_saved}
+          onSave={(newSavedState) => {
+            setLocalPosts(prev => prev.map(p => 
+              p.id === item.id ? {...p, is_saved: newSavedState} : p
+            ));
+          }}
+        />
+      ) : (
         <TouchableOpacity
           style={styles.moreButton}
           onPress={() => handleMorePress(item)}>
           <Icon name="ellipsis-horizontal" size={20} color="#000" />
         </TouchableOpacity>
+      )}
       </View>
       {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
       <Text style={styles.postText}>{item.content}</Text>

@@ -342,13 +342,6 @@ const AddScheduleScreen = () => {
           multiline
           placeholderTextColor="#A1A1AA"
         />
-
-        {/* Action Buttons */}
-        <TouchableOpacity style={styles.aiButton}>
-          <Icon name="construct" size={20} color="#FFFFFF" />
-          <Text style={styles.aiButtonText}>Automatic generate (AI)</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[
             styles.createButton,

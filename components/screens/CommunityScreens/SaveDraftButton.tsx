@@ -1,17 +1,18 @@
 // components/SaveDraftButton.tsx
 import React, { useState } from 'react';
-import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, ActivityIndicator } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { usePostStore } from '../../utils/usePostStore';
 import { theme } from '../../contants/theme';
 import CommonDialog from '../../commons/CommonDialog';
-
+import { Text } from 'react-native';
 interface SaveDraftButtonProps {
   postId: string;
-  onSave?: () => void;
+  isSaved?: boolean;
+  onSave?: (newSavedState: boolean) => void;
 }
 
-export const SaveDraftButton = ({ postId, onSave }: SaveDraftButtonProps) => {
+export const SaveDraftButton = ({ postId, isSaved, onSave }: SaveDraftButtonProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogContent, setDialogContent] = useState({
@@ -19,29 +20,38 @@ export const SaveDraftButton = ({ postId, onSave }: SaveDraftButtonProps) => {
     message: '',
     isError: false,
   });
-  const { saveDraft } = usePostStore();
+  const { saveDraft, deleteDraft } = usePostStore();
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const success = await saveDraft(postId);
+      let success;
+      let newSavedState = !isSaved;
+
+      if (isSaved) {
+        success = await deleteDraft(postId);
+      } else {
+        success = await saveDraft(postId);
+      }
+
       if (success) {
         setDialogContent({
           title: 'Success',
-          message: 'Post draft saved successfully',
+          message: newSavedState ? 'Saved to drafts' : 'Removed from drafts',
           isError: false,
         });
+        onSave?.(newSavedState); // Update parent state with new saved status
       } else {
         setDialogContent({
           title: 'Error',
-          message: 'Failed to save draft',
+          message: newSavedState ? 'Failed to save draft' : 'Failed to remove from drafts',
           isError: true,
         });
       }
     } catch (error) {
       setDialogContent({
         title: 'Error',
-        message: 'An error occurred while saving',
+        message: 'An error occurred',
         isError: true,
       });
     } finally {
@@ -52,9 +62,6 @@ export const SaveDraftButton = ({ postId, onSave }: SaveDraftButtonProps) => {
 
   const handleDialogClose = () => {
     setDialogVisible(false);
-    if (!dialogContent.isError) {
-      onSave?.();
-    }
   };
 
   return (
@@ -66,14 +73,11 @@ export const SaveDraftButton = ({ postId, onSave }: SaveDraftButtonProps) => {
         {isSaving ? (
           <ActivityIndicator size={24} color={theme.colors.primaryDark} />
         ) : (
-          <>
-            <Icon
-              name="bookmark-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-            />
-            <Text style={styles.modalOptionText}>Save draft</Text>
-          </>
+          <Icon
+            name={isSaved ? 'bookmark' : 'bookmark-outline'}
+            size={24}
+            color={theme.colors.primaryDark}
+          />
         )}
       </TouchableOpacity>
 
@@ -84,30 +88,14 @@ export const SaveDraftButton = ({ postId, onSave }: SaveDraftButtonProps) => {
         content={
           <Text style={styles.dialogContentText}>{dialogContent.message}</Text>
         }
-        actionButtons={
-          dialogContent.isError
-            ? [
-                {
-                  label: 'Retry',
-                  handler: handleSave,
-                  color: theme.colors.primaryDark,
-                  variant: 'contained',
-                },
-                {
-                  label: 'Cancel',
-                  handler: handleDialogClose,
-                  variant: 'outlined',
-                },
-              ]
-            : [
-                {
-                  label: 'OK',
-                  handler: handleDialogClose,
-                  color: theme.colors.primaryDark,
-                  variant: 'contained',
-                },
-              ]
-        }
+        actionButtons={[
+          {
+            label: 'OK',
+            handler: handleDialogClose,
+            color: theme.colors.primaryDark,
+            variant: 'contained',
+          },
+        ]}
       />
     </>
   );
@@ -118,11 +106,6 @@ const styles = {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-  },
-  modalOptionText: {
-    marginLeft: 16,
-    fontSize: 16,
-    color: '#333',
   },
   dialogContentText: {
     fontSize: 14,

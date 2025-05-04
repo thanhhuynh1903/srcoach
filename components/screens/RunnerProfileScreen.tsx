@@ -23,6 +23,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {useImageUserStore} from '../utils/useImageUserStore';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {theme} from '../contants/theme';
+import {CommonAvatar} from '../commons/CommonAvatar';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -463,12 +464,13 @@ const RunnerProfileScreen = () => {
           <View style={styles.profileSection}>
             <View style={styles.profileHeader}>
               <View style={styles.photoContainer}>
-                <TouchableOpacity style={styles.photoWrapper} onPress={handleAvatarPress}>
-                  <Image
-                    source={{
-                      uri: profile?.image?.url ? profile?.image?.url : avatarUrl,
-                    }}
-                    style={styles.profilePhoto}
+                <TouchableOpacity
+                  style={styles.photoWrapper}
+                  onPress={handleAvatarPress}>
+                  <CommonAvatar
+                    mode={null}
+                    uri={profile?.image?.url}
+                    size={80}
                   />
                   <View style={styles.cameraButtonContainer}>
                     <TouchableOpacity style={styles.cameraButton}>
@@ -480,16 +482,18 @@ const RunnerProfileScreen = () => {
 
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>{profile?.name}</Text>
-                <Text style={styles.profileUsername}>@{profile?.username || "username"}</Text>
+                <Text style={styles.profileUsername}>
+                  @{profile?.username || 'username'}
+                </Text>
 
                 {/* Role Badge */}
-                {profile?.roles?.includes("runner") && (
+                {profile?.roles?.includes('runner') && (
                   <View style={styles.roleBadge}>
                     <Icon name="walk" size={14} color="#fff" />
                     <Text style={styles.roleBadgeText}>Runner</Text>
                   </View>
                 )}
-                {profile?.roles?.includes("expert") && (
+                {profile?.roles?.includes('expert') && (
                   <View style={styles.roleBadgeEx}>
                     <Icon name="ribbon" size={14} color="#fff" />
                     <Text style={styles.roleBadgeText}>Expert</Text>
@@ -499,17 +503,24 @@ const RunnerProfileScreen = () => {
             </View>
 
             {/* Address Section */}
-            {profile?.address1 && profile?.address2 &&(
-            <View style={styles.infoRow}>
-              <Icon name="location-outline" size={16} color="#64748B" />
-              <Text style={styles.infoText}>{[profile?.address1, profile?.address2].filter(Boolean).join(", ")}</Text>
-            </View>)
-}
+            {profile?.address1 && profile?.address2 && (
+              <View style={styles.infoRow}>
+                <Icon name="location-outline" size={16} color="#64748B" />
+                <Text style={styles.infoText}>
+                  {[profile?.address1, profile?.address2]
+                    .filter(Boolean)
+                    .join(', ')}
+                </Text>
+              </View>
+            )}
             {/* Level Progress */}
             <View style={styles.levelContainer}>
               <View style={styles.levelHeader}>
                 <Text style={styles.levelTitle}>Level Progress</Text>
-                <Text style={styles.levelValue}>{profile?.user_level.charAt(0).toUpperCase() + profile?.user_level.slice(1)}</Text>
+                <Text style={styles.levelValue}>
+                  {profile?.user_level.charAt(0).toUpperCase() +
+                    profile?.user_level.slice(1)}
+                </Text>
               </View>
               <View style={styles.levelProgressContainer}>
                 <View style={styles.levelProgress}>
@@ -517,17 +528,25 @@ const RunnerProfileScreen = () => {
                     style={[
                       styles.progressBar,
                       {
-                        width: `${(profile?.points / profile?.points_to_next_level) * 100}%`,
+                        width: `${
+                          (profile?.points / profile?.points_to_next_level) *
+                          100
+                        }%`,
                       },
                     ]}
                   />
                 </View>
                 <Text style={styles.levelText}>
-                  <Text style={styles.pointsHighlight}>{profile?.points}</Text>/{profile?.points_to_next_level + profile?.points} XP
+                  <Text style={styles.pointsHighlight}>{profile?.points}</Text>/
+                  {profile?.points_to_next_level + profile?.points} XP
                 </Text>
               </View>
               <Text style={styles.nextLevelText}>
-                Next: <Text style={styles.nextLevelHighlight}>{profile?.user_next_level.charAt(0).toUpperCase() + profile?.user_next_level.slice(1)}</Text>
+                Next:{' '}
+                <Text style={styles.nextLevelHighlight}>
+                  {profile?.user_next_level.charAt(0).toUpperCase() +
+                    profile?.user_next_level.slice(1)}
+                </Text>
               </Text>
             </View>
 
@@ -536,16 +555,17 @@ const RunnerProfileScreen = () => {
               <View style={styles.statBadge}>
                 <Icon name="trophy" size={16} color="#10B981" />
                 <Text style={styles.statBadgeText}>
-                  {profile?.user_level.charAt(0).toUpperCase() + profile?.user_level.slice(1)}
+                  {profile?.user_level.charAt(0).toUpperCase() +
+                    profile?.user_level.slice(1)}
                 </Text>
               </View>
 
               <View style={styles.statBadge}>
                 <Icon name="star" size={16} color="#F59E0B" />
-                <Text style={styles.statBadgeText}>{profile?.points} Points</Text>
+                <Text style={styles.statBadgeText}>
+                  {profile?.points} Points
+                </Text>
               </View>
-
-            
             </View>
           </View>
 
@@ -724,7 +744,7 @@ const RunnerProfileScreen = () => {
                   Delete
                 </Text>
               </TouchableOpacity>
-            ) }
+            )}
 
             <View style={styles.modalDivider} />
 
@@ -748,32 +768,42 @@ const RunnerProfileScreen = () => {
           activeOpacity={1}
           onPress={() => setAvatarOptionsModalVisible(false)}>
           <View style={styles.modalContainer}>
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={handleViewAvatar}>
-              <Icon name="eye-outline" size={24} color="#0F2B5B" />
-              <Text style={styles.modalOptionText}>View avatar</Text>
-            </TouchableOpacity>
+            {!profile?.image?.url ? (
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={handleUpdateAvatar}>
+                <Icon name="duplicate-outline" size={24} color="#0F2B5B" />
+                <Text style={styles.modalOptionText}>Upload avatar</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleViewAvatar}>
+                  <Icon name="eye-outline" size={24} color="#0F2B5B" />
+                  <Text style={styles.modalOptionText}>View avatar</Text>
+                </TouchableOpacity>
 
-            <View style={styles.modalDivider} />
+                <View style={styles.modalDivider} />
 
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={handleUpdateAvatar}>
-              <Icon name="camera-outline" size={24} color="#0F2B5B" />
-              <Text style={styles.modalOptionText}>Edit Avatar</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleUpdateAvatar}>
+                  <Icon name="camera-outline" size={24} color="#0F2B5B" />
+                  <Text style={styles.modalOptionText}>Edit Avatar</Text>
+                </TouchableOpacity>
+                <View style={styles.modalDivider} />
 
-            <View style={styles.modalDivider} />
-
-            <TouchableOpacity
-              style={styles.modalOption}
-              onPress={handleDeleteAvatar}>
-              <Icon name="trash-outline" size={24} color="red" />
-              <Text style={[styles.modalOptionText, {color: 'red'}]}>
-                Delete Avatar
-              </Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={handleDeleteAvatar}>
+                  <Icon name="trash-outline" size={24} color="red" />
+                  <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                    Delete Avatar
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             <View style={styles.modalDivider} />
 
@@ -844,9 +874,9 @@ const styles = StyleSheet.create({
   profileSection: {
     padding: 20,
     borderRadius: 16,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -855,188 +885,188 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
   photoContainer: {
     marginRight: 16,
   },
   photoWrapper: {
-    position: "relative",
+    position: 'relative',
   },
   profilePhoto: {
     width: 80,
     height: 80,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: "#4A6FA5",
+    borderColor: '#4A6FA5',
   },
   cameraButtonContainer: {
-    position: "absolute",
+    position: 'absolute',
     right: -4,
     bottom: -4,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 2,
   },
   cameraButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: '#3B82F6',
     width: 28,
     height: 28,
     borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: 2,
   },
   profileUsername: {
     fontSize: 14,
-    color: "#64748B",
+    color: '#64748B',
     marginBottom: 6,
   },
   roleBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#3B82F6",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   roleBadgeEx: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFB22C",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFB22C',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   roleBadgeText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '600',
     marginLeft: 4,
   },
   infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     padding: 10,
     borderRadius: 8,
     marginBottom: 16,
   },
   infoText: {
     fontSize: 14,
-    color: "#334155",
+    color: '#334155',
     marginLeft: 8,
     flex: 1,
   },
   levelContainer: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   levelHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   levelTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#334155",
+    fontWeight: '600',
+    color: '#334155',
   },
   levelValue: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#3B82F6",
+    fontWeight: '700',
+    color: '#3B82F6',
   },
   levelProgressContainer: {
     marginBottom: 8,
   },
   levelProgress: {
     height: 10,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: '#E2E8F0',
     borderRadius: 5,
-    overflow: "hidden",
+    overflow: 'hidden',
     marginBottom: 6,
   },
   progressBar: {
-    height: "100%",
-    backgroundColor: "#3B82F6",
+    height: '100%',
+    backgroundColor: '#3B82F6',
     borderRadius: 5,
   },
   levelText: {
     fontSize: 14,
-    color: "#64748B",
-    textAlign: "right",
+    color: '#64748B',
+    textAlign: 'right',
   },
   pointsHighlight: {
-    color: "#3B82F6",
-    fontWeight: "700",
+    color: '#3B82F6',
+    fontWeight: '700',
   },
   nextLevelText: {
     fontSize: 14,
-    color: "#64748B",
+    color: '#64748B',
   },
   nextLevelHighlight: {
-    color: "#3B82F6",
-    fontWeight: "600",
+    color: '#3B82F6',
+    fontWeight: '600',
   },
   statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 8,
   },
   statBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: '#E2E8F0',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     flex: 1,
     minWidth: 100,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   statBadgeText: {
-    color: "#334155",
+    color: '#334155',
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
     marginLeft: 6,
   },
   statItem: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   statValue: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#0F172A",
+    fontWeight: '600',
+    color: '#0F172A',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 14,
-    color: "#64748B",
+    color: '#64748B',
   },
   statDivider: {
     width: 1,
-    height: "60%",
-    backgroundColor: "#F1F5F9",
-    alignSelf: "center",
+    height: '60%',
+    backgroundColor: '#F1F5F9',
+    alignSelf: 'center',
   },
   sectionContainer: {
     paddingHorizontal: 16,
@@ -1044,8 +1074,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "600",
-    color: "#0F172A",
+    fontWeight: '600',
+    color: '#0F172A',
     marginBottom: 16,
   },
   profileBio: {
