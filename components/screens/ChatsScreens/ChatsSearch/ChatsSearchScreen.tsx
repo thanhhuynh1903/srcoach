@@ -119,7 +119,7 @@ const ChatsSearchScreen = () => {
   const renderUserItem = ({item}: {item: UserItem}) => (
     <TouchableOpacity
       style={[styles.itemContainer, {backgroundColor: '#FFFFFF'}]}
-      onPress={() => navigation.navigate('Chat', {userId: item.id})}>
+      onPress={() => navigation.navigate('ChatsMessageScreen', {userId: item.id})}>
       <View style={styles.userInfoContainer}>
         <CommonAvatar
           mode={getUserMode(item.roles)}

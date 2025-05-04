@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, ScrollView} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { theme } from '../../../contants/theme';
 
@@ -8,17 +8,15 @@ interface CHSTabFilterProps {
   onFilterChange: (filter: string) => void;
 }
 
-const filters = ['All', 'Accepted', 'Pending', 'Blocked'];
+const filters = ['All', 'Accepted', 'Pending'];
 
-const CHSTabFilter = ({activeFilter, onFilterChange}: CHSTabFilterProps) => {
+const CHSTabFilter = ({ activeFilter, onFilterChange }: CHSTabFilterProps) => {
   const getFilterIcon = (filter: string) => {
     switch (filter) {
       case 'Accepted':
         return 'checkmark-circle';
       case 'Pending':
         return 'time';
-      case 'Blocked':
-        return 'ban';
       default:
         return 'chatbubbles';
     }
@@ -30,8 +28,6 @@ const CHSTabFilter = ({activeFilter, onFilterChange}: CHSTabFilterProps) => {
         return theme.colors.success;
       case 'Pending':
         return theme.colors.warning;
-      case 'Blocked':
-        return theme.colors.error;
       default:
         return theme.colors.primaryDark;
     }
@@ -51,16 +47,12 @@ const CHSTabFilter = ({activeFilter, onFilterChange}: CHSTabFilterProps) => {
               activeFilter === filter && styles.filterTabActive,
               filter === 'Accepted' && styles.acceptedFilter,
               filter === 'Pending' && styles.pendingFilter,
-              filter === 'Blocked' && styles.blockedFilter,
               activeFilter === filter &&
                 filter === 'Accepted' &&
                 styles.acceptedFilterActive,
               activeFilter === filter &&
                 filter === 'Pending' &&
                 styles.pendingFilterActive,
-              activeFilter === filter &&
-                filter === 'Blocked' &&
-                styles.blockedFilterActive,
               activeFilter === filter &&
                 filter === 'All' &&
                 styles.allFilterActive,
@@ -112,19 +104,16 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   filterTabActive: {
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
   },
   acceptedFilter: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)', // success color with 10% opacity
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
   },
   pendingFilter: {
-    backgroundColor: 'rgba(234, 179, 8, 0.1)', // warning color with 10% opacity
-  },
-  blockedFilter: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)', // error color with 10% opacity
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
   },
   allFilterActive: {
     backgroundColor: theme.colors.primaryDark,
@@ -137,10 +126,6 @@ const styles = StyleSheet.create({
   pendingFilterActive: {
     backgroundColor: theme.colors.warning,
     shadowColor: theme.colors.warning,
-  },
-  blockedFilterActive: {
-    backgroundColor: theme.colors.error,
-    shadowColor: theme.colors.error,
   },
   filterIcon: {
     marginRight: 6,
