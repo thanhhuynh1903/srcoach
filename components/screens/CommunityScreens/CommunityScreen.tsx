@@ -20,7 +20,7 @@ import {useFocusEffect} from '@react-navigation/native';
 import {formatTimeAgo} from '../../utils/utils_format';
 import {CommonAvatar} from '../../commons/CommonAvatar';
 import {SaveDraftButton} from './SaveDraftButton';
-
+import SkeletonPostList from './SkeletonPostList';
 // Interface cho User
 interface User {
   id: string;
@@ -238,9 +238,7 @@ const CommunityScreen = () => {
       <View style={styles.debugFooter}>
         {hasMorePosts && (
           <TouchableOpacity style={styles.debugButton} onPress={loadMorePosts}>
-            <Text style={styles.debugButtonText}>
-              ...Loading more posts
-            </Text>
+            <Text style={styles.debugButtonText}>...Loading more posts</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -457,6 +455,39 @@ const CommunityScreen = () => {
     }
   };
 
+  const renderPostsContent = () => {
+    if ((isLoading && localPosts.length === 0) || refreshing) {
+      return <SkeletonPostList count={4} />;
+    }
+
+    return (
+      <FlatList
+        data={localPosts}
+        extraData={[localPosts.length, pageIndex]}
+        renderItem={renderPostItem}
+        keyExtractor={item => item.id.toString()}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        onEndReached={info => {
+          if (info.distanceFromEnd > 0) {
+            console.log(
+              'onEndReached triggered with distance:',
+              info.distanceFromEnd,
+            );
+            loadMorePosts();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        contentContainerStyle={{paddingTop: 60, paddingBottom: 20}}
+        maxToRenderPerBatch={10}
+        windowSize={21}
+        removeClippedSubviews={false}
+      />
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -492,30 +523,9 @@ const CommunityScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-      <FlatList
-        data={localPosts}
-        extraData={[localPosts.length, pageIndex]} // Thêm pageIndex để đảm bảo re-render khi pageIndex thay đổi
-        renderItem={renderPostItem}
-        keyExtractor={item => item.id.toString()}
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter}
-        onEndReached={info => {
-          if (info.distanceFromEnd > 0) {
-            console.log(
-              'onEndReached triggered with distance:',
-              info.distanceFromEnd,
-            );
-            loadMorePosts();
-          }
-        }}
-        onEndReachedThreshold={0.3}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        contentContainerStyle={{paddingTop: 60, paddingBottom: 20}}
-        maxToRenderPerBatch={10}
-        windowSize={21}
-        removeClippedSubviews={false} // Thêm dòng này để tránh vấn đề với render
-      />
+
+      {renderPostsContent()}
+
       <Modal
         animationType="slide"
         transparent={true}
