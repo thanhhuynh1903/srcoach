@@ -147,7 +147,7 @@ const SearchResultsScreen = ({}) => {
           id: post.id,
         })
       }>
-      <TouchableOpacity style={styles.postHeader} onPress={() => navigate.navigate('OtherProfileScreen', {postId: post?.id})}>
+      <TouchableOpacity style={styles.postHeader} onPress={() => post?.user?.id === profile.id ? navigate.navigate('RunnerProfileScreen') : navigate.navigate('OtherProfileScreen', {postId: post?.id})}>
         <CommonAvatar mode={null} uri={post?.user?.image?.url} size={36} />
         <View style={{marginLeft: 8}}>
           <Text style={styles.authorName}>
@@ -222,7 +222,7 @@ const SearchResultsScreen = ({}) => {
     </TouchableOpacity>
   );
   const renderUserItem = (user: User) => (
-    <TouchableOpacity key={user.id} style={styles.userCard}>
+    <TouchableOpacity key={user.id} style={styles.userCard} onPress={() => navigate.navigate('OtherProfileScreen', {postId: user.id})}>
       <CommonAvatar uri={user.image?.url} size={56} />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.username}</Text>
@@ -233,7 +233,7 @@ const SearchResultsScreen = ({}) => {
   );
 
   const renderExpertItem = (expert: User) => (
-    <TouchableOpacity key={expert.id} style={styles.userCard}>
+    <TouchableOpacity key={expert.id} style={styles.userCard} onPress={() => navigate.navigate('OtherProfileScreen', {postId: expert.id})}>
     <CommonAvatar uri={expert.image?.url} size={56} />
     <View style={styles.userInfo}>
       <Text style={styles.userName}>{expert.name}</Text>

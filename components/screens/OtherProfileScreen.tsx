@@ -324,6 +324,7 @@ const OtherProfileScreen = ({route}) => {
                 <Text style={styles.profileUsername}>
                   @{userData?.user?.username || 'username'}
                 </Text>
+                <View style={{flexDirection: 'row', gap: 8}}>
                 {userData?.user.UserRole[0]?.Role?.role_name?.includes(
                   'runner',
                 ) && (
@@ -332,7 +333,7 @@ const OtherProfileScreen = ({route}) => {
                     <Text style={styles.roleBadgeText}>Runner</Text>
                   </View>
                 )}
-                {userData?.user.UserRole[0]?.Role?.role_name?.includes(
+                {userData?.user.UserRole[1]?.Role?.role_name?.includes(
                   'expert',
                 ) && (
                   <View style={styles.roleBadgeEx}>
@@ -340,6 +341,7 @@ const OtherProfileScreen = ({route}) => {
                     <Text style={styles.roleBadgeText}>Expert</Text>
                   </View>
                 )}
+                </View>
               </View>
             </View>
 
@@ -375,7 +377,7 @@ const OtherProfileScreen = ({route}) => {
                       {
                         width: `${
                           userData?.user?.points
-                            ? (userData.user.points / 500) * 100
+                            ? userData.user?.points_percentage 
                             : 0
                         }%`,
                       },
@@ -386,7 +388,7 @@ const OtherProfileScreen = ({route}) => {
                   <Text style={styles.pointsHighlight}>
                     {userData?.user?.points || 0}
                   </Text>
-                  / 500 XP
+                  / {userData?.user?.points_to_next_level + userData?.user?.points} XP
                 </Text>
               </View>
               <Text style={styles.nextLevelText}>
@@ -906,7 +908,6 @@ const styles = StyleSheet.create({
   },
   postEngagement: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',

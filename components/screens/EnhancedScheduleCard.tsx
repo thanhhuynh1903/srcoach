@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Switch} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
-
+import WorkoutComparison from './Comparison';
 interface Workout {
   time: string;
   name: string;
@@ -105,9 +105,9 @@ const EnhancedScheduleCard = ({
   // Get heart rate zone color
   const getHeartRateColor = (minbpm?: number, maxbpm?: number) => {
     if (!minbpm || !maxbpm) return '#3B82F6';
-    
+
     const avgBpm = (minbpm + maxbpm) / 2;
-    
+
     if (avgBpm < 120) return '#22C55E'; // Light - Green
     if (avgBpm < 140) return '#3B82F6'; // Moderate - Blue
     if (avgBpm < 160) return '#F59E0B'; // Vigorous - Orange
@@ -196,43 +196,77 @@ const EnhancedScheduleCard = ({
                 {(workout.minbpm || workout.maxbpm) && (
                   <View style={styles.heartRateContainer}>
                     <View style={styles.heartRateHeader}>
-                      <View style={[
-                        styles.heartRateIconContainer,
-                        {backgroundColor: `${getHeartRateColor(workout.minbpm, workout.maxbpm)}20`}
-                      ]}>
-                        <Icon 
-                          name="heart" 
-                          size={16} 
-                          color={getHeartRateColor(workout.minbpm, workout.maxbpm)} 
+                      <View
+                        style={[
+                          styles.heartRateIconContainer,
+                          {
+                            backgroundColor: `${getHeartRateColor(
+                              workout.minbpm,
+                              workout.maxbpm,
+                            )}20`,
+                          },
+                        ]}>
+                        <Icon
+                          name="heart"
+                          size={16}
+                          color={getHeartRateColor(
+                            workout.minbpm,
+                            workout.maxbpm,
+                          )}
                         />
                       </View>
-                      <Text style={styles.heartRateTitle}>Heart Rate Target</Text>
+                      <Text style={styles.heartRateTitle}>
+                        Heart Rate Target
+                      </Text>
                     </View>
 
                     {/* Improved BPM Range Display */}
                     <View style={styles.bpmCardContainer}>
-                      <View style={[
-                        styles.bpmCard, 
-                        styles.minBpmCard,
-                        {borderColor: getHeartRateColor(workout.minbpm, workout.maxbpm)}
-                      ]}>
-                        <Text style={styles.bpmValue}>{workout.minbpm || 100}</Text>
+                      <View
+                        style={[
+                          styles.bpmCard,
+                          styles.minBpmCard,
+                          {
+                            borderColor: getHeartRateColor(
+                              workout.minbpm,
+                              workout.maxbpm,
+                            ),
+                          },
+                        ]}>
+                        <Text style={styles.bpmValue}>
+                          {workout.minbpm || 100}
+                        </Text>
                         <Text style={styles.bpmLabel}>Min BPM</Text>
                       </View>
-                      
+
                       <View style={styles.bpmConnector}>
-                        <View style={[
-                          styles.bpmConnectorLine,
-                          {backgroundColor: getHeartRateColor(workout.minbpm, workout.maxbpm)}
-                        ]} />
+                        <View
+                          style={[
+                            styles.bpmConnectorLine,
+                            {
+                              backgroundColor: getHeartRateColor(
+                                workout.minbpm,
+                                workout.maxbpm,
+                              ),
+                            },
+                          ]}
+                        />
                       </View>
-                      
-                      <View style={[
-                        styles.bpmCard, 
-                        styles.maxBpmCard,
-                        {borderColor: getHeartRateColor(workout.minbpm, workout.maxbpm)}
-                      ]}>
-                        <Text style={styles.bpmValue}>{workout.maxbpm || 180}</Text>
+
+                      <View
+                        style={[
+                          styles.bpmCard,
+                          styles.maxBpmCard,
+                          {
+                            borderColor: getHeartRateColor(
+                              workout.minbpm,
+                              workout.maxbpm,
+                            ),
+                          },
+                        ]}>
+                        <Text style={styles.bpmValue}>
+                          {workout.maxbpm || 180}
+                        </Text>
                         <Text style={styles.bpmLabel}>Max BPM</Text>
                       </View>
                     </View>
@@ -266,6 +300,8 @@ const EnhancedScheduleCard = ({
                 </View>
               </View>
             ))}
+
+            <WorkoutComparison workouts={selectedDaySchedule.workouts} />
           </View>
         )}
 
@@ -522,7 +558,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     flex: 1,
   },
-  
+
   // New improved BPM display
   bpmCardContainer: {
     flexDirection: 'row',

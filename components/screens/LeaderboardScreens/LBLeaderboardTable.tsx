@@ -1,11 +1,11 @@
 import React from 'react';
-import {View, Text, StyleSheet, FlatList} from 'react-native';
+import {View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {PieChart} from 'react-native-gifted-charts';
 import {CommonAvatar} from '../../commons/CommonAvatar';
 import {theme} from '../../contants/theme';
 import {capitalizeFirstLetter} from '../../utils/utils_format';
-
+import { useNavigation } from '@react-navigation/native';
 interface LeaderboardItem {
   id: string;
   name: string;
@@ -81,9 +81,12 @@ const LeaderboardItem = ({
   index: number;
   isProfile: boolean;
 }) => {
+  console.log('item', isProfile);
+  
+  const navigate = useNavigation();
   return (
     <View style={[styles.leaderboardItem, isProfile && styles.profileItem]}>
-      <View style={styles.leaderboardItemLeft}>
+      <TouchableOpacity style={styles.leaderboardItemLeft} onPress={() => isProfile ? navigate.navigate('RunnerProfileScreen' as never) : navigate.navigate('OtherProfileScreen', {postId: item.id})}>
         <View style={styles.rankIndicator}>
           {renderRankIndicator(index + 1)}
         </View>
@@ -105,7 +108,7 @@ const LeaderboardItem = ({
             </Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
       <View style={styles.pointsContainer}>
         <View style={styles.totalPointsContainer}>
           <Icon name="trophy" size={14} color="#F59E0B" />
