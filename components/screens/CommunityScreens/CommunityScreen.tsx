@@ -143,7 +143,7 @@ const CommunityScreen = () => {
           // Chỉ thêm các bài viết mới vào danh sách
           const updatedPosts = [...prevPosts, ...uniqueNewPosts];
           console.log(
-            `Tổng số bài viết sau khi cập nhật: ${updatedPosts.length}`,
+            `Tổng số bài viết sau khi cập nhật:`,updatedPosts
           );
 
           return updatedPosts;
