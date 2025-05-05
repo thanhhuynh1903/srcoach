@@ -66,7 +66,7 @@ interface PostState {
   isLoading: boolean;
   message: string | null;
   status: string | null;
-  getAll: () => Promise<void>;
+  getAll: (pageIndex?: number, pageSize?: number) => Promise<Post[]>;
   getDetail: (id: string) => Promise<void>;
   deletePost: (id: string) => Promise<boolean>;
   likePost: (id: string, isLiked: boolean) => Promise<boolean>;
@@ -288,30 +288,51 @@ export const usePostStore = create<PostState>((set, get) => ({
     }
   },
 
-  getAll: async () => {
-    set({isLoading: true, status: null});
-
+  getAll: async (pageIndex, pageSize) => {
+    if (pageIndex === 1) {
+      set({isLoading: true, status: null});
+    }
+  
     try {
       const response = await api.fetchData<ApiResponse<Post[]>>(
-        '/posts/filter',
+        `/posts/filter?pageIndex=${pageIndex}&pageSize=${pageSize}`,
       );
-      console.log('Response:', response);
-
-      if (
-        response &&
-        response.status === 'success' &&
-        Array.isArray(response.data)
-      ) {
-        set({posts: response.data, isLoading: false, status: response.status});
+      
+      if (response?.status === 'success' && Array.isArray(response.data)) {
+        // Nếu là trang đầu tiên, cập nhật state posts
+        if (pageIndex === 1) {
+          set({
+            posts: response.data,
+            isLoading: false,
+            status: response.status,
+          });
+        } else {
+          // Nếu là trang tiếp theo, không cập nhật state posts
+          // chỉ cập nhật isLoading và status
+          set(state => ({
+            isLoading: false,
+            status: response.status,
+          }));
+        }
+        
+        // Trả về dữ liệu posts để component có thể sử dụng trực tiếp
+        return response.data;
       } else {
-        set({
-          posts: [],
-          isLoading: false,
-          status: response?.status || 'Failed to fetch posts',
-        });
+        if (pageIndex === 1) {
+          set({
+            posts: [],
+            isLoading: false,
+            status: response?.status || 'Failed to fetch posts',
+          });
+        }
+        return [];
       }
     } catch (error: any) {
-      set({isLoading: false, status: error.message});
+      console.error('Error in getAll:', error);
+      if (pageIndex === 1) {
+        set({isLoading: false, status: error.message});
+      }
+      return [];
     }
   },
 

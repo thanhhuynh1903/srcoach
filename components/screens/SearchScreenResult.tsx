@@ -31,12 +31,16 @@ type SearchResult = {
   created_at: string;
   is_upvoted: boolean;
   upvote_count: number;
+  exercise_session_record_id?: string;
   comment_count: number;
   images?: string[];
   tags?: string[];
   user?: {
     username: string;
-    avatar?: string;
+    image: {
+      url: string;
+    };
+
   };
   User?: {
     avatar?: string;
@@ -143,7 +147,7 @@ const SearchResultsScreen = ({}) => {
           id: post.id,
         })
       }>
-      <View style={styles.postHeader}>
+      <TouchableOpacity style={styles.postHeader} onPress={() => navigate.navigate('OtherProfileScreen', {postId: post?.id})}>
         <CommonAvatar mode={null} uri={post?.user?.image?.url} size={36} />
         <View style={{marginLeft: 8}}>
           <Text style={styles.authorName}>
@@ -153,7 +157,7 @@ const SearchResultsScreen = ({}) => {
             {new Date(post.created_at).toLocaleDateString('vi-VN')}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
       <Text style={styles.postTitle}>{post.title}</Text>
       <Text style={styles.postExcerpt}>
         {post.content.length > 150
@@ -221,8 +225,8 @@ const SearchResultsScreen = ({}) => {
     <TouchableOpacity key={user.id} style={styles.userCard}>
       <CommonAvatar uri={user.image?.url} size={56} />
       <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userDetail}>@{user.username}</Text>
+        <Text style={styles.userName}>{user.username}</Text>
+        <Text style={styles.userDetail}>@{user.name}</Text>
         {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
       </View>
     </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useEffect, useState, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,9 @@ import {
   Image,
   FlatList,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Modal,
   Alert,
-  RefreshControl,
   Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
@@ -21,7 +19,8 @@ import {useLoginStore} from '../../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
 import {formatTimeAgo} from '../../utils/utils_format';
 import {CommonAvatar} from '../../commons/CommonAvatar';
-import { SaveDraftButton } from './SaveDraftButton';
+import {SaveDraftButton} from './SaveDraftButton';
+
 // Interface cho User
 interface User {
   id: string;
@@ -69,25 +68,106 @@ const CommunityScreen = () => {
   const navigation = useNavigation();
   const {isLoading, status, getAll, clearCurrent, deletePost, likePost} =
     usePostStore();
-  const posts = usePostStore(state => state.posts);
+  const {profile} = useLoginStore();
+  const currentUserId = profile?.id;
 
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const {profile} = useLoginStore();
-  const currentUserId = profile?.id;
+  const [pageIndex, setPageIndex] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
   const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
   const fadeAnim = useState(new Animated.Value(0))[0];
+  const PAGE_SIZE = 10;
+  const loadingRef = useRef(false);
 
-  useEffect(() => {
-    if (posts && posts.length > 0) {
-      setLocalPosts(posts);
+  const loadInitialPosts = async () => {
+    if (loadingRef.current) return;
+    try {
+      loadingRef.current = true;
+      setPageIndex(1);
+      const newPosts = await getAll(1, PAGE_SIZE);
+      if (Array.isArray(newPosts)) {
+        setLocalPosts(newPosts);
+        setHasMorePosts(newPosts.length >= PAGE_SIZE);
+      } else {
+        setLocalPosts([]);
+        setHasMorePosts(false);
+      }
+    } catch (error) {
+      console.error('Error loading initial posts:', error);
+      setLocalPosts([]);
+    } finally {
+      loadingRef.current = false;
     }
-  }, [posts]);
+  };
+
+  const loadMorePosts = async () => {
+    if (isLoadingMore || !hasMorePosts || loadingRef.current) {
+      console.log('Đang tải hoặc không còn bài viết để tải');
+      return;
+    }
+
+    try {
+      console.log('Bắt đầu tải trang tiếp theo:', pageIndex + 1);
+      loadingRef.current = true;
+      setIsLoadingMore(true);
+
+      const nextPage = pageIndex + 1;
+
+      // Lưu trữ tạm thời giá trị pageIndex hiện tại để tránh race condition
+      const currentPageIndex = pageIndex;
+
+      // Gọi API để lấy trang tiếp theo
+      const newPosts = await getAll(nextPage, PAGE_SIZE);
+
+      // Log chi tiết kết quả nhận được
+      console.log(`Đã nhận được bài viết mới: ${newPosts?.length || 0}`);
+      console.log(
+        `Dữ liệu bài viết mới: ${JSON.stringify(newPosts?.map(p => p.id))}`,
+      );
+
+      if (Array.isArray(newPosts) && newPosts.length > 0) {
+        // Cập nhật state với cách đảm bảo state được cập nhật đúng
+        setLocalPosts(prevPosts => {
+          // Lọc ra các bài viết chưa có trong danh sách hiện tại
+          const existingIds = new Set(prevPosts.map(post => post.id));
+          const uniqueNewPosts = newPosts.filter(
+            post => !existingIds.has(post.id),
+          );
+
+          console.log(`Số bài viết mới độc nhất: ${uniqueNewPosts.length}`);
+
+          // Chỉ thêm các bài viết mới vào danh sách
+          const updatedPosts = [...prevPosts, ...uniqueNewPosts];
+          console.log(
+            `Tổng số bài viết sau khi cập nhật: ${updatedPosts.length}`,
+          );
+
+          return updatedPosts;
+        });
+
+        // Cập nhật pageIndex chỉ khi đã nhận được bài viết mới
+        setPageIndex(nextPage);
+
+        // Cập nhật trạng thái hasMorePosts
+        setHasMorePosts(newPosts.length >= PAGE_SIZE);
+      } else {
+        console.log('Không còn bài viết để tải');
+        setHasMorePosts(false);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải thêm bài viết:', error);
+    } finally {
+      setIsLoadingMore(false);
+      loadingRef.current = false;
+    }
+  };
 
   useEffect(() => {
-    getAll();
+    loadInitialPosts();
     clearCurrent();
   }, []);
 
@@ -108,105 +188,12 @@ const CommunityScreen = () => {
         }).start();
       });
     }, 3000);
-
     return () => clearInterval(interval);
   }, [fadeAnim]);
 
-  const handleMorePress = (post: Post) => {
-    setSelectedPost(post);
-    setModalVisible(true);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedPost) return;
-
-    Alert.alert(
-      'Delete Post',
-      'Are you sure you want to delete this post?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const postId = selectedPost.id;
-              setLocalPosts(prevPosts =>
-                prevPosts.filter(post => post.id !== postId),
-              );
-              setModalVisible(false);
-
-              const success = await deletePost(postId);
-
-              if (!success) {
-                Alert.alert('Error', 'Failed to delete post');
-                getAll();
-              }
-            } catch (error) {
-              console.error('Error deleting post:', error);
-              Alert.alert('Error', 'An error occurred while deleting the post');
-              getAll();
-            }
-          },
-        },
-      ],
-      {cancelable: true},
-    );
-  };
-
-  const handleUpdate = () => {
-    setModalVisible(false);
-    if (selectedPost) {
-      navigation.navigate('CommunityUpdatePostScreen', {
-        postId: selectedPost.id,
-      });
-    }
-  };
-
-  const renderTags = (tags: Tag[]) => {
-    if (!tags || tags.length === 0) {
-      return null;
-    }
-
-    if (tags.length <= 3) {
-      return (
-        <View style={styles.tagsContainer}>
-          {tags.map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ))}
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.tagsContainer}>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[0]}</Text>
-        </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[1]}</Text>
-        </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{tags[2]}</Text>
-        </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>more +{tags.length - 3}</Text>
-        </View>
-      </View>
-    );
-  };
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    getAll()
-      .then(() => {
-        setRefreshing(false);
-      })
-      .catch(() => {
-        setRefreshing(false);
-      });
+    loadInitialPosts().finally(() => setRefreshing(false));
   }, []);
 
   useFocusEffect(
@@ -215,6 +202,50 @@ const CommunityScreen = () => {
       return () => {};
     }, [onRefresh]),
   );
+
+  const renderHeader = () => (
+    <View>
+      <View style={styles.searchContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
+          <CommonAvatar mode={null} size={40} uri={profile?.image?.url} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.postCreateInput}
+          onPress={() =>
+            navigation.navigate('CommunityCreatePostScreen' as never)
+          }>
+          <Animated.Text style={[styles.placeholderText, {opacity: fadeAnim}]}>
+            {PLACEHOLDER_TEXTS[currentPlaceholderIndex]}
+          </Animated.Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.sectionTitle}>Community Posts</Text>
+    </View>
+  );
+
+  const renderFooter = () => {
+    if (isLoadingMore) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={theme.colors.primaryDark} />
+          <Text style={styles.footerText}>Loading more posts...</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.debugFooter}>
+        {hasMorePosts && (
+          <TouchableOpacity style={styles.debugButton} onPress={loadMorePosts}>
+            <Text style={styles.debugButtonText}>
+              ...Loading more posts
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity
@@ -244,22 +275,24 @@ const CommunityScreen = () => {
           </View>
         </TouchableOpacity>
         {item.user.id !== profile?.id ? (
-        <SaveDraftButton 
-          postId={item.id}
-          isSaved={item.is_saved}
-          onSave={(newSavedState) => {
-            setLocalPosts(prev => prev.map(p => 
-              p.id === item.id ? {...p, is_saved: newSavedState} : p
-            ));
-          }}
-        />
-      ) : (
-        <TouchableOpacity
-          style={styles.moreButton}
-          onPress={() => handleMorePress(item)}>
-          <Icon name="ellipsis-horizontal" size={20} color="#000" />
-        </TouchableOpacity>
-      )}
+          <SaveDraftButton
+            postId={item.id}
+            isSaved={item.is_saved}
+            onSave={newSavedState => {
+              setLocalPosts(prev =>
+                prev.map(p =>
+                  p.id === item.id ? {...p, is_saved: newSavedState} : p,
+                ),
+              );
+            }}
+          />
+        ) : (
+          <TouchableOpacity
+            style={styles.moreButton}
+            onPress={() => handleMorePress(item)}>
+            <Icon name="ellipsis-horizontal" size={20} color="#000" />
+          </TouchableOpacity>
+        )}
       </View>
       {item.title && <Text style={styles.postTitle}>{item.title}</Text>}
       <Text style={styles.postText}>{item.content}</Text>
@@ -311,7 +344,6 @@ const CommunityScreen = () => {
             />
             <Text style={styles.postActionText}>{item.upvote_count}</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.postActionButton}
             onPress={() =>
@@ -326,44 +358,74 @@ const CommunityScreen = () => {
     </TouchableOpacity>
   );
 
-  const renderPostsContent = () => {
-    if ((isLoading && localPosts.length === 0) || refreshing) {
+  const renderTags = (tags: string[]) => {
+    if (!tags || tags.length === 0) return null;
+    if (tags.length <= 3) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primaryDark} />
-          <Text style={styles.loadingText}>Loading posts...</Text>
-        </View>
-      );
-    }
-    if (status === 'error' && localPosts.length === 0) {
-      return (
-        <View style={styles.errorContainer}>
-          <Icon name="alert-circle-outline" size={48} color="red" />
-          <Text style={styles.errorText}>{status}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={getAll}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    if (!localPosts || localPosts.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Icon name="document-text-outline" size={48} color="#999" />
-          <Text style={styles.emptyText}>No posts available</Text>
+        <View style={styles.tagsContainer}>
+          {tags.map((tag, index) => (
+            <View key={index} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
+            </View>
+          ))}
         </View>
       );
     }
     return (
-      <FlatList
-        style={styles.postList}
-        data={localPosts}
-        renderItem={renderPostItem}
-        showsVerticalScrollIndicator={false}
-        keyExtractor={item => item.id}
-        scrollEnabled={false}
-      />
+      <View style={styles.tagsContainer}>
+        {tags.slice(0, 3).map((tag, index) => (
+          <View key={index} style={styles.tag}>
+            <Text style={styles.tagText}>{tag}</Text>
+          </View>
+        ))}
+        <View style={styles.tag}>
+          <Text style={styles.tagText}>more +{tags.length - 3}</Text>
+        </View>
+      </View>
     );
+  };
+
+  const handleMorePress = (post: Post) => {
+    setSelectedPost(post);
+    setModalVisible(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPost) return;
+    Alert.alert('Delete Post', 'Are you sure you want to delete this post?', [
+      {text: 'Cancel', style: 'cancel'},
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const postId = selectedPost.id;
+            setLocalPosts(prevPosts =>
+              prevPosts.filter(post => post.id !== postId),
+            );
+            setModalVisible(false);
+            const success = await deletePost(postId);
+            if (!success) {
+              Alert.alert('Error', 'Failed to delete post');
+              loadInitialPosts();
+            }
+          } catch (error) {
+            console.error('Error deleting post:', error);
+            Alert.alert('Error', 'An error occurred while deleting the post');
+            loadInitialPosts();
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleUpdate = () => {
+    setModalVisible(false);
+    if (selectedPost) {
+      navigation.navigate('CommunityUpdatePostScreen', {
+        postId: selectedPost.id,
+      });
+    }
   };
 
   const handleLikePost = async (id: string, isLike: boolean) => {
@@ -373,34 +435,30 @@ const CommunityScreen = () => {
       ]);
       return;
     }
-
     const success = await likePost(id, isLike);
-
     if (success) {
-      const updatedLocalPosts = localPosts.map(post => {
-        if (post.id === id) {
-          return {
-            ...post,
-            is_upvoted: isLike,
-            upvote_count: isLike
-              ? post.is_upvoted
-                ? post.upvote_count
-                : post.upvote_count + 1
-              : post.is_upvoted
-              ? post.upvote_count - 1
-              : post.upvote_count,
-          };
-        }
-        return post;
-      });
-
-      setLocalPosts(updatedLocalPosts);
+      setLocalPosts(prev =>
+        prev.map(post =>
+          post.id === id
+            ? {
+                ...post,
+                is_upvoted: isLike,
+                upvote_count: isLike
+                  ? post.is_upvoted
+                    ? post.upvote_count
+                    : post.upvote_count + 1
+                  : post.is_upvoted
+                  ? post.upvote_count - 1
+                  : post.upvote_count,
+              }
+            : post,
+        ),
+      );
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header remains fixed at the top */}
       <View style={styles.header}>
         <View style={{flex: 1, flexDirection: 'row', alignItems: 'center'}}>
           <Icon name="fitness" size={24} color={theme.colors.primaryDark} />
@@ -434,41 +492,30 @@ const CommunityScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* ScrollView contains all scrollable content */}
-      <ScrollView
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.colors.primaryDark]}
-            tintColor={theme.colors.primaryDark}
-          />
-        }>
-        {/* Search container is now inside the ScrollView */}
-        <View style={styles.searchContainer}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('RunnerProfileScreen' as never)}>
-            <CommonAvatar mode={null} size={40} uri={profile?.image?.url} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.postCreateInput}
-            onPress={() =>
-              navigation.navigate('CommunityCreatePostScreen' as never)
-            }>
-            <Animated.Text
-              style={[styles.placeholderText, {opacity: fadeAnim}]}>
-              {PLACEHOLDER_TEXTS[currentPlaceholderIndex]}
-            </Animated.Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.sectionTitle}>Community Posts</Text>
-        {renderPostsContent()}
-      </ScrollView>
-
+      <FlatList
+        data={localPosts}
+        extraData={[localPosts.length, pageIndex]} // Thêm pageIndex để đảm bảo re-render khi pageIndex thay đổi
+        renderItem={renderPostItem}
+        keyExtractor={item => item.id.toString()}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        onEndReached={info => {
+          if (info.distanceFromEnd > 0) {
+            console.log(
+              'onEndReached triggered with distance:',
+              info.distanceFromEnd,
+            );
+            loadMorePosts();
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        contentContainerStyle={{paddingTop: 60, paddingBottom: 20}}
+        maxToRenderPerBatch={10}
+        windowSize={21}
+        removeClippedSubviews={false} // Thêm dòng này để tránh vấn đề với render
+      />
       <Modal
         animationType="slide"
         transparent={true}
@@ -491,10 +538,12 @@ const CommunityScreen = () => {
                 <Text style={styles.modalOptionText}>Update</Text>
               </TouchableOpacity>
             ) : (
-              <SaveDraftButton postId={selectedPost?.id ?? ''} onSave={() => setModalVisible(false)}/>
+              <SaveDraftButton
+                postId={selectedPost?.id ?? ''}
+                onSave={() => setModalVisible(false)}
+              />
             )}
             <View style={styles.modalDivider} />
-
             {selectedPost && selectedPost?.user?.id === currentUserId && (
               <TouchableOpacity
                 style={styles.modalOption}
@@ -505,9 +554,7 @@ const CommunityScreen = () => {
                 </Text>
               </TouchableOpacity>
             )}
-
             <View style={styles.modalDivider} />
-
             <TouchableOpacity
               style={styles.modalCancelButton}
               onPress={() => setModalVisible(false)}>
@@ -525,13 +572,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  scrollContainer: {
-    flex: 1,
-    marginTop: 60, // Account for fixed header height
+  debugFooter: {
+    padding: 16,
+    alignItems: 'center',
   },
-  scrollContentContainer: {
-    paddingBottom: 20,
+  debugButton: {
+    backgroundColor: theme.colors.primaryDark,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 200,
+    alignItems: 'center',
   },
+  debugButtonText: {
+    color: 'white',
+    fontWeight: '600',
+  },
+
   header: {
     position: 'absolute',
     top: 0,
@@ -622,9 +679,6 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: 'bold',
     color: '#000',
-  },
-  postList: {
-    marginBottom: 100,
   },
   postTime: {
     color: '#999',
@@ -800,6 +854,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: theme.colors.primaryDark,
+  },
+  footerLoader: {
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  footerText: {
+    marginLeft: 8,
+    color: '#666',
+    fontSize: 14,
   },
 });
 
