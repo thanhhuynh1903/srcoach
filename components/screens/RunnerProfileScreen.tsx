@@ -577,7 +577,7 @@ const RunnerProfileScreen = () => {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{profile?.total_posts || 0}</Text>
+              <Text style={styles.statValue}>{localPosts?.length || 0}</Text>
               <Text style={styles.statLabel}>Posts</Text>
             </View>
             <View style={styles.statDivider} />
