@@ -20,19 +20,19 @@ api.interceptors.response.use(
 );
 
 export const searchUsers = async (query: string) => {
-  const response = await api.get(`/users/search/users?query=${encodeURIComponent(query)}`);
+  const response = await api.get(`/chats/search/users?query=${encodeURIComponent(query)}`);
   if (!response.data.status) ToastUtil.error('Search Failed', response.data.message);
   return response.data;
 };
 
 export const searchExperts = async (query: string) => {
-  const response = await api.get(`/users/search/experts?query=${encodeURIComponent(query)}`);
+  const response = await api.get(`/chats/search/experts?query=${encodeURIComponent(query)}`);
   if (!response.data.status) ToastUtil.error('Search Failed', response.data.message);
   return response.data;
 };
 
 export const searchRunners = async (query: string) => {
-  const response = await api.get(`/users/search/runners?query=${encodeURIComponent(query)}`);
+  const response = await api.get(`/chats/search/runners?query=${encodeURIComponent(query)}`);
   if (!response.data.status) ToastUtil.error('Search Failed', response.data.message);
   return response.data;
 };
@@ -85,13 +85,37 @@ export const sendExpertRecommendation = async (sessionId: string, content: strin
   return response.data;
 };
 
-export const sendImageMessage = async (sessionId: string, url: string) => {
-  const response = await api.post('/chats/session/message/image', { 
-    session_id: sessionId, 
-    url 
-  });
-  if (!response.data.status) ToastUtil.error('Error', response.data.message);
-  return response.data;
+export const sendImageMessage = async (sessionId: string, imageUri: string) => {
+  const formData = new FormData();
+  const filename = imageUri.split('/').pop() || 'image.jpg';
+  
+  let mimeType = 'image/jpeg';
+  if (filename.endsWith('.png')) mimeType = 'image/png';
+  if (filename.endsWith('.gif')) mimeType = 'image/gif';
+
+  formData.append('image', {
+    uri: imageUri,
+    name: filename,
+    type: mimeType,
+  } as any);
+
+  formData.append('session_id', sessionId);
+
+  try {
+    const response = await api.post('/chats/session/message/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (!response.data.status) {
+      ToastUtil.error('Error', response.data.message);
+    }
+    return response.data;
+  } catch (error) {
+    ToastUtil.error('Error', 'Failed to send image message');
+    throw error;
+  }
 };
 
 export const getSessionMessages = async (sessionId: string, limit = 30, cursor?: string | null) => {

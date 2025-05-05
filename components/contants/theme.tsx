@@ -17,6 +17,7 @@ export const theme = {
     warning: '#ffc107',
     error: '#dc3545',
     white: '#fff',
+    lightGray: '#d3d3d3',
   },
   fonts: {
     regular: '400',

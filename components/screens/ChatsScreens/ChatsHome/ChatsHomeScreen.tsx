@@ -1,13 +1,14 @@
 import React, {useState, useEffect} from 'react';
-import {View, StyleSheet, ScrollView, Text} from 'react-native';
+import {View, StyleSheet, ScrollView, Text, RefreshControl} from 'react-native';
 import {theme} from '../../../contants/theme';
 import CHSHeader from './CHSHeader';
 import CHSSearch from './CHSSearch';
 import CHSTabFilter from './CHSTabFilter';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
-import {listSessions} from '../../../utils/useChatsAPI';
+import {listSessions, respondToSession} from '../../../utils/useChatsAPI';
 import {CHSChatList} from './CHSChatList';
+import ToastUtil from '../../../utils/utils_toast';
 
 interface ChatSession {
   id: string;
@@ -16,6 +17,7 @@ interface ChatSession {
   is_expert_session: boolean;
   expert_rating_allowed: boolean;
   user_archived: boolean;
+  is_initiator: boolean;
   other_user: {
     id: string;
     name: string;
@@ -41,6 +43,7 @@ const ChatsHomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -59,6 +62,7 @@ const ChatsHomeScreen = () => {
       console.error('Error fetching sessions:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -69,8 +73,28 @@ const ChatsHomeScreen = () => {
   const handleChatPress = (session: ChatSession) => {
     navigation.navigate('ChatsMessageScreen', {
       userId: session.other_user.id,
-      sessionId: session.id,
     });
+  };
+
+  const handleRespondToSession = async (sessionId: string, accept: boolean) => {
+    try {
+      const response = await respondToSession(sessionId, accept);
+      if (response.status) {
+        if (accept) {
+          ToastUtil.success('Success', 'Session accepted successfully');
+        } else {
+          ToastUtil.success('Success', 'Session rejected successfully');
+        }
+        fetchSessions();
+      }
+    } catch (error) {
+      console.error('Error responding to session:', error);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchSessions();
   };
 
   return (
@@ -88,8 +112,16 @@ const ChatsHomeScreen = () => {
       <ScrollView 
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
+        }
       >
-        {loading ? (
+        {loading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <Text>Loading chats...</Text>
           </View>
@@ -108,6 +140,8 @@ const ChatsHomeScreen = () => {
               key={session.id}
               session={session}
               onPress={() => handleChatPress(session)}
+              onAccept={() => handleRespondToSession(session.id, true)}
+              onDeny={() => handleRespondToSession(session.id, false)}
             />
           ))
         )}

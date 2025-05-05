@@ -3,13 +3,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   StyleSheet,
   SafeAreaView,
   ActivityIndicator,
-  ListRenderItemInfo,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useRoute, useNavigation} from '@react-navigation/native';
@@ -18,6 +14,8 @@ import {
   createOrGetSession,
   sendNormalMessage,
   getSessionMessages,
+  sendImageMessage,
+  respondToSession,
 } from '../../../utils/useChatsAPI';
 import BackButton from '../../../BackButton';
 import {
@@ -27,12 +25,10 @@ import {
 import {useLoginStore} from '../../../utils/useLoginStore';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
-import {CMINormal} from './ChatsMessageItem/CMINormal';
-import {CMIProfile} from './ChatsMessageItem/CMIProfile';
-import {CMIExerciseRecord} from './ChatsMessageItem/CMIExerciseRecord';
-import {CMIExpertRecommendation} from './ChatsMessageItem/CMIExpertRecommendation';
-import {CMIImage} from './ChatsMessageItem/CMIImage';
 import {CMSMessageControl} from './CMSMessageControl';
+import ChatsPanelRunner from './ChatsMessageItem/ChatsPanelRunner/ChatsPanelRunner';
+import * as ImagePicker from 'react-native-image-picker';
+import {CMSMessageContainer} from './CMSMessageContainer';
 
 type MessageItem = {
   id: string;
@@ -56,239 +52,175 @@ export default function ChatsMessageScreen() {
   const route = useRoute() as any;
   const navigation = useNavigation();
   const {profile} = useLoginStore();
-  const {userId} = route.params;
-  
+  const {userId, sessionId: initialSessionId} = route.params;
+
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [sessionId, setSessionId] = useState('');
+  const [sessionId, setSessionId] = useState(initialSessionId || '');
   const [sessionStatus, setSessionStatus] = useState('');
+  const [isInitiator, setIsInitiator] = useState(false);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [cursor, setCursor] = useState<string | null>(null);
   const [showContent, setShowContent] = useState(false);
-  
-  const flatListRef = useRef<FlatList<MessageItem>>(null);
-  const scrollOffsetRef = useRef(0);
-  const contentHeightRef = useRef(0);
-  const isScrollingRef = useRef(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [panelVisible, setPanelVisible] = useState(false);
 
-  // Generate unique key for each message
-  const getMessageKey = useCallback((item: MessageItem) => {
-    return `${item.id}_${item.created_at}`; // Combine ID and timestamp for uniqueness
-  }, []);
-
-  // Estimate height for each item type
-  const getItemLayout = useCallback(
-    (_: ArrayLike<MessageItem> | null | undefined, index: number) => {
-      const item = messages[index];
-      let height = 100; // Default height
-      
-      switch(item?.message_type) {
-        case 'IMAGE':
-          height = 200;
-          break;
-        case 'EXERCISE_RECORD':
-          height = 150;
-          break;
-        case 'EXPERT_RECOMMENDATION':
-          height = 180;
-          break;
-        default:
-          height = 100;
-      }
-      
-      return {
-        length: height,
-        offset: height * index,
-        index,
-      };
-    },
-    [messages],
-  );
+  const flatListRef = useRef(null);
+  const isInitialLoad = useRef(true);
+  const shouldScrollToEnd = useRef(false);
 
   useEffect(() => {
     const initChat = async () => {
-      const response = await createOrGetSession(userId);
-      if (response.status) {
-        setSessionId(response.data.session.id);
-        setSessionStatus(response.data.session.status);
-        setOtherUser(response.data.other_user);
-        loadMessages(response.data.session.id);
+      if (initialSessionId) {
+        loadMessages(initialSessionId);
+      } else {
+        const response = await createOrGetSession(userId);
+        if (response.status) {
+          setSessionId(response.data.session.id);
+          setSessionStatus(response.data.session.status);
+          setIsInitiator(response.data.session.is_initiator);
+          setOtherUser(response.data.other_user);
+          loadMessages(response.data.session.id);
+        }
       }
     };
     initChat();
-  }, [userId]);
+  }, [userId, initialSessionId]);
 
-  const loadMessages = useCallback(async (sessionId: string, loadMore = false) => {
+  const loadMessages = useCallback(async (sessionId: string) => {
     try {
-      if (loadMore) {
-        if (!hasMoreMessages || loadingMore) return;
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-        setShowContent(false);
-        setMessages([]);
-        setCursor(null);
-        setHasMoreMessages(true);
-      }
+      setLoading(true);
+      setShowContent(false);
+      isInitialLoad.current = true;
 
-      const response = await getSessionMessages(sessionId, 30, cursor);
+      const response = await getSessionMessages(sessionId, 5000);
       if (response.status) {
-        // Ensure messages are unique before adding them
-        const newMessages = [...response.data.messages]
-          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-          .filter((message, index, self) => 
-            index === self.findIndex(m => 
-              m.id === message.id && m.created_at === message.created_at
-            )
-          );
+        const newMessages = response.data.messages;
 
-        if (loadMore) {
-          // Prepend older messages and ensure no duplicates
-          setMessages(prev => {
-            const combined = [...newMessages, ...prev];
-            return combined.filter((message, index, self) => 
-              index === self.findIndex(m => 
-                getMessageKey(m) === getMessageKey(message)
-              )
-            );
-          });
-        } else {
-          setMessages(newMessages);
+        setMessages(newMessages.sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        ));
+
+        if (response.data.session?.status === 'PENDING' && !isInitiator) {
+          setSessionStatus(response.data.session.status);
         }
 
-        setCursor(response.data.nextCursor);
-        setHasMoreMessages(!!response.data.nextCursor);
-
-        setTimeout(() => {
-          setShowContent(true);
-          if (!loadMore && flatListRef.current && newMessages.length > 0) {
-            flatListRef.current.scrollToIndex({
-              index: newMessages.length - 1,
-              animated: false,
-            });
-          }
-        }, 100);
+        setShowContent(true);
+        shouldScrollToEnd.current = true;
       }
     } catch (error) {
       console.error('Error loading messages:', error);
       setShowContent(true);
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
-  }, [cursor, hasMoreMessages, loadingMore, getMessageKey]);
-
-  const handleLoadMore = useCallback(async () => {
-    if (!hasMoreMessages || loadingMore) return;
-    
-    const previousLength = messages.length;
-    await loadMessages(sessionId, true);
-    
-    if (flatListRef.current && messages.length > previousLength) {
-      const newIndex = messages.length - previousLength;
-      setTimeout(() => {
-        if (flatListRef.current) {
-          flatListRef.current.scrollToIndex({
-            index: newIndex,
-            animated: false,
-          });
-        }
-      }, 50);
-    }
-  }, [hasMoreMessages, loadingMore, loadMessages, messages.length, sessionId]);
-
-  const handleScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const {contentOffset, contentSize} = event.nativeEvent;
-      scrollOffsetRef.current = contentOffset.y;
-      contentHeightRef.current = contentSize.height;
-
-      const scrollPosition = contentOffset.y / contentSize.height;
-      if (scrollPosition < 0.2 && hasMoreMessages && !loadingMore && !isScrollingRef.current) {
-        handleLoadMore();
-      }
-    },
-    [handleLoadMore, hasMoreMessages, loadingMore],
-  );
-
-  const handleScrollBeginDrag = useCallback(() => {
-    isScrollingRef.current = true;
-  }, []);
-
-  const handleScrollEndDrag = useCallback(() => {
-    isScrollingRef.current = false;
-  }, []);
+  }, [isInitiator]);
 
   const handleSendMessage = async () => {
-    if (!messageText.trim()) return;
-    const response = await sendNormalMessage(sessionId, messageText);
-    if (response.status) {
-      setMessageText('');
-      loadMessages(sessionId);
+    if (!sessionId) {
+      ToastUtil.error('Error', 'Session not initialized');
+      return;
+    }
+
+    if (selectedImage) {
+      try {
+        setLoading(true);
+        const response = await sendImageMessage(sessionId, selectedImage);
+        if (response.status) {
+          setSelectedImage(null);
+          shouldScrollToEnd.current = true;
+          loadMessages(sessionId);
+        } else {
+          ToastUtil.error(
+            'Error',
+            response.data.message || 'Failed to send image',
+          );
+        }
+      } catch (error) {
+        console.error('Error sending image:', error);
+        ToastUtil.error('Error', 'Failed to send image');
+      } finally {
+        setLoading(false);
+      }
+    } else if (messageText.trim()) {
+      try {
+        setLoading(true);
+        const response = await sendNormalMessage(sessionId, messageText);
+        if (response.status) {
+          setMessageText('');
+          shouldScrollToEnd.current = true;
+          loadMessages(sessionId);
+        } else {
+          ToastUtil.error(
+            'Error',
+            response.data.message || 'Failed to send message',
+          );
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        ToastUtil.error('Error', 'Failed to send message');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleScrollToIndexFailed = useCallback((info: {
-    index: number;
-    highestMeasuredFrameIndex: number;
-    averageItemLength: number;
-  }) => {
-    if (flatListRef.current) {
-      flatListRef.current.scrollToOffset({
-        offset: info.averageItemLength * info.index,
-        animated: false,
+  const handleImagePress = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+        selectionLimit: 1,
       });
-      setTimeout(() => {
-        if (flatListRef.current && messages.length > 0) {
-          flatListRef.current.scrollToIndex({
-            index: info.index,
-            animated: false,
-          });
+
+      if (!result.didCancel && result.assets && result.assets.length > 0) {
+        const selected = result.assets[0];
+        setSelectedImage(selected.uri || null);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      ToastUtil.error('Error', 'Failed to select image');
+    }
+  }, []);
+
+  const handleRemoveImage = useCallback(() => {
+    setSelectedImage(null);
+  }, []);
+
+  const handleRespondToSession = async (accept: boolean) => {
+    try {
+      const response = await respondToSession(sessionId, accept);
+      if (response.status) {
+        if (accept) {
+          ToastUtil.success('Success', 'Session accepted successfully');
+          setSessionStatus('ACCEPTED');
+        } else {
+          ToastUtil.success('Success', 'Session rejected successfully');
+          navigation.goBack();
         }
-      }, 100);
+      }
+    } catch (error) {
+      console.error('Error responding to session:', error);
+      ToastUtil.error('Error', 'Failed to respond to session');
     }
-  }, [messages.length]);
+  };
 
-  const renderMessage = useCallback(({item}: ListRenderItemInfo<MessageItem>) => {
-    const isMe = item.sender.id === profile?.id;
+  const handleSendExerciseRecord = () => {
+    setPanelVisible(false);
+    ToastUtil.info(
+      'Feature coming soon',
+      'Exercise record sending will be implemented',
+    );
+  };
 
-    if (!showContent) return null;
-
-    switch (item.message_type) {
-      case 'NORMAL':
-        return <CMINormal message={item} isMe={isMe} />;
-      case 'PROFILE':
-        return <CMIProfile message={item} isMe={isMe} />;
-      case 'EXERCISE_RECORD':
-        return (
-          <CMIExerciseRecord
-            message={item}
-            isMe={isMe}
-            onPress={() =>
-              navigation.navigate('ExerciseDetail', {
-                recordId: item.content.exercise_session_record_id,
-              })
-            }
-          />
-        );
-      case 'EXPERT_RECOMMENDATION':
-        return <CMIExpertRecommendation message={item} isMe={isMe} />;
-      case 'IMAGE':
-        return <CMIImage message={item} isMe={isMe} />;
-      default:
-        return <CMINormal message={item} isMe={isMe} />;
-    }
-  }, [navigation, profile?.id, showContent]);
-
-  const LoadingMoreIndicator = useCallback(() => (
-    <View style={styles.loadingMoreContainer}>
-      <ActivityIndicator size="small" color={theme.colors.primaryDark} />
-      <Text style={styles.loadingMoreText}>Loading older messages...</Text>
-    </View>
-  ), []);
+  const handleExerciseRecordPress = useCallback(
+    (recordId: string) => {
+      navigation.navigate('ExerciseDetail', {
+        recordId,
+      });
+    },
+    [navigation],
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -325,21 +257,53 @@ export default function ChatsMessageScreen() {
             </View>
           </View>
         </View>
-
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Icon name="search" size={20} color="#000" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Icon name="information-circle" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
       </View>
 
       {sessionStatus === 'PENDING' && (
-        <View style={styles.pendingNotice}>
-          <Text style={styles.pendingNoticeText}>
-            Waiting for other party to accept the chat
+        <View
+          style={[
+            styles.pendingNotice,
+            isInitiator
+              ? styles.pendingNoticeWaiting
+              : styles.pendingNoticeAction,
+          ]}>
+          <Icon
+            name="information-circle"
+            size={16}
+            color={isInitiator ? theme.colors.warning : theme.colors.white}
+            style={styles.pendingIcon}
+          />
+          <Text
+            style={[
+              styles.pendingNoticeText,
+              isInitiator
+                ? styles.pendingNoticeTextWaiting
+                : styles.pendingNoticeTextAction,
+            ]}>
+            {isInitiator
+              ? 'Waiting for other party to accept this chat'
+              : 'Accept this chat request?'}
+          </Text>
+
+          {!isInitiator && (
+            <View style={styles.pendingActions}>
+              <TouchableOpacity
+                style={[styles.pendingButton, styles.pendingButtonDeny]}
+                onPress={() => handleRespondToSession(false)}>
+                <Icon name="close" size={16} color={theme.colors.white} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pendingButton, styles.pendingButtonAccept]}
+                onPress={() => handleRespondToSession(true)}>
+                <Icon name="checkmark" size={16} color={theme.colors.white} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text style={styles.pendingNote}>
+            {isInitiator
+              ? 'You can send a message to remind them'
+              : 'Sending a message will automatically accept'}
           </Text>
         </View>
       )}
@@ -349,30 +313,12 @@ export default function ChatsMessageScreen() {
           <ActivityIndicator size="large" color={theme.colors.primaryDark} />
         </View>
       ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={getMessageKey} // Use the unique key generator
-          contentContainerStyle={styles.messagesContainer}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          onScrollBeginDrag={handleScrollBeginDrag}
-          onScrollEndDrag={handleScrollEndDrag}
-          ListHeaderComponent={loadingMore ? <LoadingMoreIndicator /> : null}
-          onContentSizeChange={(w, h) => {
-            contentHeightRef.current = h;
-          }}
-          getItemLayout={getItemLayout}
-          onScrollToIndexFailed={handleScrollToIndexFailed}
-          initialNumToRender={20}
-          maxToRenderPerBatch={10}
-          windowSize={21}
-          removeClippedSubviews={true}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-          }}
-          inverted={false}
+        <CMSMessageContainer
+          messages={messages}
+          profileId={profile?.id || ''}
+          showContent={showContent}
+          onExerciseRecordPress={handleExerciseRecordPress}
+          shouldScrollToEnd={shouldScrollToEnd.current}
         />
       )}
 
@@ -380,6 +326,18 @@ export default function ChatsMessageScreen() {
         messageText={messageText}
         setMessageText={setMessageText}
         handleSendMessage={handleSendMessage}
+        onImagePress={handleImagePress}
+        selectedImage={selectedImage}
+        onRemoveImage={handleRemoveImage}
+        disabled={loading || (sessionStatus === 'PENDING' && isInitiator)}
+        setPanelVisible={setPanelVisible}
+      />
+
+      <ChatsPanelRunner
+        visible={panelVisible}
+        onClose={() => setPanelVisible(false)}
+        sessionId={sessionId}
+        onSendSuccess={() => loadMessages(sessionId)}
       />
     </SafeAreaView>
   );
@@ -440,39 +398,60 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     color: '#666',
   },
-  headerIcons: {
-    flexDirection: 'row',
-  },
-  iconButton: {
-    marginLeft: 12,
-  },
   pendingNotice: {
-    backgroundColor: '#FFEB3B',
     padding: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  pendingNoticeWaiting: {
+    backgroundColor: '#FFF3E0',
+  },
+  pendingNoticeAction: {
+    backgroundColor: theme.colors.primary,
+  },
+  pendingIcon: {
+    marginRight: 6,
   },
   pendingNoticeText: {
-    color: '#000',
     fontSize: 12,
+    marginRight: 8,
+  },
+  pendingNoticeTextWaiting: {
+    color: '#000',
+  },
+  pendingNoticeTextAction: {
+    color: theme.colors.white,
+  },
+  pendingNote: {
+    fontSize: 10,
+    width: '100%',
+    textAlign: 'center',
+    marginTop: 4,
+    color: theme.colors.white,
+  },
+  pendingActions: {
+    flexDirection: 'row',
+    marginLeft: 8,
+  },
+  pendingButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  pendingButtonAccept: {
+    backgroundColor: theme.colors.success,
+  },
+  pendingButtonDeny: {
+    backgroundColor: theme.colors.error,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  messagesContainer: {
-    padding: 12,
-    paddingBottom: 20,
-    minHeight: '100%',
-  },
-  loadingMoreContainer: {
-    paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingMoreText: {
-    marginTop: 5,
-    color: theme.colors.gray,
-    fontSize: 12,
   },
 });
