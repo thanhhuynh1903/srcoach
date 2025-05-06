@@ -104,10 +104,10 @@ export default function ExerciseRecordsScreen() {
         showSyncStatus('Done');
         readSampleData();
       } else {
-        showSyncStatus('Sync failed');
+        showSyncStatus('Sync failed. Please try again');
       }
     } catch (error) {
-      showSyncStatus('Sync failed');
+      showSyncStatus('Sync failed. Please try again');
       ToastUtil.error('Sync Error', 'Failed to sync exercise data');
     } finally {
       setAccessDetailNavigation(true);

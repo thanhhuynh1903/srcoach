@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Animated } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { getRandomFunFact } from '../../contants/funFacts';
 import { theme } from '../../contants/theme';
@@ -15,27 +15,38 @@ interface FunFact {
 }
 
 const HomeFunFactCard: React.FC<HomeFunFactCardProps> = ({ style }) => {
-  const [funFact, setFunFact] = React.useState<FunFact>(getRandomFunFact());
+  const [currentFact, setCurrentFact] = useState<FunFact>(getRandomFunFact());
+  const [nextFact, setNextFact] = useState<FunFact>(getRandomFunFact());
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const refreshFunFact = () => {
-    setFunFact(getRandomFunFact());
+    setNextFact(getRandomFunFact());
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentFact(nextFact);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    });
   };
 
   const handleOpenUrl = () => {
-    if (funFact?.url) {
-      Linking.openURL(funFact.url);
+    if (currentFact?.url) {
+      Linking.openURL(currentFact.url);
     }
   };
 
   useFocusEffect(
     React.useCallback(() => {
-      refreshFunFact();
-    }, [])
+      const intervalId = setInterval(() => refreshFunFact(), 10000);
+      return () => clearInterval(intervalId);
+    }, [nextFact])
   );
-
-  useEffect(() => {
-    refreshFunFact();
-  }, []);
 
   return (
     <View style={[styles.card, style]}>
@@ -45,17 +56,19 @@ const HomeFunFactCard: React.FC<HomeFunFactCardProps> = ({ style }) => {
           <Text style={styles.title}>Fun Fact</Text>
         </View>
       </View>
-      <Text style={styles.factText}>{funFact?.content}</Text>
-      {funFact?.url && (
-        <TouchableOpacity 
-          style={styles.readMoreButton} 
-          onPress={handleOpenUrl}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.readMoreText}>More info</Text>
-          <Icon name="open-outline" size={16} color={theme.colors.primaryDark} />
-        </TouchableOpacity>
-      )}
+      <Animated.View style={{ opacity: fadeAnim, minHeight: 80 }}>
+        <Text style={styles.factText}>{currentFact?.content}</Text>
+        {currentFact?.url && (
+          <TouchableOpacity 
+            style={styles.readMoreButton} 
+            onPress={handleOpenUrl}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.readMoreText}>More info</Text>
+            <Icon name="open-outline" size={16} color={theme.colors.primaryDark} />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
     </View>
   );
 };
@@ -74,6 +87,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    minHeight: 130,
   },
   header: {
     flexDirection: 'row',
@@ -90,9 +104,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
     color: '#000',
-  },
-  refreshButton: {
-    padding: 4,
   },
   factText: {
     fontSize: 14,

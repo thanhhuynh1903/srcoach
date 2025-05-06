@@ -54,7 +54,7 @@ const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count}) => 
   </View>
 );
 
-export const CHSChatList = ({session, onPress, onAccept, onDeny}: ChatListItemProps) => {
+const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, onDeny}) => {
   const getStatusColor = () => {
     switch (session.status) {
       case 'ACCEPTED':
@@ -191,19 +191,19 @@ export const CHSChatList = ({session, onPress, onAccept, onDeny}: ChatListItemPr
   );
 };
 
-interface ChatListSectionProps {
+interface CHSChatListProps {
   sessions: ChatListItemProps['session'][];
   onItemPress: (session: ChatListItemProps['session']) => void;
   onAccept: (session: ChatListItemProps['session']) => void;
   onDeny: (session: ChatListItemProps['session']) => void;
 }
 
-export const ChatListSections: React.FC<ChatListSectionProps> = ({sessions, onItemPress, onAccept, onDeny}) => {
+const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccept, onDeny}) => {
   const expertSessions = sessions.filter(
-    s => s.status === 'ACCEPTED' && s.other_user.roles.includes('EXPERT')
+    s => s.status === 'ACCEPTED' && s.other_user.roles.includes('expert')
   );
   const directMessages = sessions.filter(
-    s => s.status === 'ACCEPTED' && !s.other_user.roles.includes('EXPERT')
+    s => s.status === 'ACCEPTED' && !s.other_user.roles.includes('expert')
   );
   const pendingRequests = sessions.filter(s => s.status === 'PENDING');
 
@@ -233,7 +233,7 @@ export const ChatListSections: React.FC<ChatListSectionProps> = ({sessions, onIt
       sections={sections}
       keyExtractor={(item) => item.id}
       renderItem={({item}) => (
-        <CHSChatList
+        <ChatListItem
           session={item}
           onPress={() => onItemPress(item)}
           onAccept={() => onAccept(item)}
@@ -261,11 +261,11 @@ const styles = StyleSheet.create({
   categoryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 5,
     paddingHorizontal: 8,
-    backgroundColor: theme.colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomWidth: .3,
+    borderColor: '#595959',
   },
   categoryIcon: {
     marginRight: 8,
@@ -273,20 +273,21 @@ const styles = StyleSheet.create({
   categoryText: {
     fontWeight: '600',
     fontSize: 16,
-    color: theme.colors.dark,
-    flex: 1,
+    color: '#595959',
+    marginRight: 10,
   },
   categoryBadge: {
-    backgroundColor: theme.colors.dark,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
+    borderColor: '#595959',
+    borderRadius: 5,
+    minWidth: 20,
+    height: 20,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 6,
+    backgroundColor: '#5959592d',
   },
   categoryBadgeText: {
-    color: theme.colors.white,
+    color: '#000',
     fontSize: 12,
     fontWeight: 'bold',
   },

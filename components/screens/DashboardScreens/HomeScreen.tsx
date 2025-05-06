@@ -12,13 +12,19 @@ import HomeHeader from '../../HomeHeader';
 import WellnessAndMedication from '../../WellnessAndMedication';
 import {useNavigation} from '@react-navigation/native';
 import useAuthStore from '../../utils/useAuthStore';
-import {initializeHealthConnect, fetchSummaryRecord} from '../../utils/utils_healthconnect';
+import {
+  initializeHealthConnect,
+  fetchSummaryRecord,
+  startSyncData,
+} from '../../utils/utils_healthconnect';
 import {useLoginStore} from '../../utils/useLoginStore';
 import CommonDialog from '../../commons/CommonDialog';
 import HomeHealthScoreCard from './HomeHealthScoreCard';
-import { theme } from '../../contants/theme';
+import {theme} from '../../contants/theme';
 import HomeHealthData from './HomeHealthData';
 import HomeFunFactCard from './HomeFunFactCard';
+import ToastUtil from '../../utils/utils_toast';
+import { formatISODuration } from 'date-fns';
 
 interface SummaryData {
   steps: {
@@ -105,6 +111,18 @@ const HomeScreen = () => {
     },
   };
 
+  const handleSyncPress = async () => {
+    try {
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - 1000 * 60 * 60 * 24 * 30);
+  
+      await startSyncData(startDate.toISOString(), endDate.toISOString());
+      await getHealthData();
+    } catch (error) {
+      ToastUtil.error('Sync failed', 'Failed to sync health data');
+    }
+  };
+
   const showInfoDialog = (metric: keyof typeof metricInfo) => {
     setCurrentMetricInfo(metricInfo[metric]);
     setInfoDialogVisible(true);
@@ -137,7 +155,6 @@ const HomeScreen = () => {
         setHealthScore(response.healthScore);
       }
     } catch (error) {
-      console.log('Error fetching health data:', error);
       if (error.response?.data?.errors) {
         const newErrors = {...errors};
         Object.keys(error.response.data.errors).forEach(key => {
@@ -166,7 +183,7 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <HomeHeader navigation={navigation} />
+      <HomeHeader navigation={navigation} onSyncPress={handleSyncPress} />
 
       <ScrollView
         style={styles.scrollView}
@@ -189,7 +206,10 @@ const HomeScreen = () => {
         )}
 
         {/* Health Score */}
-        <HomeHealthScoreCard healthScore={healthScore} navigation={navigation} />
+        <HomeHealthScoreCard
+          healthScore={healthScore}
+          navigation={navigation}
+        />
 
         {/* Health Data */}
         <HomeHealthData
@@ -213,7 +233,9 @@ const HomeScreen = () => {
           onClose={() => setInfoDialogVisible(false)}
           title={currentMetricInfo.title}
           content={
-            <Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>
+            <Text style={styles.dialogContent}>
+              {currentMetricInfo.content}
+            </Text>
           }
           actionButtons={[
             {

@@ -7,7 +7,7 @@ import CHSTabFilter from './CHSTabFilter';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {listSessions, respondToSession} from '../../../utils/useChatsAPI';
-import {CHSChatList} from './CHSChatList';
+import CHSChatList from './CHSChatList';
 import ToastUtil from '../../../utils/utils_toast';
 
 interface ChatSession {
@@ -76,6 +76,14 @@ const ChatsHomeScreen = () => {
     });
   };
 
+  const handleAccept = (session: ChatSession) => {
+    handleRespondToSession(session.id, true);
+  };
+
+  const handleDeny = (session: ChatSession) => {
+    handleRespondToSession(session.id, false);
+  };
+
   const handleRespondToSession = async (sessionId: string, accept: boolean) => {
     try {
       const response = await respondToSession(sessionId, accept);
@@ -132,18 +140,17 @@ const ChatsHomeScreen = () => {
               size={48}
               color={'#c2c2c2'}
             />
-            <Text style={styles.emptyText}>No chats found</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'No matching chats found' : 'No chats found'}
+            </Text>
           </View>
         ) : (
-          sessions.map(session => (
-            <CHSChatList
-              key={session.id}
-              session={session}
-              onPress={() => handleChatPress(session)}
-              onAccept={() => handleRespondToSession(session.id, true)}
-              onDeny={() => handleRespondToSession(session.id, false)}
-            />
-          ))
+          <CHSChatList
+            sessions={sessions}
+            onItemPress={handleChatPress}
+            onAccept={handleAccept}
+            onDeny={handleDeny}
+          />
         )}
       </ScrollView>
     </View>
