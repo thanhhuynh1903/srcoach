@@ -51,7 +51,7 @@ export const searchRunners = async (query: string) => {
 
 export const searchAllMessages = async (query: string) => {
   const response = await api.get(
-    `/messages/search/all-messages?query=${encodeURIComponent(query)}`,
+    `/chats/search/all-messages?query=${encodeURIComponent(query)}`,
   );
   if (!response.data.status)
     ToastUtil.error('Search Failed', response.data.message);
@@ -63,7 +63,7 @@ export const searchSessionMessages = async (
   sessionId: string,
 ) => {
   const response = await api.get(
-    `/messages/search/session-messages?query=${encodeURIComponent(
+    `/chats/search/session-messages?query=${encodeURIComponent(
       query,
     )}&sessionId=${sessionId}`,
   );

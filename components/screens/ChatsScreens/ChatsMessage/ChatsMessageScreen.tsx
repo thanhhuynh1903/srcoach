@@ -29,6 +29,7 @@ import ChatsPanelExpertPOVExpert from './ChatsMessagePanel/ChatsPanelExpertPOVEx
 import * as ImagePicker from 'react-native-image-picker';
 import {CMSMessageContainer} from './CMSMessageContainer';
 import {CMSHeader} from './CMSHeader';
+import {CMSSidePanelInfo} from './CMSSidePanelInfo';
 
 type MessageItem = {
   id: string;
@@ -64,6 +65,7 @@ export default function ChatsMessageScreen() {
   const [showContent, setShowContent] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [panelVisible, setPanelVisible] = useState(false);
+  const [infoPanelVisible, setInfoPanelVisible] = useState(false);
 
   const isInitialLoad = useRef(true);
   const shouldScrollToEnd = useRef(false);
@@ -243,10 +245,10 @@ export default function ChatsMessageScreen() {
         otherUser={otherUser}
         onBackPress={() => navigation.goBack()}
         onSearchPress={() => {
-          ToastUtil.info('Search', 'Search functionality will be implemented');
+          navigation.navigate('ChatsSessionMessageSearch', {sessionId});
         }}
         onInfoPress={() => {
-          ToastUtil.info('Info', 'User info will be shown here');
+          setInfoPanelVisible(true);
         }}
       />
 
@@ -331,6 +333,12 @@ export default function ChatsMessageScreen() {
         onClose={() => setPanelVisible(false)}
         sessionId={sessionId}
         onSendSuccess={() => loadMessages(sessionId)}
+      />
+
+      <CMSSidePanelInfo
+        visible={infoPanelVisible}
+        onClose={() => setInfoPanelVisible(false)}
+        sessionId={sessionId}
       />
     </SafeAreaView>
   );

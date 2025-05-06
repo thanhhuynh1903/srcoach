@@ -4,6 +4,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import { capitalizeFirstLetter } from '../../../utils/utils_format';
+import { useLoginStore } from '../../../utils/useLoginStore';
 
 interface ChatListItemProps {
   session: {
@@ -87,45 +88,26 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
   };
 
   const preview = getMessagePreview();
-  const isSpecialMessage = session.last_message?.message_type !== 'NORMAL' && 
-                         session.last_message?.message_type !== undefined;
-
-  const getUserRole = () => {
-    return session.other_user.roles.includes('expert') ? 'expert' : 'runner';
-  };
-
+  const isSpecialMessage = session.last_message?.message_type !== 'NORMAL' && session.last_message?.message_type !== undefined;
+  const getUserRole = () => session.other_user.roles.includes('expert') ? 'expert' : 'runner';
   const showActionButtons = session.status === 'PENDING' && !session.is_initiator;
 
   return (
-    <View style={[
-      styles.chatItemContainer,
-      {borderLeftWidth: 4, borderLeftColor: getStatusColor()},
-    ]}>
-      <TouchableOpacity 
-        style={styles.chatItem}
-        onPress={onPress}
-      >
+    <View style={[styles.chatItemContainer, {borderLeftWidth: 4, borderLeftColor: getStatusColor()}]}>
+      <TouchableOpacity style={styles.chatItem} onPress={onPress}>
         <View style={styles.avatarContainer}>
-          <CommonAvatar
-            mode={getUserRole()}
-            size={40}
-            uri={session.other_user.image?.url}
-          />
+          <CommonAvatar mode={getUserRole()} size={40} uri={session.other_user.image?.url} />
           {session.unread_count > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>{session.unread_count}</Text>
             </View>
           )}
         </View>
-
         <View style={styles.chatContent}>
           <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {session.other_user.name}
-            </Text>
+            <Text style={styles.userName} numberOfLines={1}>{session.other_user.name}</Text>
             <Text style={styles.username}>@{session.other_user.username}</Text>
           </View>
-
           <View style={styles.userStats}>
             <View style={styles.statItem}>
               <Icon name="trophy" size={14} color={theme.colors.warning} />
@@ -136,43 +118,24 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
               <Text style={styles.statText}>{capitalizeFirstLetter(session.other_user.user_level)}</Text>
             </View>
           </View>
-
           <View style={styles.previewContainer}>
-            {preview.icon && (
-              <Icon 
-                name={preview.icon} 
-                size={14} 
-                color="#828282" 
-                style={styles.previewIcon}
-              />
-            )}
-            <Text
-              style={[
-                styles.chatPreview,
-                session.unread_count > 0 && styles.unreadPreview,
-                isSpecialMessage && styles.specialPreview,
-              ]}
-              numberOfLines={1}>
+            {preview.icon && <Icon name={preview.icon} size={14} color="#828282" style={styles.previewIcon} />}
+            <Text style={[styles.chatPreview, session.unread_count > 0 && styles.unreadPreview, isSpecialMessage && styles.specialPreview]} numberOfLines={1}>
               {preview.text}
             </Text>
           </View>
         </View>
-
         {!showActionButtons && (
           <View style={styles.rightContent}>
             {session.last_message && (
               <Text style={styles.chatTime}>
-                {new Date(session.last_message.created_at).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {new Date(session.last_message.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
               </Text>
             )}
             <Icon name="chevron-forward" size={20} color="#828282" />
           </View>
         )}
       </TouchableOpacity>
-
       {showActionButtons && (
         <View style={styles.actionButtons}>
           <TouchableWithoutFeedback onPress={onDeny}>
@@ -199,35 +162,29 @@ interface CHSChatListProps {
 }
 
 const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccept, onDeny}) => {
-  const expertSessions = sessions.filter(
-    s => s.status === 'ACCEPTED' && s.other_user.roles.includes('expert')
-  );
-  const directMessages = sessions.filter(
-    s => s.status === 'ACCEPTED' && !s.other_user.roles.includes('expert')
-  );
+  const {profile} = useLoginStore();
+  const isExpert = profile?.roles?.includes('expert');
+
+  const expertSessions = sessions.filter(s => s.status === 'ACCEPTED' && s.other_user.roles.includes('expert'));
+  const directMessages = sessions.filter(s => s.status === 'ACCEPTED' && !s.other_user.roles.includes('expert'));
   const pendingRequests = sessions.filter(s => s.status === 'PENDING');
 
+  const expertSessionCount = isExpert ? `${expertSessions.length}/15` : `${expertSessions.length}/1`;
+  const directMessageCount = isExpert ? directMessages.length : 0;
+  const pendingRequestCount = isExpert ? pendingRequests.length : 0;
+
   const data = [
-    {type: 'header', title: 'Expert Sessions', iconName: 'trophy', count: expertSessions.length},
+    {type: 'header', title: 'Expert Sessions', iconName: 'trophy', count: expertSessionCount},
     ...expertSessions.map(item => ({type: 'item', data: item})),
-    {type: 'header', title: 'Direct Messages', iconName: 'chatbubbles', count: directMessages.length},
+    {type: 'header', title: 'Direct Messages', iconName: 'chatbubbles', count: directMessageCount},
     ...directMessages.map(item => ({type: 'item', data: item})),
-    {type: 'header', title: 'Pending Requests', iconName: 'time', count: pendingRequests.length},
+    {type: 'header', title: 'Pending Requests', iconName: 'time', count: pendingRequestCount},
     ...pendingRequests.map(item => ({type: 'item', data: item})),
-  ].filter(section => 
-    section.type === 'header' || 
-    (section.type === 'item' && section.data)
-  );
+  ].filter(section => section.type === 'header' || (section.type === 'item' && section.data));
 
   const renderItem = ({item}: {item: any}) => {
     if (item.type === 'header') {
-      return (
-        <ChatCategory 
-          title={item.title} 
-          iconName={item.iconName} 
-          count={item.count} 
-        />
-      );
+      return <ChatCategory title={item.title} iconName={item.iconName} count={item.count} />;
     }
     return (
       <ChatListItem
@@ -249,9 +206,7 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
     <FlatList
       data={data}
       renderItem={renderItem}
-      keyExtractor={(item, index) => 
-        item.type === 'header' ? `header-${item.title}` : `item-${item.data.id}`
-      }
+      keyExtractor={(item, index) => item.type === 'header' ? `header-${item.title}` : `item-${item.data.id}`}
       getItemLayout={getItemLayout as any}
       initialNumToRender={10}
       maxToRenderPerBatch={10}
