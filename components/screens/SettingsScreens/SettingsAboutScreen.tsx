@@ -18,7 +18,7 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
   const appVersion = packageJson.version;
 
   const handleEmailPress = () => {
-    Linking.openURL('smartrunningcoach@gmail.com');
+    Linking.openURL('mailto:smartrunningcoach@gmail.com');
   };
 
   return (
@@ -41,13 +41,6 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
             <Text style={styles.appVersion}>Version {appVersion}</Text>
           </View>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>INFORMATION</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
           {/* About Options */}
           <View style={styles.optionsContainer}>
             <TouchableOpacity
@@ -57,10 +50,13 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
                 <Icon
                   name="megaphone-outline"
                   size={20}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryDark}
                   style={styles.optionIcon}
                 />
-                <Text style={styles.optionText}>What's New</Text>
+                <View>
+                  <Text style={styles.optionText}>What's New</Text>
+                  <Text style={styles.optionSubtext}>Latest features and updates</Text>
+                </View>
               </View>
               <Icon name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
@@ -72,10 +68,13 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
                 <Icon
                   name="document-text-outline"
                   size={20}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryDark}
                   style={styles.optionIcon}
                 />
-                <Text style={styles.optionText}>Terms of Service</Text>
+                <View>
+                  <Text style={styles.optionText}>Terms of Service</Text>
+                  <Text style={styles.optionSubtext}>Legal terms and conditions</Text>
+                </View>
               </View>
               <Icon name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
@@ -87,10 +86,13 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
                 <Icon
                   name="shield-checkmark-outline"
                   size={20}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryDark}
                   style={styles.optionIcon}
                 />
-                <Text style={styles.optionText}>Privacy Policy</Text>
+                <View>
+                  <Text style={styles.optionText}>Privacy Policy</Text>
+                  <Text style={styles.optionSubtext}>How we handle your data</Text>
+                </View>
               </View>
               <Icon name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
@@ -102,10 +104,13 @@ const SettingsAboutScreen: React.FC = ({ navigation }) => {
                 <Icon
                   name="mail-outline"
                   size={20}
-                  color={theme.colors.primary}
+                  color={theme.colors.primaryDark}
                   style={styles.optionIcon}
                 />
-                <Text style={styles.optionText}>Contact Us</Text>
+                <View>
+                  <Text style={styles.optionText}>Contact Us</Text>
+                  <Text style={styles.optionSubtext}>Email our support team</Text>
+                </View>
               </View>
               <Icon name="chevron-forward" size={20} color="#ccc" />
             </TouchableOpacity>
@@ -144,28 +149,21 @@ const styles = StyleSheet.create({
   backButton: {
     marginRight: 15,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerIcon: {
-    marginRight: 10,
-  },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: theme.colors.text,
+    color: '#000',
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
     paddingBottom: 30,
   },
   appInfoContainer: {
     alignItems: 'center',
     marginVertical: 30,
+    paddingHorizontal: 20,
   },
   appIcon: {
     width: 100,
@@ -183,27 +181,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 15,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#eee',
-  },
-  dividerText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#999',
-    marginHorizontal: 10,
-    letterSpacing: 1,
-  },
   optionsContainer: {
     backgroundColor: 'white',
     borderRadius: 12,
-    marginBottom: 20,
+    margin: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -216,8 +197,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 15,
     paddingHorizontal: 20,
+    width: '100%',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  optionItemLast: {
+    borderBottomWidth: 0,
   },
   optionContent: {
     flexDirection: 'row',
@@ -228,11 +213,18 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 16,
+    fontWeight: '500',
     color: '#333',
   },
+  optionSubtext: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
   copyrightContainer: {
-    marginTop: 30,
+    marginTop: 20,
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   copyrightText: {
     fontSize: 12,

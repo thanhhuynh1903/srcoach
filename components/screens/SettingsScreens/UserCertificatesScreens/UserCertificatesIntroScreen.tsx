@@ -30,16 +30,15 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           <Icon
             name="ribbon"
             size={24}
-            color={theme.colors.primary}
+            color={'#000'}
             style={styles.headerIcon}
           />
           <Text style={styles.title}>Become an Expert</Text>
         </View>
       </View>
 
-      {/* Blue Background Content */}
       <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primary]}
+        colors={['#ff9900', '#ad8500']}
         start={{x: 0, y: 0}}
         end={{x: 1, y: 1}}
         style={styles.backgroundGradient}>
@@ -52,7 +51,9 @@ const UserCertificatesIntroScreen = ({navigation}) => {
               color="white"
               style={styles.heroImage}
             />
-            <Text style={styles.heroTitle}>Join Our Coaching Expert Program</Text>
+            <Text style={styles.heroTitle}>
+              Join Our Coaching Expert Program
+            </Text>
             <Text style={styles.heroText}>
               As a certified Expert, you'll gain access to elevating features,
               build your coaching brand, and connect with runners worldwide.
@@ -69,11 +70,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           {/* Benefits Section */}
           <View style={styles.benefitsContainer}>
             <View style={styles.benefitItem}>
-              <View
-                style={[
-                  styles.benefitIcon,
-                  {backgroundColor: 'rgba(255, 255, 255, 0.2)'},
-                ]}>
+              <View style={[styles.benefitIcon]}>
                 <Icon name="people" size={20} color="white" />
               </View>
               <Text style={styles.benefitTitle}>Build Your Following</Text>
@@ -83,11 +80,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
             </View>
 
             <View style={styles.benefitItem}>
-              <View
-                style={[
-                  styles.benefitIcon,
-                  {backgroundColor: 'rgba(255, 255, 255, 0.2)'},
-                ]}>
+              <View style={[styles.benefitIcon]}>
                 <Icon name="cash" size={20} color="white" />
               </View>
               <Text style={styles.benefitTitle}>Earn More</Text>
@@ -97,11 +90,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
             </View>
 
             <View style={styles.benefitItem}>
-              <View
-                style={[
-                  styles.benefitIcon,
-                  {backgroundColor: 'rgba(255, 255, 255, 0.2)'},
-                ]}>
+              <View style={[styles.benefitIcon]}>
                 <Icon name="medal" size={20} color="white" />
               </View>
               <Text style={styles.benefitTitle}>Credibility</Text>
@@ -129,11 +118,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           {/* Step 1 */}
           <View style={styles.step}>
             <View style={[styles.stepIcon, styles.stepIcon1]}>
-              <Icon
-                name="document-text-outline"
-                size={20}
-                color={theme.colors.primary}
-              />
+              <Icon name="document-text-outline" size={20} color={'#FFF'} />
             </View>
             <View style={styles.stepText}>
               <Text style={styles.stepTitle}>Government ID</Text>
@@ -204,6 +189,19 @@ const UserCertificatesIntroScreen = ({navigation}) => {
                 No, verification is completely free. You only pay a small
                 commission on paid coaching.
               </Text>
+            </View>
+
+            {/* Legal Links */}
+            <View style={styles.legalLinksContainer}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PrivacyPolicyScreen')}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalSeparator}>•</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('TermsOfServiceScreen')}>
+                <Text style={styles.legalLink}>Terms of Service</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -282,7 +280,7 @@ const styles = StyleSheet.create({
   },
   heroText: {
     fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 1)',
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 10,
@@ -312,7 +310,7 @@ const styles = StyleSheet.create({
   },
   benefitItem: {
     width: '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
@@ -326,16 +324,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    backgroundColor: '#f49600ff',
   },
   benefitTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: 'white',
+    color: theme.colors.primaryDark,
     marginBottom: 5,
   },
   benefitText: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: theme.colors.primaryDark,
     lineHeight: 18,
   },
   sectionTitleContainer: {
@@ -354,7 +353,7 @@ const styles = StyleSheet.create({
   step: {
     flexDirection: 'row',
     marginBottom: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -369,29 +368,30 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   stepIcon1: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#f49600ff',
   },
   stepIcon2: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#f49600ff',
   },
   stepIcon3: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#f49600ff',
   },
   stepIcon4: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#f49600ff',
   },
   stepText: {
     flex: 1,
+    color: theme.colors.primaryDark,
   },
   stepTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: theme.colors.primaryDark,
     marginBottom: 4,
   },
   stepDescription: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: theme.colors.primaryDark,
     lineHeight: 20,
   },
   faqContainer: {
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   faqItem: {
     marginBottom: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 1)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -414,13 +414,30 @@ const styles = StyleSheet.create({
   faqQuestion: {
     fontSize: 15,
     fontWeight: '600',
-    color: 'white',
+    color: theme.colors.primaryDark,
     marginBottom: 5,
   },
   faqAnswer: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: theme.colors.primaryDark,
     lineHeight: 20,
+  },
+  legalLinksContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  legalLink: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalSeparator: {
+    color: 'white',
+    fontSize: 14,
+    marginHorizontal: 10,
   },
   footer: {
     padding: 20,
@@ -442,14 +459,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 10,
-    gap: 12
-  },
-  gradientButton: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
+    gap: 12,
   },
   continueButtonText: {
     fontSize: 16,
