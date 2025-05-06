@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback, SectionList} from 'react-native';
+import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback, FlatList} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
@@ -46,7 +46,7 @@ interface ChatCategoryProps {
 
 const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count}) => (
   <View style={styles.categoryContainer}>
-    <Icon name={iconName} size={18} color={theme.colors.dark} style={styles.categoryIcon} />
+    <Icon name={iconName} size={18} color={theme.colors.primaryDark} style={styles.categoryIcon} />
     <Text style={styles.categoryText}>{title}</Text>
     <View style={styles.categoryBadge}>
       <Text style={styles.categoryBadgeText}>{count}</Text>
@@ -207,45 +207,57 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
   );
   const pendingRequests = sessions.filter(s => s.status === 'PENDING');
 
-  const sections = [
-    {
-      title: 'Expert Sessions',
-      iconName: 'trophy',
-      data: expertSessions,
-      count: expertSessions.length,
-    },
-    {
-      title: 'Direct Messages',
-      iconName: 'chatbubbles',
-      data: directMessages,
-      count: directMessages.length,
-    },
-    {
-      title: 'Pending Requests',
-      iconName: 'time',
-      data: pendingRequests,
-      count: pendingRequests.length,
-    },
-  ].filter(section => section.data.length > 0);
+  const data = [
+    {type: 'header', title: 'Expert Sessions', iconName: 'trophy', count: expertSessions.length},
+    ...expertSessions.map(item => ({type: 'item', data: item})),
+    {type: 'header', title: 'Direct Messages', iconName: 'chatbubbles', count: directMessages.length},
+    ...directMessages.map(item => ({type: 'item', data: item})),
+    {type: 'header', title: 'Pending Requests', iconName: 'time', count: pendingRequests.length},
+    ...pendingRequests.map(item => ({type: 'item', data: item})),
+  ].filter(section => 
+    section.type === 'header' || 
+    (section.type === 'item' && section.data)
+  );
+
+  const renderItem = ({item}: {item: any}) => {
+    if (item.type === 'header') {
+      return (
+        <ChatCategory 
+          title={item.title} 
+          iconName={item.iconName} 
+          count={item.count} 
+        />
+      );
+    }
+    return (
+      <ChatListItem
+        session={item.data}
+        onPress={() => onItemPress(item.data)}
+        onAccept={() => onAccept(item.data)}
+        onDeny={() => onDeny(item.data)}
+      />
+    );
+  };
+
+  const getItemLayout = (data: any[] | null, index: number) => {
+    const item = data?.[index];
+    const length = item?.type === 'header' ? 40 : 100;
+    return {length, offset: length * index, index};
+  };
 
   return (
-    <SectionList
-      sections={sections}
-      keyExtractor={(item) => item.id}
-      renderItem={({item}) => (
-        <ChatListItem
-          session={item}
-          onPress={() => onItemPress(item)}
-          onAccept={() => onAccept(item)}
-          onDeny={() => onDeny(item)}
-        />
-      )}
-      renderSectionHeader={({section: {title, iconName, count}}) => (
-        <ChatCategory title={title} iconName={iconName} count={count} />
-      )}
-      stickySectionHeadersEnabled={false}
+    <FlatList
+      data={data}
+      renderItem={renderItem}
+      keyExtractor={(item, index) => 
+        item.type === 'header' ? `header-${item.title}` : `item-${item.data.id}`
+      }
+      getItemLayout={getItemLayout as any}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      windowSize={10}
       contentContainerStyle={styles.listContainer}
-      SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
+      ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
     />
   );
 };
@@ -255,17 +267,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 20,
   },
-  sectionSeparator: {
-    height: 16,
+  itemSeparator: {
+    height: 8,
   },
   categoryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 12,
-    paddingBottom: 5,
+    paddingBottom: 2,
     paddingHorizontal: 8,
-    borderBottomWidth: .3,
-    borderColor: '#595959',
   },
   categoryIcon: {
     marginRight: 8,
@@ -273,11 +283,11 @@ const styles = StyleSheet.create({
   categoryText: {
     fontWeight: '600',
     fontSize: 16,
-    color: '#595959',
+    color: theme.colors.primaryDark,
     marginRight: 10,
   },
   categoryBadge: {
-    borderColor: '#595959',
+    color: theme.colors.primaryDark,
     borderRadius: 5,
     minWidth: 20,
     height: 20,

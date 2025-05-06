@@ -13,6 +13,8 @@ type CMSMessageContainerProps = {
   showContent: boolean;
   onExerciseRecordPress: (recordId: string) => void;
   shouldScrollToEnd: boolean;
+  loadMessages: (sessionId: string) => Promise<void>;
+  sessionId: string;
 };
 
 export const CMSMessageContainer = React.memo(
@@ -22,6 +24,8 @@ export const CMSMessageContainer = React.memo(
     showContent,
     onExerciseRecordPress,
     shouldScrollToEnd,
+    loadMessages,
+    sessionId
   }: CMSMessageContainerProps) => {
     const flatListRef = useRef<FlatList>(null);
     const isInitialScrollDone = useRef(false);
@@ -70,9 +74,9 @@ export const CMSMessageContainer = React.memo(
     const renderMessage = useCallback(
       ({item}: ListRenderItemInfo<MessageItem>) => {
         const isMe = item.sender.id === profileId;
-
+    
         if (!showContent) return null;
-
+    
         switch (item.message_type) {
           case 'NORMAL':
             return <CMINormal message={item} isMe={isMe} />;
@@ -91,14 +95,20 @@ export const CMSMessageContainer = React.memo(
               />
             );
           case 'EXPERT_RECOMMENDATION':
-            return <CMIExpertRecommendation message={item} isMe={isMe} />;
+            return (
+              <CMIExpertRecommendation 
+                message={item} 
+                isMe={isMe} 
+                onRefresh={() => loadMessages(sessionId)}
+              />
+            );
           case 'IMAGE':
             return <CMIImage message={item} isMe={isMe} />;
           default:
             return <CMINormal message={item} isMe={isMe} />;
         }
       },
-      [profileId, showContent, onExerciseRecordPress],
+      [profileId, showContent, onExerciseRecordPress, loadMessages, sessionId], // Add loadMessages and sessionId to dependencies
     );
 
     return (

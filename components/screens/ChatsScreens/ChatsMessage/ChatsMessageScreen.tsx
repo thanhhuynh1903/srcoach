@@ -18,17 +18,17 @@ import {
   respondToSession,
 } from '../../../utils/useChatsAPI';
 import BackButton from '../../../BackButton';
-import {
-  capitalizeFirstLetter,
-  formatTimestampAgo,
-} from '../../../utils/utils_format';
+import {capitalizeFirstLetter} from '../../../utils/utils_format';
 import {useLoginStore} from '../../../utils/useLoginStore';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
 import {CMSMessageControl} from './CMSMessageControl';
 import ChatsPanelRunner from './ChatsMessagePanel/ChatsPanelRunner';
+import ChatsPanelExpertPOVRunner from './ChatsMessagePanel/ChatsPanelExpertPOVRunner';
+import ChatsPanelExpertPOVExpert from './ChatsMessagePanel/ChatsPanelExpertPOVExpert';
 import * as ImagePicker from 'react-native-image-picker';
 import {CMSMessageContainer} from './CMSMessageContainer';
+import {CMSHeader} from './CMSHeader';
 
 type MessageItem = {
   id: string;
@@ -65,9 +65,23 @@ export default function ChatsMessageScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [panelVisible, setPanelVisible] = useState(false);
 
-  const flatListRef = useRef(null);
   const isInitialLoad = useRef(true);
   const shouldScrollToEnd = useRef(false);
+
+  // Determine which panel to show based on user roles
+  const getPanelComponent = useCallback(() => {
+    const isExpertSession =
+      otherUser?.roles?.includes('expert') ||
+      profile?.roles?.includes('expert');
+
+    if (!isExpertSession) {
+      return ChatsPanelRunner;
+    }
+
+    return profile?.roles?.includes('expert')
+      ? ChatsPanelExpertPOVExpert
+      : ChatsPanelExpertPOVRunner;
+  }, [otherUser, profile]);
 
   useEffect(() => {
     const initChat = async () => {
@@ -87,34 +101,41 @@ export default function ChatsMessageScreen() {
     initChat();
   }, [userId, initialSessionId]);
 
-  const loadMessages = useCallback(async (sessionId: string) => {
-    try {
-      setLoading(true);
-      setShowContent(false);
-      isInitialLoad.current = true;
+  const loadMessages = useCallback(
+    async (sessionId: string) => {
+      try {
+        setLoading(true);
+        setShowContent(false);
+        isInitialLoad.current = true;
 
-      const response = await getSessionMessages(sessionId, 5000);
-      if (response.status) {
-        const newMessages = response.data.messages;
+        const response = await getSessionMessages(sessionId, 5000);
+        if (response.status) {
+          const newMessages = response.data.messages;
 
-        setMessages(newMessages.sort(
-          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        ));
+          setMessages(
+            newMessages.sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime(),
+            ),
+          );
 
-        if (response.data.session?.status === 'PENDING' && !isInitiator) {
-          setSessionStatus(response.data.session.status);
+          if (response.data.session?.status === 'PENDING' && !isInitiator) {
+            setSessionStatus(response.data.session.status);
+          }
+
+          setShowContent(true);
+          shouldScrollToEnd.current = true;
         }
-
+      } catch (error) {
+        console.error('Error loading messages:', error);
         setShowContent(true);
-        shouldScrollToEnd.current = true;
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      setShowContent(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [isInitiator]);
+    },
+    [isInitiator],
+  );
 
   const handleSendMessage = async () => {
     if (!sessionId) {
@@ -214,42 +235,20 @@ export default function ChatsMessageScreen() {
     [navigation],
   );
 
+  const PanelComponent = getPanelComponent();
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
-          <BackButton size={20} />
-        </TouchableOpacity>
-
-        <View style={styles.userInfo}>
-          <CommonAvatar
-            size={40}
-            uri={otherUser?.image?.url}
-            mode={otherUser?.roles?.includes('EXPERT') ? 'expert' : 'runner'}
-          />
-
-          <View style={styles.userDetails}>
-            <View style={styles.userMainInfo}>
-              <Text style={styles.userName}>{otherUser?.name}</Text>
-              <Text style={styles.userUsername}>@{otherUser?.username}</Text>
-            </View>
-            <View style={styles.userStats}>
-              <View style={styles.statItem}>
-                <Icon name="trophy" size={14} color="#FFD700" />
-                <Text style={styles.statText}>{otherUser?.points}</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Icon name="medal" size={14} color="#FFD700" />
-                <Text style={styles.statText}>
-                  {capitalizeFirstLetter(otherUser?.user_level)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </View>
+      <CMSHeader
+        otherUser={otherUser}
+        onBackPress={() => navigation.goBack()}
+        onSearchPress={() => {
+          ToastUtil.info('Search', 'Search functionality will be implemented');
+        }}
+        onInfoPress={() => {
+          ToastUtil.info('Info', 'User info will be shown here');
+        }}
+      />
 
       {sessionStatus === 'PENDING' && (
         <View
@@ -311,6 +310,8 @@ export default function ChatsMessageScreen() {
           showContent={showContent}
           onExerciseRecordPress={handleExerciseRecordPress}
           shouldScrollToEnd={shouldScrollToEnd.current}
+          loadMessages={loadMessages}
+          sessionId={sessionId}
         />
       )}
 
@@ -325,7 +326,7 @@ export default function ChatsMessageScreen() {
         setPanelVisible={setPanelVisible}
       />
 
-      <ChatsPanelRunner
+      <PanelComponent
         visible={panelVisible}
         onClose={() => setPanelVisible(false)}
         sessionId={sessionId}
@@ -339,56 +340,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  backButton: {
-    marginRight: 8,
-  },
-  userInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  userDetails: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  userMainInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 6,
-  },
-  userUsername: {
-    fontSize: 14,
-    color: '#666',
-  },
-  userStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  statText: {
-    fontSize: 12,
-    marginLeft: 4,
-    color: '#666',
   },
   pendingNotice: {
     padding: 8,

@@ -12,7 +12,6 @@ import CommonPanel from '../../../../commons/CommonPanel';
 import { theme } from '../../../../contants/theme';
 import {fetchExerciseSessionRecords} from '../../../../utils/utils_healthconnect';
 import {
-  ExerciseType,
   getNameFromExerciseType,
   getIconFromExerciseType,
 } from '../../../../contants/exerciseType';
