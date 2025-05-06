@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   Dimensions,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ScreenWrapper from '../../ScreenWrapper';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {useCallback, useState} from 'react';
+import {useCallback, useState, useEffect, useRef} from 'react';
 import {
   getNameFromExerciseType,
   getIconFromExerciseType,
@@ -20,6 +21,7 @@ import {
   ExerciseSession,
   fetchExerciseSessionRecords,
   initializeHealthConnect,
+  startSyncData,
 } from '../../utils/utils_healthconnect';
 import ContentLoader, {Rect} from 'react-content-loader/native';
 import {format, parseISO} from 'date-fns';
@@ -42,6 +44,9 @@ export default function ExerciseRecordsScreen() {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [accessDetailNavigation, setAccessDetailNavigation] = useState(false);
 
   const showDatePicker = () => {
     setDatePickerVisibility(true);
@@ -66,6 +71,47 @@ export default function ExerciseRecordsScreen() {
   const clearFilters = () => {
     setStartDate(null);
     setEndDate(null);
+  };
+
+  const showSyncStatus = (message: string) => {
+    setSyncStatus(message);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    if (message === 'Done') {
+      setTimeout(() => {
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => setSyncStatus(null));
+      }, 1000);
+    }
+  };
+
+  const handleSyncPress = async () => {
+    try {
+      showSyncStatus('Syncing data...');
+      setAccessDetailNavigation(false);
+      const success = await startSyncData(
+        startDate || new Date('2025-01-01T00:00:00.000Z').toISOString(),
+        endDate || new Date().toISOString(),
+      );
+      if (success) {
+        showSyncStatus('Done');
+        readSampleData();
+      } else {
+        showSyncStatus('Sync failed');
+      }
+    } catch (error) {
+      showSyncStatus('Sync failed');
+      ToastUtil.error('Sync Error', 'Failed to sync exercise data');
+    } finally {
+      setAccessDetailNavigation(true);
+    }
   };
 
   const generateData = (sessions: ExerciseSession[]) => {
@@ -226,9 +272,9 @@ export default function ExerciseRecordsScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={showDatePicker}>
+          <TouchableOpacity onPress={handleSyncPress}>
             <Icon
-              name="calendar"
+              name="sync"
               size={24}
               color={theme.colors.primaryDark}
               style={styles.headerIcon}
@@ -254,6 +300,19 @@ export default function ExerciseRecordsScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {syncStatus && (
+        <Animated.View
+          style={[
+            styles.syncStatusContainer,
+            {
+              opacity: fadeAnim,
+              backgroundColor: theme.colors.primaryDark,
+            },
+          ]}>
+          <Text style={styles.syncStatusText}>{syncStatus}</Text>
+        </Animated.View>
+      )}
 
       <TouchableOpacity
         style={styles.dateFilterContainer}
@@ -388,6 +447,7 @@ export default function ExerciseRecordsScreen() {
                     <TouchableOpacity
                       style={styles.activityRow}
                       onPress={() => {
+                        if (!accessDetailNavigation) return;
                         navigation.navigate(
                           'ExerciseRecordsDetailScreen' as never,
                           {
@@ -458,6 +518,16 @@ const styles = StyleSheet.create({
   headerIcon: {
     marginLeft: 20,
     color: theme.colors.primaryDark,
+  },
+  syncStatusContainer: {
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  syncStatusText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
   dateFilterContainer: {
     flexDirection: 'row',

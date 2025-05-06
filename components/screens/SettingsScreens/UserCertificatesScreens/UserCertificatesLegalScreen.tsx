@@ -6,14 +6,13 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
-  Platform,
   Pressable,
-  Dimensions,
   SafeAreaView,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import LinearGradient from 'react-native-linear-gradient';
+import BackButton from '../../../BackButton';
 
 const CustomCheckbox = ({value, onValueChange}) => (
   <Pressable
@@ -37,37 +36,29 @@ const UserCertificatesLegalScreen = ({navigation}) => {
   };
 
   const openTermsLink = () => {
-    Linking.openURL('https://yourdomain.com/terms');
+    navigation.navigate('TermsOfServiceScreen');
   };
 
   const openPrivacyLink = () => {
-    Linking.openURL('https://yourdomain.com/privacy');
+    navigation.navigate('PrivacyPolicyScreen');
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Fixed Header */}
-      <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primary]}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+      <View style={styles.header}>
+        <BackButton size={24} style={styles.backButton} />
 
         <View style={styles.headerContent}>
           <Icon
             name="document-text"
             size={24}
-            color="white"
+            color="black"
             style={styles.headerIcon}
           />
-          <Text style={styles.title}>Legal Notice</Text>
+          <Text style={styles.title}>Application Legal Notice</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -158,6 +149,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    gap: 12
   },
   backButton: {
     marginRight: 10,
@@ -175,7 +170,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: 'black',
   },
   scrollContent: {
     padding: 20,

@@ -8,54 +8,53 @@ import {
   Platform,
   Dimensions,
   SafeAreaView,
-  Image,
+  StatusBar,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import LinearGradient from 'react-native-linear-gradient';
+import BackButton from '../../../BackButton';
 
 const {width, height} = Dimensions.get('window');
 
 const UserCertificatesIntroScreen = ({navigation}) => {
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Fixed Header */}
-      <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primary]}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+      <StatusBar barStyle="dark-content" backgroundColor="white" />
+
+      {/* White Header */}
+      <View style={styles.header}>
+        <BackButton size={24} />
 
         <View style={styles.headerContent}>
           <Icon
             name="ribbon"
             size={24}
-            color="white"
+            color={theme.colors.primary}
             style={styles.headerIcon}
           />
           <Text style={styles.title}>Become an Expert</Text>
         </View>
-      </LinearGradient>
+      </View>
 
-      {/* Scrollable Content */}
-      <View style={styles.scrollContainer}>
+      {/* Blue Background Content */}
+      <LinearGradient
+        colors={[theme.colors.primaryDark, theme.colors.primary]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.backgroundGradient}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Hero Section */}
           <View style={styles.heroContainer}>
             <Icon
               name="ribbon"
               size={120}
-              color={theme.colors.primary}
+              color="white"
               style={styles.heroImage}
             />
-            <Text style={styles.heroTitle}>Join Our Elite Running Experts</Text>
+            <Text style={styles.heroTitle}>Join Our Coaching Expert Program</Text>
             <Text style={styles.heroText}>
-              As a certified Expert, you'll gain access to premium features,
+              As a certified Expert, you'll gain access to elevating features,
               build your coaching brand, and connect with runners worldwide.
             </Text>
           </View>
@@ -73,9 +72,9 @@ const UserCertificatesIntroScreen = ({navigation}) => {
               <View
                 style={[
                   styles.benefitIcon,
-                  {backgroundColor: 'rgba(92, 124, 250, 0.1)'},
+                  {backgroundColor: 'rgba(255, 255, 255, 0.2)'},
                 ]}>
-                <Icon name="people" size={20} color={theme.colors.primary} />
+                <Icon name="people" size={20} color="white" />
               </View>
               <Text style={styles.benefitTitle}>Build Your Following</Text>
               <Text style={styles.benefitText}>
@@ -87,9 +86,9 @@ const UserCertificatesIntroScreen = ({navigation}) => {
               <View
                 style={[
                   styles.benefitIcon,
-                  {backgroundColor: 'rgba(255, 164, 91, 0.1)'},
+                  {backgroundColor: 'rgba(255, 255, 255, 0.2)'},
                 ]}>
-                <Icon name="cash" size={20} color="#FFA45B" />
+                <Icon name="cash" size={20} color="white" />
               </View>
               <Text style={styles.benefitTitle}>Earn More</Text>
               <Text style={styles.benefitText}>
@@ -101,9 +100,9 @@ const UserCertificatesIntroScreen = ({navigation}) => {
               <View
                 style={[
                   styles.benefitIcon,
-                  {backgroundColor: 'rgba(77, 218, 184, 0.1)'},
+                  {backgroundColor: 'rgba(255, 255, 255, 0.2)'},
                 ]}>
-                <Icon name="medal" size={20} color="#4DDAB8" />
+                <Icon name="medal" size={20} color="white" />
               </View>
               <Text style={styles.benefitTitle}>Credibility</Text>
               <Text style={styles.benefitText}>
@@ -147,7 +146,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           {/* Step 2 */}
           <View style={styles.step}>
             <View style={[styles.stepIcon, styles.stepIcon2]}>
-              <Icon name="school-outline" size={20} color="#FFA45B" />
+              <Icon name="school-outline" size={20} color="white" />
             </View>
             <View style={styles.stepText}>
               <Text style={styles.stepTitle}>Certifications</Text>
@@ -160,7 +159,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           {/* Step 3 */}
           <View style={styles.step}>
             <View style={[styles.stepIcon, styles.stepIcon3]}>
-              <Icon name="trophy-outline" size={20} color="#4DDAB8" />
+              <Icon name="trophy-outline" size={20} color="white" />
             </View>
             <View style={styles.stepText}>
               <Text style={styles.stepTitle}>Achievements</Text>
@@ -173,7 +172,7 @@ const UserCertificatesIntroScreen = ({navigation}) => {
           {/* Step 4 */}
           <View style={styles.step}>
             <View style={[styles.stepIcon, styles.stepIcon4]}>
-              <Icon name="time-outline" size={20} color="#9C5BFF" />
+              <Icon name="time-outline" size={20} color="white" />
             </View>
             <View style={styles.stepText}>
               <Text style={styles.stepTitle}>Experience</Text>
@@ -208,21 +207,15 @@ const UserCertificatesIntroScreen = ({navigation}) => {
             </View>
           </View>
         </ScrollView>
-      </View>
+      </LinearGradient>
 
       {/* Sticky Footer with Button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.continueButton}
           onPress={() => navigation.navigate('UserCertificatesLegalScreen')}>
-          <LinearGradient
-            colors={[theme.colors.primaryDark, theme.colors.primaryDark]}
-            style={styles.gradientButton}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 0}}>
-            <Text style={styles.continueButtonText}>Begin Verification</Text>
-            <Icon name="arrow-forward" size={20} color="white" />
-          </LinearGradient>
+          <Icon name="arrow-forward" size={20} color={'#FFF'} />
+          <Text style={styles.continueButtonText}>Begin Verification</Text>
         </TouchableOpacity>
         <Text style={styles.footerText}>
           By proceeding, you agree to our Terms of Service and Privacy Policy
@@ -235,13 +228,17 @@ const UserCertificatesIntroScreen = ({navigation}) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'white',
   },
   header: {
     height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    gap: 12,
   },
   backButton: {
     marginRight: 10,
@@ -259,33 +256,33 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: '#000',
   },
-  scrollContainer: {
+  backgroundGradient: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 100,
-    paddingTop: 30,
   },
   heroContainer: {
     alignItems: 'center',
     marginBottom: 25,
   },
   heroImage: {
+    paddingTop: 20,
     marginBottom: 15,
   },
   heroTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#333',
+    color: 'white',
     textAlign: 'center',
     marginBottom: 10,
   },
   heroText: {
     fontSize: 15,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 10,
@@ -298,12 +295,12 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   dividerText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#999',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginHorizontal: 10,
     letterSpacing: 1,
   },
@@ -315,15 +312,12 @@ const styles = StyleSheet.create({
   },
   benefitItem: {
     width: '48%',
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   benefitIcon: {
     width: 40,
@@ -336,12 +330,12 @@ const styles = StyleSheet.create({
   benefitTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: 'white',
     marginBottom: 5,
   },
   benefitText: {
     fontSize: 13,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 18,
   },
   sectionTitleContainer: {
@@ -350,24 +344,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: 'white',
     marginBottom: 5,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   step: {
     flexDirection: 'row',
     marginBottom: 15,
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   stepIcon: {
     width: 40,
@@ -378,16 +369,16 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   stepIcon1: {
-    backgroundColor: 'rgba(92, 124, 250, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   stepIcon2: {
-    backgroundColor: 'rgba(255, 164, 91, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   stepIcon3: {
-    backgroundColor: 'rgba(77, 218, 184, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   stepIcon4: {
-    backgroundColor: 'rgba(156, 91, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   stepText: {
     flex: 1,
@@ -395,12 +386,12 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: 'white',
     marginBottom: 4,
   },
   stepDescription: {
     fontSize: 13,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 20,
   },
   faqContainer: {
@@ -409,34 +400,31 @@ const styles = StyleSheet.create({
   faqTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: 'white',
     marginBottom: 15,
   },
   faqItem: {
     marginBottom: 15,
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   faqQuestion: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: 'white',
     marginBottom: 5,
   },
   faqAnswer: {
     fontSize: 13,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.8)',
     lineHeight: 20,
   },
   footer: {
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#eee',
   },
@@ -449,18 +437,25 @@ const styles = StyleSheet.create({
   continueButton: {
     borderRadius: 10,
     overflow: 'hidden',
+    backgroundColor: theme.colors.primaryDark,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    gap: 12
   },
   gradientButton: {
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 10,
   },
   continueButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+    color: '#FFF',
   },
 });
 
