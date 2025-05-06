@@ -119,7 +119,13 @@ const ChatsSearchScreen = () => {
   const renderUserItem = ({item}: {item: UserItem}) => (
     <TouchableOpacity
       style={[styles.itemContainer, {backgroundColor: '#FFFFFF'}]}
-      onPress={() => navigation.navigate('ChatsMessageScreen', {userId: item.id})}>
+      onPress={() => {
+        if (item.roles?.includes('expert')) {
+          navigation.navigate('ChatsExpertNotiScreen', {userId: item.id});
+        } else {
+          navigation.navigate('ChatsMessageScreen', {userId: item.id});
+        }
+      }}>
       <View style={styles.userInfoContainer}>
         <CommonAvatar
           mode={getUserMode(item.roles)}

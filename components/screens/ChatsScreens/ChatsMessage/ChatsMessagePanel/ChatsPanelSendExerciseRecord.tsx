@@ -8,16 +8,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import CommonPanel from '../../../commons/CommonPanel';
-import { theme } from '../../../contants/theme';
-import {fetchExerciseSessionRecords} from '../../../utils/utils_healthconnect';
+import CommonPanel from '../../../../commons/CommonPanel';
+import { theme } from '../../../../contants/theme';
+import {fetchExerciseSessionRecords} from '../../../../utils/utils_healthconnect';
 import {
   ExerciseType,
   getNameFromExerciseType,
   getIconFromExerciseType,
-} from '../../../contants/exerciseType';
-import {formatTimestampAgo} from '../../../utils/utils_format';
-import { sendExerciseRecordMessage } from '../../../utils/useChatsAPI';
+} from '../../../../contants/exerciseType';
+import {formatTimestampAgo} from '../../../../utils/utils_format';
+import { sendExerciseRecordMessage } from '../../../../utils/useChatsAPI';
 
 interface ExerciseSession {
   id: string;

@@ -58,6 +58,7 @@ import DraftScreen from '../screens/SettingsScreens/DraftScreen';
 import ChatsHomeScreen from '../screens/ChatsScreens/ChatsHome/ChatsHomeScreen';
 import ChatsSearchScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchScreen';
 import ChatsMessageScreen from '../screens/ChatsScreens/ChatsMessage/ChatsMessageScreen';
+import ChatsExpertNotiScreen from '../screens/ChatsScreens/ChatsSearch/ChatsExpertNotiScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -117,6 +118,7 @@ export const stackScreens = [
   //Chats Screen
   {name: 'ChatsSearchScreen', component: ChatsSearchScreen},
   {name: 'ChatsMessageScreen', component: ChatsMessageScreen},
+  {name: 'ChatsExpertNotiScreen', component: ChatsExpertNotiScreen},
 
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},

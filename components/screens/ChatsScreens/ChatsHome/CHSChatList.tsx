@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback} from 'react-native';
+import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback, SectionList} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
@@ -38,6 +38,22 @@ interface ChatListItemProps {
   onDeny: () => void;
 }
 
+interface ChatCategoryProps {
+  title: string;
+  iconName: string;
+  count: number;
+}
+
+const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count}) => (
+  <View style={styles.categoryContainer}>
+    <Icon name={iconName} size={18} color={theme.colors.dark} style={styles.categoryIcon} />
+    <Text style={styles.categoryText}>{title}</Text>
+    <View style={styles.categoryBadge}>
+      <Text style={styles.categoryBadgeText}>{count}</Text>
+    </View>
+  </View>
+);
+
 export const CHSChatList = ({session, onPress, onAccept, onDeny}: ChatListItemProps) => {
   const getStatusColor = () => {
     switch (session.status) {
@@ -51,27 +67,31 @@ export const CHSChatList = ({session, onPress, onAccept, onDeny}: ChatListItemPr
   };
 
   const getMessagePreview = () => {
-    if (!session.last_message) return 'No messages yet';
-    if (session.last_message.archived) return 'Archived message';
+    if (!session.last_message) return {text: 'No messages yet', icon: null};
+    if (session.last_message.archived) return {text: 'Archived message', icon: null};
 
     switch (session.last_message.message_type) {
       case 'NORMAL':
-        return session.last_message.content || 'Message';
+        return {text: session.last_message.content || 'Message', icon: null};
       case 'PROFILE':
-        return 'Profile information shared';
+        return {text: 'Profile information shared', icon: 'person'};
       case 'EXERCISE_RECORD':
-        return 'Exercise record shared';
+        return {text: 'Exercise record shared', icon: 'fitness'};
       case 'EXPERT_RECOMMENDATION':
-        return 'Expert recommendation';
+        return {text: 'Expert recommendation sent', icon: 'ribbon'};
       case 'IMAGE':
-        return 'Image';
+        return {text: 'Image attached', icon: 'image'};
       default:
-        return 'New message';
+        return {text: 'New message', icon: null};
     }
   };
 
+  const preview = getMessagePreview();
+  const isSpecialMessage = session.last_message?.message_type !== 'NORMAL' && 
+                         session.last_message?.message_type !== undefined;
+
   const getUserRole = () => {
-    return session.other_user.roles.includes('EXPERT') ? 'expert' : 'runner';
+    return session.other_user.roles.includes('expert') ? 'expert' : 'runner';
   };
 
   const showActionButtons = session.status === 'PENDING' && !session.is_initiator;
@@ -117,23 +137,39 @@ export const CHSChatList = ({session, onPress, onAccept, onDeny}: ChatListItemPr
             </View>
           </View>
 
-          <Text
-            style={[
-              styles.chatPreview,
-              session.unread_count > 0 && styles.unreadPreview,
-            ]}
-            numberOfLines={1}>
-            {getMessagePreview()}
-          </Text>
+          <View style={styles.previewContainer}>
+            {preview.icon && (
+              <Icon 
+                name={preview.icon} 
+                size={14} 
+                color="#828282" 
+                style={styles.previewIcon}
+              />
+            )}
+            <Text
+              style={[
+                styles.chatPreview,
+                session.unread_count > 0 && styles.unreadPreview,
+                isSpecialMessage && styles.specialPreview,
+              ]}
+              numberOfLines={1}>
+              {preview.text}
+            </Text>
+          </View>
         </View>
 
-        {session.last_message && !showActionButtons && (
-          <Text style={styles.chatTime}>
-            {new Date(session.last_message.created_at).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
+        {!showActionButtons && (
+          <View style={styles.rightContent}>
+            {session.last_message && (
+              <Text style={styles.chatTime}>
+                {new Date(session.last_message.created_at).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+            )}
+            <Icon name="chevron-forward" size={20} color="#828282" />
+          </View>
         )}
       </TouchableOpacity>
 
@@ -155,7 +191,105 @@ export const CHSChatList = ({session, onPress, onAccept, onDeny}: ChatListItemPr
   );
 };
 
+interface ChatListSectionProps {
+  sessions: ChatListItemProps['session'][];
+  onItemPress: (session: ChatListItemProps['session']) => void;
+  onAccept: (session: ChatListItemProps['session']) => void;
+  onDeny: (session: ChatListItemProps['session']) => void;
+}
+
+export const ChatListSections: React.FC<ChatListSectionProps> = ({sessions, onItemPress, onAccept, onDeny}) => {
+  const expertSessions = sessions.filter(
+    s => s.status === 'ACCEPTED' && s.other_user.roles.includes('EXPERT')
+  );
+  const directMessages = sessions.filter(
+    s => s.status === 'ACCEPTED' && !s.other_user.roles.includes('EXPERT')
+  );
+  const pendingRequests = sessions.filter(s => s.status === 'PENDING');
+
+  const sections = [
+    {
+      title: 'Expert Sessions',
+      iconName: 'trophy',
+      data: expertSessions,
+      count: expertSessions.length,
+    },
+    {
+      title: 'Direct Messages',
+      iconName: 'chatbubbles',
+      data: directMessages,
+      count: directMessages.length,
+    },
+    {
+      title: 'Pending Requests',
+      iconName: 'time',
+      data: pendingRequests,
+      count: pendingRequests.length,
+    },
+  ].filter(section => section.data.length > 0);
+
+  return (
+    <SectionList
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      renderItem={({item}) => (
+        <CHSChatList
+          session={item}
+          onPress={() => onItemPress(item)}
+          onAccept={() => onAccept(item)}
+          onDeny={() => onDeny(item)}
+        />
+      )}
+      renderSectionHeader={({section: {title, iconName, count}}) => (
+        <ChatCategory title={title} iconName={iconName} count={count} />
+      )}
+      stickySectionHeadersEnabled={false}
+      contentContainerStyle={styles.listContainer}
+      SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
+    />
+  );
+};
+
 const styles = StyleSheet.create({
+  listContainer: {
+    paddingHorizontal: 12,
+    paddingBottom: 20,
+  },
+  sectionSeparator: {
+    height: 16,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  categoryIcon: {
+    marginRight: 8,
+  },
+  categoryText: {
+    fontWeight: '600',
+    fontSize: 16,
+    color: theme.colors.dark,
+    flex: 1,
+  },
+  categoryBadge: {
+    backgroundColor: theme.colors.dark,
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  categoryBadgeText: {
+    color: theme.colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   chatItemContainer: {
     borderRadius: 8,
     backgroundColor: '#FFF',
@@ -203,18 +337,31 @@ const styles = StyleSheet.create({
     color: theme.colors.dark,
     marginLeft: 4,
   },
+  previewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewIcon: {
+    marginRight: 4,
+  },
   chatPreview: {
     fontSize: 13,
     color: '#828282',
+  },
+  specialPreview: {
+    fontStyle: 'italic',
   },
   unreadPreview: {
     color: theme.colors.dark,
     fontWeight: '600',
   },
+  rightContent: {
+    alignItems: 'flex-end',
+  },
   chatTime: {
     fontSize: 12,
     color: '#828282',
-    alignSelf: 'flex-start',
+    marginBottom: 4,
   },
   unreadBadge: {
     position: 'absolute',

@@ -26,7 +26,7 @@ import {useLoginStore} from '../../../utils/useLoginStore';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
 import {CMSMessageControl} from './CMSMessageControl';
-import ChatsPanelRunner from './ChatsMessageItem/ChatsPanelRunner/ChatsPanelRunner';
+import ChatsPanelRunner from './ChatsMessagePanel/ChatsPanelRunner';
 import * as ImagePicker from 'react-native-image-picker';
 import {CMSMessageContainer} from './CMSMessageContainer';
 
@@ -203,14 +203,6 @@ export default function ChatsMessageScreen() {
       console.error('Error responding to session:', error);
       ToastUtil.error('Error', 'Failed to respond to session');
     }
-  };
-
-  const handleSendExerciseRecord = () => {
-    setPanelVisible(false);
-    ToastUtil.info(
-      'Feature coming soon',
-      'Exercise record sending will be implemented',
-    );
   };
 
   const handleExerciseRecordPress = useCallback(
@@ -429,7 +421,7 @@ const styles = StyleSheet.create({
     width: '100%',
     textAlign: 'center',
     marginTop: 4,
-    color: theme.colors.white,
+    color: '#000000',
   },
   pendingActions: {
     flexDirection: 'row',

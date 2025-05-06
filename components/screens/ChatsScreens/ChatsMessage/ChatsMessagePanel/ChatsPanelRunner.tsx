@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import CommonPanel from '../../../../../commons/CommonPanel';
-import {theme} from '../../../../../contants/theme';
-import ChatsPanelSendExerciseRecord from '../../ChatsPanelSendExerciseRecord';
+import CommonPanel from '../../../../commons/CommonPanel';
+import {theme} from '../../../../contants/theme';
+import ChatsPanelSendExerciseRecord from './ChatsPanelSendExerciseRecord';
 
 interface ChatsPanelRunnerProps {
   visible: boolean;

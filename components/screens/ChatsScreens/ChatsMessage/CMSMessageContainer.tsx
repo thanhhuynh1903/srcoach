@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   },
   messagesContainer: {
     padding: 12,
-    paddingBottom: 20,
+    paddingBottom: 40,
     flexGrow: 1,
   },
 });
