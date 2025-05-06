@@ -47,7 +47,7 @@ const WellnessAndMedication = () => {
             <Image source={imageexpert} style={styles.robotImage} />
           </View>
 
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('Chat')}>
             <Icon name="chatbubbles-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>

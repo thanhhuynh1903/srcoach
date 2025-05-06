@@ -16,7 +16,6 @@ import DailyGoalsSection from '../DailyGoalsScreen';
 import BackButton from '../BackButton';
 import {useNavigation} from '@react-navigation/native';
 import useScheduleStore from '../utils/useScheduleStore';
-import {Activity} from 'react-native-feather';
 import {ActivityIndicator} from 'react-native-paper';
 
 const AddScheduleScreen = () => {

@@ -32,6 +32,8 @@ export interface Schedule {
   updated_at?: string;
   is_expert_choice?: boolean;
   alarm_enabled?: boolean;
+  schedule_type?: string;
+  status: string;
 }
 
 interface ScheduleState {
