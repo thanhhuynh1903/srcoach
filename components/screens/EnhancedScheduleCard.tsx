@@ -1,8 +1,17 @@
 import {useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Switch} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  Modal,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import WorkoutComparison from './Comparison';
+import useScheduleStore from '../utils/useScheduleStore';
+import {theme} from '../contants/theme';
 interface Workout {
   time: string;
   name: string;
@@ -48,7 +57,39 @@ const EnhancedScheduleCard = ({
   const [selectedDay, setSelectedDay] = useState(initialSelectedDay);
   const [alarmEnabled, setAlarmEnabled] = useState(initialAlarmEnabled);
   const [expanded, setExpanded] = useState(false);
+  const {deleteSchedule} = useScheduleStore();
+  const [modalVisible, setModalVisible] = useState(false);
 
+  const handleMorePress = (post: Post) => {
+    setModalVisible(true);
+  };
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Schedule',
+      'Are you sure you want to delete this schedule?',
+      [
+        {text: 'Cancel', onPress: () => {}, style: 'cancel'},
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              await deleteSchedule(id);
+              // Xử lý thành công
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete schedule');
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+    );
+    setShowActionMenu(false);
+  };
+
+  const handleEdit = () => {
+    navigation.navigate('EditScheduleScreen', {scheduleId: id});
+    setShowActionMenu(false);
+  };
   // Find the schedule for the selected day
   const selectedDaySchedule = daySchedules.find(
     schedule => schedule.day === selectedDay,
@@ -118,8 +159,16 @@ const EnhancedScheduleCard = ({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.startedText}>Started {startDate}</Text>
-        <View style={[styles.statusBadge, {backgroundColor: getStatusColor()}]}>
-          <Text style={styles.statusText}>{status}</Text>
+        <View style={styles.headerRight}>
+          <View
+            style={[styles.statusBadge, {backgroundColor: getStatusColor()}]}>
+            <Text style={styles.statusText}>{status}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleMorePress}>
+            <Icon name="ellipsis-vertical" size={18} color="#64748B" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -326,6 +375,43 @@ const EnhancedScheduleCard = ({
           />
         </View>
       </View>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.modalOption}>
+              <Icon
+                name="create-outline"
+                size={24}
+                color={theme.colors.primaryDark}
+              />
+              <Text style={styles.modalOptionText}>Update</Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalDivider} />
+
+            <TouchableOpacity style={styles.modalOption}>
+              <Icon name="trash-outline" size={24} color="red" />
+              <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                Delete
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.modalDivider} />
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -350,6 +436,50 @@ const styles = StyleSheet.create({
   startedText: {
     fontSize: 12,
     color: '#64748B',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  actionButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#000',
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  modalCancelButton: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.primaryDark,
   },
   expertChoiceText: {
     paddingHorizontal: 8,

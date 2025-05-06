@@ -38,8 +38,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       goal_steps: 5000,
       goal_distance: 5,
       goal_calories: 300,
-      goal_minbpms: 120,  
-      goal_maxbpms: 150  
+      goal_minbpms: 100,  
+      goal_maxbpms: 130  
     },
     afternoon: {
       description: "afternoon",
@@ -48,8 +48,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       goal_steps: 8000,
       goal_distance: 8,
       goal_calories: 500,
-      goal_minbpms: 130, 
-      goal_maxbpms: 160   
+      goal_minbpms: 110, 
+      goal_maxbpms: 135   
     },
     evening: {
       description: "evening",
@@ -58,8 +58,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, on
       goal_steps: 6000,
       goal_distance: 6,
       goal_calories: 400,
-      goal_minbpms: 125, 
-      goal_maxbpms: 155  
+      goal_minbpms: 100, 
+      goal_maxbpms: 120  
     }
   }
 
