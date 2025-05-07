@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useRoute, useNavigation} from '@react-navigation/native';
+import {useRoute, useNavigation, useFocusEffect} from '@react-navigation/native';
 import ToastUtil from '../../../utils/utils_toast';
 import {
   createOrGetSession,
@@ -16,11 +16,9 @@ import {
   getSessionMessages,
   sendImageMessage,
   respondToSession,
+  markSessionMessagesAsRead,
 } from '../../../utils/useChatsAPI';
-import BackButton from '../../../BackButton';
-import {capitalizeFirstLetter} from '../../../utils/utils_format';
 import {useLoginStore} from '../../../utils/useLoginStore';
-import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
 import {CMSMessageControl} from './CMSMessageControl';
 import ChatsPanelRunner from './ChatsMessagePanel/ChatsPanelRunner';
@@ -53,11 +51,11 @@ export default function ChatsMessageScreen() {
   const route = useRoute() as any;
   const navigation = useNavigation();
   const {profile} = useLoginStore();
-  const {userId, sessionId: initialSessionId} = route.params;
+  const {userId, initialMessage} = route.params;
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [sessionId, setSessionId] = useState(initialSessionId || '');
+  const [sessionId, setSessionId] = useState('');
   const [sessionStatus, setSessionStatus] = useState('');
   const [isInitiator, setIsInitiator] = useState(false);
   const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
@@ -85,32 +83,31 @@ export default function ChatsMessageScreen() {
       : ChatsPanelExpertPOVRunner;
   }, [otherUser, profile]);
 
-  useEffect(() => {
-    const initChat = async () => {
-      if (initialSessionId) {
-        loadMessages(initialSessionId);
-      } else {
-        const response = await createOrGetSession(userId);
+  useFocusEffect(
+    useCallback(() => {
+      const initChat = async () => {
+        const response = await createOrGetSession(userId, initialMessage);
         if (response.status) {
           setSessionId(response.data.session.id);
           setSessionStatus(response.data.session.status);
           setIsInitiator(response.data.session.is_initiator);
           setOtherUser(response.data.other_user);
-          loadMessages(response.data.session.id);
+          loadMessages();
+          await markSessionMessagesAsRead(userId);
         }
-      }
-    };
-    initChat();
-  }, [userId, initialSessionId]);
+      };
+      initChat();
+    }, [userId])
+  )
 
   const loadMessages = useCallback(
-    async (sessionId: string) => {
+    async () => {
       try {
         setLoading(true);
         setShowContent(false);
         isInitialLoad.current = true;
 
-        const response = await getSessionMessages(sessionId, 5000);
+        const response = await getSessionMessages(userId, 5000);
         if (response.status) {
           const newMessages = response.data.messages;
 
@@ -152,7 +149,7 @@ export default function ChatsMessageScreen() {
         if (response.status) {
           setSelectedImage(null);
           shouldScrollToEnd.current = true;
-          loadMessages(sessionId);
+          loadMessages();
         } else {
           ToastUtil.error(
             'Error',
@@ -172,7 +169,7 @@ export default function ChatsMessageScreen() {
         if (response.status) {
           setMessageText('');
           shouldScrollToEnd.current = true;
-          loadMessages(sessionId);
+          loadMessages();
         } else {
           ToastUtil.error(
             'Error',
@@ -338,7 +335,7 @@ export default function ChatsMessageScreen() {
       <CMSSidePanelInfo
         visible={infoPanelVisible}
         onClose={() => setInfoPanelVisible(false)}
-        sessionId={sessionId}
+        userId={userId}
       />
     </SafeAreaView>
   );

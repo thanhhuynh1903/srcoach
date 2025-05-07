@@ -42,11 +42,12 @@ interface ChatListItemProps {
 interface ChatCategoryProps {
   title: string;
   iconName: string;
-  count: number;
+  count: string | number;
+  id: string;
 }
 
-const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count}) => (
-  <View style={styles.categoryContainer}>
+const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count, id}) => (
+  <View style={styles.categoryContainer} testID={`category-${id}`}>
     <Icon name={iconName} size={18} color={theme.colors.primaryDark} style={styles.categoryIcon} />
     <Text style={styles.categoryText}>{title}</Text>
     <View style={styles.categoryBadge}>
@@ -165,35 +166,78 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
   const {profile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
 
-  // Updated categorization logic
-  const expertSessions = sessions.filter(s => 
-    (isExpert && !s.other_user.roles.includes('expert')) || 
-    (!isExpert && s.other_user.roles.includes('expert'))
-  );
-  
-  const directMessages = sessions.filter(s => 
-    (isExpert && s.other_user.roles.includes('expert')) || 
-    (!isExpert && !s.other_user.roles.includes('expert'))
-  ).filter(s => s.status === 'ACCEPTED');
-  
-  const pendingRequests = sessions.filter(s => s.status === 'PENDING');
+  // Categorize sessions based on user role and other user role
+  const categorizeSessions = () => {
+    const expertSessions: ChatListItemProps['session'][] = [];
+    const directMessages: ChatListItemProps['session'][] = [];
+    const pendingRequests: ChatListItemProps['session'][] = [];
+
+    sessions.forEach(session => {
+      const otherIsExpert = session.other_user.roles.includes('expert');
+      
+      if (session.status === 'PENDING') {
+        pendingRequests.push(session);
+      } else if (isExpert && otherIsExpert) {
+        directMessages.push(session);
+      } else if (!isExpert && !otherIsExpert) {
+        directMessages.push(session);
+      } else {
+        expertSessions.push(session);
+      }
+    });
+
+    return { expertSessions, directMessages, pendingRequests };
+  };
+
+  const { expertSessions, directMessages, pendingRequests } = categorizeSessions();
 
   const expertSessionCount = isExpert ? `${expertSessions.length}/15` : `${expertSessions.length}/1`;
   const directMessageCount = directMessages.length;
   const pendingRequestCount = pendingRequests.length;
 
+  // Prepare flatlist data with proper keys
   const data = [
-    expertSessions.length > 0 && {type: 'header', title: 'Expert Sessions', iconName: 'trophy', count: expertSessionCount},
-    ...expertSessions.map(item => ({type: 'item', data: item})),
-    directMessages.length > 0 && {type: 'header', title: 'Direct Messages', iconName: 'chatbubbles', count: directMessageCount},
-    ...directMessages.map(item => ({type: 'item', data: item})),
-    pendingRequests.length > 0 && {type: 'header', title: 'Pending Requests', iconName: 'time', count: pendingRequestCount},
-    ...pendingRequests.map(item => ({type: 'item', data: item})),
+    expertSessions.length > 0 && {
+      type: 'header' as const,
+      title: isExpert ? 'Runner Sessions' : 'Expert Sessions',
+      iconName: isExpert ? 'people' : 'trophy',
+      count: expertSessionCount,
+      id: 'expert-sessions'
+    },
+    ...expertSessions.map(item => ({
+      type: 'item' as const,
+      data: item,
+      id: `expert-${item.id}`
+    })),
+    directMessages.length > 0 && {
+      type: 'header' as const,
+      title: 'Direct Messages',
+      iconName: 'chatbubbles',
+      count: directMessageCount,
+      id: 'direct-messages'
+    },
+    ...directMessages.map(item => ({
+      type: 'item' as const,
+      data: item,
+      id: `direct-${item.id}`
+    })),
+    pendingRequests.length > 0 && {
+      type: 'header' as const,
+      title: 'Pending Requests',
+      iconName: 'time',
+      count: pendingRequestCount,
+      id: 'pending-requests'
+    },
+    ...pendingRequests.map(item => ({
+      type: 'item' as const,
+      data: item,
+      id: `pending-${item.id}`
+    })),
   ].filter(Boolean);
 
-  const renderItem = ({item}: {item: any}) => {
+  const renderItem = ({item}: {item: typeof data[0]}) => {
     if (item.type === 'header') {
-      return <ChatCategory title={item.title} iconName={item.iconName} count={item.count} />;
+      return <ChatCategory title={item.title} iconName={item.iconName} count={item.count} id={item.id} />;
     }
     return (
       <ChatListItem
@@ -215,7 +259,7 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
     <FlatList
       data={data}
       renderItem={renderItem}
-      keyExtractor={(item, index) => item.type === 'header' ? `header-${item.title}` : `item-${item.data.id}`}
+      keyExtractor={(item) => item.id}
       getItemLayout={getItemLayout as any}
       initialNumToRender={10}
       maxToRenderPerBatch={10}

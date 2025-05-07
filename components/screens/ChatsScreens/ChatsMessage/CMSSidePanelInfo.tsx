@@ -8,7 +8,7 @@ import {theme} from '../../../contants/theme';
 type SessionInfoProps = {
   visible: boolean;
   onClose: () => void;
-  sessionId: string;
+  userId: string;
 };
 
 type SessionInfoData = {
@@ -31,16 +31,16 @@ type SessionInfoData = {
   };
 };
 
-export const CMSSidePanelInfo = ({visible, onClose, sessionId}: SessionInfoProps) => {
+export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) => {
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<SessionInfoData | null>(null);
 
   useEffect(() => {
-    if (visible && sessionId) {
+    if (visible && userId) {
       const fetchSessionInfo = async () => {
         try {
           setLoading(true);
-          const response = await getSessionInfo(sessionId);
+          const response = await getSessionInfo(userId);
           if (response.status) {
             setInfo(response.data);
           }
@@ -52,7 +52,7 @@ export const CMSSidePanelInfo = ({visible, onClose, sessionId}: SessionInfoProps
       };
       fetchSessionInfo();
     }
-  }, [visible, sessionId]);
+  }, [visible, userId]);
 
   if (!visible) return null;
 
@@ -115,13 +115,13 @@ export const CMSSidePanelInfo = ({visible, onClose, sessionId}: SessionInfoProps
               <View style={styles.infoRow}>
                 <Icon name="trophy" size={16} color={theme.colors.warning} />
                 <Text style={styles.infoText}>
-                  {info.other_user.points || 0} points
+                  {info.other_user.points || 0} pts
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Icon name="medal" size={16} color={theme.colors.warning} />
                 <Text style={styles.infoText}>
-                  {info.other_user.user_level || 'No level'}
+                  {capitalizeFirstLetter(info.other_user.user_level || 'No level')}
                 </Text>
               </View>
             </View>

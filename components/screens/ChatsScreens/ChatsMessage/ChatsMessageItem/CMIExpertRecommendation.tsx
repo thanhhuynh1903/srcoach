@@ -45,9 +45,13 @@ export const CMIExpertRecommendation = ({
             uri={message.sender.image?.url}
             mode={message.sender.roles.includes('EXPERT') ? 'expert' : 'runner'}
           />
-          <Text style={styles.senderName}>{message.sender.name}</Text>
+          {isMe ? (
+            <Text style={styles.myText}>You</Text>
+          ) : (
+            <Text style={styles.senderName}>{message.sender.name}</Text>
+          )}
           <Text style={styles.headerText}>
-            has sent an Expert Recommendation
+            {isMe ? 'have' : 'has'} sent an Expert Recommendation
           </Text>
         </View>
 
@@ -111,8 +115,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  myText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#048100',
+  },
   senderName: {
-    marginLeft: 8,
+    marginLeft: 6,
     fontSize: 16,
     fontWeight: '700',
     color: '#048100',

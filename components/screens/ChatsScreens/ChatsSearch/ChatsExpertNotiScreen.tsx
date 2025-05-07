@@ -1,25 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import {useTheme} from '@react-navigation/native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../../BackButton';
 import {theme} from '../../../contants/theme';
+import { createOrGetSession } from '../../../utils/useChatsAPI';
 
 const ChatsExpertNotiScreen = () => {
   const {colors} = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
   const {userId} = route.params as {userId: string};
+  const [message, setMessage] = useState('');
+  const maxChars = 2000;
 
   const handleProceed = () => {
-    navigation.navigate('ChatsMessageScreen', {userId});
+    createOrGetSession(userId, message).then((response) => {
+      if (response.status) {
+        navigation.navigate('ChatsMessageScreen', {userId});
+      }
+    });
   };
 
   return (
@@ -28,7 +36,7 @@ const ChatsExpertNotiScreen = () => {
       <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
         <BackButton size={24} />
         <Text style={styles.headerTitle}>Expert Verification</Text>
-        <View style={{width: 24}} /> {/* For alignment */}
+        <View style={{width: 24}} />
       </View>
 
       {/* Content */}
@@ -77,14 +85,37 @@ const ChatsExpertNotiScreen = () => {
             Please note that while our experts are certified, you should always 
             consult with a medical professional for health-related concerns.
           </Text>
+
+          {/* Initial Message Input */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>
+              Initial Message <Text style={styles.requiredStar}>*</Text>
+            </Text>
+            <TextInput
+              style={styles.messageInput}
+              multiline
+              placeholder="Type your initial message to the expert here..."
+              placeholderTextColor="#9E9E9E"
+              value={message}
+              onChangeText={setMessage}
+              maxLength={maxChars}
+            />
+            <Text style={styles.charCounter}>
+              {message.length}/{maxChars}
+            </Text>
+          </View>
         </View>
       </ScrollView>
 
       {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.proceedButton, {backgroundColor: theme.colors.primaryDark}]}
-          onPress={handleProceed}>
+          style={[
+            styles.proceedButton, 
+            {backgroundColor: message.length > 0 ? theme.colors.primaryDark : '#CCCCCC'}
+          ]}
+          onPress={handleProceed}
+          disabled={message.length === 0}>
           <Text style={styles.proceedButtonText}>Proceed to Chat</Text>
         </TouchableOpacity>
         <Text style={styles.termsText}>
@@ -163,6 +194,41 @@ const styles = StyleSheet.create({
     color: '#757575',
     fontStyle: 'italic',
     lineHeight: 18,
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginTop: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#424242',
+    marginBottom: 8,
+  },
+  requiredStar: {
+    color: 'red',
+  },
+  messageInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#424242',
+    backgroundColor: '#FAFAFA',
+    textAlignVertical: 'top',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  charCounter: {
+    fontSize: 12,
+    color: '#9E9E9E',
+    textAlign: 'right',
+    marginTop: 4,
   },
   footer: {
     padding: 20,

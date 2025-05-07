@@ -72,8 +72,8 @@ export const searchSessionMessages = async (
   return response.data;
 };
 
-export const createOrGetSession = async (otherUserId: string) => {
-  const response = await api.post('/chats/session', {otherUserId});
+export const createOrGetSession = async (otherUserId: string, initialMessage: string) => {
+  const response = await api.post('/chats/session', {otherUserId, initial_message: initialMessage});
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
 };
@@ -165,13 +165,13 @@ export const sendImageMessage = async (sessionId: string, imageUri: string) => {
 };
 
 export const getSessionMessages = async (
-  sessionId: string,
+  userId: string,
   limit = 30,
   cursor?: string | null,
 ) => {
   const response = await api.get('/chats/session/messages', {
     params: {
-      session_id: sessionId,
+      otherUserId: userId,
       limit,
       cursor: cursor || undefined,
     },
@@ -180,9 +180,9 @@ export const getSessionMessages = async (
   return response.data;
 };
 
-export const getSessionInfo = async (sessionId: string) => {
+export const getSessionInfo = async (userId: string) => {
   const response = await api.get('/chats/session/info', {
-    params: {session_id: sessionId},
+    params: {otherUserId: userId},
   });
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
@@ -196,9 +196,9 @@ export const archiveMessage = async (messageId: string) => {
   return response.data;
 };
 
-export const respondToSession = async (sessionId: string, accept: boolean) => {
+export const respondToSession = async (userId: string, accept: boolean) => {
   const response = await api.post('/chats/session/respond', {
-    session_id: sessionId,
+    otherUserId: userId,
     accept,
   });
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
@@ -246,5 +246,19 @@ export const rejectExpertRecommendation = async (messageId: string) => {
   } else {
     ToastUtil.success('Success', response.data.message);
   }
+  return response.data;
+};
+
+export const markSessionMessagesAsRead = async (userId: string) => {
+  const response = await api.post('/chats/session/mark-read', {
+    otherUserId: userId,
+  });
+  if (!response.data.status) ToastUtil.error('Error', response.data.message);
+  return response.data;
+};
+
+export const markAllMessagesAsRead = async () => {
+  const response = await api.post('/chats/session/mark-all-read');
+  if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
 };

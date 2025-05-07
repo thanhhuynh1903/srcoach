@@ -18,12 +18,13 @@ import {
   searchExperts,
   searchRunners,
   searchAllMessages,
+  getSessionInfo,
 } from '../../../utils/useChatsAPI';
 import ToastUtil from '../../../utils/utils_toast';
 import BackButton from '../../../BackButton';
-import { CommonAvatar } from '../../../commons/CommonAvatar';
+import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
-import { capitalizeFirstLetter } from '../../../utils/utils_format';
+import {capitalizeFirstLetter} from '../../../utils/utils_format';
 
 type SearchTab = 'all' | 'runners' | 'experts' | 'messages';
 
@@ -61,49 +62,52 @@ const ChatsSearchScreen = () => {
     }
   }, [route.params]);
 
-  const handleSearch = useCallback(async (query?: string) => {
-    const searchTerm = query || searchQuery;
-    if (!searchTerm.trim()) {
-      setSearchResults([]);
-      setHasSearched(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      let response;
-      switch (activeTab) {
-        case 'all':
-          response = await searchUsers(searchTerm);
-          break;
-        case 'runners':
-          response = await searchRunners(searchTerm);
-          break;
-        case 'experts':
-          response = await searchExperts(searchTerm);
-          break;
-        case 'messages':
-          response = await searchAllMessages(searchTerm);
-          break;
+  const handleSearch = useCallback(
+    async (query?: string) => {
+      const searchTerm = query || searchQuery;
+      if (!searchTerm.trim()) {
+        setSearchResults([]);
+        setHasSearched(false);
+        return;
       }
 
-      if (response?.status && response.data) {
-        setSearchResults(response.data);
+      setIsLoading(true);
+      try {
+        let response;
+        switch (activeTab) {
+          case 'all':
+            response = await searchUsers(searchTerm);
+            break;
+          case 'runners':
+            response = await searchRunners(searchTerm);
+            break;
+          case 'experts':
+            response = await searchExperts(searchTerm);
+            break;
+          case 'messages':
+            response = await searchAllMessages(searchTerm);
+            break;
+        }
+
+        if (response?.status && response.data) {
+          setSearchResults(response.data);
+          setHasSearched(true);
+        } else {
+          ToastUtil.error(
+            'Search Failed',
+            response?.message || 'No results found',
+          );
+          setHasSearched(true);
+        }
+      } catch (error) {
+        ToastUtil.error('Search Error', 'Failed to perform search');
         setHasSearched(true);
-      } else {
-        ToastUtil.error(
-          'Search Failed',
-          response?.message || 'No results found',
-        );
-        setHasSearched(true);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      ToastUtil.error('Search Error', 'Failed to perform search');
-      setHasSearched(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchQuery, activeTab]);
+    },
+    [searchQuery, activeTab],
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -119,11 +123,16 @@ const ChatsSearchScreen = () => {
   const renderUserItem = ({item}: {item: UserItem}) => (
     <TouchableOpacity
       style={[styles.itemContainer, {backgroundColor: '#FFFFFF'}]}
-      onPress={() => {
-        if (item.roles?.includes('expert')) {
+      onPress={async () => {
+        if (!item.roles?.includes('expert')) {
+          return navigation.navigate('ChatsMessageScreen', {userId: item.id});
+        }
+
+        let status = item?.status;
+        if (status === null) {
           navigation.navigate('ChatsExpertNotiScreen', {userId: item.id});
-        } else {
-          navigation.navigate('ChatsMessageScreen', {userId: item.id});
+        } else if (status === 'ACCEPTED') {
+          return navigation.navigate('ChatsMessageScreen', {userId: item.id});
         }
       }}>
       <View style={styles.userInfoContainer}>
@@ -143,7 +152,9 @@ const ChatsSearchScreen = () => {
             <View style={styles.statItem}>
               <Ionicons name="medal" size={16} color="#FFD700" />
               <Text style={styles.statText}>
-                {item.user_level === null ? 'Newbie' : `${capitalizeFirstLetter(item.user_level as any)}`}
+                {item.user_level === null
+                  ? 'Newbie'
+                  : `${capitalizeFirstLetter(item.user_level as any)}`}
               </Text>
             </View>
           </View>
@@ -174,7 +185,10 @@ const ChatsSearchScreen = () => {
             }}
           />
           <TouchableOpacity
-            style={[styles.searchButton, {backgroundColor: theme.colors.primaryDark}]}
+            style={[
+              styles.searchButton,
+              {backgroundColor: theme.colors.primaryDark},
+            ]}
             onPress={() => {
               setHasSearched(true);
               handleSearch();
@@ -185,35 +199,36 @@ const ChatsSearchScreen = () => {
 
         {/* Filter Tabs */}
         <View style={styles.tabsOuterContainer}>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContainer}
-          >
-            {(['all', 'runners', 'experts', 'messages'] as SearchTab[]).map(tab => (
-              <TouchableOpacity
-                key={tab}
-                style={[
-                  styles.tabButton,
-                  activeTab === tab && {
-                    backgroundColor: theme.colors.primaryDark,
-                  },
-                ]}
-                onPress={() => {
-                  setActiveTab(tab);
-                  if (hasSearched) {
-                    handleSearch();
-                  }
-                }}>
-                <Text
+            contentContainerStyle={styles.tabsContainer}>
+            {(['all', 'runners', 'experts', 'messages'] as SearchTab[]).map(
+              tab => (
+                <TouchableOpacity
+                  key={tab}
                   style={[
-                    styles.tabText,
-                    activeTab === tab ? {color: 'white'} : {color: '#424242'},
-                  ]}>
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                    styles.tabButton,
+                    activeTab === tab && {
+                      backgroundColor: theme.colors.primaryDark,
+                    },
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab);
+                    if (hasSearched) {
+                      handleSearch();
+                    }
+                  }}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      activeTab === tab ? {color: 'white'} : {color: '#424242'},
+                    ]}>
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ),
+            )}
           </ScrollView>
         </View>
       </View>

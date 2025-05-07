@@ -74,7 +74,7 @@ const ChatsSessionMessageSearch = () => {
     return (
       <TouchableOpacity
         style={styles.messageItem}
-        onPress={() => navigation.navigate('ChatsMessageScreen', {sessionId: item.sessionId})}>
+        onPress={() => navigation.navigate('ChatsMessageScreen', {userId: item.sender.id})}>
         <View style={styles.avatarContainer}>
           <CommonAvatar
             mode={item.sender.roles.includes('expert') ? 'expert' : 'runner'}

@@ -5,10 +5,11 @@ import CHSHeader from './CHSHeader';
 import CHSSearch from './CHSSearch';
 import CHSTabFilter from './CHSTabFilter';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {listSessions, respondToSession} from '../../../utils/useChatsAPI';
 import CHSChatList from './CHSChatList';
 import ToastUtil from '../../../utils/utils_toast';
+import {useLoginStore} from '../../../utils/useLoginStore';
 
 interface ChatSession {
   id: string;
@@ -46,9 +47,13 @@ const ChatsHomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
 
-  useEffect(() => {
-    fetchSessions();
-  }, [activeFilter]);
+  const {profile} = useLoginStore();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchSessions();
+    }, [activeFilter])
+  )
 
   const fetchSessions = async () => {
     try {
@@ -71,6 +76,15 @@ const ChatsHomeScreen = () => {
   };
 
   const handleChatPress = (session: ChatSession) => {
+    if (
+      profile.roles && profile.roles.includes('expert') &&
+      session.other_user?.roles?.includes('runner') &&
+      session.status == 'PENDING'
+    ) {
+      navigation.navigate('ChatsExpertConfirmScreen', {userId: session.other_user.id});
+      return;
+    }
+
     navigation.navigate('ChatsMessageScreen', {
       userId: session.other_user.id,
     });
@@ -117,7 +131,7 @@ const ChatsHomeScreen = () => {
         activeFilter={activeFilter}
         onFilterChange={handleFilterChange}
       />
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -127,19 +141,14 @@ const ChatsHomeScreen = () => {
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
-        }
-      >
+        }>
         {loading && !refreshing ? (
           <View style={styles.loadingContainer}>
             <Text>Loading chats...</Text>
           </View>
         ) : sessions.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon
-              name="chatbubbles-outline"
-              size={48}
-              color={'#c2c2c2'}
-            />
+            <Icon name="chatbubbles-outline" size={48} color={'#c2c2c2'} />
             <Text style={styles.emptyText}>
               {searchQuery ? 'No matching chats found' : 'No chats found'}
             </Text>
