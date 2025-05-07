@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,10 @@ interface PostData {
   runRecord?: string;
 }
 
+// Hằng số cho giới hạn
+const MAX_IMAGES = 8;
+const MAX_TAGS = 10;
+
 const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   onPost
 }) => {
@@ -43,10 +47,29 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const [tags, setTags] = useState('');
   const [runRecord, setRunRecord] = useState<ExerciseRecord | null>(null);
+  const [tagCount, setTagCount] = useState(0);
+  const [tagError, setTagError] = useState('');
 
-  const { createPost, isLoading, status,message,getAll,getMyPosts } = usePostStore();
+  const { createPost, isLoading, status, message, getAll, getMyPosts } = usePostStore();
+
+  // Theo dõi số lượng tags
+  useEffect(() => {
+    const tagArray = tags.split(',').filter(tag => tag.trim() !== '');
+    setTagCount(tagArray.length);
+    
+    if (tagArray.length > MAX_TAGS) {
+      setTagError(`Maximum ${MAX_TAGS} tags allowed`);
+    } else {
+      setTagError('');
+    }
+  }, [tags]);
 
   const handleAddImage = () => {
+    if (selectedImages.length >= MAX_IMAGES) {
+      Alert.alert('Photo Limit', `You can only add up to ${MAX_IMAGES} photos`);
+      return;
+    }
+
     const options = {
       mediaType: 'photo',
       includeBase64: false,
@@ -60,10 +83,14 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
         console.log('User cancelled image picker');
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
-        Alert.alert('Lỗi', response.errorMessage || 'Đã xảy ra lỗi khi chọn ảnh');
+        Alert.alert('Error', response.errorMessage || 'An error occurred while selecting a photo.');
       } else if (response.assets && response.assets.length > 0) {
-        // Thêm ảnh mới vào danh sách
-        setSelectedImages([...selectedImages, response.assets[0]]);
+        // Thêm ảnh mới vào danh sách nếu chưa vượt quá giới hạn
+        if (selectedImages.length < MAX_IMAGES) {
+          setSelectedImages([...selectedImages, response.assets[0]]);
+        } else {
+          Alert.alert('Photo Limit', `You can only add up to ${MAX_IMAGES} photos`);
+        }
       }
     });
   };
@@ -75,24 +102,43 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   };
 
   const handleSelectRecord = (record: ExerciseRecord) => {
-    setRunRecord(record)
+    setRunRecord(record);
+  };
+
+  const handleTagsChange = (text: string) => {
+    setTags(text);
     
-  }
+    // Kiểm tra số lượng tags ngay khi người dùng nhập
+    const tagArray = text.split(',').filter(tag => tag.trim() !== '');
+    if (tagArray.length > MAX_TAGS) {
+      setTagError(`Maximum ${MAX_TAGS} tags allowed`);
+    } else {
+      setTagError('');
+    }
+  };
+
   const handlePost = async () => {
     if (!title.trim() || !content.trim()) {
-      Alert.alert('Enter more info', 'Please enter both title and content');
+      Alert.alert('Missing information', 'Please enter both title and content');
+      return;
+    }
+
+    // Kiểm tra số lượng tags
+    const tagArray = tags.split(',').filter(tag => tag.trim() !== '');
+    if (tagArray.length > MAX_TAGS) {
+      Alert.alert('Too many tags', `You can only add up to ${MAX_TAGS} tags`);
       return;
     }
 
     try {
-      console.log("Selected exercise record:", runRecord)
+      console.log("Selected exercise record:", runRecord);
       // Nếu có onPost callback (từ props), sử dụng nó
       if (onPost) {
         const postData: PostData = {
           title: title.trim(),
           content: content.trim(),
           images: selectedImages.map(img => img.uri),
-          tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+          tags: tagArray,
           runRecord: runRecord ? runRecord.id : null,
         };
         onPost(postData);
@@ -100,29 +146,28 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
       }
 
       // Ngược lại, sử dụng createPost từ usePostStore
-      const tagsArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '');
-      
       await createPost({
         title: title.trim(),
         content: content.trim(),
-        tags: tagsArray || [],
+        tags: tagArray,
         exerciseSessionRecordId: runRecord ? runRecord?.id : null,
         images: selectedImages || [],
       });
+      
       console.log('status', usePostStore.getState().status);
       // Thành công, quay lại màn hình trước đó
-      Alert.alert('Success', 'Create post successfully', [
+      Alert.alert('Success', 'Created post successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
       await getAll();
       await getMyPosts();
     } catch (error: any) {
       console.error('Error creating post:', error);
-      Alert.alert('Error', error.message || 'Cannot create post');
+      Alert.alert('Error', error.message || 'Cannot create post. Please try again later.');
     }
   };
 
-  const isPostButtonEnabled = title.trim() !== '' && content.trim() !== '';
+  const isPostButtonEnabled = title.trim() !== '' && content.trim() !== '' && !tagError;
 
   // Hiển thị ảnh mẫu nếu không có ảnh được chọn
   const displayImages = selectedImages.length > 0 
@@ -180,40 +225,80 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
           {/* Images */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Image</Text>
-            <Text style={{ fontSize: 12, color: '#666',marginBottom: 8 }}>Note: First picture will be displayed on the post</Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>Image</Text>
+              <Text style={styles.countIndicator}>
+                {selectedImages.length}/{MAX_IMAGES}
+              </Text>
+            </View>
+            <Text style={styles.noteText}>
+              Note: First picture will be displayed on the post
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
-              <TouchableOpacity style={styles.addImageButton} onPress={handleAddImage}>
-                <Icon name="add" size={24} color="#999" />
-                <Text style={styles.addImageText}>Add</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.addImageButton, 
+                  selectedImages.length >= MAX_IMAGES && styles.disabledButton
+                ]} 
+                onPress={handleAddImage}
+                disabled={selectedImages.length >= MAX_IMAGES}
+              >
+                <Icon name="add" size={24} color={selectedImages.length >= MAX_IMAGES ? "#ccc" : "#999"} />
+                <Text style={[
+                  styles.addImageText,
+                  selectedImages.length >= MAX_IMAGES && {color: "#ccc"}
+                ]}>
+                  Add
+                </Text>
               </TouchableOpacity>
 
-              {displayImages.map((image, index) => (
-                <View key={index} style={styles.imageContainer}>
-                  <Image source={{ uri: image.uri }} style={styles.image} />
-                  {selectedImages.length > 0 && (
+              {selectedImages.length > 0 ? (
+                selectedImages.map((image, index) => (
+                  <View key={index} style={styles.imageContainer}>
+                    <Image source={{ uri: image.uri }} style={styles.image} />
                     <TouchableOpacity
                       style={styles.removeImageButton}
                       onPress={() => handleRemoveImage(index)}
                     >
                       <Icon name="close-circle" size={22} color="#fff" />
                     </TouchableOpacity>
-                  )}
-                </View>
-              ))}
+                  </View>
+                ))
+              ) : (
+                displayImages.map((image, index) => (
+                  <View key={index} style={styles.imageContainer}>
+                    <Image source={{ uri: image.uri }} style={styles.image} />
+                  </View>
+                ))
+              )}
             </ScrollView>
           </View>
 
           {/* Tags */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Tags</Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>Tags</Text>
+              <Text style={[
+                styles.countIndicator,
+                tagCount > MAX_TAGS && styles.errorCount
+              ]}>
+                {tagCount}/{MAX_TAGS}
+              </Text>
+            </View>
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, tagError ? styles.inputError : null]}
               placeholder="Add tags separated by commas..."
               placeholderTextColor="#999"
               value={tags}
-              onChangeText={setTags}
+              onChangeText={handleTagsChange}
             />
+            {tagError ? (
+              <Text style={styles.errorText}>{tagError}</Text>
+            ) : (
+              <Text style={styles.noteText}>
+                Separate tags with commas (e.g., running, fitness, marathon)
+              </Text>
+            )}
           </View>
 
           {/* Run Record */}
@@ -261,13 +346,35 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
   formGroup: { marginBottom: 20 },
   label: { fontSize: 16, fontWeight: '500', color: '#000', marginBottom: 8 },
+  labelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  countIndicator: {
+    fontSize: 14,
+    color: '#666',
+  },
+  errorCount: {
+    color: '#d32f2f',
+    fontWeight: '500',
+  },
   selectInput: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 50, paddingHorizontal: 16, backgroundColor: '#f5f5f5', borderRadius: 8 },
   textInput: { height: 50, paddingHorizontal: 16, backgroundColor: '#f5f5f5', borderRadius: 8, fontSize: 16, color: '#333' },
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#d32f2f',
+  },
   textArea: { minHeight: 150, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: '#f5f5f5', borderRadius: 8, fontSize: 16, color: '#333' },
   inputText: { fontSize: 16, color: '#333' },
   placeholderText: { fontSize: 16, color: '#999' },
   imagesContainer: { flexDirection: 'row', marginBottom: 8 },
   addImageButton: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  disabledButton: {
+    backgroundColor: '#f0f0f0',
+    opacity: 0.7,
+  },
   addImageText: { fontSize: 14, color: '#999', marginTop: 4 },
   imageContainer: { position: 'relative', marginRight: 12 },
   image: { width: 80, height: 80, borderRadius: 8 },
@@ -288,7 +395,15 @@ const styles = StyleSheet.create({
   },
   errorText: { 
     color: '#d32f2f', 
-    fontSize: 14 
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  noteText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });
 

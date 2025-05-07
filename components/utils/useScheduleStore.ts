@@ -87,38 +87,41 @@ const useScheduleStore = create<ScheduleState>()(
         try {
           const response = await api.fetchData(`/schedules/self`);
           console.log('response', response);
-          
+
           set({schedules: response.data, isLoading: false});
         } catch (error) {
           console.error('Lỗi khi lấy danh sách lịch tập cá nhân:', error);
           set({
-            error: 'Không thể lấy danh sách lịch tập cá nhân. Vui lòng thử lại sau.',
+            error:
+              'Không thể lấy danh sách lịch tập cá nhân. Vui lòng thử lại sau.',
             isLoading: false,
           });
         }
       },
-    
+
       // Tạo lịch tập mới
       createSchedule: async scheduleData => {
         set({isLoading: true, error: null, message: null});
 
         try {
           // Đảm bảo dữ liệu có định dạng đúng
-          const payload = scheduleData?.user_id ? {
-            title: scheduleData.title || '',
-            description: scheduleData.description || '',
-            user_id: scheduleData.user_id,
-            days: scheduleData.days || [], 
-          } : {
-            title: scheduleData.title || '',
-            description: scheduleData.description || '',
-            days: scheduleData.days || [],             
-          };
+          const payload = scheduleData?.user_id
+            ? {
+                title: scheduleData.title || '',
+                description: scheduleData.description || '',
+                user_id: scheduleData.user_id,
+                days: scheduleData.days || [],
+              }
+            : {
+                title: scheduleData.title || '',
+                description: scheduleData.description || '',
+                days: scheduleData.days || [],
+              };
           console.log('Payload tạo lịch tập:', payload);
 
           const response = await api.postData(`/schedules/create`, payload);
           const newSchedule = response?.data;
-          
+
           console.log('Kết quả tạo lịch tập:', response?.message);
           set(state => ({
             schedules: [...state.schedules, newSchedule],
@@ -127,7 +130,7 @@ const useScheduleStore = create<ScheduleState>()(
           }));
 
           return newSchedule;
-        } catch (error : any) {
+        } catch (error: any) {
           console.log('Lỗi khi tạo lịch tập:', error.response?.data.message);
           set({
             message: error?.response?.data?.message,
@@ -174,16 +177,19 @@ const useScheduleStore = create<ScheduleState>()(
 
       // Xóa lịch tập
       deleteSchedule: async id => {
-        set({isLoading: true, error: null});
+        set({isLoading: true, error: null,message: null});
         try {
-          await axios.delete(`${API_URL}/api/schedules/${id}`);
-
-          set(state => ({
-            schedules: state.schedules.filter(s => s.id !== id),
-            isLoading: false,
-          }));
-
-          return true;
+          const response = await api.deleteData(`/schedules/cancel/${id}`);
+          if (response.status === 'success') {
+            console.log('Kết quả xóa lịch tập:', response.message);
+            set(state => ({
+              schedules: state.schedules.filter(s => s.id !== id),
+              message: response.message,
+              isLoading: false,
+            }));
+            return true;
+          }
+          return false;
         } catch (error) {
           console.error('Lỗi khi xóa lịch tập:', error);
           set({

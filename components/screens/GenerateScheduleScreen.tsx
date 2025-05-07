@@ -14,11 +14,13 @@ import EnhancedScheduleCard from './EnhancedScheduleCard';
 import {useNavigation} from '@react-navigation/native';
 import BackButton from '../BackButton';
 import useScheduleStore from '../utils/useScheduleStore';
-
+import CommonDialog from '../commons/CommonDialog';
+import {theme} from '../contants/theme';
 const GenerateScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
   const navigation = useNavigation();
   const {schedules, isLoading, error, fetchSelfSchedules} = useScheduleStore();
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
 
   const hasActiveSchedule = useMemo(() => {
     return schedules?.some(
@@ -177,6 +179,11 @@ const GenerateScheduleScreen = () => {
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Schedules</Text>
+        <TouchableOpacity
+          onPress={() => setShowInfoDialog(true)}
+          style={{marginLeft: 'auto'}}>
+          <Icon name="information-circle-outline" size={22} color="#0F2B5B" />
+        </TouchableOpacity>
       </View>
 
       {/* Tab Navigation */}
@@ -257,19 +264,6 @@ const GenerateScheduleScreen = () => {
             })}
 
             {/* Thông báo giới hạn lịch chạy */}
-            <View style={styles.limitNoteContainer}>
-              <Icon
-                name="information-circle-outline"
-                size={22}
-                color="#0F2B5B"
-              />
-              <Text style={styles.limitNoteText}>
-                To ensure effective training, each user is only allowed to
-                maintain one running schedule. Complete your current goals or
-                adjust your existing schedule to suit your needs. When you are
-                done, you can create a new schedule with new challenges!
-              </Text>
-            </View>
           </>
         ) : (
           <View style={styles.emptyContainer}>
@@ -287,12 +281,40 @@ const GenerateScheduleScreen = () => {
                 onPress={() =>
                   navigation.navigate('AddScheduleScreen' as never)
                 }>
-                <Text style={styles.createButtonText}>Create new workout schedule</Text>
+                <Text style={styles.createButtonText}>
+                  Create new workout schedule
+                </Text>
               </TouchableOpacity>
             )}
           </View>
         )}
       </ScrollView>
+      <CommonDialog
+        visible={showInfoDialog}
+        onClose={() => setShowInfoDialog(false)}
+        title="Schedule Info"
+        content={
+          <View>
+            <Text style={styles.dialogText}>
+              - This screen displays all your workout schedules.
+            </Text>
+            <Text style={styles.dialogText}>
+              - To ensure effective training, each user is only allowed to
+                maintain one running schedule. Complete your current goals or
+                adjust your existing schedule to suit your needs. When you are
+                done, you can create a new schedule with new challenges!
+            </Text>
+          </View>
+        }
+        actionButtons={[
+          {
+            label: 'Got it',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setShowInfoDialog(false),
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 };
@@ -473,28 +495,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 15,
   },
-  limitNoteContainer: {
-    backgroundColor: '#EBF3FF',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 24,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderLeftWidth: 4,
-    borderLeftColor: '#0F2B5B',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  limitNoteText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#334155',
-    lineHeight: 20,
-    marginLeft: 10,
+  dialogText: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 8,
   },
 });
 
