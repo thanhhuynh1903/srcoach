@@ -165,22 +165,31 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
   const {profile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
 
-  const expertSessions = sessions.filter(s => s.status === 'ACCEPTED' && s.other_user.roles.includes('expert'));
-  const directMessages = sessions.filter(s => s.status === 'ACCEPTED' && !s.other_user.roles.includes('expert'));
+  // Updated categorization logic
+  const expertSessions = sessions.filter(s => 
+    (isExpert && !s.other_user.roles.includes('expert')) || 
+    (!isExpert && s.other_user.roles.includes('expert'))
+  );
+  
+  const directMessages = sessions.filter(s => 
+    (isExpert && s.other_user.roles.includes('expert')) || 
+    (!isExpert && !s.other_user.roles.includes('expert'))
+  ).filter(s => s.status === 'ACCEPTED');
+  
   const pendingRequests = sessions.filter(s => s.status === 'PENDING');
 
   const expertSessionCount = isExpert ? `${expertSessions.length}/15` : `${expertSessions.length}/1`;
-  const directMessageCount = isExpert ? directMessages.length : 0;
-  const pendingRequestCount = isExpert ? pendingRequests.length : 0;
+  const directMessageCount = directMessages.length;
+  const pendingRequestCount = pendingRequests.length;
 
   const data = [
-    {type: 'header', title: 'Expert Sessions', iconName: 'trophy', count: expertSessionCount},
+    expertSessions.length > 0 && {type: 'header', title: 'Expert Sessions', iconName: 'trophy', count: expertSessionCount},
     ...expertSessions.map(item => ({type: 'item', data: item})),
-    {type: 'header', title: 'Direct Messages', iconName: 'chatbubbles', count: directMessageCount},
+    directMessages.length > 0 && {type: 'header', title: 'Direct Messages', iconName: 'chatbubbles', count: directMessageCount},
     ...directMessages.map(item => ({type: 'item', data: item})),
-    {type: 'header', title: 'Pending Requests', iconName: 'time', count: pendingRequestCount},
+    pendingRequests.length > 0 && {type: 'header', title: 'Pending Requests', iconName: 'time', count: pendingRequestCount},
     ...pendingRequests.map(item => ({type: 'item', data: item})),
-  ].filter(section => section.type === 'header' || (section.type === 'item' && section.data));
+  ].filter(Boolean);
 
   const renderItem = ({item}: {item: any}) => {
     if (item.type === 'header') {
