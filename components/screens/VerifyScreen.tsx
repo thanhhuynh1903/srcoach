@@ -44,18 +44,28 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
     const newCode = [...code];
     newCode[index] = text;
     setCode(newCode);
-
+  
+    // Tự động chuyển focus khi có giá trị hợp lệ (kể cả số 0)
     if (text.length === 1 && index < 5) {
       inputRefs.current[index + 1].focus();
     }
   };
-
-  // Handle backspace: auto-focus previous input
+  
   const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
+    if (e.nativeEvent.key === 'Backspace') {
+      const newCode = [...code];
+      
+      if (newCode[index] === '' || newCode[index] === '0') {
+        newCode[index] = '';
+        setCode(newCode);
+        
+        if (index > 0) {
+          inputRefs.current[index - 1].focus();
+        }
+      }
     }
   };
+  
 
   // Handle verify: call verifyCode and set loading status
   const handleVerify = async () => {

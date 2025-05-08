@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
+    alignSelf: "flex-start",
     paddingHorizontal: 16,
     height: 44,
     marginTop: 20,
