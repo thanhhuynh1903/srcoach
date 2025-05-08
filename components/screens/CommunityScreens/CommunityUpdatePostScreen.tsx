@@ -25,6 +25,10 @@ import type {ExerciseRecord} from './RecordSelectionModal';
 import type {ExerciseSession} from '../../utils/utils_healthconnect';
 import {format, parseISO} from 'date-fns';
 
+// Hằng số cho giới hạn
+const MAX_IMAGES = 8;
+const MAX_TAGS = 10;
+
 interface CommunityPostUpdateScreenProps {
   route?: {
     params: {
@@ -47,6 +51,7 @@ const CommunityPostUpdateScreen: React.FC<
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [tags, setTags] = useState('');
   const [displayTags, setDisplayTags] = useState<string[]>([]);
+  const [tagError, setTagError] = useState('');
   const [runRecord, setRunRecord] = useState<ExerciseRecord | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -150,13 +155,20 @@ const CommunityPostUpdateScreen: React.FC<
     }
   }, [session, currentPost]);
 
-  // Cập nhật displayTags khi tags thay đổi
+  // Cập nhật displayTags khi tags thay đổi và kiểm tra giới hạn
   useEffect(() => {
     if (tags && typeof tags === 'string') {
       const tagsArray = tags
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag !== '');
+      
+      if (tagsArray.length > MAX_TAGS) {
+        setTagError(`Maximum ${MAX_TAGS} tags allowed`);
+      } else {
+        setTagError('');
+      }
+      
       if (tagsArray.length > 0) {
         setDisplayTags(tagsArray);
       } else {
@@ -164,10 +176,17 @@ const CommunityPostUpdateScreen: React.FC<
       }
     } else {
       setDisplayTags([]);
+      setTagError('');
     }
   }, [tags]);
 
   const handleAddImage = () => {
+    // Kiểm tra tổng số ảnh (cả hiện có và mới) không vượt quá giới hạn
+    if (existingImages.length + selectedImages.length >= MAX_IMAGES) {
+      Alert.alert('Photo Limit', `You can only add up to ${MAX_IMAGES} photos`);
+      return;
+    }
+
     const options = {
       mediaType: 'photo',
       includeBase64: false,
@@ -183,11 +202,15 @@ const CommunityPostUpdateScreen: React.FC<
         console.log('ImagePicker Error: ', response.errorMessage);
         Alert.alert(
           'Lỗi',
-          response.errorMessage || 'Đã xảy ra lỗi khi chọn ảnh',
+          response.errorMessage || 'An error occurred while selecting a photo.',
         );
       } else if (response.assets && response.assets.length > 0) {
-        // Thêm ảnh mới vào danh sách
-        setSelectedImages([...selectedImages, response.assets[0]]);
+        // Kiểm tra lại trước khi thêm ảnh mới
+        if (existingImages.length + selectedImages.length < MAX_IMAGES) {
+          setSelectedImages([...selectedImages, response.assets[0]]);
+        } else {
+          Alert.alert('Photo Limit', `You can only add up to ${MAX_IMAGES} photos`);
+        }
       }
     });
   };
@@ -209,25 +232,43 @@ const CommunityPostUpdateScreen: React.FC<
     setRunRecord(record);
   };
 
+  const handleTagsChange = (text: string) => {
+    setTags(text);
+    
+    // Kiểm tra số lượng tags ngay khi người dùng nhập
+    const tagsArray = text
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag !== '');
+      
+    if (tagsArray.length > MAX_TAGS) {
+      setTagError(`Maximum ${MAX_TAGS} tags allowed`);
+    } else {
+      setTagError('');
+    }
+  };
+
   const handleUpdate = async () => {
     if (!title.trim() || !content.trim()) {
       Alert.alert(
-        'Thông tin không đầy đủ',
-        'Vui lòng nhập cả tiêu đề và nội dung',
+        'Incomplete information',
+        'Please enter both title and content',
       );
       return;
     }
 
-    try {
-      // Xử lý tags an toàn
-      const tagsArray =
-        typeof tags === 'string'
-          ? tags
-              .split(',')
-              .map(tag => tag.trim())
-              .filter(tag => tag !== '')
-          : [];
+    // Kiểm tra số lượng tags
+    const tagsArray = tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag !== '');
+      
+    if (tagsArray.length > MAX_TAGS) {
+      Alert.alert('Too many tags', `You can only add up to ${MAX_TAGS} tags`);
+      return;
+    }
 
+    try {
       // Tách riêng ảnh cũ và ảnh mới theo yêu cầu API
       const oldImageUrls = existingImages; // Mảng chứa các URL ảnh cũ muốn giữ lại
       const newImages = selectedImages; // Mảng chứa file ảnh mới upload lên
@@ -243,7 +284,7 @@ const CommunityPostUpdateScreen: React.FC<
 
       if (status !== 'error') {
         getAll();
-        Alert.alert('Success', 'The article has been updated successfully.', [
+        Alert.alert('Success', 'The posts has been updated successfully.', [
           {text: 'OK', onPress: () => navigation.goBack()},
         ]);
       } else {
@@ -255,7 +296,8 @@ const CommunityPostUpdateScreen: React.FC<
     }
   };
 
-  const isUpdateButtonEnabled = title.trim() !== '' && content.trim() !== '';
+  const isUpdateButtonEnabled = title.trim() !== '' && content.trim() !== '' && !tagError;
+  const totalImagesCount = existingImages.length + selectedImages.length;
 
   // Hiển thị trạng thái đang tải ban đầu
   if (initialLoading) {
@@ -314,7 +356,12 @@ const CommunityPostUpdateScreen: React.FC<
           {/* Existing Images */}
           {existingImages.length > 0 && (
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Current images</Text>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Current images</Text>
+                <Text style={styles.countIndicator}>
+                  {totalImagesCount}/{MAX_IMAGES}
+                </Text>
+              </View>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -335,18 +382,38 @@ const CommunityPostUpdateScreen: React.FC<
 
           {/* New Images */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>
-              {existingImages.length > 0 ? 'Add new images' : 'Images'}
-            </Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>
+                {existingImages.length > 0 ? 'Add new images' : 'Images'}
+              </Text>
+              {existingImages.length === 0 && (
+                <Text style={styles.countIndicator}>
+                  {totalImagesCount}/{MAX_IMAGES}
+                </Text>
+              )}
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.imagesContainer}>
               <TouchableOpacity
-                style={styles.addImageButton}
-                onPress={handleAddImage}>
-                <Icon name="add" size={24} color="#999" />
-                <Text style={styles.addImageText}>Add</Text>
+                style={[
+                  styles.addImageButton,
+                  totalImagesCount >= MAX_IMAGES && styles.disabledButton
+                ]}
+                onPress={handleAddImage}
+                disabled={totalImagesCount >= MAX_IMAGES}>
+                <Icon 
+                  name="add" 
+                  size={24} 
+                  color={totalImagesCount >= MAX_IMAGES ? "#ccc" : "#999"} 
+                />
+                <Text style={[
+                  styles.addImageText,
+                  totalImagesCount >= MAX_IMAGES && {color: "#ccc"}
+                ]}>
+                  Add
+                </Text>
               </TouchableOpacity>
 
               {selectedImages.map((image, index) => (
@@ -364,7 +431,15 @@ const CommunityPostUpdateScreen: React.FC<
 
           {/* Tags */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Tags</Text>
+            <View style={styles.labelContainer}>
+              <Text style={styles.label}>Tags</Text>
+              <Text style={[
+                styles.countIndicator,
+                displayTags.length > MAX_TAGS && styles.errorCount
+              ]}>
+                {displayTags.length}/{MAX_TAGS}
+              </Text>
+            </View>
 
             {/* Display Tags */}
             {displayTags.length > 0 && (
@@ -378,12 +453,20 @@ const CommunityPostUpdateScreen: React.FC<
             )}
 
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, tagError ? styles.inputError : null]}
               placeholder="Add tags, separated by commas..."
               placeholderTextColor="#999"
               value={tags}
-              onChangeText={setTags}
+              onChangeText={handleTagsChange}
             />
+            
+            {tagError ? (
+              <Text style={styles.errorText}>{tagError}</Text>
+            ) : (
+              <Text style={styles.noteText}>
+                Separate tags with commas (e.g., running, fitness, marathon)
+              </Text>
+            )}
           </View>
 
           {/* Run Record */}
@@ -479,11 +562,25 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 20,
   },
+  labelContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '500',
     color: '#000',
     marginBottom: 8,
+  },
+  countIndicator: {
+    fontSize: 14,
+    color: '#666',
+  },
+  errorCount: {
+    color: '#d32f2f',
+    fontWeight: '500',
   },
   warningText: {
     fontSize: 12,
@@ -507,6 +604,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
     color: '#333',
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: '#d32f2f',
   },
   textArea: {
     minHeight: 150,
@@ -538,6 +639,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+  },
+  disabledButton: {
+    backgroundColor: '#f0f0f0',
+    opacity: 0.7,
   },
   addImageText: {
     fontSize: 14,
@@ -632,6 +737,14 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#d32f2f',
     fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  noteText: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    marginLeft: 4,
   },
 });
 

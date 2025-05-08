@@ -1,5 +1,3 @@
-// src/stores/useScheduleStore.ts
-
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import axios from 'axios';
@@ -87,38 +85,41 @@ const useScheduleStore = create<ScheduleState>()(
         try {
           const response = await api.fetchData(`/schedules/self`);
           console.log('response', response);
-          
+
           set({schedules: response.data, isLoading: false});
         } catch (error) {
-          console.error('Lỗi khi lấy danh sách lịch tập cá nhân:', error);
+          console.error('Error getting personal training schedule list:', error);
           set({
-            error: 'Không thể lấy danh sách lịch tập cá nhân. Vui lòng thử lại sau.',
+            error:
+              'Unable to get personal training schedule list. Please try again later..',
             isLoading: false,
           });
         }
       },
-    
+
       // Tạo lịch tập mới
       createSchedule: async scheduleData => {
         set({isLoading: true, error: null, message: null});
 
         try {
           // Đảm bảo dữ liệu có định dạng đúng
-          const payload = scheduleData?.user_id ? {
-            title: scheduleData.title || '',
-            description: scheduleData.description || '',
-            user_id: scheduleData.user_id,
-            days: scheduleData.days || [], 
-          } : {
-            title: scheduleData.title || '',
-            description: scheduleData.description || '',
-            days: scheduleData.days || [],             
-          };
+          const payload = scheduleData?.user_id
+            ? {
+                title: scheduleData.title || '',
+                description: scheduleData.description || '',
+                user_id: scheduleData.user_id,
+                days: scheduleData.days || [],
+              }
+            : {
+                title: scheduleData.title || '',
+                description: scheduleData.description || '',
+                days: scheduleData.days || [],
+              };
           console.log('Payload tạo lịch tập:', payload);
 
           const response = await api.postData(`/schedules/create`, payload);
           const newSchedule = response?.data;
-          
+
           console.log('Kết quả tạo lịch tập:', response?.message);
           set(state => ({
             schedules: [...state.schedules, newSchedule],
@@ -127,11 +128,11 @@ const useScheduleStore = create<ScheduleState>()(
           }));
 
           return newSchedule;
-        } catch (error : any) {
-          console.log('Lỗi khi tạo lịch tập:', error.response?.data.message);
+        } catch (error: any) {
+          console.log('Error creating workout schedule:', error.response?.data.message);
           set({
             message: error?.response?.data?.message,
-            error: 'Không thể tạo lịch tập. Vui lòng thử lại sau.',
+            error: 'Unable to create workout schedule. Please try again later.',
             isLoading: false,
           });
           return null;
@@ -174,20 +175,22 @@ const useScheduleStore = create<ScheduleState>()(
 
       // Xóa lịch tập
       deleteSchedule: async id => {
-        set({isLoading: true, error: null});
+        set({isLoading: true, error: null,message: null});
         try {
-          await axios.delete(`${API_URL}/api/schedules/${id}`);
-
-          set(state => ({
-            schedules: state.schedules.filter(s => s.id !== id),
-            isLoading: false,
-          }));
-
-          return true;
+          const response = await api.deleteData(`/schedules/cancel/${id}`);
+          if (response.status === 'success') {
+            set(state => ({
+              schedules: state.schedules.filter(s => s.id !== id),
+              message: response.message,
+              isLoading: false,
+            }));
+            return true;
+          }
+          return false;
         } catch (error) {
-          console.error('Lỗi khi xóa lịch tập:', error);
+          console.error('Error while deleting workout schedule:', error);
           set({
-            error: 'Không thể xóa lịch tập. Vui lòng thử lại sau.',
+            error: 'Unable to delete workout schedule. Please try again later.',
             isLoading: false,
           });
           return false;

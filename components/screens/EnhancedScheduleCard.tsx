@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   Switch,
   Modal,
+  Alert
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import WorkoutComparison from './Comparison';
 import useScheduleStore from '../utils/useScheduleStore';
 import {theme} from '../contants/theme';
+import Toast from 'react-native-toast-message';
 interface Workout {
   time: string;
   name: string;
@@ -57,39 +59,44 @@ const EnhancedScheduleCard = ({
   const [selectedDay, setSelectedDay] = useState(initialSelectedDay);
   const [alarmEnabled, setAlarmEnabled] = useState(initialAlarmEnabled);
   const [expanded, setExpanded] = useState(false);
-  const {deleteSchedule} = useScheduleStore();
+  const {deleteSchedule,message,clear} = useScheduleStore();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleMorePress = (post: Post) => {
+  const handleMorePress = () => {
     setModalVisible(true);
   };
-  const handleDelete = () => {
+  const handleDelete = () => {    
     Alert.alert(
       'Delete Schedule',
       'Are you sure you want to delete this schedule?',
       [
-        {text: 'Cancel', onPress: () => {}, style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
-          onPress: async () => {
+          async onPress() {
             try {
-              await deleteSchedule(id);
-              // Xử lý thành công
+              const success = await deleteSchedule(id);
+                            
+              if (success) {
+                Toast.show({
+                  type: 'success',
+                  text1:'Delete Schedule successful'
+                });
+              }
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete schedule');
+              Toast.show({ type: 'error', text1: 'Xóa thất bại' });
             }
-          },
-          style: 'destructive',
-        },
-      ],
+          }
+        }
+      ]
+  
     );
-    setShowActionMenu(false);
   };
 
-  const handleEdit = () => {
-    navigation.navigate('EditScheduleScreen', {scheduleId: id});
-    setShowActionMenu(false);
-  };
+  // const handleEdit = () => {
+  //   navigation.navigate('EditScheduleScreen', {scheduleId: id});
+  //   setShowActionMenu(false);
+  // };
   // Find the schedule for the selected day
   const selectedDaySchedule = daySchedules.find(
     schedule => schedule.day === selectedDay,
@@ -396,7 +403,7 @@ const EnhancedScheduleCard = ({
 
             <View style={styles.modalDivider} />
 
-            <TouchableOpacity style={styles.modalOption}>
+            <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
               <Icon name="trash-outline" size={24} color="red" />
               <Text style={[styles.modalOptionText, {color: 'red'}]}>
                 Delete
@@ -413,6 +420,7 @@ const EnhancedScheduleCard = ({
         </TouchableOpacity>
       </Modal>
     </View>
+    
   );
 };
 
@@ -526,7 +534,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 15,
     justifyContent: 'center',
+    alignItems:'flex-start',
     marginBottom: 16,
+    flexWrap: 'wrap',
   },
   dayCircle: {
     width: 28,
