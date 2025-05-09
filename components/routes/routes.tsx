@@ -21,7 +21,7 @@ import RiskWarningScreen from '../screens/RiskWarningScreen';
 import DeviceNotificationScreen from '../screens/SettingsScreens/DeviceNotificationScreen';
 import CaloriesScreen from '../screens/DashboardScreens/RecordCaloriesScreen';
 import VerifyScreen from '../screens/VerifyScreen';
-import GenerateScheduleScreen from '../screens/GenerateScheduleScreen';
+import GenerateScheduleScreen from '../screens/ScheduleScreens/GenerateScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginScreen';
@@ -32,7 +32,7 @@ import CommunityNewsDetailScreen from '../screens/CommunityScreens/CommunityNews
 import CommunityPostDetailScreen from '../screens/CommunityScreens/CommunityPostDetailScreen';
 import CommunityPostCreateScreen from '../screens/CommunityScreens/CommunityPostCreateScreen';
 import CommunityUpdatePostScreen from '../screens/CommunityScreens/CommunityUpdatePostScreen';
-import AddScheduleScreen from '../screens/AddScheduleScreen';
+import AddScheduleScreen from '../screens/ScheduleScreens/AddScheduleScreen';
 import PasswordRecoveryScreen from '../screens/AuthenciationScreens/PasswordRecoveryScreen';
 import PasswordRecoveryCodeScreen from '../screens/AuthenciationScreens/PasswordRecoveryCodeScreen';
 import PasswordRecoveryNewScreen from '../screens/AuthenciationScreens/PasswordRecoveryNewScreen';

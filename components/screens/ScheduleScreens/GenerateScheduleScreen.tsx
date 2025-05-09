@@ -14,10 +14,10 @@ import {
 import Icon from "@react-native-vector-icons/ionicons"
 import EnhancedScheduleCard from "./EnhancedScheduleCard"
 import { useNavigation } from "@react-navigation/native"
-import BackButton from "../BackButton"
-import useScheduleStore from "../utils/useScheduleStore"
-import CommonDialog from "../commons/CommonDialog"
-import { theme } from "../contants/theme"
+import BackButton from "../../BackButton"
+import useScheduleStore from "../../utils/useScheduleStore"
+import CommonDialog from "../../commons/CommonDialog"
+import { theme } from "../../contants/theme"
 const GenerateScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState("All")
   const navigation = useNavigation()

@@ -24,7 +24,8 @@ const WorkoutComparison = ({ workouts }: WorkoutComparisonProps) => {
   const stepsAnim = new Animated.Value(0)
   const distanceAnim = new Animated.Value(0)
   const caloriesAnim = new Animated.Value(0)
-
+   console.log("workouts", workouts);
+   
   // Calculate max values
   const maxValues = {
     steps: Math.max(...workouts.map((w) => w.steps)),
@@ -167,7 +168,7 @@ const WorkoutComparison = ({ workouts }: WorkoutComparisonProps) => {
                   {
                     width: caloriesAnim.interpolate({
                       inputRange: [0, 100],
-                      outputRange: ["0%", "50%"],
+                      outputRange: ["0%", "100%"],
                     }),
                     backgroundColor: "#EF4444",
                   },
