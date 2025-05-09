@@ -127,7 +127,6 @@ const useScheduleStore = create<ScheduleState>()(
           set(state => ({
             schedules: [...state.schedules, newSchedule],
             isLoading: false,
-            message: response?.message,
           }));
 
           return newSchedule;

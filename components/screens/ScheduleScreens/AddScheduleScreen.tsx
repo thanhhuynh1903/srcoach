@@ -18,7 +18,7 @@ import {useNavigation} from '@react-navigation/native';
 import useScheduleStore from '../../utils/useScheduleStore';
 import {ActivityIndicator} from 'react-native-paper';
 import {is} from 'date-fns/locale';
-
+import Toast from 'react-native-toast-message';
 const AddScheduleScreen = () => {
   // State for form fields
   const navigate = useNavigation();
@@ -34,16 +34,13 @@ const AddScheduleScreen = () => {
   const [dailyGoals, setDailyGoals] = useState({});
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
-
   useEffect(() => {
-  if (message) {
-    Alert.alert("Validation Error", message, [{ text: "OK" }]);
-    // Reset message sau khi hiển thị
-    useScheduleStore.getState().clear(); 
-  }
-}, [message]);
-
-
+    if (message) {
+      Alert.alert('Validation Error', message, [{text: 'OK'}]);
+      // Reset message sau khi hiển thị
+      useScheduleStore.getState().clear();
+    }
+  }, [message]);
   const handleCreateSchedule = async () => {
     useScheduleStore.getState().clear();
 
@@ -75,9 +72,12 @@ const AddScheduleScreen = () => {
       console.log('Schedules after creation:', message);
       await fetchSelfSchedules();
       if (result) {
-        Alert.alert('Success', 'Schedule created successfully', [
-          {text: 'OK', onPress: () => navigate.goBack()},
-        ]);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Schedule created successfully',
+        });
+        navigate.goBack();
       }
     } catch (err) {
       console.error('Error creating workout schedule:', err);
@@ -353,11 +353,11 @@ const AddScheduleScreen = () => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            getSelectedDatesCount() === 0 || isCreating
+            getSelectedDatesCount() < 3 || isCreating
               ? styles.disabledButton
               : null,
           ]}
-          disabled={getSelectedDatesCount() === 0 || isCreating}
+          disabled={getSelectedDatesCount() < 3 || isCreating}
           onPress={handleCreateSchedule}>
           {isCreating ? (
             <ActivityIndicator color="#FFFFFF" />

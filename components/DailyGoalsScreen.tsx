@@ -1,51 +1,44 @@
-import React, {useState, useEffect} from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  TextInput,
-  Switch,
-} from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
-import {format} from 'date-fns';
-import {US} from 'date-fns/locale';
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from "react-native"
+import Icon from "@react-native-vector-icons/ionicons"
+import { format } from "date-fns"
+import { US } from "date-fns/locale"
 
 interface TrainingSession {
-  description: string;
-  start_time: string;
-  end_time: string;
-  goal_steps: number | null;
-  goal_distance: number | null;
-  goal_calories: number | null;
-  goal_minbpms: number | null;
-  goal_maxbpms: number | null;
+  description: string
+  start_time: string
+  end_time: string
+  goal_steps: number | null
+  goal_distance: number | null
+  goal_calories: number | null
+  goal_minbpms: number | null
+  goal_maxbpms: number | null
 }
 
 interface DailySchedule {
-  day: string;
-  details: TrainingSession[];
+  day: string
+  details: TrainingSession[]
 }
 
 interface DailyGoalsSectionProps {
-  selectedDates: Record<string, any>;
-  onGoalsChange: (schedule: DailySchedule[]) => void;
+  selectedDates: Record<string, any>
+  onGoalsChange: (schedule: DailySchedule[]) => void
 }
 
-const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
-  selectedDates,
-  onGoalsChange,
-}) => {
-  const [expandedDay, setExpandedDay] = useState<string | null>(null);
-  const [dailySchedule, setDailySchedule] = useState<DailySchedule[]>([]);
+const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({ selectedDates, onGoalsChange }) => {
+  const [expandedDay, setExpandedDay] = useState<string | null>(null)
+  const [dailySchedule, setDailySchedule] = useState<DailySchedule[]>([])
+  const [validationErrors, setValidationErrors] = useState<Record<string, Record<string, string>>>({})
 
   // Thời gian mặc định cho các buổi tập
   const defaultSessions = {
     morning: {
-      description: 'Morning',
-      start_time: '06:00',
-      end_time: '08:00',
+      description: "Morning",
+      start_time: "06:00",
+      end_time: "08:00",
       goal_steps: 5000,
       goal_distance: 5,
       goal_calories: 300,
@@ -53,9 +46,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       goal_maxbpms: 130,
     },
     afternoon: {
-      description: 'afternoon',
-      start_time: '15:00',
-      end_time: '17:00',
+      description: "afternoon",
+      start_time: "15:00",
+      end_time: "17:00",
       goal_steps: 8000,
       goal_distance: 8,
       goal_calories: 500,
@@ -63,70 +56,83 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       goal_maxbpms: 135,
     },
     evening: {
-      description: 'evening',
-      start_time: '18:00',
-      end_time: '20:00',
+      description: "evening",
+      start_time: "18:00",
+      end_time: "20:00",
       goal_steps: 6000,
       goal_distance: 6,
       goal_calories: 400,
       goal_minbpms: 100,
       goal_maxbpms: 120,
     },
-  };
+  }
 
   // Hàm kiểm tra và sửa lỗi dữ liệu trước khi gửi đi
-  const validateAndFixScheduleData = (
-    scheduleData: DailySchedule[],
-  ): DailySchedule[] => {
-    return scheduleData.map(day => {
+  const getDistanceError = (value: number | null) => {
+    if (value == null) return null // Không lỗi nếu không có mục tiêu
+    if (value < 1.0) return "Khoảng cách phải ít nhất 1.0 km"
+    if (value > 25) return "Khoảng cách phải tối đa 25 km"
+    return null
+  }
+
+  const getCaloriesError = (value: number | null) => {
+    if (value == null) return null
+    if (value < 10) return "Calo phải ít nhất 10"
+    if (value > 2000) return "Calo phải tối đa 2000"
+    return null
+  }
+
+  const getStepsError = (value: number | null) => {
+    if (value == null) return null
+    if (value < 1500) return "Bước chân phải ít nhất 1500"
+    if (value > 35000) return "Bước chân phải tối đa 35000"
+    return null
+  }
+
+  const validateAndFixScheduleData = (scheduleData: DailySchedule[]): DailySchedule[] => {
+    return scheduleData.map((day) => {
       return {
         day: day.day,
-        details: day.details.map(session => {
+        details: day.details.map((session) => {
           return {
-            description: session.description || 'Session',
+            description: session.description || "Session",
             start_time: session.start_time,
             end_time: session.end_time,
             goal_steps:
-              typeof session.goal_steps === 'string'
-                ? parseInt(session.goal_steps)
-                : session.goal_steps,
+              typeof session.goal_steps === "string" ? Number.parseInt(session.goal_steps) : session.goal_steps,
             goal_distance:
-              typeof session.goal_distance === 'string'
-                ? Math.min(parseFloat(session.goal_distance), 9999.99)
+              typeof session.goal_distance === "string"
+                ? Math.min(Number.parseFloat(session.goal_distance), 9999.99)
                 : session.goal_distance !== null
-                ? Math.min(session.goal_distance, 9999.99)
-                : null,
+                  ? Math.min(session.goal_distance, 9999.99)
+                  : null,
 
             goal_calories:
-              typeof session.goal_calories === 'string'
-                ? parseInt(session.goal_calories)
+              typeof session.goal_calories === "string"
+                ? Number.parseInt(session.goal_calories)
                 : session.goal_calories,
             goal_minbpms:
-              typeof session.goal_minbpms === 'string'
-                ? parseInt(session.goal_minbpms)
-                : session.goal_minbpms,
+              typeof session.goal_minbpms === "string" ? Number.parseInt(session.goal_minbpms) : session.goal_minbpms,
             goal_maxbpms:
-              typeof session.goal_maxbpms === 'string'
-                ? parseInt(session.goal_maxbpms)
-                : session.goal_maxbpms,
-          };
+              typeof session.goal_maxbpms === "string" ? Number.parseInt(session.goal_maxbpms) : session.goal_maxbpms,
+          }
         }),
-      };
-    });
-  };
+      }
+    })
+  }
 
   // Khởi tạo lịch cho các ngày được chọn
   useEffect(() => {
-    const newSchedule: DailySchedule[] = [];
+    const newSchedule: DailySchedule[] = []
 
     Object.keys(selectedDates)
       .sort()
-      .forEach(date => {
+      .forEach((date) => {
         // Kiểm tra xem ngày đã có trong lịch chưa
-        const existingDay = dailySchedule.find(item => item.day === date);
+        const existingDay = dailySchedule.find((item) => item.day === date)
 
         if (existingDay) {
-          newSchedule.push(existingDay);
+          newSchedule.push(existingDay)
         } else {
           // Thêm ngày mới với buổi sáng mặc định
           newSchedule.push({
@@ -138,39 +144,37 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                 end_time: `${date}T${defaultSessions.morning.end_time}:00.000Z`,
               },
             ],
-          });
+          })
         }
-      });
+      })
 
     // Loại bỏ các ngày không còn được chọn
-    const filteredSchedule = newSchedule.filter(day =>
-      Object.keys(selectedDates).includes(day.day),
-    );
+    const filteredSchedule = newSchedule.filter((day) => Object.keys(selectedDates).includes(day.day))
 
     // Kiểm tra và sửa lỗi dữ liệu
-    const validatedSchedule = validateAndFixScheduleData(filteredSchedule);
+    const validatedSchedule = validateAndFixScheduleData(filteredSchedule)
 
-    setDailySchedule(validatedSchedule);
-    onGoalsChange(validatedSchedule);
-  }, [selectedDates]);
+    setDailySchedule(validatedSchedule)
+    onGoalsChange(validatedSchedule)
+  }, [selectedDates])
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, 'EEE, dd/MM', {locale: US});
-  };
+    const date = new Date(dateString)
+    return format(date, "EEE, dd/MM", { locale: US })
+  }
 
   const toggleDay = (date: string) => {
-    setExpandedDay(expandedDay === date ? null : date);
-  };
+    setExpandedDay(expandedDay === date ? null : date)
+  }
 
   const addSession = (dayIndex: number) => {
-    const newSchedule = [...dailySchedule];
-    const day = newSchedule[dayIndex];
-    const date = day.day;
+    const newSchedule = [...dailySchedule]
+    const day = newSchedule[dayIndex]
+    const date = day.day
 
     // Thêm buổi tập mới vào ngày với giá trị số đúng kiểu dữ liệu
     day.details.push({
-      description: 'New Session',
+      description: "New Session",
       start_time: `${date}T${defaultSessions.afternoon.start_time}:00.000Z`,
       end_time: `${date}T${defaultSessions.afternoon.end_time}:00.000Z`,
       goal_steps: Number(defaultSessions.afternoon.goal_steps),
@@ -178,338 +182,376 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       goal_calories: Number(defaultSessions.afternoon.goal_calories),
       goal_minbpms: Number(defaultSessions.afternoon.goal_minbpms),
       goal_maxbpms: Number(defaultSessions.afternoon.goal_maxbpms),
-    });
+    })
 
-    setDailySchedule(newSchedule);
-    onGoalsChange(validateAndFixScheduleData(newSchedule));
-  };
+    setDailySchedule(newSchedule)
+    onGoalsChange(validateAndFixScheduleData(newSchedule))
+  }
 
   const removeSession = (dayIndex: number, sessionIndex: number) => {
-    const newSchedule = [...dailySchedule];
+    const newSchedule = [...dailySchedule]
 
     // Không cho phép xóa nếu chỉ còn 1 buổi tập
     if (newSchedule[dayIndex].details.length <= 1) {
-      return;
+      return
     }
 
-    newSchedule[dayIndex].details.splice(sessionIndex, 1);
-    setDailySchedule(newSchedule);
-    onGoalsChange(validateAndFixScheduleData(newSchedule));
-  };
+    newSchedule[dayIndex].details.splice(sessionIndex, 1)
 
-  const updateSession = (
-    dayIndex: number,
-    sessionIndex: number,
-    field: keyof TrainingSession,
-    value: any,
-  ) => {
-    const newSchedule = [...dailySchedule];
-    const session = newSchedule[dayIndex].details[sessionIndex];
+    // Xóa thông báo lỗi cho buổi tập đã xóa
+    const newValidationErrors = { ...validationErrors }
+    const sessionKey = `${dayIndex}-${sessionIndex}`
+    if (newValidationErrors[sessionKey]) {
+      delete newValidationErrors[sessionKey]
+    }
+    setValidationErrors(newValidationErrors)
 
-    if (field === 'start_time' || field === 'end_time') {
+    setDailySchedule(newSchedule)
+    onGoalsChange(validateAndFixScheduleData(newSchedule))
+  }
+
+  const validateField = (dayIndex: number, sessionIndex: number, field: keyof TrainingSession, value: any) => {
+    const sessionKey = `${dayIndex}-${sessionIndex}`
+    const newValidationErrors = { ...validationErrors }
+
+    if (!newValidationErrors[sessionKey]) {
+      newValidationErrors[sessionKey] = {}
+    }
+
+    // Xóa lỗi cũ nếu có
+    if (newValidationErrors[sessionKey][field]) {
+      delete newValidationErrors[sessionKey][field]
+    }
+
+    // Kiểm tra các điều kiện
+    let error = null
+    if (field === "goal_distance") {
+      error = getDistanceError(value)
+    } else if (field === "goal_calories") {
+      error = getCaloriesError(value)
+    } else if (field === "goal_steps") {
+      error = getStepsError(value)
+    }
+
+    if (error) {
+      newValidationErrors[sessionKey][field] = error
+    } else if (Object.keys(newValidationErrors[sessionKey]).length === 0) {
+      delete newValidationErrors[sessionKey]
+    }
+
+    setValidationErrors(newValidationErrors)
+  }
+
+  const updateSession = (dayIndex: number, sessionIndex: number, field: keyof TrainingSession, value: any) => {
+    const newSchedule = [...dailySchedule]
+    const session = newSchedule[dayIndex].details[sessionIndex]
+
+    if (field === "start_time" || field === "end_time") {
       // Xử lý cập nhật thời gian
-      const date = newSchedule[dayIndex].day;
-      const [hours, minutes] = value.split(':');
-      const timeString = `${date}T${hours}:${minutes}:00.000Z`;
-      session[field] = timeString;
+      const date = newSchedule[dayIndex].day
+      const [hours, minutes] = value.split(":")
+      const timeString = `${date}T${hours}:${minutes}:00.000Z`
+      session[field] = timeString
     } else if (
-      field === 'goal_steps' ||
-      field === 'goal_calories' ||
-      field === 'goal_minbpms' ||
-      field === 'goal_maxbpms'
+      field === "goal_steps" ||
+      field === "goal_calories" ||
+      field === "goal_minbpms" ||
+      field === "goal_maxbpms"
     ) {
       // Đảm bảo các giá trị số nguyên được lưu dưới dạng số, không phải chuỗi
-      const newValue = parseInt(value) || 0;
+      const newValue = Number.parseInt(value) || 0
       if (newValue === 0) {
-        session[field] = null;
+        session[field] = null
       } else {
-        session[field] = newValue;
+        session[field] = newValue
       }
-    } else if (field === 'goal_distance') {
-      const newValue =
-        value === null ? null : Math.min(parseFloat(value), 9999.99);
-      session[field] = isNaN(newValue) ? null : newValue;
+
+      // Validate immediately after updating
+      if (field === "goal_steps" || field === "goal_calories") {
+        validateField(dayIndex, sessionIndex, field, newValue)
+      }
+    } else if (field === "goal_distance") {
+      const newValue = value === null ? null : Math.min(Number.parseFloat(value), 9999.99)
+      session[field] = isNaN(newValue) ? null : newValue
+
+      // Validate immediately after updating
+      validateField(dayIndex, sessionIndex, field, newValue)
     } else {
       // Xử lý các trường khác
-      session[field] = value;
+      session[field] = value
     }
 
-    setDailySchedule(newSchedule);
-    onGoalsChange(validateAndFixScheduleData(newSchedule));
-  };
+    setDailySchedule(newSchedule)
+    onGoalsChange(validateAndFixScheduleData(newSchedule))
+  }
 
   // Hàm trích xuất giờ:phút từ chuỗi ISO
   const extractTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return `${date.getUTCHours().toString().padStart(2, '0')}:${date
-      .getUTCMinutes()
-      .toString()
-      .padStart(2, '0')}`;
-  };
+    const date = new Date(isoString)
+    return `${date.getUTCHours().toString().padStart(2, "0")}:${date.getUTCMinutes().toString().padStart(2, "0")}`
+  }
 
   if (Object.keys(selectedDates).length === 0) {
-    return null;
+    return null
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Daily Goals</Text>
-      <Text style={styles.sectionDescription}>
-        Set specific goals for each day in your workout schedule
-      </Text>
+      <Text style={styles.sectionDescription}>Set specific goals for each day in your workout schedule</Text>
 
       <ScrollView
         style={styles.daysContainer}
         nestedScrollEnabled={true}
         showsVerticalScrollIndicator={true}
-        contentContainerStyle={{paddingBottom: 8}}>
+        contentContainerStyle={{ paddingBottom: 8 }}
+      >
         {dailySchedule.map((day, dayIndex) => (
           <View key={day.day} style={styles.dayCard}>
-            <TouchableOpacity
-              style={styles.dayHeader}
-              onPress={() => toggleDay(day.day)}
-              activeOpacity={0.7}>
+            <TouchableOpacity style={styles.dayHeader} onPress={() => toggleDay(day.day)} activeOpacity={0.7}>
               <View style={styles.dayHeaderLeft}>
                 <View style={styles.dateCircle}>
-                  <Text style={styles.dateNumber}>
-                    {new Date(day.day).getDate()}
-                  </Text>
+                  <Text style={styles.dateNumber}>{new Date(day.day).getDate()}</Text>
                 </View>
                 <View>
                   <Text style={styles.dateText}>{formatDate(day.day)}</Text>
                   <Text style={styles.sessionCount}>
-                    {day.details.length}{' '}
-                    {day.details.length === 1 ? 'Session' : 'Sessions'}
+                    {day.details.length} {day.details.length === 1 ? "Session" : "Sessions"}
                   </Text>
                 </View>
               </View>
-              <Icon
-                name={expandedDay === day.day ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color="#64748B"
-              />
+              <Icon name={expandedDay === day.day ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
             </TouchableOpacity>
 
             {expandedDay === day.day && (
               <View style={styles.dayGoals}>
-                {day.details.map((session, sessionIndex) => (
-                  <View key={sessionIndex} style={styles.sessionContainer}>
-                    <View style={styles.sessionHeader}>
-                      <Text style={styles.sessionTitle}>
-                        Session {sessionIndex + 1}
-                      </Text>
-                      {day.details.length > 1 && (
-                        <TouchableOpacity
-                          onPress={() => removeSession(dayIndex, sessionIndex)}
-                          style={styles.removeButton}>
-                          <Icon
-                            name="trash-outline"
-                            size={16}
-                            color="#EF4444"
+                {day.details.map((session, sessionIndex) => {
+                  const sessionKey = `${dayIndex}-${sessionIndex}`
+                  const sessionErrors = validationErrors[sessionKey] || {}
+
+                  return (
+                    <View key={sessionIndex} style={styles.sessionContainer}>
+                      <View style={styles.sessionHeader}>
+                        <Text style={styles.sessionTitle}>Session {sessionIndex + 1}</Text>
+                        {day.details.length > 1 && (
+                          <TouchableOpacity
+                            onPress={() => removeSession(dayIndex, sessionIndex)}
+                            style={styles.removeButton}
+                          >
+                            <Icon name="trash-outline" size={16} color="#EF4444" />
+                            <Text style={styles.removeButtonText}>Delete</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {/* Mô tả buổi tập */}
+                      <View style={styles.inputRow}>
+                        <Text style={styles.inputLabel}>Describe:</Text>
+                        <TextInput
+                          style={styles.textInput}
+                          value={session.description}
+                          onChangeText={(value) => updateSession(dayIndex, sessionIndex, "description", value)}
+                          placeholder="Describe your session"
+                        />
+                      </View>
+
+                      {/* Thời gian bắt đầu và kết thúc */}
+                      <View style={styles.timeRow}>
+                        <View style={styles.timeInputContainer}>
+                          <Text style={styles.timeLabel}>Start:</Text>
+                          <TextInput
+                            style={styles.timeInput}
+                            value={extractTime(session.start_time)}
+                            onChangeText={(value) => updateSession(dayIndex, sessionIndex, "start_time", value)}
+                            placeholder="HH:MM"
                           />
-                          <Text style={styles.removeButtonText}>Delete</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    {/* Mô tả buổi tập */}
-                    <View style={styles.inputRow}>
-                      <Text style={styles.inputLabel}>Describe:</Text>
-                      <TextInput
-                        style={styles.textInput}
-                        value={session.description}
-                        onChangeText={value =>
-                          updateSession(
-                            dayIndex,
-                            sessionIndex,
-                            'description',
-                            value,
-                          )
-                        }
-                        placeholder="Describe your session"
-                      />
-                    </View>
-
-                    {/* Thời gian bắt đầu và kết thúc */}
-                    <View style={styles.timeRow}>
-                      <View style={styles.timeInputContainer}>
-                        <Text style={styles.timeLabel}>Start:</Text>
-                        <TextInput
-                          style={styles.timeInput}
-                          value={extractTime(session.start_time)}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'start_time',
-                              value,
-                            )
-                          }
-                          placeholder="HH:MM"
-                        />
+                        </View>
+                        <View style={styles.timeInputContainer}>
+                          <Text style={styles.timeLabel}>End:</Text>
+                          <TextInput
+                            style={styles.timeInput}
+                            value={extractTime(session.end_time)}
+                            onChangeText={(value) => updateSession(dayIndex, sessionIndex, "end_time", value)}
+                            placeholder="HH:MM"
+                          />
+                        </View>
                       </View>
-                      <View style={styles.timeInputContainer}>
-                        <Text style={styles.timeLabel}>End:</Text>
-                        <TextInput
-                          style={styles.timeInput}
-                          value={extractTime(session.end_time)}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'end_time',
-                              value,
-                            )
-                          }
-                          placeholder="HH:MM"
-                        />
-                      </View>
-                    </View>
 
-                    {/* Mục tiêu */}
-                    <Text style={styles.goalsTitle}>Training objectives</Text>
+                      {/* Mục tiêu */}
+                      <Text style={styles.goalsTitle}>Training objectives</Text>
 
-                    <View style={styles.goalRow}>
-                      <View style={styles.goalIconContainer}>
-                        <Icon name="walk" size={16} color="#0F2B5B" />
-                      </View>
-                      <Text style={styles.goalLabel}>Distance</Text>
-                      <View style={styles.goalInputWrapper}>
-                        <TextInput
-                          style={styles.goalInput}
-                          value={
-                            // Hiển thị giá trị nguyên bản khi đang nhập
-                            typeof session.goal_distance === 'number'
-                              ? session.goal_distance
-                                  .toString()
-                                  .replace(/\.?0+$/, '')
-                              : '0.00'
-                          }
-                          onChangeText={value => {
-                            // Cho phép nhập dấu chấm và số
-                            if (/^\d*\.?\d*$/.test(value)) {
-                              const numericValue =
-                                value === '' ? null : parseFloat(value);
-                              updateSession(
-                                dayIndex,
-                                sessionIndex,
-                                'goal_distance',
-                                numericValue,
-                              );
+                      <View style={styles.goalRow}>
+                        <View style={styles.goalIconContainer}>
+                          <Icon name="walk" size={16} color="#0F2B5B" />
+                        </View>
+                        <Text style={styles.goalLabel}>Distance</Text>
+                        <View style={[styles.goalInputWrapper, sessionErrors.goal_distance ? styles.inputError : null]}>
+                          <TextInput
+                            style={styles.goalInput}
+                            value={
+                              typeof session.goal_distance === "number"
+                                ? session.goal_distance.toString()
+                                : typeof session.goal_distance === "string"
+                                  ? session.goal_distance
+                                  : ""
                             }
-                          }}
-                          keyboardType="decimal-pad"
-                          placeholder="0.00"
-                          maxLength={5}
-                        />
-
-                        <Text style={styles.goalUnit}>km</Text>
+                            onChangeText={(value) => {
+                              // Cho phép nhập dấu chấm và số
+                              if (/^\d*\.?\d*$/.test(value)) {
+                                updateSession(dayIndex, sessionIndex, "goal_distance", value)
+                              }
+                            }}
+                            onBlur={() => {
+                              validateField(dayIndex, sessionIndex, "goal_distance", session.goal_distance)
+                            }}
+                            keyboardType="decimal-pad"
+                            placeholder="0.00"
+                            maxLength={5}
+                          />
+                          <Text style={styles.goalUnit}>km</Text>
+                          {sessionErrors.goal_distance && (
+                            <View style={styles.errorIcon}>
+                              <Icon name="alert-circle" size={16} color="#EF4444" />
+                            </View>
+                          )}
+                        </View>
                       </View>
+                      {sessionErrors.goal_distance && (
+                        <Text style={styles.errorText}>{sessionErrors.goal_distance}</Text>
+                      )}
+
+                      <View style={styles.goalRow}>
+                        <View style={styles.goalIconContainer}>
+                          <Icon name="flame" size={16} color="#0F2B5B" />
+                        </View>
+                        <Text style={styles.goalLabel}>Calo</Text>
+                        <View style={[styles.goalInputWrapper, sessionErrors.goal_calories ? styles.inputError : null]}>
+                          <TextInput
+                            style={styles.goalInput}
+                            value={session.goal_calories?.toString() || ""}
+                            onChangeText={(value) => {
+                              if (/^\d*$/.test(value)) {
+                                updateSession(
+                                  dayIndex,
+                                  sessionIndex,
+                                  "goal_calories",
+                                  value === "" ? null : Number.parseInt(value),
+                                )
+                              }
+                            }}
+                            onBlur={() => {
+                              validateField(dayIndex, sessionIndex, "goal_calories", session.goal_calories)
+                            }}
+                            keyboardType="numeric"
+                            maxLength={5}
+                          />
+                          <Text style={styles.goalUnit}>kcal</Text>
+                          {sessionErrors.goal_calories && (
+                            <View style={styles.errorIcon}>
+                              <Icon name="alert-circle" size={16} color="#EF4444" />
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      {sessionErrors.goal_calories && (
+                        <Text style={styles.errorText}>{sessionErrors.goal_calories}</Text>
+                      )}
+
+                      <View style={styles.goalRow}>
+                        <View style={styles.goalIconContainer}>
+                          <Icon name="footsteps" size={16} color="#0F2B5B" />
+                        </View>
+                        <Text style={styles.goalLabel}>Steps</Text>
+                        <View style={[styles.goalInputWrapper, sessionErrors.goal_steps ? styles.inputError : null]}>
+                          <TextInput
+                            style={styles.goalInput}
+                            value={session.goal_steps?.toString() || ""}
+                            onChangeText={(value) => {
+                              if (/^\d*$/.test(value)) {
+                                updateSession(
+                                  dayIndex,
+                                  sessionIndex,
+                                  "goal_steps",
+                                  value === "" ? null : Number.parseInt(value),
+                                )
+                              }
+                            }}
+                            onBlur={() => {
+                              validateField(dayIndex, sessionIndex, "goal_steps", session.goal_steps)
+                            }}
+                            keyboardType="numeric"
+                            maxLength={5}
+                          />
+                          <Text style={styles.goalUnit}>Step</Text>
+                          {sessionErrors.goal_steps && (
+                            <View style={styles.errorIcon}>
+                              <Icon name="alert-circle" size={16} color="#EF4444" />
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      {sessionErrors.goal_steps && <Text style={styles.errorText}>{sessionErrors.goal_steps}</Text>}
+
+                      {/* Heart Rate BPM Range */}
+                      <View style={styles.goalRow}>
+                        <View style={styles.goalIconContainer}>
+                          <Icon name="heart" size={16} color="#0F2B5B" />
+                        </View>
+                        <Text style={styles.goalLabel}>Min Heart Rate</Text>
+                        <View style={styles.goalInputWrapper}>
+                          <TextInput
+                            style={styles.goalInput}
+                            value={session.goal_minbpms?.toString() || ""}
+                            onChangeText={(value) => {
+                              if (/^\d*$/.test(value)) {
+                                updateSession(
+                                  dayIndex,
+                                  sessionIndex,
+                                  "goal_minbpms",
+                                  value === "" ? null : Number.parseInt(value),
+                                )
+                              }
+                            }}
+                            keyboardType="numeric"
+                            maxLength={3}
+                          />
+                          <Text style={styles.goalUnit}>bpm</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.goalRow}>
+                        <View style={styles.goalIconContainer}>
+                          <Icon name="heart-half" size={16} color="#0F2B5B" />
+                        </View>
+                        <Text style={styles.goalLabel}>Max Heart Rate</Text>
+                        <View style={styles.goalInputWrapper}>
+                          <TextInput
+                            style={styles.goalInput}
+                            value={session.goal_maxbpms?.toString() || ""}
+                            onChangeText={(value) => {
+                              if (/^\d*$/.test(value)) {
+                                updateSession(
+                                  dayIndex,
+                                  sessionIndex,
+                                  "goal_maxbpms",
+                                  value === "" ? null : Number.parseInt(value),
+                                )
+                              }
+                            }}
+                            keyboardType="numeric"
+                            maxLength={3}
+                          />
+                          <Text style={styles.goalUnit}>bpm</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.divider} />
                     </View>
-
-                    <View style={styles.goalRow}>
-                      <View style={styles.goalIconContainer}>
-                        <Icon name="flame" size={16} color="#0F2B5B" />
-                      </View>
-                      <Text style={styles.goalLabel}>Calo</Text>
-                      <View style={styles.goalInputWrapper}>
-                        <TextInput
-                          style={styles.goalInput}
-                          value={session.goal_calories?.toString() || '0'}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'goal_calories',
-                              parseInt(value) || 0,
-                            )
-                          }
-                          keyboardType="numeric"
-                          maxLength={5}
-                        />
-                        <Text style={styles.goalUnit}>kcal</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.goalRow}>
-                      <View style={styles.goalIconContainer}>
-                        <Icon name="footsteps" size={16} color="#0F2B5B" />
-                      </View>
-                      <Text style={styles.goalLabel}>Steps</Text>
-                      <View style={styles.goalInputWrapper}>
-                        <TextInput
-                          style={styles.goalInput}
-                          value={session.goal_steps?.toString() || '0'}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'goal_steps',
-                              parseInt(value) || 0,
-                            )
-                          }
-                          keyboardType="numeric"
-                          maxLength={5}
-                        />
-                        <Text style={styles.goalUnit}>Step</Text>
-                      </View>
-                    </View>
-
-                    {/* Heart Rate BPM Range */}
-                    <View style={styles.goalRow}>
-                      <View style={styles.goalIconContainer}>
-                        <Icon name="heart" size={16} color="#0F2B5B" />
-                      </View>
-                      <Text style={styles.goalLabel}>Min Heart Rate</Text>
-                      <View style={styles.goalInputWrapper}>
-                        <TextInput
-                          style={styles.goalInput}
-                          value={session.goal_minbpms?.toString()}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'goal_minbpms',
-                              parseInt(value) || 0,
-                            )
-                          }
-                          keyboardType="numeric"
-                        />
-                        <Text style={styles.goalUnit}>bpm</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.goalRow}>
-                      <View style={styles.goalIconContainer}>
-                        <Icon name="heart-half" size={16} color="#0F2B5B" />
-                      </View>
-                      <Text style={styles.goalLabel}>Max Heart Rate</Text>
-                      <View style={styles.goalInputWrapper}>
-                        <TextInput
-                          style={styles.goalInput}
-                          value={session.goal_maxbpms?.toString()}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'goal_maxbpms',
-                              parseInt(value) || 0,
-                            )
-                          }
-                          keyboardType="numeric"
-                        />
-                        <Text style={styles.goalUnit}>bpm</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.divider} />
-                  </View>
-                ))}
+                  )
+                })}
 
                 {/* Nút thêm buổi tập */}
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => addSession(dayIndex)}>
+                <TouchableOpacity style={styles.addButton} onPress={() => addSession(dayIndex)}>
                   <Icon name="add-circle-outline" size={16} color="#0F2B5B" />
                   <Text style={styles.addButtonText}>Add more session</Text>
                 </TouchableOpacity>
@@ -519,8 +561,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
         ))}
       </ScrollView>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -529,12 +571,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   sectionDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: "#64748B",
     marginBottom: 16,
   },
   daysContainer: {
@@ -542,78 +584,78 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   dayCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     marginBottom: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   dayHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 12,
   },
   dayHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   dateCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#0F2B5B',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#0F2B5B",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   dateNumber: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "600",
     fontSize: 16,
   },
   dateText: {
     fontSize: 15,
-    fontWeight: '500',
-    color: '#0F172A',
+    fontWeight: "500",
+    color: "#0F172A",
   },
   sessionCount: {
     fontSize: 13,
-    color: '#64748B',
+    color: "#64748B",
     marginTop: 2,
   },
   dayGoals: {
     padding: 12,
     paddingTop: 0,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
   },
   sessionContainer: {
     marginBottom: 8,
   },
   sessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginVertical: 12,
   },
   sessionTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: "600",
+    color: "#0F172A",
   },
   removeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
   },
   removeButtonText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: "#EF4444",
     marginLeft: 4,
   },
   inputRow: {
@@ -621,21 +663,21 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: "#64748B",
     marginBottom: 4,
   },
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
   },
   timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   timeInputContainer: {
@@ -644,13 +686,13 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: "#64748B",
     marginBottom: 4,
   },
   timeInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -658,42 +700,42 @@ const styles = StyleSheet.create({
   },
   goalsTitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0F172A',
+    fontWeight: "500",
+    color: "#0F172A",
     marginBottom: 12,
     marginTop: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: "#E2E8F0",
     marginVertical: 16,
   },
   goalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 8,
   },
   goalIconContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#E0E7FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E0E7FF",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   goalLabel: {
     fontSize: 14,
-    color: '#0F172A',
+    color: "#0F172A",
     flex: 1,
   },
   goalInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     paddingHorizontal: 8,
     paddingVertical: 4,
     width: 100,
@@ -702,34 +744,56 @@ const styles = StyleSheet.create({
   goalInput: {
     flex: 1,
     fontSize: 14,
-    color: '#0F172A',
+    color: "#0F172A",
     padding: 0,
-    textAlign: 'right',
+    textAlign: "right",
     paddingRight: 4,
     includeFontPadding: false,
   },
-
+  inputError: {
+    borderColor: "#EF4444",
+    borderWidth: 1.5,
+    backgroundColor: "#FEF2F2",
+  },
   goalUnit: {
     fontSize: 12,
-    color: '#64748B',
+    color: "#64748B",
     marginLeft: 4,
     width: 30,
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E0E7FF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E0E7FF",
     borderRadius: 8,
     paddingVertical: 10,
     marginTop: 8,
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0F2B5B',
+    fontWeight: "500",
+    color: "#0F2B5B",
     marginLeft: 8,
   },
-});
+  errorText: {
+    fontSize: 12,
+    color: "#EF4444",
+    marginTop: 4,
+    marginLeft: 44,
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  errorIcon: {
+    position: "absolute",
+    right: -8,
+    top: -8,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#EF4444",
+  },
+ 
+})
 
-export default DailyGoalsSection;
+export default DailyGoalsSection
