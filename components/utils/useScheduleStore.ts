@@ -88,7 +88,10 @@ const useScheduleStore = create<ScheduleState>()(
 
           set({schedules: response.data, isLoading: false});
         } catch (error) {
-          console.error('Error getting personal training schedule list:', error);
+          console.error(
+            'Error getting personal training schedule list:',
+            error,
+          );
           set({
             error:
               'Unable to get personal training schedule list. Please try again later..',
@@ -124,15 +127,14 @@ const useScheduleStore = create<ScheduleState>()(
           set(state => ({
             schedules: [...state.schedules, newSchedule],
             isLoading: false,
-            message: response?.message,
           }));
 
           return newSchedule;
         } catch (error: any) {
-          console.log('Error creating workout schedule:', error.response?.data.message);
+          const serverMessage =
+            error.response?.data?.message || 'Unknown error';
           set({
-            message: error?.response?.data?.message,
-            error: 'Unable to create workout schedule. Please try again later.',
+            message: serverMessage, // Cập nhật message trực tiếp từ server
             isLoading: false,
           });
           return null;
@@ -175,7 +177,7 @@ const useScheduleStore = create<ScheduleState>()(
 
       // Xóa lịch tập
       deleteSchedule: async id => {
-        set({isLoading: true, error: null,message: null});
+        set({isLoading: true, error: null, message: null});
         try {
           const response = await api.deleteData(`/schedules/cancel/${id}`);
           if (response.status === 'success') {

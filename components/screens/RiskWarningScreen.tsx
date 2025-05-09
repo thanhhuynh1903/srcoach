@@ -14,7 +14,8 @@ import BackButton from '../BackButton';
 import {PieChart} from 'react-native-gifted-charts';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
-
+import CommonDialog from '../commons/CommonDialog';
+import { set } from 'date-fns';
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
 const getSeverityColor = (severity: any) => {
   switch (severity?.toLowerCase()) {
@@ -51,7 +52,7 @@ const getLevelProgress = (level: any) => {
 const RiskWarningScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-
+  const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
   const activityData = route.params?.params?.userActivity;
   const alertId = route.params?.alertId;
 
@@ -148,10 +149,7 @@ const RiskWarningScreen = () => {
 
       if (success) {
         await fetchHealthAlerts();
-        // Hiển thị thông báo thành công
-        Alert.alert('Success', 'Health assessment report saved.', [
-          {text: 'OK'},
-        ]);
+        setShowLogoutDialog(true);
       } else {
         Alert.alert('Error', 'Unable to save report. Please try again later.', [
           {text: 'OK', onPress: () => navigation.goBack()},
@@ -178,18 +176,27 @@ const RiskWarningScreen = () => {
       color: '#F1F5F9',
     },
   ];
+  const Confirm = [
 
+    {
+      label: 'OK',
+      color: '#1E3A8A',
+      variant: 'contained',
+      handler: () => setShowLogoutDialog(false),
+      iconName: 'log-out-outline',
+    },
+  ];
   // Tạo metrics từ risk_factors
   const heartRiskFactor = assessment.risk_factors.find(
     f =>
-      f.name.toLowerCase().includes('nhịp tim') &&
-      !f.name.toLowerCase().includes('thấp'),
+      f.name.toLowerCase().includes('Heart Rate') &&
+      !f.name.toLowerCase().includes('Low'),
   );
 
   const lowestHeartRiskFactor = assessment.risk_factors.find(
     f =>
-      f.name.toLowerCase().includes('nhịp tim') &&
-      f.name.toLowerCase().includes('thấp'),
+      f.name.toLowerCase().includes('Heart Rate') &&
+      f.name.toLowerCase().includes('Low'),
   );
 
   const paceRiskFactor = assessment.risk_factors.find(f =>
@@ -289,13 +296,14 @@ const RiskWarningScreen = () => {
         {/* Activity Info */}
         <View style={styles.activityInfoContainer}>
           <Text style={styles.activityName}>
-            {assessment.alert_type || 'Hoạt động thể thao'}
+            {assessment.alert_type || 'ACTIVITY ALERT'}
           </Text>
           <View style={styles.activityStats}>
             <View style={styles.activityStat}>
               <Icon name="walk-outline" size={16} color="#64748B" />
               <Text style={styles.activityStatText}>
-                {activityData?.distance || assessment?.distance || '0'} km
+                
+                {activityData?.distance.toFixed(2) || assessment?.distance.toFixed(2) || '0'} km
               </Text>
             </View>
             <View style={styles.activityStat}>
@@ -413,6 +421,20 @@ const RiskWarningScreen = () => {
           </View>
         )}
       </ScrollView>
+      <CommonDialog
+        visible={showLogoutDialog}
+        onClose={() => setShowLogoutDialog(false)}
+        title="Save report"
+        content={
+          <View>
+            <Text style={{color: '#666', fontSize: 16}}>
+              This form risk report is saved successfully!!
+            </Text>
+          </View>
+        }
+        actionButtons={Confirm}
+        width="85%"
+      />
     </SafeAreaView>
   );
 };
@@ -596,7 +618,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   activityStatText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#64748B',
   },
   metricsContainer: {

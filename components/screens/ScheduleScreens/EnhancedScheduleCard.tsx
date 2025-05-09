@@ -11,8 +11,8 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 import WorkoutComparison from './Comparison';
-import useScheduleStore from '../utils/useScheduleStore';
-import {theme} from '../contants/theme';
+import useScheduleStore from '../../utils/useScheduleStore';
+import {theme} from '../../contants/theme';
 import Toast from 'react-native-toast-message';
 interface Workout {
   time: string;
@@ -78,6 +78,7 @@ const EnhancedScheduleCard = ({
               const success = await deleteSchedule(id);
                             
               if (success) {
+                await clear();
                 Toast.show({
                   type: 'success',
                   text1:'Delete Schedule successful'

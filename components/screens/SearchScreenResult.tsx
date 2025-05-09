@@ -40,7 +40,6 @@ type SearchResult = {
     image: {
       url: string;
     };
-
   };
   User?: {
     avatar?: string;
@@ -51,7 +50,7 @@ type User = {
   name: string;
   username: string;
   bio?: string;
-  image?: { url: string };
+  image?: {url: string};
 };
 const SearchResultsScreen = ({}) => {
   // In a real app, you would get the query from route.params
@@ -59,8 +58,15 @@ const SearchResultsScreen = ({}) => {
   const [activeTab, setActiveTab] = useState('All');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const navigate = useNavigation();
-  const {searchAll, searchPost,searchResults ,allSearchResults, searchLoading, searchError, likePost} =
-    usePostStore();
+  const {
+    searchAll,
+    searchPost,
+    searchResults,
+    allSearchResults,
+    searchLoading,
+    searchError,
+    likePost,
+  } = usePostStore();
 
   const {profile} = useLoginStore();
 
@@ -147,7 +153,13 @@ const SearchResultsScreen = ({}) => {
           id: post.id,
         })
       }>
-      <TouchableOpacity style={styles.postHeader} onPress={() => post?.user?.id === profile.id ? navigate.navigate('RunnerProfileScreen') : navigate.navigate('OtherProfileScreen', {postId: post?.id})}>
+      <TouchableOpacity
+        style={styles.postHeader}
+        onPress={() =>
+          post?.user?.id === profile.id
+            ? navigate.navigate('RunnerProfileScreen')
+            : navigate.navigate('OtherProfileScreen', {postId: post?.id})
+        }>
         <CommonAvatar mode={null} uri={post?.user?.image?.url} size={36} />
         <View style={{marginLeft: 8}}>
           <Text style={styles.authorName}>
@@ -222,7 +234,12 @@ const SearchResultsScreen = ({}) => {
     </TouchableOpacity>
   );
   const renderUserItem = (user: User) => (
-    <TouchableOpacity key={user.id} style={styles.userCard} onPress={() => navigate.navigate('OtherProfileScreen', {postId: user.id})}>
+    <TouchableOpacity
+      key={user.id}
+      style={styles.userCard}
+      onPress={() =>
+        navigate.navigate('OtherProfileScreen', {postId: user.id})
+      }>
       <CommonAvatar uri={user.image?.url} size={56} />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.username}</Text>
@@ -233,14 +250,19 @@ const SearchResultsScreen = ({}) => {
   );
 
   const renderExpertItem = (expert: User) => (
-    <TouchableOpacity key={expert.id} style={styles.userCard} onPress={() => navigate.navigate('OtherProfileScreen', {postId: expert.id})}>
-    <CommonAvatar uri={expert.image?.url} size={56} />
-    <View style={styles.userInfo}>
-      <Text style={styles.userName}>{expert.name}</Text>
-      <Text style={styles.userDetail}>@{expert.username}</Text>
-      {expert.bio && <Text style={styles.userBio}>{expert.bio}</Text>}
-    </View>
-  </TouchableOpacity>
+    <TouchableOpacity
+      key={expert.id}
+      style={styles.userCard}
+      onPress={() =>
+        navigate.navigate('OtherProfileScreen', {postId: expert.id})
+      }>
+      <CommonAvatar uri={expert.image?.url} size={56} />
+      <View style={styles.userInfo}>
+        <Text style={styles.userName}>{expert.name}</Text>
+        <Text style={styles.userDetail}>@{expert.username}</Text>
+        {expert.bio && <Text style={styles.userBio}>{expert.bio}</Text>}
+      </View>
+    </TouchableOpacity>
   );
 
   const handleLikePost = async (postId: string, isLike: boolean) => {
@@ -324,23 +346,29 @@ const SearchResultsScreen = ({}) => {
           <>
             {activeTab === 'All' && (
               <>
-                {searchResults && searchResults.length > 0 && (
+                {debouncedQuery === '' ? (
+                  renderEmptyState()
+                ) : (
                   <>
-                    <Text style={styles.sectionTitle}>Posts</Text>
-                    {searchResults.map(post => renderPostItem(post))}
-                  </>
-                )}
-                {allSearchResults.experts.length > 0 && (
-                  <>
-                    <Text style={styles.sectionTitle}>Experts</Text>
-                    {allSearchResults.experts.map(renderExpertItem)}
-                  </>
-                )}
+                    {searchResults && searchResults.length > 0 && (
+                      <>
+                        <Text style={styles.sectionTitle}>Posts</Text>
+                        {searchResults.map(post => renderPostItem(post))}
+                      </>
+                    )}
+                    {allSearchResults.experts.length > 0 && (
+                      <>
+                        <Text style={styles.sectionTitle}>Experts</Text>
+                        {allSearchResults.experts.map(renderExpertItem)}
+                      </>
+                    )}
 
-                {allSearchResults.runners.length > 0 && (
-                  <>
-                    <Text style={styles.sectionTitle}>Runners</Text>
-                    {allSearchResults.runners.map(renderUserItem)}
+                    {allSearchResults.runners.length > 0 && (
+                      <>
+                        <Text style={styles.sectionTitle}>Runners</Text>
+                        {allSearchResults.runners.map(renderUserItem)}
+                      </>
+                    )}
                   </>
                 )}
               </>
@@ -690,7 +718,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 8,
   },
-
 });
 
 export default SearchResultsScreen;

@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {Calendar} from 'react-native-calendars';
-import DailyGoalsSection from '../DailyGoalsScreen';
-import BackButton from '../BackButton';
+import DailyGoalsSection from '../../DailyGoalsScreen';
+import BackButton from '../../BackButton';
 import {useNavigation} from '@react-navigation/native';
-import useScheduleStore from '../utils/useScheduleStore';
+import useScheduleStore from '../../utils/useScheduleStore';
 import {ActivityIndicator} from 'react-native-paper';
-
+import {is} from 'date-fns/locale';
+import Toast from 'react-native-toast-message';
 const AddScheduleScreen = () => {
   // State for form fields
   const navigate = useNavigation();
@@ -26,15 +27,23 @@ const AddScheduleScreen = () => {
   const [selectedDates, setSelectedDates] = useState({});
   const [currentMonth, setCurrentMonth] = useState('');
   const [validDates, setValidDates] = useState({});
-  const {createSchedule, schedules, isLoading, message,fetchSelfSchedules} = useScheduleStore();
+  const {createSchedule, schedules, isLoading, message, fetchSelfSchedules} =
+    useScheduleStore();
   const [isCreating, setIsCreating] = useState(false);
   // Daily goals for each selected date
   const [dailyGoals, setDailyGoals] = useState({});
-
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
-
+  useEffect(() => {
+    if (message) {
+      Alert.alert('Validation Error', message, [{text: 'OK'}]);
+      // Reset message sau khi hiển thị
+      useScheduleStore.getState().clear();
+    }
+  }, [message]);
   const handleCreateSchedule = async () => {
+    useScheduleStore.getState().clear();
+
     // Kiểm tra dữ liệu đầu vào
     if (!title) {
       Alert.alert('Error', 'Please enter a title for your workout schedule.');
@@ -60,15 +69,15 @@ const AddScheduleScreen = () => {
 
       // Gọi API tạo lịch tập
       const result = await createSchedule(formData);
-      console.log('Create schedule result:', result);
       console.log('Schedules after creation:', message);
-      await fetchSelfSchedules(); // Cập nhật danh sách lịch tập sau khi tạo mới
+      await fetchSelfSchedules();
       if (result) {
-        Alert.alert('Success', 'Schedule created successfully', [
-          {text: 'OK', onPress: () => navigate.goBack()},
-        ]);
-      } else {
-        Alert.alert('Error', message);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Schedule created successfully',
+        });
+        navigate.goBack();
       }
     } catch (err) {
       console.error('Error creating workout schedule:', err);
@@ -344,11 +353,11 @@ const AddScheduleScreen = () => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            getSelectedDatesCount() === 0 || isCreating
+            getSelectedDatesCount() < 3 || isCreating
               ? styles.disabledButton
               : null,
           ]}
-          disabled={getSelectedDatesCount() === 0 || isCreating}
+          disabled={getSelectedDatesCount() < 3 || isCreating}
           onPress={handleCreateSchedule}>
           {isCreating ? (
             <ActivityIndicator color="#FFFFFF" />

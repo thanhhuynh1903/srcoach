@@ -53,8 +53,17 @@ const PasswordRecoveryCodeScreen = ({ navigation }: { navigation: any }) => {
 
   // Handle backspace: auto-focus previous input
   const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
+    if (e.nativeEvent.key === 'Backspace') {
+      const newCode = [...code];
+      
+      if (newCode[index] === '' || newCode[index] === '0') {
+        newCode[index] = '';
+        setCode(newCode);
+        
+        if (index > 0) {
+          inputRefs.current[index - 1].focus();
+        }
+      }
     }
   };
 

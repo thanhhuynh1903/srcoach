@@ -34,6 +34,7 @@ const RiskWarningListScreen = () => {
   const [dialogMessage, setDialogMessage] = useState('');
   const navigation = useNavigation();
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // Step 1: Add sort state
 
   const {
     healthAlerts,
@@ -143,8 +144,14 @@ const RiskWarningListScreen = () => {
       );
     }
 
+    filtered = [...filtered].sort((a, b) => {
+      const scoreA = a.score || 0;
+      const scoreB = b.score || 0;
+      return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+    });
+
     return filtered;
-  }, [activeFilter, searchQuery, healthAlerts]);
+  }, [activeFilter, searchQuery, healthAlerts, sortOrder]);
 
   const renderLoadingSkeletons = () => (
     <View style={styles.loadingContainer}>
@@ -423,21 +430,28 @@ const RiskWarningListScreen = () => {
           },
         ]}
       />
-
-      <View style={styles.searchContainer}>
-        <Icon name="search" size={20} color="#64748B" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search health alerts"
-          placeholderTextColor="#64748B"
-          value={searchQuery}
-          onChangeText={handleSearchChange}
-        />
-        {searchQuery && (
-          <TouchableOpacity onPress={() => handleSearchChange('')}>
-            <Icon name="close-circle" size={18} color="#64748B" />
-          </TouchableOpacity>
-        )}
+      <View style={{flexDirection: 'row', marginHorizontal: 16, gap: 10,  marginVertical: 8}}>
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#64748B" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search health alerts"
+            placeholderTextColor="#64748B"
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+          />
+          {searchQuery && (
+            <TouchableOpacity onPress={() => handleSearchChange('')}>
+              <Icon name="close-circle" size={18} color="#64748B" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))}
+        >
+          <Icon name={sortOrder === "asc" ? "filter" : "filter-outline"} size={22} color="#64748B" />
+        </TouchableOpacity>
       </View>
       <View style={styles.filtersWrapper}>
         <ScrollView
@@ -561,28 +575,42 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingHorizontal: 16,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    gap: 10,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    borderColor: "#E5E5EA",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 3,
+    shadowRadius: 2,
     elevation: 1,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#000000',
+    color: "#000000",
     paddingVertical: 0,
+    marginLeft: 8,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filtersWrapper: {
     paddingVertical: 8,
