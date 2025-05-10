@@ -41,13 +41,13 @@ interface ScheduleState {
   currentSchedule: Schedule | null;
   message: string | null; // Thêm thuộc tính message để lưu thông báo từ API
   // Actions
-  fetchSchedules: () => Promise<void>;
   fetchSelfSchedules: () => Promise<void>;
+  fetchDetail: (scheduleId: string) => Promise<Schedule | null>;
   createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
   updateSchedule: (
     id: string,
     schedule: Partial<Schedule>,
-  ) => Promise<Schedule | null>;
+  ) => Promise<string | null>;
   deleteSchedule: (id: string) => Promise<boolean>;
   setCurrentSchedule: (schedule: Schedule | null) => void;
   resetCurrentSchedule: () => void;
@@ -65,20 +65,6 @@ const useScheduleStore = create<ScheduleState>()(
       currentSchedule: null,
       message: null,
       // Lấy danh sách lịch tập
-      fetchSchedules: async () => {
-        set({isLoading: true, error: null});
-        try {
-          const response = await api.fetchData(`/schedules/self`);
-          console.log('response', response);
-          set({schedules: response.data, isLoading: false});
-        } catch (error) {
-          console.error('Lỗi khi lấy danh sách lịch tập:', error);
-          set({
-            error: 'Không thể lấy danh sách lịch tập. Vui lòng thử lại sau.',
-            isLoading: false,
-          });
-        }
-      },
 
       fetchSelfSchedules: async () => {
         set({isLoading: true, error: null});
@@ -100,6 +86,26 @@ const useScheduleStore = create<ScheduleState>()(
         }
       },
 
+      fetchDetail: async (scheduleId: string) => {
+        set({isLoading: true, error: null});
+        try {
+          const response = await api.fetchData(`/schedules/${scheduleId}`);
+          console.log('response', response);
+          set({isLoading: false});
+          return response?.data;
+        } catch (error) {
+          console.error(
+            'Error getting personal training schedule list:',
+            error,
+          );
+          set({
+            error:
+              'Unable to get personal training schedule list. Please try again later..',
+            isLoading: false,
+          });
+          return null;
+        }
+      },
       // Tạo lịch tập mới
       createSchedule: async scheduleData => {
         set({isLoading: true, error: null, message: null});
@@ -148,32 +154,22 @@ const useScheduleStore = create<ScheduleState>()(
         });
       },
       // Cập nhật lịch tập
-      updateSchedule: async (id, scheduleUpdate) => {
-        set({isLoading: true, error: null});
-        try {
-          const response = await axios.put(
-            `${API_URL}/api/schedules/${id}`,
-            scheduleUpdate,
-          );
-          const updatedSchedule = response.data;
+    updateSchedule: async (scheduleId, data) => {
+    try {
+      set({ isLoading: true });
+      const response = await api.putData(`/schedules/${scheduleId}`, data);
+      const updateSchedule = response?.status ;
+      console.log('Kết quả cập nhật lịch tập:', updateSchedule);
+      
+      return updateSchedule;
+    } catch (error) {
+      console.log('Error while updating schedule:', error);
+      return null;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 
-          set(state => ({
-            schedules: state.schedules.map(s =>
-              s.id === id ? updatedSchedule : s,
-            ),
-            isLoading: false,
-          }));
-
-          return updatedSchedule;
-        } catch (error) {
-          console.error('Lỗi khi cập nhật lịch tập:', error);
-          set({
-            error: 'Không thể cập nhật lịch tập. Vui lòng thử lại sau.',
-            isLoading: false,
-          });
-          return null;
-        }
-      },
 
       // Xóa lịch tập
       deleteSchedule: async id => {

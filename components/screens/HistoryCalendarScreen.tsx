@@ -108,7 +108,11 @@ const HistoryCard = ({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.startedText}>Started {startDate}</Text>
+        <View style={{flexDirection: "row", alignItems: "center",gap : 8}}>
         {isExpertChoice && <Text style={styles.expertChoiceText}>Expert's Choice</Text>}
+  
+        {isExpertChoice && <Text style={styles.expertChoiceText}>Anonymous</Text>}
+        </View>
       </View>
 
       <Text style={styles.cardTitle}>{title}</Text>
