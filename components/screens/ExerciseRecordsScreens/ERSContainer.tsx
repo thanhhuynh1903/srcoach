@@ -9,7 +9,6 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {ExerciseSession} from '../../utils/utils_healthconnect';
 import {format, parseISO} from 'date-fns';
-import {theme} from '../../contants/theme';
 import {getNameFromExerciseType, getIconFromExerciseType} from '../../contants/exerciseType';
 
 const {width} = Dimensions.get('window');

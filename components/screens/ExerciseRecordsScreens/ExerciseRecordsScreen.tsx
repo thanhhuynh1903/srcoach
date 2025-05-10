@@ -8,7 +8,6 @@ import {
   Dimensions,
   RefreshControl,
   Animated,
-  FlatList,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ScreenWrapper from '../../ScreenWrapper';
@@ -28,7 +27,10 @@ import {ERSContainerSkeleton} from './ERSContainerSkeleton';
 import {ERSInfoDialog} from './ERSInfoDialog';
 import CommonDialog from '../../commons/CommonDialog';
 import Slider from '@react-native-community/slider';
-import {getIconFromExerciseType, getNameFromExerciseType} from '../../contants/exerciseType';
+import {
+  getIconFromExerciseType,
+  getNameFromExerciseType,
+} from '../../contants/exerciseType';
 
 export default function ExerciseRecordsScreen() {
   const navigation = useNavigation();
@@ -137,16 +139,42 @@ export default function ExerciseRecordsScreen() {
     });
   };
 
+  const getFilteredSampleData = () => {
+    let filteredSession = exerciseSessions
+    if (selectedExerciseTypes && selectedExerciseTypes.length > 0) {
+      filteredSession = exerciseSessions.filter(s =>
+        selectedExerciseTypes.includes(s.exerciseType),
+      );
+    }
+    if (maxDistance) {
+      filteredSession = filteredSession.filter(
+        s => s.total_distance <= maxDistance,
+      );
+    }
+    if (maxSteps) {
+      filteredSession = filteredSession.filter(
+        s => s.total_steps <= maxSteps,
+      );
+    }
+    if (startDate) {
+      filteredSession = filteredSession.filter(
+        s => new Date(s.startTime) >= new Date(startDate),
+      );
+    }
+    if (endDate) {
+      filteredSession = filteredSession.filter(
+        s => new Date(s.startTime) <= new Date(endDate),
+      );
+    }
+    return filteredSession
+  };
+
   const readSampleData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const data = await fetchExerciseSessionRecords(
-        startDate || new Date('2025-01-01T00:00:00.000Z').toISOString(),
-        endDate || new Date().toISOString(),
-      );
-
+      const data = await fetchExerciseSessionRecords();
       setExerciseSessions(data);
     } catch (error) {
       setError('Failed to load health data');
@@ -248,6 +276,69 @@ export default function ExerciseRecordsScreen() {
           onPress={() => setShowFilterDialog(true)}>
           <Icon name="filter" size={20} color={theme.colors.primaryDark} />
         </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderExerciseTypes = () => {
+    const halfLength = Math.ceil(allExerciseTypes.length / 2);
+    const firstColumn = allExerciseTypes.slice(0, halfLength);
+    const secondColumn = allExerciseTypes.slice(halfLength);
+
+    return (
+      <View style={styles.exerciseTypeColumnsContainer}>
+        <View style={styles.exerciseTypeColumn}>
+          {firstColumn.map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.exerciseTypeItem,
+                selectedExerciseTypes.includes(type) &&
+                  styles.exerciseTypeItemSelected,
+              ]}
+              onPress={() => toggleExerciseType(type)}>
+              <View style={styles.exerciseTypeTextContainer}>
+                <Icon name={getIconFromExerciseType(type)} size={24} />
+                <Text style={styles.exerciseTypeText}>
+                  {getNameFromExerciseType(type)}
+                </Text>
+              </View>
+              {selectedExerciseTypes.includes(type) && (
+                <Icon
+                  name="checkmark"
+                  size={16}
+                  color={theme.colors.primaryDark}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.exerciseTypeColumn}>
+          {secondColumn.map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.exerciseTypeItem,
+                selectedExerciseTypes.includes(type) &&
+                  styles.exerciseTypeItemSelected,
+              ]}
+              onPress={() => toggleExerciseType(type)}>
+              <View style={styles.exerciseTypeTextContainer}>
+                <Icon name={getIconFromExerciseType(type)} size={24} />
+                <Text style={styles.exerciseTypeText}>
+                  {getNameFromExerciseType(type)}
+                </Text>
+              </View>
+              {selectedExerciseTypes.includes(type) && (
+                <Icon
+                  name="checkmark"
+                  size={16}
+                  color={theme.colors.primaryDark}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     );
   };
@@ -422,35 +513,7 @@ export default function ExerciseRecordsScreen() {
             {/* Exercise Type Filter */}
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Exercise Types</Text>
-              <FlatList
-                data={allExerciseTypes}
-                keyExtractor={item => item}
-                renderItem={({item}) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.exerciseTypeItem,
-                      selectedExerciseTypes.includes(item) &&
-                        styles.exerciseTypeItemSelected,
-                    ]}
-                    onPress={() => toggleExerciseType(item)}>
-                    <View style={styles.exerciseTypeTextContainer}>
-                      <Icon name={getIconFromExerciseType(item)} size={24} />
-                      <Text style={styles.exerciseTypeText}>
-                        {getNameFromExerciseType(item)}
-                      </Text>
-                    </View>
-                    {selectedExerciseTypes.includes(item) && (
-                      <Icon
-                        name="checkmark"
-                        size={16}
-                        color={theme.colors.primaryDark}
-                      />
-                    )}
-                  </TouchableOpacity>
-                )}
-                numColumns={2}
-                contentContainerStyle={styles.exerciseTypeList}
-              />
+              {renderExerciseTypes()}
             </View>
           </ScrollView>
         }
@@ -486,7 +549,7 @@ export default function ExerciseRecordsScreen() {
           renderErrorState()
         ) : (
           <ERSContainer
-            exerciseSessions={exerciseSessions}
+            exerciseSessions={getFilteredSampleData()}
             accessDetailNavigation={accessDetailNavigation}
             onPressActivity={handleActivityPress}
           />
@@ -647,14 +710,17 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 8,
   },
-  exerciseTypeList: {
+  exerciseTypeColumnsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  exerciseTypeColumn: {
+    width: '48%',
   },
   exerciseTypeItem: {
-    width: '48%',
+    width: '100%',
     padding: 12,
-    margin: '1%',
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
     borderRadius: 4,

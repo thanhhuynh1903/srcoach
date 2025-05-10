@@ -6,12 +6,16 @@ import {
   StyleSheet,
   Image,
   ScrollView,
+  Text,
+  Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 
 interface CMSMessageControlProps {
   messageText: string;
+  showTyping: boolean;
+  typingUsername?: string;
   setMessageText: (text: string) => void;
   handleSendMessage: () => void;
   onImagePress: () => void;
@@ -22,6 +26,8 @@ interface CMSMessageControlProps {
 
 export const CMSMessageControl = ({
   messageText,
+  showTyping,
+  typingUsername = 'Someone',
   setMessageText,
   handleSendMessage,
   onImagePress,
@@ -29,8 +35,52 @@ export const CMSMessageControl = ({
   onRemoveImage,
   setPanelVisible
 }: CMSMessageControlProps) => {
+  const typingAnimation = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (showTyping) {
+      // Fade in animation when typing starts
+      Animated.timing(typingAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Fade out animation when typing stops
+      Animated.timing(typingAnimation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showTyping]);
+
+  const typingIndicatorOpacity = typingAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const typingIndicatorTranslateY = typingAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [10, 0],
+  });
+
   return (
     <View style={styles.container}>
+      {/* Typing indicator */}
+      <Animated.View
+        style={[
+          styles.typingIndicatorContainer,
+          {
+            opacity: typingIndicatorOpacity,
+            transform: [{ translateY: typingIndicatorTranslateY }],
+          },
+        ]}>
+        <Text style={styles.typingIndicatorText}>
+          {typingUsername} is typing...
+        </Text>
+      </Animated.View>
+
       {selectedImage && (
         <ScrollView
           horizontal
@@ -51,7 +101,7 @@ export const CMSMessageControl = ({
         </ScrollView>
       )}
       <View style={styles.inputContainer}>
-      <TouchableOpacity style={styles.actionButton} onPress={() => setPanelVisible(true)}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => setPanelVisible(true)}>
           <Icon name="add" size={24} color={theme.colors.primaryDark} />
         </TouchableOpacity>
 
@@ -89,6 +139,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
+    paddingBottom: 10,
+  },
+  typingIndicatorContainer: {
+    position: 'absolute',
+    top: -30,
+    left: 0,
+    width: '50%',
+    backgroundColor: 'white',
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+    marginHorizontal: 10,
+    borderRadius: 15,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  typingIndicatorText: {
+    color: '#333',
+    fontSize: 14,
   },
   imagePreviewScrollContainer: {
     maxHeight: 120,

@@ -28,6 +28,7 @@ import * as ImagePicker from 'react-native-image-picker';
 import {CMSMessageContainer} from './CMSMessageContainer';
 import {CMSHeader} from './CMSHeader';
 import {CMSSidePanelInfo} from './CMSSidePanelInfo';
+import { getSocket, disconnectSocket } from '../../../utils/socket';
 
 type MessageItem = {
   id: string;
@@ -67,6 +68,7 @@ export default function ChatsMessageScreen() {
 
   const isInitialLoad = useRef(true);
   const shouldScrollToEnd = useRef(false);
+  const socketRef = useRef<any>(null);
 
   // Determine which panel to show based on user roles
   const getPanelComponent = useCallback(() => {
@@ -83,6 +85,57 @@ export default function ChatsMessageScreen() {
       : ChatsPanelExpertPOVRunner;
   }, [otherUser, profile]);
 
+  const setupSocket = useCallback(() => {
+    if (!sessionId) return;
+
+    const socket = getSocket();
+    socketRef.current = socket;
+    
+    socket.emit('joinSession', sessionId);
+
+    socket.on('newMessage', (message: MessageItem) => {
+      setMessages(prevMessages => [...prevMessages, message]);
+      shouldScrollToEnd.current = true;
+    });
+
+    return () => {
+      socket.emit('leaveSession', sessionId);
+      socket.off('newMessage');
+    };
+  }, [sessionId]);
+
+  const loadInitialMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      setShowContent(false);
+
+      const response = await getSessionMessages(userId, 5000);
+      if (response.status) {
+        const newMessages = response.data.messages;
+
+        setMessages(
+          newMessages.sort(
+            (a, b) =>
+              new Date(a.created_at).getTime() -
+              new Date(b.created_at).getTime(),
+          ),
+        );
+
+        if (response.data.session?.status === 'PENDING' && !isInitiator) {
+          setSessionStatus(response.data.session.status);
+        }
+
+        setShowContent(true);
+        shouldScrollToEnd.current = true;
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      setShowContent(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, isInitiator]);
+
   useFocusEffect(
     useCallback(() => {
       const initChat = async () => {
@@ -92,49 +145,25 @@ export default function ChatsMessageScreen() {
           setSessionStatus(response.data.session.status);
           setIsInitiator(response.data.session.is_initiator);
           setOtherUser(response.data.other_user);
-          loadMessages();
+          await loadInitialMessages();
           await markSessionMessagesAsRead(userId);
         }
       };
       initChat();
-    }, [userId])
-  )
 
-  const loadMessages = useCallback(
-    async () => {
-      try {
-        setLoading(true);
-        setShowContent(false);
-        isInitialLoad.current = true;
-
-        const response = await getSessionMessages(userId, 5000);
-        if (response.status) {
-          const newMessages = response.data.messages;
-
-          setMessages(
-            newMessages.sort(
-              (a, b) =>
-                new Date(a.created_at).getTime() -
-                new Date(b.created_at).getTime(),
-            ),
-          );
-
-          if (response.data.session?.status === 'PENDING' && !isInitiator) {
-            setSessionStatus(response.data.session.status);
-          }
-
-          setShowContent(true);
-          shouldScrollToEnd.current = true;
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.emit('leaveSession', sessionId);
+          socketRef.current.off('newMessage');
         }
-      } catch (error) {
-        console.error('Error loading messages:', error);
-        setShowContent(true);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [isInitiator],
+      };
+    }, [userId])
   );
+
+  useEffect(() => {
+    const cleanup = setupSocket();
+    return cleanup;
+  }, [setupSocket]);
 
   const handleSendMessage = async () => {
     if (!sessionId) {
@@ -144,12 +173,9 @@ export default function ChatsMessageScreen() {
 
     if (selectedImage) {
       try {
-        setLoading(true);
         const response = await sendImageMessage(sessionId, selectedImage);
         if (response.status) {
           setSelectedImage(null);
-          shouldScrollToEnd.current = true;
-          loadMessages();
         } else {
           ToastUtil.error(
             'Error',
@@ -159,17 +185,12 @@ export default function ChatsMessageScreen() {
       } catch (error) {
         console.error('Error sending image:', error);
         ToastUtil.error('Error', 'Failed to send image');
-      } finally {
-        setLoading(false);
       }
     } else if (messageText.trim()) {
       try {
-        setLoading(true);
         const response = await sendNormalMessage(sessionId, messageText);
         if (response.status) {
           setMessageText('');
-          shouldScrollToEnd.current = true;
-          loadMessages();
         } else {
           ToastUtil.error(
             'Error',
@@ -179,8 +200,6 @@ export default function ChatsMessageScreen() {
       } catch (error) {
         console.error('Error sending message:', error);
         ToastUtil.error('Error', 'Failed to send message');
-      } finally {
-        setLoading(false);
       }
     }
   };
@@ -233,6 +252,16 @@ export default function ChatsMessageScreen() {
     },
     [navigation],
   );
+
+  const handleTypeMessage = function(text: string) {
+    const socket = getSocket()
+
+    socket.emit('typingMessage', {
+      sessionId: sessionId,
+      toUserId: otherUser?.id
+    });
+    setMessageText(text);
+  }
 
   const PanelComponent = getPanelComponent();
 
@@ -309,27 +338,26 @@ export default function ChatsMessageScreen() {
           showContent={showContent}
           onExerciseRecordPress={handleExerciseRecordPress}
           shouldScrollToEnd={shouldScrollToEnd.current}
-          loadMessages={loadMessages}
           sessionId={sessionId}
         />
       )}
 
       <CMSMessageControl
         messageText={messageText}
-        setMessageText={setMessageText}
+        setMessageText={handleTypeMessage}
         handleSendMessage={handleSendMessage}
         onImagePress={handleImagePress}
         selectedImage={selectedImage}
         onRemoveImage={handleRemoveImage}
         disabled={loading || (sessionStatus === 'PENDING' && isInitiator)}
         setPanelVisible={setPanelVisible}
+        showTyping={true}
       />
 
       <PanelComponent
         visible={panelVisible}
         onClose={() => setPanelVisible(false)}
         sessionId={sessionId}
-        onSendSuccess={() => loadMessages(sessionId)}
       />
 
       <CMSSidePanelInfo
