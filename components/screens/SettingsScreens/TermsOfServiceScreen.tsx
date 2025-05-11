@@ -10,21 +10,14 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import LinearGradient from 'react-native-linear-gradient';
+import BackButton from '../../BackButton';
 
-const TermsOfServiceScreen = ({navigation}) => {
+const TermsOfServiceScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Fixed Header */}
-      <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primary]}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
+      <View
         style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+        <BackButton />
 
         <View style={styles.headerContent}>
           <Icon
@@ -35,7 +28,7 @@ const TermsOfServiceScreen = ({navigation}) => {
           />
           <Text style={styles.title}>Terms of Service</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Scrollable Content */}
       <View style={styles.scrollContainer}>
@@ -154,9 +147,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
+    gap: 5,
   },
   backButton: {
-    marginRight: 10,
     zIndex: 1,
   },
   headerContent: {
@@ -166,12 +159,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   headerIcon: {
-    marginRight: 10,
+    color: "#000",
+    margin: 5,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: '#000000',
   },
   scrollContainer: {
     flex: 1,
