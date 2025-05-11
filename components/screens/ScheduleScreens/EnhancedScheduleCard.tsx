@@ -94,10 +94,10 @@ const EnhancedScheduleCard = ({
     );
   };
 
-  // const handleEdit = () => {
-  //   navigation.navigate('EditScheduleScreen', {scheduleId: id});
-  //   setShowActionMenu(false);
-  // };
+  const handleEdit = async () => {
+  await navigation.navigate('UpdateScheduleScreen', {scheduleId: id});
+  setModalVisible(false);
+  };
   // Find the schedule for the selected day
   const selectedDaySchedule = daySchedules.find(
     schedule => schedule.day === selectedDay,
@@ -142,10 +142,12 @@ const EnhancedScheduleCard = ({
     switch (status) {
       case 'COMPLETED':
         return '#22C55E'; // Xanh lá
-      case 'IN_PROGRESS':
+      case 'INCOMING':
         return '#3B82F6'; // Xanh dương
-      case 'PENDING':
-        return '#F97316'; // Cam
+      case 'ONGOING':
+        return '#64748B'; 
+      case 'MISSED':
+        return '#CB0404';
       default:
         return '#64748B'; // Xám
     }
@@ -213,6 +215,8 @@ const EnhancedScheduleCard = ({
               Workouts for Mar {selectedDay} {getMonthFromStartDate()}
             </Text>
             {selectedDaySchedule.workouts.map((workout, index) => (
+              console.log('workout', workout),
+              
               <View key={index} style={styles.workoutItem}>
                 {/* Time */}
                 <View style={styles.timeContainer}>
@@ -227,9 +231,11 @@ const EnhancedScheduleCard = ({
                         backgroundColor:
                           workout.status === 'COMPLETED'
                             ? '#22C55E'
-                            : workout.status === 'IN_PROGRESS'
+                            : workout.status === 'INCOMING'
                             ? '#3B82F6'
-                            : '#64748B',
+                            : workout.status === 'ONGOING'
+                            ? '#64748B'
+                            : '#CB0404',
                       },
                     ]}>
                     <Text style={styles.workoutStatusText}>
@@ -393,7 +399,7 @@ const EnhancedScheduleCard = ({
           activeOpacity={1}
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.modalOption}>
+            <TouchableOpacity style={styles.modalOption} onPress={handleEdit}>
               <Icon
                 name="create-outline"
                 size={24}
