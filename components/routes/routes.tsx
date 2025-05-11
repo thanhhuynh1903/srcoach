@@ -61,6 +61,7 @@ import ChatsMessageScreen from '../screens/ChatsScreens/ChatsMessage/ChatsMessag
 import ChatsExpertNotiScreen from '../screens/ChatsScreens/ChatsSearch/ChatsExpertNotiScreen';
 import ChatsSessionMessageSearch from '../screens/ChatsScreens/ChatsSearch/ChatsSessionMessageSearch';
 import ChatsExpertConfirmScreen from '../screens/ChatsScreens/ChatsSearch/ChatsExpertConfirmScreen';
+import WhatsNewScreen from '../screens/SettingsScreens/SettingsAboutScreens/WhatsNewScreen';
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
 export const stackScreens = [
@@ -132,6 +133,7 @@ export const stackScreens = [
   {name: 'SettingsAboutScreen', component: SettingsAboutScreen},
   {name: 'SettingsRecruitmentsScreen', component: SettingsRecruitmentsScreen},
   {name: 'DraftScreen', component: DraftScreen},
+  {name: 'WhatsNewScreen', component: WhatsNewScreen},
 
   // Settings - Become Expert (Certificates)
   {name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen},

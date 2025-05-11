@@ -29,7 +29,7 @@ interface NewsState {
   clearCurrent: () => void;
 }
 
-const useNewsApi = create<NewsState>((set) => ({
+const useNewsStore = create<NewsState>((set) => ({
   news: [],
   currentArticle: null,
   isLoading: false,
@@ -37,8 +37,6 @@ const useNewsApi = create<NewsState>((set) => ({
 
   getAll: async () => {
     const api = useApiStore.getState();
-
-    console.log(api)
     set({ isLoading: true, error: null });
     
     try {
@@ -78,4 +76,4 @@ const useNewsApi = create<NewsState>((set) => ({
   clearCurrent: () => set({ currentArticle: null }),
 }));
 
-export default useNewsApi;
+export default useNewsStore;
