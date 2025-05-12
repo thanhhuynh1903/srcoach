@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -9,36 +9,41 @@ import {
 } from 'react-native';
 import * as Progress from 'react-native-progress';
 import Icon from '@react-native-vector-icons/ionicons';
-import { wp } from '../helpers/common';
+import {wp} from '../helpers/common';
 import welcome_1 from '../assets/welcome_1.png';
 import welcome_2 from '../assets/welcome_2.png';
 import welcome_3 from '../assets/welcome_3.png';
 import welcome_4 from '../assets/welcome_4.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const slides = [
   {
     heading: 'Helpful Resources & Community.',
-    subheading: 'Join a community of 5,000+ users dedicating to healthy life with AI/ML.',
+    subheading:
+      'Join a community of 5,000+ users dedicating to healthy life with AI/ML.',
     image: welcome_1,
   },
   {
     heading: 'Intuitive Nutrition & Med Tracker with AI',
-    subheading: 'Easily track your medication & nutrition with the power of AI.',
+    subheading:
+      'Easily track your medication & nutrition with the power of AI.',
     image: welcome_2,
   },
   {
     heading: 'Emphatic AI Wellness Chatbot For All.',
-    subheading: 'Experience compassionate and personalized care with our AI chatbot.',
+    subheading:
+      'Experience compassionate and personalized care with our AI chatbot.',
     image: welcome_3,
   },
   {
     heading: 'Your Intelligent Fitness Companion.',
-    subheading: 'Track your calorie & fitness nutrition with AI and get special recommendations.',
+    subheading:
+      'Track your calorie & fitness nutrition with AI and get special recommendations.',
     image: welcome_4,
   },
 ];
 
-const WelcomeInfoScreen = ({ navigation }: { navigation: any }) => {
+const WelcomeInfoScreen = ({navigation}: {navigation: any}) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const handleNext = () => {
@@ -66,7 +71,12 @@ const WelcomeInfoScreen = ({ navigation }: { navigation: any }) => {
           height={10}
           width={wp(60)}
         />
-        <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')} style={styles.skipButton}>
+        <TouchableOpacity
+          onPress={async () => {
+            await AsyncStorage.setItem('shouldNotShowWelcome', '1');
+            navigation.navigate('LoginScreen');
+          }}
+          style={styles.skipButton}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
       </View>
@@ -131,7 +141,7 @@ const styles = StyleSheet.create({
   image: {
     width: wp(100),
     height: wp(140),
-    transform: [{ translateY: 50 }],
+    transform: [{translateY: 50}],
     resizeMode: 'cover',
   },
   fab: {

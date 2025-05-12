@@ -22,7 +22,7 @@ const SettingsRecruitmentsScreen: React.FC = ({ navigation }) => {
       <View style={styles.optionsContainer}>
         <TouchableOpacity
           style={styles.optionItem}
-          onPress={() => console.log('Apply for experts pressed')}>
+          onPress={() => navigation.navigate('UserCertificatesIntroScreen')}>
           <View style={styles.optionContent}>
             <Icon
               name="person-add-outline"

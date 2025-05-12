@@ -9,24 +9,39 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
-import useUserCertificatesStore from '../../../utils/useUserCertificatesStore';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../../contants/theme';
 import LinearGradient from 'react-native-linear-gradient';
+import { getSelfCertificates } from '../../../utils/useUserCertificatesAPI';
 
 const UserCertificatesAlreadyExistsScreen = () => {
   const navigation = useNavigation();
-  const { clearCertificates } = useUserCertificatesStore();
   const [loading, setLoading] = useState(true);
+
+  const checkExistingCertificates = async () => {
+    try {
+      const certificates = await getSelfCertificates();
+      
+      if (!certificates || certificates.length === 0) {
+        // No existing certificates, go to submit screen
+        navigation.replace('UserCertificatesSubmitScreen');
+      } else {
+        // Has existing certificates, go to view screen
+        navigation.replace('UserCertificatesExpertsScreen');
+      }
+    } catch (error) {
+      console.error('Error checking certificates:', error);
+      // On error, default to submit screen
+      navigation.replace('UserCertificatesSubmitScreen');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
-      const timer = setTimeout(() => {
-        clearCertificates();
-        navigation.replace('UserCertificatesSubmitScreen');
-      }, 1000); // 1 second delay
-
-      return () => clearTimeout(timer);
+      checkExistingCertificates();
+      return () => {};
     }, [])
   );
 
@@ -36,7 +51,7 @@ const UserCertificatesAlreadyExistsScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header - Maintained from original */}
+      {/* Header */}
       <LinearGradient
         colors={[theme.colors.primaryDark, theme.colors.primary]}
         start={{x: 0, y: 0}}
@@ -58,10 +73,10 @@ const UserCertificatesAlreadyExistsScreen = () => {
         </View>
       </LinearGradient>
 
-      {/* Loading indicator during the 1-second delay */}
+      {/* Loading indicator during the check */}
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading application...</Text>
+        <Text style={styles.loadingText}>Checking for existing applications</Text>
       </View>
     </SafeAreaView>
   );
@@ -102,7 +117,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 20,
     fontSize: 16,
-    color: theme.colors.textSecondary,
+    color: '#000',
   },
 });
 

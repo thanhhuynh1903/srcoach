@@ -10,15 +10,18 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
-import {useLoginStore} from './utils/useLoginStore';
-import {CommonAvatar} from './commons/CommonAvatar';
+import { useLoginStore } from './utils/useLoginStore';
+import { CommonAvatar } from './commons/CommonAvatar';
+import { startSyncData } from './utils/utils_healthconnect';
 
-const HomeHeader = () => {
+const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
   const {profile} = useLoginStore();
   const [time, setTime] = useState({current: '', date: ''});
   const [searchIndex, setSearchIndex] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const waveAnim = useRef(new Animated.Value(0)).current;
+  const syncSpinAnim = useRef(new Animated.Value(0)).current;
   const navigation = useNavigation();
 
   const searchPlaceholders = [
@@ -43,6 +46,48 @@ const HomeHeader = () => {
     : profile?.roles?.includes('runner')
     ? 'runner'
     : 'default';
+
+  const handleSyncPress = async () => {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    startSyncAnimation();
+    
+    try {
+      // Get current date and yesterday's date
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 1);
+      
+      await startSyncData(startDate.toISOString(), endDate.toISOString());
+      if (onSyncPress) onSyncPress();
+    } catch (error) {
+      console.error('Sync error:', error);
+    } finally {
+      setIsSyncing(false);
+      stopSyncAnimation();
+    }
+  };
+
+  const startSyncAnimation = () => {
+    syncSpinAnim.setValue(0);
+    Animated.loop(
+      Animated.timing(syncSpinAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+  };
+
+  const stopSyncAnimation = () => {
+    syncSpinAnim.stopAnimation();
+  };
+
+  const spin = syncSpinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   useEffect(() => {
     const updateTime = () => {
@@ -133,6 +178,16 @@ const HomeHeader = () => {
           {time.date} • {time.current}
         </Text>
         <View style={styles.icons}>
+          <TouchableOpacity onPress={handleSyncPress}>
+            <Animated.View style={{transform: [{rotate: spin}]}}>
+              <Icon 
+                name="sync-outline" 
+                size={24} 
+                color="#fff" 
+                style={isSyncing ? styles.syncingIcon : null}
+              />
+            </Animated.View>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() =>
               navigation.navigate('ManageNotificationsScreen' as never)
@@ -208,6 +263,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  syncingIcon: {
+    opacity: 0.7,
   },
   dateText: {
     color: '#e2e2e2',

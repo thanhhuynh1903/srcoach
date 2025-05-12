@@ -5,147 +5,174 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  RefreshControl,
+  Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ScreenWrapper from '../../ScreenWrapper';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {useCallback, useState} from 'react';
-import {
-  getNameFromExerciseType,
-  getIconFromExerciseType,
-} from '../../contants/exerciseType';
+import {useCallback, useState, useRef, useMemo} from 'react';
 import {
   ExerciseSession,
   fetchExerciseSessionRecords,
-  initializeHealthConnect,
+  handleSyncButtonPress,
 } from '../../utils/utils_healthconnect';
-import ContentLoader, {Rect} from 'react-content-loader/native';
 import {format, parseISO} from 'date-fns';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import {theme} from '../../contants/theme';
-import CommonDialog from '../../commons/CommonDialog';
 import ToastUtil from '../../utils/utils_toast';
-
-const {width} = Dimensions.get('window');
+import {ERSContainer} from './ERSContainer';
+import {ERSContainerSkeleton} from './ERSContainerSkeleton';
+import {ERSInfoDialog} from './ERSInfoDialog';
+import CommonDialog from '../../commons/CommonDialog';
+import Slider from '@react-native-community/slider';
+import {
+  getIconFromExerciseType,
+  getNameFromExerciseType,
+} from '../../contants/exerciseType';
 
 export default function ExerciseRecordsScreen() {
   const navigation = useNavigation();
-  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>(
-    [],
-  );
+  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [accessDetailNavigation, setAccessDetailNavigation] = useState(true);
+
+  // Filter states
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [minSteps, setMinSteps] = useState<number>(0);
+  const [maxSteps, setMaxSteps] = useState<number>(10000);
+  const [minDistance, setMinDistance] = useState<number>(0);
+  const [maxDistance, setMaxDistance] = useState<number>(10000);
+  const [selectedExerciseTypes, setSelectedExerciseTypes] = useState<string[]>([]);
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
 
-  const showDatePicker = () => {
-    setDatePickerVisibility(true);
+  // Calculate min/max values from data
+  const {allExerciseTypes, stepsRange, distanceRange} = useMemo(() => {
+    const types = new Set<string>();
+    let minSteps = Infinity;
+    let maxSteps = 0;
+    let minDistance = Infinity;
+    let maxDistance = 0;
+
+    exerciseSessions.forEach(session => {
+      types.add(session.exerciseType);
+      const steps = session.total_steps || 0;
+      const distance = session.total_distance || 0;
+
+      if (steps < minSteps) minSteps = steps;
+      if (steps > maxSteps) maxSteps = steps;
+      if (distance < minDistance) minDistance = distance;
+      if (distance > maxDistance) maxDistance = distance;
+    });
+
+    return {
+      allExerciseTypes: Array.from(types),
+      stepsRange: {
+        min: minSteps === Infinity ? 0 : minSteps,
+        max: maxSteps === 0 ? 10000 : maxSteps,
+      },
+      distanceRange: {
+        min: minDistance === Infinity ? 0 : minDistance,
+        max: maxDistance === 0 ? 10000 : maxDistance,
+      },
+    };
+  }, [exerciseSessions]);
+
+  const showSyncStatus = (message: string) => {
+    setSyncStatus(message);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   };
 
-  const hideDatePicker = () => {
-    setDatePickerVisibility(false);
+  const hideSyncStatus = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setSyncStatus(null));
   };
 
-  const handleDateConfirm = (date: Date) => {
-    hideDatePicker();
-    if (!startDate) {
-      setStartDate(date.toISOString());
-    } else if (!endDate && new Date(date) > new Date(startDate)) {
-      setEndDate(date.toISOString());
-    } else {
-      setStartDate(date.toISOString());
-      setEndDate(null);
+  const handleSyncPress = async () => {
+    try {
+      setIsSyncing(true);
+      setAccessDetailNavigation(false);
+      showSyncStatus('Syncing data...');
+      
+      const result = await handleSyncButtonPress();
+      
+      if (result.type === 'SYNC_SUCCESS') {
+        showSyncStatus('Sync completed successfully');
+        await readSampleData();
+      } else {
+        showSyncStatus(result.message);
+      }
+    } catch (error) {
+      showSyncStatus('Sync failed. Please try again');
+      ToastUtil.error('Sync Error', 'Failed to sync exercise data');
+    } finally {
+      setIsSyncing(false);
+      setAccessDetailNavigation(true);
+      // Don't automatically hide the status - let user dismiss or it will hide on next sync
     }
   };
 
-  const clearFilters = () => {
-    setStartDate(null);
-    setEndDate(null);
+  const handleActivityPress = (id: string, clientRecordId: string) => {
+    navigation.navigate('ExerciseRecordsDetailScreen' as never, {
+      id,
+      clientRecordId,
+    });
   };
 
-  const generateData = (sessions: ExerciseSession[]) => {
-    const sessionsByDate: Record<string, any[]> = {};
-
-    sessions.forEach(session => {
-      const startDate = parseISO(session.startTime);
-      const dateStr = format(startDate, 'EEE, MMM d');
-
-      if (!sessionsByDate[dateStr]) {
-        sessionsByDate[dateStr] = [];
-      }
-
-      const endDate = parseISO(session.endTime);
-      const duration =
-        session.duration_minutes ||
-        Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
-
-      const distanceInMeters =
-        session.total_distance || Math.round((2 + Math.random() * 8) * 1000);
-
-      const timeStr = format(startDate, 'HH:mm');
-
-      sessionsByDate[dateStr].push({
-        time: timeStr,
-        type: getNameFromExerciseType(session.exerciseType),
-        duration,
-        distance: distanceInMeters,
-        steps:
-          session.total_steps || Math.round((distanceInMeters / 1000) * 1300),
-        id: session.id,
-        clientRecordId: session.clientRecordId,
-        exerciseType: session.exerciseType,
-        startTime: session.startTime,
-        endTime: session.endTime,
-      });
-    });
-
-    const result = Object.keys(sessionsByDate).map(dateStr => {
-      const activities = sessionsByDate[dateStr];
-      const totalSteps = activities.reduce(
-        (sum, activity) => sum + (activity.steps || 0),
-        0,
+  const getFilteredSampleData = () => {
+    let filteredSession = exerciseSessions;
+    if (selectedExerciseTypes && selectedExerciseTypes.length > 0) {
+      filteredSession = exerciseSessions.filter(s =>
+        selectedExerciseTypes.includes(s.exerciseType),
       );
-      const totalDistance = activities.reduce(
-        (sum, activity) => sum + activity.distance,
-        0,
+    }
+    if (maxDistance) {
+      filteredSession = filteredSession.filter(
+        s => s.total_distance <= maxDistance,
       );
-
-      return {
-        date: dateStr,
-        dateObj: parseISO(activities[0].startTime),
-        metrics: {
-          steps: totalSteps,
-          distance: totalDistance,
-        },
-        activities: activities.sort(
-          (a, b) =>
-            new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
-        ),
-      };
-    });
-
-    return result.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+    }
+    if (maxSteps) {
+      filteredSession = filteredSession.filter(
+        s => s.total_steps <= maxSteps,
+      );
+    }
+    if (startDate) {
+      filteredSession = filteredSession.filter(
+        s => new Date(s.startTime) >= new Date(startDate),
+      );
+    }
+    if (endDate) {
+      filteredSession = filteredSession.filter(
+        s => new Date(s.startTime) <= new Date(endDate),
+      );
+    }
+    return filteredSession;
   };
-
-  const exerciseData = generateData(exerciseSessions);
 
   const readSampleData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const data = await fetchExerciseSessionRecords(
-        startDate || new Date('2025-01-01T00:00:00.000Z').toISOString(),
-        endDate || new Date().toISOString(),
-      );
-
+      const data = await fetchExerciseSessionRecords();
       setExerciseSessions(data);
     } catch (error) {
+      setError('Failed to load health data');
       ToastUtil.error('An error occurred', 'Failed to load health data.');
     } finally {
       setLoading(false);
@@ -164,29 +191,40 @@ export default function ExerciseRecordsScreen() {
     }, [startDate, endDate]),
   );
 
-  const renderLoadingSkeleton = () => (
-    <View style={styles.loadingContainer}>
-      {[...Array(3)].map((_, i) => (
-        <View key={i} style={styles.skeletonDayContainer}>
-          <ContentLoader
-            speed={1}
-            width={width - 32}
-            height={200}
-            viewBox={`0 0 ${width - 32} 200`}
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb">
-            <Rect x="0" y="0" rx="4" ry="4" width="150" height="24" />
-            <Rect x={width - 182} y="0" rx="4" ry="4" width="150" height="24" />
-            <Rect x="0" y="40" rx="4" ry="4" width={width - 32} height="20" />
-            <Rect x="0" y="70" rx="4" ry="4" width={width - 32} height="20" />
-            <Rect x="0" y="100" rx="4" ry="4" width={width - 32} height="20" />
-            <Rect x="0" y="140" rx="4" ry="4" width={width - 32} height="20" />
-            <Rect x="0" y="170" rx="4" ry="4" width={width - 32} height="20" />
-          </ContentLoader>
-        </View>
-      ))}
-    </View>
-  );
+  const showDatePicker = (mode: 'start' | 'end') => {
+    setDatePickerMode(mode);
+    setDatePickerVisibility(true);
+  };
+
+  const handleDateConfirm = (date: Date) => {
+    setDatePickerVisibility(false);
+    if (datePickerMode === 'start') {
+      setStartDate(date.toISOString());
+    } else {
+      setEndDate(date.toISOString());
+    }
+  };
+
+  const clearFilters = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setMinSteps(0);
+    setMaxSteps(stepsRange.max);
+    setMinDistance(0);
+    setMaxDistance(distanceRange.max);
+    setSelectedExerciseTypes([]);
+  };
+
+  const applyFilters = () => {
+    setShowFilterDialog(false);
+    readSampleData();
+  };
+
+  const toggleExerciseType = (type: string) => {
+    setSelectedExerciseTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type],
+    );
+  };
 
   const renderErrorState = () => (
     <View style={styles.emptyState}>
@@ -199,15 +237,106 @@ export default function ExerciseRecordsScreen() {
     </View>
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Icon name="walk" size={48} color="#ACADAE" />
-      <Text style={styles.emptyText}>No run data available</Text>
-      <Text style={styles.emptySubtext}>
-        Your recorded runs will appear here
-      </Text>
-    </View>
-  );
+  const renderFilterBanner = () => {
+    const activeFilters = [];
+    if (startDate)
+      activeFilters.push(`From: ${format(parseISO(startDate), 'MMM d, yyyy')}`);
+    if (endDate)
+      activeFilters.push(`To: ${format(parseISO(endDate), 'MMM d, yyyy')}`);
+    if (minSteps > 0 || maxSteps < stepsRange.max)
+      activeFilters.push(`Steps: ${minSteps}-${maxSteps}`);
+    if (minDistance > 0 || maxDistance < distanceRange.max)
+      activeFilters.push(`Distance: ${minDistance}-${maxDistance}m`);
+    if (selectedExerciseTypes.length > 0)
+      activeFilters.push(`${selectedExerciseTypes.length} selected types`);
+
+    return (
+      <View style={styles.filterBannerContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterBannerScroll}>
+          {activeFilters.length > 0 ? (
+            activeFilters.map((filter, index) => (
+              <View key={index} style={styles.filterPill}>
+                <Text style={styles.filterPillText}>{filter}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.noFiltersText}>No filters applied</Text>
+          )}
+        </ScrollView>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setShowFilterDialog(true)}>
+          <Icon name="filter" size={20} color={theme.colors.primaryDark} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderExerciseTypes = () => {
+    const halfLength = Math.ceil(allExerciseTypes.length / 2);
+    const firstColumn = allExerciseTypes.slice(0, halfLength);
+    const secondColumn = allExerciseTypes.slice(halfLength);
+
+    return (
+      <View style={styles.exerciseTypeColumnsContainer}>
+        <View style={styles.exerciseTypeColumn}>
+          {firstColumn.map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.exerciseTypeItem,
+                selectedExerciseTypes.includes(type) &&
+                  styles.exerciseTypeItemSelected,
+              ]}
+              onPress={() => toggleExerciseType(type)}>
+              <View style={styles.exerciseTypeTextContainer}>
+                <Icon name={getIconFromExerciseType(type)} size={24} />
+                <Text style={styles.exerciseTypeText}>
+                  {getNameFromExerciseType(type)}
+                </Text>
+              </View>
+              {selectedExerciseTypes.includes(type) && (
+                <Icon
+                  name="checkmark"
+                  size={16}
+                  color={theme.colors.primaryDark}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.exerciseTypeColumn}>
+          {secondColumn.map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.exerciseTypeItem,
+                selectedExerciseTypes.includes(type) &&
+                  styles.exerciseTypeItemSelected,
+              ]}
+              onPress={() => toggleExerciseType(type)}>
+              <View style={styles.exerciseTypeTextContainer}>
+                <Icon name={getIconFromExerciseType(type)} size={24} />
+                <Text style={styles.exerciseTypeText}>
+                  {getNameFromExerciseType(type)}
+                </Text>
+              </View>
+              {selectedExerciseTypes.includes(type) && (
+                <Icon
+                  name="checkmark"
+                  size={16}
+                  color={theme.colors.primaryDark}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <ScreenWrapper bg={'#FFFFFF'}>
@@ -226,11 +355,13 @@ export default function ExerciseRecordsScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={showDatePicker}>
+          <TouchableOpacity 
+            onPress={handleSyncPress}
+            disabled={isSyncing}>
             <Icon
-              name="calendar"
+              name="sync"
               size={24}
-              color={theme.colors.primaryDark}
+              color={isSyncing ? '#cccccc' : theme.colors.primaryDark}
               style={styles.headerIcon}
             />
           </TouchableOpacity>
@@ -255,169 +386,169 @@ export default function ExerciseRecordsScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.dateFilterContainer}
-        onPress={showDatePicker}>
-        <Text style={styles.dateFilterText}>
-          {startDate
-            ? format(parseISO(startDate), 'MMM d, yyyy')
-            : 'All time start'}
-        </Text>
-        <Icon
-          name="chevron-forward"
-          size={16}
-          color={'#656565'}
-          style={styles.dateFilterIcon}
-        />
-        <Text style={styles.dateFilterText}>
-          {endDate ? format(parseISO(endDate), 'MMM d, yyyy') : 'All time end'}
-        </Text>
-        {(startDate || endDate) && (
-          <TouchableOpacity
-            onPress={clearFilters}
-            style={styles.clearFilterButton}>
-            <Icon name="close" size={16} color={'#656565'} />
+      {syncStatus && (
+        <Animated.View
+          style={[
+            styles.syncStatusContainer,
+            {
+              opacity: fadeAnim,
+              backgroundColor: syncStatus.includes('failed') || syncStatus.includes('error')
+                ? '#FF5252'
+                : theme.colors.primaryDark,
+            },
+          ]}>
+          <Text style={styles.syncStatusText}>{syncStatus}</Text>
+          <TouchableOpacity 
+            style={styles.closeSyncStatusButton}
+            onPress={hideSyncStatus}>
+            <Icon name="close" size={20} color="white" />
           </TouchableOpacity>
-        )}
-      </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {renderFilterBanner()}
 
       <DateTimePickerModal
         isVisible={isDatePickerVisible}
         mode="date"
         onConfirm={handleDateConfirm}
-        onCancel={hideDatePicker}
-        minimumDate={new Date('2025-01-01')}
-        maximumDate={new Date()}
+        onCancel={() => setDatePickerVisibility(false)}
+        minimumDate={
+          datePickerMode === 'start'
+            ? new Date('2025-01-01')
+            : startDate
+            ? new Date(startDate)
+            : new Date('2025-01-01')
+        }
+        maximumDate={
+          datePickerMode === 'end'
+            ? new Date()
+            : endDate
+            ? new Date(endDate)
+            : new Date()
+        }
+      />
+
+      <ERSInfoDialog
+        visible={showInfoDialog}
+        onClose={() => setShowInfoDialog(false)}
       />
 
       <CommonDialog
-        visible={showInfoDialog}
-        onClose={() => setShowInfoDialog(false)}
-        title="Run Records Info"
+        visible={showFilterDialog}
+        onClose={() => setShowFilterDialog(false)}
+        title="Filter Records"
+        width="90%"
+        height="80%"
         content={
-          <View>
-            <Text style={styles.dialogText}>
-              This screen displays your recorded run sessions from Health
-              Connect.
-            </Text>
-            <Text style={styles.dialogText}>
-              Each session shows details like duration, distance, and steps.
-            </Text>
-            <Text style={[styles.dialogText, {marginTop: 12}]}>
-              <Text style={{fontWeight: 'bold'}}>Running sessions</Text>{' '}
-              include:
-            </Text>
-            <View style={styles.dialogBullet}>
-              <View style={styles.dialogBullet}>
-                <Text style={styles.dialogText}>• Distance covered</Text>
-              </View>
-              <View style={styles.dialogBullet}>
-                <Text style={styles.dialogText}>• Duration</Text>
-              </View>
-              <View style={styles.dialogBullet}>
-                <Text style={styles.dialogText}>• Estimated steps</Text>
-              </View>
-              <View style={styles.dialogBullet}>
-                <Text style={styles.dialogText}>• Pace metrics</Text>
-              </View>
-              <View style={[styles.dialogBullet]}>
-                <Text style={styles.dialogText}>
-                  • Routes run (visible via map)
-                </Text>
+          <ScrollView>
+            {/* Date Filters */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Date Range</Text>
+              <View style={styles.dateFilterRow}>
+                <TouchableOpacity
+                  style={styles.dateFilterButton}
+                  onPress={() => showDatePicker('start')}>
+                  <Text style={styles.dateFilterButtonText}>
+                    {startDate
+                      ? format(parseISO(startDate), 'MMM d, yyyy')
+                      : 'Select Start Date'}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.dateFilterToText}>to</Text>
+                <TouchableOpacity
+                  style={styles.dateFilterButton}
+                  onPress={() => showDatePicker('end')}>
+                  <Text style={styles.dateFilterButtonText}>
+                    {endDate
+                      ? format(parseISO(endDate), 'MMM d, yyyy')
+                      : 'Select End Date'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
+
+            {/* Steps Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>
+                Steps: {minSteps} - {maxSteps}
+              </Text>
+              <View style={styles.sliderContainer}>
+                <Text>{minSteps}</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={stepsRange.max}
+                  step={100}
+                  minimumTrackTintColor={theme.colors.primaryDark}
+                  maximumTrackTintColor="#d3d3d3"
+                  thumbTintColor={theme.colors.primaryDark}
+                  value={maxSteps}
+                  onValueChange={value => setMaxSteps(value)}
+                />
+                <Text>{stepsRange.max}</Text>
+              </View>
+            </View>
+
+            {/* Distance Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>
+                Distance (m): {minDistance} - {maxDistance}
+              </Text>
+              <View style={styles.sliderContainer}>
+                <Text>{minDistance}</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={0}
+                  maximumValue={distanceRange.max}
+                  step={100}
+                  minimumTrackTintColor={theme.colors.primaryDark}
+                  maximumTrackTintColor="#d3d3d3"
+                  thumbTintColor={theme.colors.primaryDark}
+                  value={maxDistance}
+                  onValueChange={value => setMaxDistance(value)}
+                />
+                <Text>{distanceRange.max}</Text>
+              </View>
+            </View>
+
+            {/* Exercise Type Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Exercise Types</Text>
+              {renderExerciseTypes()}
+            </View>
+          </ScrollView>
         }
         actionButtons={[
           {
-            label: 'Got it',
+            label: 'Clear All',
+            variant: 'outlined',
+            color: theme.colors.primaryDark,
+            handler: clearFilters,
+          },
+          {
+            label: 'Apply',
             variant: 'contained',
             color: theme.colors.primaryDark,
-            handler: () => setShowInfoDialog(false),
+            handler: applyFilters,
           },
         ]}
       />
 
       <ScrollView
         style={styles.container}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.colors.primaryDark]}
-            tintColor={theme.colors.primaryDark}
+       >
+        {loading ? (
+          <ERSContainerSkeleton />
+        ) : error ? (
+          renderErrorState()
+        ) : (
+          <ERSContainer
+            exerciseSessions={getFilteredSampleData()}
+            accessDetailNavigation={accessDetailNavigation}
+            onPressActivity={handleActivityPress}
           />
-        }>
-        {loading
-          ? renderLoadingSkeleton()
-          : error
-          ? renderErrorState()
-          : exerciseData.length > 0
-          ? exerciseData.map((day, dayIndex) => (
-              <View key={dayIndex} style={styles.dayContainer}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dateText}>{day.date}</Text>
-                  <View style={styles.metricsContainer}>
-                    <View style={styles.metricItem}>
-                      <Icon
-                        name="footsteps"
-                        size={18}
-                        color="#4285F4"
-                        style={styles.metricIcon}
-                      />
-                      <Text style={styles.metricText}>
-                        {day.metrics.steps.toLocaleString()} steps
-                      </Text>
-                    </View>
-                    <View style={styles.metricItem}>
-                      <Icon
-                        name="map"
-                        size={18}
-                        color="#0F9D58"
-                        style={styles.metricIcon}
-                      />
-                      <Text style={styles.metricText}>
-                        {(day.metrics.distance / 1000).toFixed(1)} km
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {day.activities.map((activity, actIndex) => (
-                  <View key={actIndex} style={styles.activityContainer}>
-                    <TouchableOpacity
-                      style={styles.activityRow}
-                      onPress={() => {
-                        navigation.navigate(
-                          'ExerciseRecordsDetailScreen' as never,
-                          {
-                            id: activity.id,
-                            clientRecordId: activity.clientRecordId,
-                          },
-                        );
-                      }}>
-                      <Text style={styles.timeText}>{activity.time}</Text>
-                      <View style={styles.iconContainer}>
-                        <Icon
-                          name={getIconFromExerciseType(activity.exerciseType)}
-                          size={32}
-                          color="#052658"
-                          style={styles.runIcon}
-                        />
-                      </View>
-                      <View style={styles.activityDetails}>
-                        <Text style={styles.activityType}>{activity.type}</Text>
-                        <Text style={styles.activityMetrics}>
-                          {activity.duration} min •{' '}
-                          {(activity.distance / 1000).toFixed(1)} km
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ))
-          : renderEmptyState()}
+        )}
       </ScrollView>
     </ScreenWrapper>
   );
@@ -457,109 +588,56 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     marginLeft: 20,
-    color: theme.colors.primaryDark,
   },
-  dateFilterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+  syncStatusContainer: {
     padding: 12,
-    backgroundColor: '#F5F5F5',
-  },
-  dateFilterText: {
-    fontSize: 14,
-    color: theme.colors.primaryDark,
-    fontWeight: '500',
-  },
-  dateFilterIcon: {
-    marginHorizontal: 8,
-  },
-  clearFilterButton: {
-    marginLeft: 12,
-    padding: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    width: '100%',
-  },
-  skeletonDayContainer: {
-    marginBottom: 24,
-    width: '100%',
-  },
-  dayContainer: {
-    marginBottom: 24,
-    width: '100%',
-  },
-  dayHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    width: '100%',
   },
-  dateText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: '#333333',
-  },
-  metricsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  metricItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metricIcon: {
-    marginRight: 4,
-  },
-  metricText: {
-    fontSize: 15,
-    color: '#757575',
-  },
-  activityContainer: {
-    marginVertical: 8,
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ACADAE',
-    paddingBottom: 16,
-    width: '100%',
-  },
-  activityRow: {
-    gap: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-  },
-  timeText: {
-    width: 48,
+  syncStatusText: {
+    color: 'white',
     fontSize: 16,
-    color: '#757575',
-  },
-  iconContainer: {
-    width: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  runIcon: {
-    backgroundColor: '#E8F0FE',
-    padding: 4,
-    borderRadius: 50,
-    overflow: 'hidden',
-  },
-  activityDetails: {
+    fontWeight: '500',
     flex: 1,
-    marginLeft: 8,
   },
-  activityType: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#333333',
+  closeSyncStatusButton: {
+    marginLeft: 10,
   },
-  activityMetrics: {
-    fontSize: 16,
+  filterBannerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F5F5F5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  filterBannerScroll: {
+    flexGrow: 1,
+    alignItems: 'center',
+  },
+  filterPill: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderColor: theme.colors.primaryDark,
+    borderWidth: 1,
+  },
+  filterPillText: {
+    color: theme.colors.primaryDark,
+    fontSize: 12,
+  },
+  noFiltersText: {
     color: '#757575',
+    fontSize: 12,
+    paddingHorizontal: 8,
+  },
+  filterButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   emptyState: {
     flex: 1,
@@ -591,13 +669,74 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
   },
-  dialogText: {
-    fontSize: 15,
-    color: '#333',
+  // Filter Dialog Styles
+  filterSection: {
+    marginBottom: 20,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primaryDark,
     marginBottom: 8,
   },
-  dialogBullet: {
-    marginLeft: 16,
-    marginTop: 8,
+  dateFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dateFilterButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryDark,
+    borderRadius: 4,
+    padding: 10,
+    alignItems: 'center',
+  },
+  dateFilterButtonText: {
+    color: theme.colors.primaryDark,
+  },
+  dateFilterToText: {
+    marginHorizontal: 8,
+    color: '#757575',
+  },
+  sliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  slider: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  exerciseTypeColumnsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  exerciseTypeColumn: {
+    width: '48%',
+  },
+  exerciseTypeItem: {
+    width: '100%',
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  exerciseTypeItemSelected: {
+    borderColor: theme.colors.primaryDark,
+    backgroundColor: theme.colors.primaryLight,
+  },
+  exerciseTypeTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  exerciseTypeText: {
+    color: '#333',
   },
 });

@@ -49,22 +49,21 @@ import UserCertificatesAlreadyExistsScreen from '../screens/SettingsScreens/User
 import UserCertificatesExpertScreen from '../screens/SettingsScreens/UserCertificatesScreens/UserCertificatesExpertsScreen';
 import SettingsAboutScreen from '../screens/SettingsScreens/SettingsAboutScreen';
 import ScheduleDetailScreen from '../screens/ScheduleDetailScreen';
-import ChatsScreen from '../screens/ChatsScreens/ChatsHome/ChatsScreen';
 import ExerciseRecordsScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsScreen';
-import ChatsUserInviRunnerScreen from '../screens/ChatsScreens/ChatsUserInvitation/ChatsUserInviRunnerScreen';
-import ChatsUserInviExpertScreen from '../screens/ChatsScreens/ChatsUserInvitation/ChatsUserInviExpertScreen';
-import ChatsRunnerMessageScreen from '../screens/ChatsScreens/ChatsRunnerPOV/ChatsRunnerMessageScreen';
-import ChatsExpertMessageScreen from '../screens/ChatsScreens/ChatsExpertPOV/ChatsExpertMessageScreen';
-import ChatsUserSearchScreen from '../screens/ChatsScreens/ChatsUserSearch/ChatsUserSearchScreen';
-import ChatsSearchAllMessagesScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchAllMessagesScreen';
-import ChatsSearchSessionMessagesScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchSessionMessagesScreen';
 import OtherProfileScreen from '../screens/OtherProfileScreen';
 import ExerciseRecordsFullMapScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsFullMapScreen';
 import ExerciseRecordsDetailScreen from '../screens/ExerciseRecordsScreens/ExerciseRecordsDetailScreen';
-import CRMessageItemExerciseRecordDetail from '../screens/ChatsScreens/ChatsMessageItems/CRMessageItemExerciseRecordDetail';
 import SettingsRecruitmentsScreen from '../screens/SettingsScreens/SettingsRecruitmentsScreen';
 import DraftScreen from '../screens/SettingsScreens/DraftScreen';
+import ChatsHomeScreen from '../screens/ChatsScreens/ChatsHome/ChatsHomeScreen';
+import ChatsSearchScreen from '../screens/ChatsScreens/ChatsSearch/ChatsSearchScreen';
+import ChatsMessageScreen from '../screens/ChatsScreens/ChatsMessage/ChatsMessageScreen';
+import ChatsExpertNotiScreen from '../screens/ChatsScreens/ChatsSearch/ChatsExpertNotiScreen';
+import ChatsSessionMessageSearch from '../screens/ChatsScreens/ChatsSearch/ChatsSessionMessageSearch';
+import ChatsExpertConfirmScreen from '../screens/ChatsScreens/ChatsSearch/ChatsExpertConfirmScreen';
+import WhatsNewScreen from '../screens/SettingsScreens/SettingsAboutScreens/WhatsNewScreen';
 import UpdateScheduleScreen from '../screens/ScheduleScreens/UpdateScheduleScreen';
+import NewsDetailScreen from '../screens/NewsScreens/NewsDetailScreen';
 
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
@@ -112,7 +111,10 @@ export const stackScreens = [
     component: PasswordRecoverySuccessScreen,
   },
 
-  {name: 'ExerciseRecordsFullMapScreen', component: ExerciseRecordsFullMapScreen},
+  {
+    name: 'ExerciseRecordsFullMapScreen',
+    component: ExerciseRecordsFullMapScreen,
+  },
 
   // Community Screens
   {name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen},
@@ -120,15 +122,15 @@ export const stackScreens = [
   {name: 'CommunityCreatePostScreen', component: CommunityPostCreateScreen},
   {name: 'CommunityUpdatePostScreen', component: CommunityUpdatePostScreen},
 
+  //News Screens
+  {name: 'NewsDetailScreen', component: NewsDetailScreen},
+
   //Chats Screen
-  { name: 'ChatsUserSearchScreen', component: ChatsUserSearchScreen},
-  { name: 'ChatsUserInviRunnerScreen', component: ChatsUserInviRunnerScreen},
-  { name: 'ChatsUserInviExpertScreen', component: ChatsUserInviExpertScreen},
-  { name: 'ChatsRunnerMessageScreen', component: ChatsRunnerMessageScreen},
-  { name: 'ChatsExpertMessageScreen', component: ChatsExpertMessageScreen},
-  { name: 'ChatsSearchAllMessagesScreen', component: ChatsSearchAllMessagesScreen},
-  { name: 'ChatsSearchSessionMessagesScreen', component: ChatsSearchSessionMessagesScreen},
-  { name: 'CRMessageItemExerciseRecordDetail', component: CRMessageItemExerciseRecordDetail},
+  {name: 'ChatsSearchScreen', component: ChatsSearchScreen},
+  {name: 'ChatsMessageScreen', component: ChatsMessageScreen},
+  {name: 'ChatsExpertNotiScreen', component: ChatsExpertNotiScreen},
+  {name: 'ChatsSessionMessageSearch', component: ChatsSessionMessageSearch},
+  {name: 'ChatsExpertConfirmScreen', component: ChatsExpertConfirmScreen},
 
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},
@@ -138,6 +140,7 @@ export const stackScreens = [
   {name: 'SettingsAboutScreen', component: SettingsAboutScreen},
   {name: 'SettingsRecruitmentsScreen', component: SettingsRecruitmentsScreen},
   {name: 'DraftScreen', component: DraftScreen},
+  {name: 'WhatsNewScreen', component: WhatsNewScreen},
 
   // Settings - Become Expert (Certificates)
   {name: 'UserCertificatesIntroScreen', component: UserCertificatesIntroScreen},
@@ -166,7 +169,7 @@ export const tabScreens = [
   {name: 'Records', component: ExerciseRecordsScreen},
   {name: 'Risk', component: RiskWarningListScreen},
   {name: 'Community', component: CommunityScreen},
-  {name: 'Chat', component: ChatsScreen},
+  {name: 'Chat', component: ChatsHomeScreen},
   {name: 'Settings', component: SettingsScreen},
 ];
 
