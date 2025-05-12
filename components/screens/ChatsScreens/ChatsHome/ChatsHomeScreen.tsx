@@ -169,7 +169,7 @@ const ChatsHomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ebebeb',
+    backgroundColor: '#F5F5F5',
   },
   content: {
     flex: 1,

@@ -6,7 +6,7 @@ import {useLoginStore} from '../utils/useLoginStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import ToastUtil from '../utils/utils_toast';
-import { theme } from '../contants/theme';
+import {theme} from '../contants/theme';
 import NotificationService from '../services/NotificationService';
 
 const WelcomeScreen = () => {
@@ -74,6 +74,9 @@ const WelcomeScreen = () => {
     let isMounted = true;
 
     const checkTokenAndNavigate = async () => {
+      let shouldNotShowWelcome = await AsyncStorage.getItem(
+        'shouldNotShowWelcome',
+      );
       try {
         setLoadingStatus('Checking authentication...');
         const token = await AsyncStorage.getItem('authToken');
@@ -93,17 +96,6 @@ const WelcomeScreen = () => {
             const profileSuccess = await fetchUserProfile();
 
             if (profileSuccess) {
-              // Sync health data
-              setLoadingStatus('Syncing health data...');
-              const endDate = new Date();
-              const startDate = new Date();
-              startDate.setDate(endDate.getDate() - 30);
-
-              await startSyncData(
-                startDate.toISOString(),
-                endDate.toISOString(),
-              );
-
               setLoadingStatus('Success');
               setShowSuccess(true);
 
@@ -115,12 +107,15 @@ const WelcomeScreen = () => {
                 navigation.navigate('HomeTabs' as never);
               }
             } else {
-              // Failed to get profile
               await AsyncStorage.removeItem('authToken');
               await AsyncStorage.removeItem('authTokenTimestamp');
               setUserData(null);
               if (isMounted) {
-                navigation.navigate('WelcomeInfoScreen' as never);
+                if (shouldNotShowWelcome) {
+                  navigation.navigate('LoginScreen' as never);
+                } else {
+                  navigation.navigate('WelcomeInfoScreen' as never);
+                }
               }
             }
           } else {
@@ -129,13 +124,21 @@ const WelcomeScreen = () => {
             await AsyncStorage.removeItem('authTokenTimestamp');
             setUserData(null);
             if (isMounted) {
-              navigation.navigate('WelcomeInfoScreen' as never);
+              if (shouldNotShowWelcome) {
+                navigation.navigate('LoginScreen' as never);
+              } else {
+                navigation.navigate('WelcomeInfoScreen' as never);
+              }
             }
           }
         } else {
           // No token found
           if (isMounted) {
-            navigation.navigate('WelcomeInfoScreen' as never);
+            if (shouldNotShowWelcome) {
+              navigation.navigate('LoginScreen' as never);
+            } else {
+              navigation.navigate('WelcomeInfoScreen' as never);
+            }
           }
         }
       } catch (error) {
@@ -160,11 +163,9 @@ const WelcomeScreen = () => {
 
   const setupNotifications = async () => {
     try {
-     
-        console.log('Đang khởi tạo dịch vụ thông báo...');
-        await NotificationService.init();
-        console.log('Đã khởi tạo dịch vụ thông báo thành công');
-      
+      console.log('Đang khởi tạo dịch vụ thông báo...');
+      await NotificationService.init();
+      console.log('Đã khởi tạo dịch vụ thông báo thành công');
     } catch (error) {
       console.error('Lỗi khi thiết lập thông báo:', error);
     }

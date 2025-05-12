@@ -8,210 +8,196 @@ import {
   RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
+import {useNavigation} from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Components
 import HomeHeader from '../../HomeHeader';
 import WellnessAndMedication from '../../WellnessAndMedication';
-import {useNavigation} from '@react-navigation/native';
-import useAuthStore from '../../utils/useAuthStore';
-import {
-  initializeHealthConnect,
-  fetchSummaryRecord,
-  startSyncData,
-} from '../../utils/utils_healthconnect';
-import {useLoginStore} from '../../utils/useLoginStore';
 import CommonDialog from '../../commons/CommonDialog';
 import HomeHealthScoreCard from './HomeHealthScoreCard';
-import {theme} from '../../contants/theme';
 import HomeHealthData from './HomeHealthData';
 import HomeFunFactCard from './HomeFunFactCard';
-import ToastUtil from '../../utils/utils_toast';
-import { formatISODuration } from 'date-fns';
 
-interface SummaryData {
-  steps: {
-    value: number;
-    percentage: number;
-  };
-  activeCalories: {
-    value: number;
-    percentage: number;
-  };
-  distance: {
-    value: number;
-    percentage: number;
-  };
+// Utils
+import {fetchSummaryRecord, handleSyncButtonPress} from '../../utils/utils_healthconnect';
+import useAuthStore from '../../utils/useAuthStore';
+import {useLoginStore} from '../../utils/useLoginStore';
+import ToastUtil from '../../utils/utils_toast';
+
+// Constants
+import {theme} from '../../contants/theme';
+
+type MetricInfo = {
+  title: string;
+  content: string;
+};
+
+type MetricInfoMap = {
+  heartRate: MetricInfo;
+  steps: MetricInfo;
+  distance: MetricInfo;
+  calories: MetricInfo;
+  oxygenSaturation: MetricInfo;
+  sleep: MetricInfo;
+  totalCalories: MetricInfo;
+};
+
+type SummaryDataItem = {
+  value: number;
+  percentage: number;
+};
+
+type SummaryData = {
+  steps: SummaryDataItem;
+  activeCalories: SummaryDataItem;
+  distance: SummaryDataItem;
+  heartRate: SummaryDataItem;
+  oxygenSaturation: SummaryDataItem;
+  sleep: SummaryDataItem;
+  totalCalories: SummaryDataItem;
+};
+
+const METRIC_INFO: MetricInfoMap = {
   heartRate: {
-    value: number;
-    percentage: number;
-  };
+    title: 'Heart Rate',
+    content:
+      'Your heart rate is the number of times your heart beats per minute. A normal resting heart rate for adults ranges from 60 to 100 beats per minute.',
+  },
+  steps: {
+    title: 'Steps',
+    content:
+      'Steps count your daily physical activity. The recommended daily step count is 10,000 steps for general health benefits.',
+  },
+  distance: {
+    title: 'Distance',
+    content:
+      'Distance shows how far you have walked or run. Tracking distance can help you monitor your physical activity levels.',
+  },
+  calories: {
+    title: 'Active Calories',
+    content:
+      "Active calories are the calories you burn through physical activity. This doesn't include calories burned at rest (BMR).",
+  },
   oxygenSaturation: {
-    value: number;
-    percentage: number;
-  };
+    title: 'Oxygen Saturation',
+    content:
+      'Oxygen saturation (SpO2) measures how much oxygen your blood is carrying. Normal levels are typically between 95-100%.',
+  },
   sleep: {
-    value: number;
-    percentage: number;
-  };
+    title: 'Sleep',
+    content:
+      'Sleep duration and quality are essential for overall health. Adults typically need 7-9 hours of sleep per night.',
+  },
   totalCalories: {
-    value: number;
-    percentage: number;
-  };
-}
+    title: 'Total Calories',
+    content:
+      'Total calories include both active calories burned through movement and calories burned at rest (BMR).',
+  },
+};
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const {token, loadToken} = useAuthStore();
+  const {profile} = useLoginStore();
+
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
-  const [healthScore, setHealthScore] = useState<any>(null);
+  const [healthScore, setHealthScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const {profile} = useLoginStore();
   const [infoDialogVisible, setInfoDialogVisible] = useState(false);
-  const [currentMetricInfo, setCurrentMetricInfo] = useState({
+  const [currentMetricInfo, setCurrentMetricInfo] = useState<MetricInfo>({
     title: '',
     content: '',
   });
+  const [syncMethodError, setSyncMethodError] = useState(false);
   const [healthConnectError, setHealthConnectError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const metricInfo = {
-    heartRate: {
-      title: 'Heart Rate',
-      content:
-        'Your heart rate is the number of times your heart beats per minute. A normal resting heart rate for adults ranges from 60 to 100 beats per minute.',
-    },
-    steps: {
-      title: 'Steps',
-      content:
-        'Steps count your daily physical activity. The recommended daily step count is 10,000 steps for general health benefits.',
-    },
-    distance: {
-      title: 'Distance',
-      content:
-        'Distance shows how far you have walked or run. Tracking distance can help you monitor your physical activity levels.',
-    },
-    calories: {
-      title: 'Active Calories',
-      content:
-        "Active calories are the calories you burn through physical activity. This doesn't include calories burned at rest (BMR).",
-    },
-    oxygenSaturation: {
-      title: 'Oxygen Saturation',
-      content:
-        'Oxygen saturation (SpO2) measures how much oxygen your blood is carrying. Normal levels are typically between 95-100%.',
-    },
-    sleep: {
-      title: 'Sleep',
-      content:
-        'Sleep duration and quality are essential for overall health. Adults typically need 7-9 hours of sleep per night.',
-    },
-    totalCalories: {
-      title: 'Total Calories',
-      content:
-        'Total calories include both active calories burned through movement and calories burned at rest (BMR).',
-    },
+  const showInfoDialog = (metric: keyof MetricInfoMap) => {
+    setCurrentMetricInfo(METRIC_INFO[metric]);
+    setInfoDialogVisible(true);
   };
 
   const handleSyncPress = async () => {
     try {
-      const endDate = new Date();
-      const startDate = new Date(endDate.getTime() - 1000 * 60 * 60 * 24 * 30);
-  
-      await startSyncData(startDate.toISOString(), endDate.toISOString());
-      await getHealthData();
-    } catch (error) {
-      ToastUtil.error('Sync failed', 'Failed to sync health data');
-    }
-  };
+      setRefreshing(true);
+      setLoading(true);
+      const result = await handleSyncButtonPress();
 
-  const showInfoDialog = (metric: keyof typeof metricInfo) => {
-    setCurrentMetricInfo(metricInfo[metric]);
-    setInfoDialogVisible(true);
-  };
-
-  useEffect(() => {
-    const loadUserToken = async () => {
-      await loadToken();
-    };
-    loadUserToken();
-  }, [loadToken]);
-
-  const getHealthData = async () => {
-    setLoading(true);
-    setErrors({});
-    setHealthConnectError(false);
-
-    try {
-      try {
-        await initializeHealthConnect();
-      } catch (hcError) {
-        console.log('Health Connect initialization error:', hcError);
+      if (result?.type === 'SYNC_METHOD_MISSING') {
+        setSyncMethodError(true);
+      } else if (result?.type.includes('HEALTHCONNECT')) {
         setHealthConnectError(true);
       }
+      let summary = await fetchSummaryRecord();
+      setSummaryData(summary.summaries);
+      setHealthScore(summary.healthScore);
 
-      const response = await fetchSummaryRecord();
-
-      if (response && response.summaries && response.healthScore) {
-        setSummaryData(response.summaries);
-        setHealthScore(response.healthScore);
-      }
-    } catch (error) {
-      if (error.response?.data?.errors) {
-        const newErrors = {...errors};
-        Object.keys(error.response.data.errors).forEach(key => {
-          newErrors[key] = true;
-        });
-        setErrors(newErrors);
-      }
+    } catch (error: any) {
+      ToastUtil.error(
+        'Sync failed',
+        error.message || 'Failed to sync health data',
+      );
     } finally {
-      setLoading(false);
       setRefreshing(false);
+      setLoading(false);
     }
   };
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    getHealthData();
-  }, []);
-
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      getHealthData();
-    });
+    const loadInitialData = async () => {
+      await loadToken();
+      await handleSyncPress();
+    };
 
-    return unsubscribe;
-  }, [navigation]);
+    loadInitialData();
+  }, [loadToken]);
+
+  const renderErrorBanner = (
+    visible: boolean,
+    message: string,
+    buttonText: string,
+    onPress: () => void,
+  ) => {
+    if (!visible) return null;
+
+    return (
+      <View style={styles.errorBanner}>
+        <View style={styles.errorBannerContent}>
+          <Icon name="warning" size={20} color="#FFF" />
+          <Text style={styles.errorBannerText}>{message}</Text>
+        </View>
+        <TouchableOpacity onPress={onPress} style={styles.refreshButton}>
+          <Text style={styles.errorBannerButtonText}>{buttonText}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <HomeHeader navigation={navigation} onSyncPress={handleSyncPress} />
 
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }>
-        {/* Health Connect Error Banner */}
-        {healthConnectError && (
-          <View style={styles.errorBanner}>
-            <View style={styles.errorBannerContent}>
-              <Icon name="warning" size={20} color="#FFF" />
-              <Text style={styles.errorBannerText}>
-                Sync data from Health Connect failed
-              </Text>
-            </View>
-            <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-              <Icon name="refresh" size={20} color="#FFF" />
-            </TouchableOpacity>
-          </View>
+      <ScrollView style={styles.scrollView}>
+        {renderErrorBanner(
+          syncMethodError,
+          'Please select a sync method in Settings',
+          'Go to Settings',
+          () => navigation.navigate('SettingsDevicesScreen' as never),
         )}
 
-        {/* Health Score */}
+        {renderErrorBanner(
+          healthConnectError,
+          'Health Connect syncing failed',
+          'Install Health Connect',
+          () => {},
+        )}
+
         <HomeHealthScoreCard
           healthScore={healthScore}
           navigation={navigation}
         />
-
-        {/* Health Data */}
         <HomeHealthData
           summaryData={summaryData}
           errors={errors}
@@ -219,34 +205,26 @@ const HomeScreen = () => {
           navigation={navigation}
           showInfoDialog={showInfoDialog}
         />
-
         <HomeFunFactCard />
-
-        {/* Wellness and Goals */}
         <WellnessAndMedication navigation={navigation} />
       </ScrollView>
 
-      {/* Metric Info Dialog - rendered last to ensure proper z-index */}
-      {infoDialogVisible && (
-        <CommonDialog
-          visible={infoDialogVisible}
-          onClose={() => setInfoDialogVisible(false)}
-          title={currentMetricInfo.title}
-          content={
-            <Text style={styles.dialogContent}>
-              {currentMetricInfo.content}
-            </Text>
-          }
-          actionButtons={[
-            {
-              label: 'Close',
-              variant: 'contained',
-              color: theme.colors.primaryDark,
-              handler: () => setInfoDialogVisible(false),
-            },
-          ]}
-        />
-      )}
+      <CommonDialog
+        visible={infoDialogVisible}
+        onClose={() => setInfoDialogVisible(false)}
+        title={currentMetricInfo.title}
+        content={
+          <Text style={styles.dialogContent}>{currentMetricInfo.content}</Text>
+        }
+        actionButtons={[
+          {
+            label: 'Close',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setInfoDialogVisible(false),
+          },
+        ]}
+      />
     </View>
   );
 };
@@ -284,6 +262,16 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     fontWeight: '500',
+  },
+  errorBannerButtonText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 4,
   },
   refreshButton: {
     marginLeft: 16,

@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
@@ -24,8 +25,16 @@ import logo_health_connect from '../../assets/logo_health_connect.png';
 import logo_samsung_health from '../../assets/logo_samsung_health.png';
 import {theme} from '../../contants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {format, formatDistanceToNow} from 'date-fns';
+import {formatDistanceToNow} from 'date-fns';
 import CommonDialog from '../../commons/CommonDialog';
+import {
+  handleSyncButtonPress,
+  initializeHealthConnect,
+  startSyncData,
+} from '../../utils/utils_healthconnect';
+
+const HEALTH_CONNECT_STORE_URL =
+  'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
 
 const syncFrequencyOptions = [
   {label: 'Never', value: 0},
@@ -41,15 +50,17 @@ const syncFrequencyOptions = [
   {label: '24 hours', value: 1440},
 ];
 
+type SyncMethod = 'none' | 'healthconnect' | 'samsunghealth';
+
 const SettingsDevicesScreen = () => {
-  const [samsungHealthEnabled, setSamsungHealthEnabled] = useState(false);
-  const [healthConnectEnabled, setHealthConnectEnabled] = useState(false);
+  const [syncMethod, setSyncMethod] = useState<SyncMethod>('none');
   const [syncFrequency, setSyncFrequency] = useState(180);
   const [showFrequencyModal, setShowFrequencyModal] = useState(false);
   const [lastSynced, setLastSynced] = useState('Never');
-  const [healthConnectError, setHealthConnectError] = useState<string | null>(
-    null,
-  );
+  const [healthConnectError, setHealthConnectError] = useState<{
+    type: 'permission' | 'connection' | 'other';
+    message: string;
+  } | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -68,12 +79,38 @@ const SettingsDevicesScreen = () => {
     setDialogVisible(true);
   };
 
-  // Check Health Connect status and last sync time on component mount
+  // Load saved settings on component mount
   useEffect(() => {
     const init = async () => {
-      await checkHealthConnectStatus();
-      await loadLastSyncTime();
-      setInitializing(false);
+      try {
+        // Load sync method
+        const savedMethod = await AsyncStorage.getItem('syncMethod');
+        if (savedMethod) {
+          setSyncMethod(savedMethod as SyncMethod);
+        }
+
+        // Load sync frequency
+        const savedFrequency = await AsyncStorage.getItem('syncFrequency');
+        if (savedFrequency) {
+          setSyncFrequency(parseInt(savedFrequency, 10));
+        }
+
+        // Load last sync time
+        const timestamp = await AsyncStorage.getItem('syncLastTimestamp');
+        if (timestamp) {
+          const date = new Date(parseInt(timestamp, 10));
+          setLastSynced(formatDistanceToNow(date, {addSuffix: true}));
+        }
+
+        // Check Health Connect status if it's the selected method
+        if (savedMethod === 'healthconnect') {
+          await checkHealthConnectStatus();
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setInitializing(false);
+      }
     };
     init();
   }, []);
@@ -81,35 +118,85 @@ const SettingsDevicesScreen = () => {
   const checkHealthConnectStatus = async () => {
     try {
       const isInitialized = await initialize();
-      setHealthConnectEnabled(isInitialized);
-      setHealthConnectError(null);
-    } catch (error) {
-      setHealthConnectError(
-        'Failed to initialize Health Connect. Please make sure the app is installed and try again.',
-      );
-      setHealthConnectEnabled(false);
+      if (isInitialized) {
+        setHealthConnectError(null);
+        await AsyncStorage.setItem('syncMethod', 'healthconnect');
+        setSyncMethod('healthconnect');
+      } else {
+        throw new Error('Health Connect not initialized');
+      }
+    } catch (error: any) {
+      if (error.message.includes('permission')) {
+        setHealthConnectError({
+          type: 'permission',
+          message: 'Permissions required',
+        });
+      } else if (
+        error.message.includes('not installed') ||
+        error.message.includes('not available')
+      ) {
+        setHealthConnectError({
+          type: 'connection',
+          message: 'App not installed',
+        });
+      } else {
+        setHealthConnectError({
+          type: 'other',
+          message: 'Connection failed',
+        });
+      }
+      await AsyncStorage.setItem('syncMethod', 'none');
+      setSyncMethod('none');
     }
   };
 
-  const loadLastSyncTime = async () => {
+  const handleRequestPermission = async () => {
     try {
-      const timestamp = await AsyncStorage.getItem('syncDataTimestamp');
-      if (timestamp) {
-        const date = new Date(parseInt(timestamp, 10));
-        setLastSynced(formatDistanceToNow(date, {addSuffix: true}));
+      const granted = await requestPermission([
+        {accessType: 'read', recordType: 'Steps'},
+        {accessType: 'read', recordType: 'Distance'},
+        {accessType: 'read', recordType: 'ActiveCaloriesBurned'},
+      ]);
+
+      if (granted) {
+        setHealthConnectError(null);
+        await AsyncStorage.setItem('syncMethod', 'healthconnect');
+        setSyncMethod('healthconnect');
+        showDialog(
+          'Success',
+          'Health Connect permissions granted successfully',
+        );
+      } else {
+        showDialog(
+          'Permission Required',
+          'Health Connect permissions are required to sync data.',
+        );
       }
     } catch (error) {
-      console.error('Failed to load last sync time:', error);
+      showDialog(
+        'Error',
+        'Failed to request Health Connect permissions. Please try again.',
+      );
     }
+  };
+
+  const handleInstallHealthConnect = () => {
+    Linking.openURL(HEALTH_CONNECT_STORE_URL).catch(() => {
+      showDialog(
+        'Error',
+        'Could not open Google Play Store. Please install Health Connect manually.',
+      );
+    });
   };
 
   const toggleHealthConnect = async () => {
-    if (healthConnectEnabled) {
+    if (syncMethod === 'healthconnect') {
       // Turning off - revoke permissions
       try {
         await revokeAllPermissions();
-        setHealthConnectEnabled(false);
         setHealthConnectError(null);
+        await AsyncStorage.setItem('syncMethod', 'none');
+        setSyncMethod('none');
       } catch (error) {
         showDialog(
           'Error',
@@ -117,54 +204,26 @@ const SettingsDevicesScreen = () => {
         );
       }
     } else {
-      // Turning on - request permissions
-      try {
-        const granted = await requestPermission([
-          {accessType: 'read', recordType: 'Steps'},
-          {accessType: 'read', recordType: 'Distance'},
-          {accessType: 'read', recordType: 'ActiveCaloriesBurned'},
-          // Add other required permissions here
-        ]);
-
-        if (granted) {
-          setHealthConnectEnabled(true);
-          setHealthConnectError(null);
-        } else {
-          showDialog(
-            'Permission Required',
-            'Health Connect permissions are required to sync data.',
-          );
-        }
-      } catch (error) {
-        setHealthConnectError(
-          'Failed to request Health Connect permissions. Please try again.',
-        );
-        setHealthConnectEnabled(false);
-      }
+      // Turning on - check status first
+      await checkHealthConnectStatus();
     }
   };
 
   const handleSyncNow = async () => {
-    if (!healthConnectEnabled) {
+    if (syncMethod === 'none') {
       showDialog(
         'Sync disabled',
-        'Please enable one of the following sync options to sync data.',
+        'Please enable one of the sync methods to sync data.',
       );
       return;
     }
 
     setIsSyncing(true);
     try {
-      // Simulate sync process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await handleSyncButtonPress();
 
-      // In a real app, you would actually sync data here
-      // const steps = await readRecords('Steps', {timeRangeFilter: {...}});
-      // Process and store the data...
-
-      // Update last sync time
       const now = new Date();
-      await AsyncStorage.setItem('syncDataTimestamp', now.getTime().toString());
+      await AsyncStorage.setItem('syncLastTimestamp', now.getTime().toString());
       setLastSynced(formatDistanceToNow(now, {addSuffix: true}));
 
       showDialog('Success', 'Data synced successfully');
@@ -173,6 +232,12 @@ const SettingsDevicesScreen = () => {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleFrequencyChange = async (value: number) => {
+    setSyncFrequency(value);
+    await AsyncStorage.setItem('syncFrequency', value.toString());
+    setShowFrequencyModal(false);
   };
 
   const getFrequencyLabel = () => {
@@ -194,33 +259,20 @@ const SettingsDevicesScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderWidth: 1,
-          borderColor: '#F1F5F9',
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: '#FFF',
-        }}>
+      <View style={styles.header}>
         <BackButton size={26} />
-        <Text style={{fontSize: 18, fontWeight: '600', marginLeft: 8}}>
-          Manage connected accounts
-        </Text>
+        <Text style={styles.headerTitle}>Manage connected accounts</Text>
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Header Section */}
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Sync Your Health Data</Text>
+          <Text style={styles.headerContextTitle}>Sync Your Health Data</Text>
           <Text style={styles.headerDescription}>
             Connect your favorite health apps to sync and manage all your health
             data in one place.
           </Text>
         </View>
 
-        {/* Available Apps Section */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Available Apps</Text>
           <Text style={styles.sectionSubtitle}>Select apps to sync data</Text>
@@ -228,10 +280,7 @@ const SettingsDevicesScreen = () => {
           {/* Samsung Health - Disabled */}
           <View style={[styles.appItem, styles.unsupportedApp]}>
             <View style={styles.samsungIconContainer}>
-              <Image
-                source={logo_samsung_health}
-                style={{width: 36, height: 36, resizeMode: 'cover'}}
-              />
+              <Image source={logo_samsung_health} style={styles.appIcon} />
             </View>
             <View style={styles.appInfo}>
               <Text style={styles.appName}>Samsung Health</Text>
@@ -239,7 +288,7 @@ const SettingsDevicesScreen = () => {
             </View>
             <View style={styles.switchContainer}>
               <Switch
-                value={false}
+                value={syncMethod === 'samsunghealth'}
                 disabled
                 trackColor={{false: '#E2E8F0', true: '#CBD5E1'}}
                 thumbColor="#E2E8F0"
@@ -247,41 +296,65 @@ const SettingsDevicesScreen = () => {
             </View>
           </View>
 
-          {/* Health Connect */}
           <View style={styles.appItem}>
             <View style={styles.healthConnectIconContainer}>
               <View style={styles.healthConnectIcon}>
-                <Image
-                  source={logo_health_connect}
-                  style={{width: 36, height: 36, resizeMode: 'cover'}}
-                />
+                <Image source={logo_health_connect} style={styles.appIcon} />
               </View>
             </View>
             <View style={styles.appInfo}>
               <Text style={styles.appName}>Health Connect</Text>
               <Text style={styles.appDescription}>Sync Google Health data</Text>
-              {healthConnectError ? (
-                <View style={styles.errorContainer}>
+
+              {healthConnectError && (
+                <View style={styles.errorInlineContainer}>
                   <Icon
                     name="warning-outline"
                     size={14}
                     color={theme.colors.error}
+                    style={styles.errorIcon}
                   />
-                  <Text style={styles.errorText}>{healthConnectError}</Text>
+                  <Text style={styles.errorInlineText}>
+                    {healthConnectError.message}
+                  </Text>
+
+                  {healthConnectError.type === 'permission' && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={handleRequestPermission}>
+                      <Icon name="key-outline" size={14} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}> Grant</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {healthConnectError.type === 'connection' && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={handleInstallHealthConnect}>
+                      <Icon name="download-outline" size={14} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}> Install</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-              ) : healthConnectEnabled ? (
+              )}
+
+              {syncMethod === 'healthconnect' && !healthConnectError && (
                 <Text style={styles.noteText}>
                   Note: For this to work, your app associated with running
                   devices must be linked to this as well
                 </Text>
-              ) : null}
+              )}
             </View>
             <View style={styles.switchContainer}>
               <Switch
-                value={healthConnectEnabled}
+                value={syncMethod === 'healthconnect'}
                 onValueChange={toggleHealthConnect}
                 trackColor={{false: '#E2E8F0', true: '#CBD5E1'}}
-                thumbColor={healthConnectEnabled ? '#1E40AF' : '#FFFFFF'}
+                thumbColor={
+                  syncMethod === 'healthconnect'
+                    ? theme.colors.primary
+                    : '#FFFFFF'
+                }
               />
             </View>
           </View>
@@ -295,7 +368,11 @@ const SettingsDevicesScreen = () => {
             style={styles.settingItem}
             onPress={() => setShowFrequencyModal(true)}>
             <View style={styles.settingLeft}>
-              <Icon name="repeat-outline" size={18} color="#0EA5E9" />
+              <Icon
+                name="repeat-outline"
+                size={18}
+                color={theme.colors.primary}
+              />
               <Text style={styles.settingLabel}>Sync frequency</Text>
             </View>
             <View style={styles.settingRight}>
@@ -306,14 +383,17 @@ const SettingsDevicesScreen = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
-              <Icon name="time-outline" size={18} color="#0EA5E9" />
+              <Icon
+                name="time-outline"
+                size={18}
+                color={theme.colors.primary}
+              />
               <Text style={styles.settingLabel}>Last synced: {lastSynced}</Text>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Sync Now Button */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[
@@ -325,12 +405,19 @@ const SettingsDevicesScreen = () => {
           {isSyncing ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.connectButtonText}>Sync Now</Text>
+            <>
+              <Icon
+                name="sync-outline"
+                size={18}
+                color="#FFFFFF"
+                style={styles.syncIcon}
+              />
+              <Text style={styles.connectButtonText}>Sync Now</Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Sync Frequency Modal */}
       <Modal
         visible={showFrequencyModal}
         transparent={true}
@@ -349,13 +436,14 @@ const SettingsDevicesScreen = () => {
                     syncFrequency === option.value &&
                       styles.frequencyOptionSelected,
                   ]}
-                  onPress={() => {
-                    setSyncFrequency(option.value);
-                    setShowFrequencyModal(false);
-                  }}>
+                  onPress={() => handleFrequencyChange(option.value)}>
                   <Text style={styles.frequencyOptionText}>{option.label}</Text>
                   {syncFrequency === option.value && (
-                    <Icon name="checkmark" size={18} color="#1E40AF" />
+                    <Icon
+                      name="checkmark"
+                      size={18}
+                      color={theme.colors.primary}
+                    />
                   )}
                 </Pressable>
               ))}
@@ -390,6 +478,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: 8,
+    color: '#0F172A',
+  },
   content: {
     flex: 1,
     padding: 16,
@@ -405,7 +508,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 24,
   },
-  headerTitle: {
+  headerContextTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#0F172A',
@@ -443,6 +546,11 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     backgroundColor: '#F8FAFC',
   },
+  appIcon: {
+    width: 36,
+    height: 36,
+    resizeMode: 'cover',
+  },
   samsungIconContainer: {
     width: 36,
     height: 36,
@@ -465,10 +573,10 @@ const styles = StyleSheet.create({
   },
   appInfo: {
     flex: 1,
-    marginRight: 12, // Added margin to prevent text from overlapping switch
+    marginRight: 12,
   },
   switchContainer: {
-    width: 50, // Fixed width for switch container
+    width: 50,
   },
   appName: {
     fontSize: 16,
@@ -486,14 +594,34 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
-  errorContainer: {
+  errorInlineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+    flexWrap: 'wrap',
   },
-  errorText: {
+  errorIcon: {
+    marginRight: 4,
+  },
+  errorInlineText: {
     fontSize: 12,
     color: theme.colors.error,
+    marginRight: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
     marginLeft: 4,
   },
   settingItem: {
@@ -528,10 +656,12 @@ const styles = StyleSheet.create({
     borderTopColor: '#F1F5F9',
   },
   connectButton: {
-    backgroundColor: '#0F2B5B',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primaryDark,
     borderRadius: 8,
     paddingVertical: 16,
-    alignItems: 'center',
   },
   connectButtonDisabled: {
     opacity: 0.7,
@@ -540,6 +670,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  syncIcon: {
+    marginRight: 8,
   },
   modalContainer: {
     flex: 1,

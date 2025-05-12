@@ -122,6 +122,51 @@ export interface RestingHeartRateRecord {
   dataOrigin: string;
 }
 
+export const handleSyncButtonPress = async () => {
+  let syncMethod = await AsyncStorage.getItem('syncMethod');
+  if (!syncMethod) {
+    ToastUtil.show('A sync method must be selected first.');
+    return {
+      type: 'SYNC_METHOD_MISSING',
+      message: 'A sync method must be selected first.',
+    };
+  }
+  try {
+    await initializeHealthConnect();
+  } catch (e) {
+    ToastUtil.error(
+      'Sync data error',
+      'An error occurred while syncing data from Health Connect.',
+    );
+    return {
+      type: 'SYNC_ERROR_HEALTHCONNECT',
+      message: 'An error occurred while syncing data from Health Connect.',
+    };
+  }
+
+  try {
+    const now = new Date();
+    const endTime = now.toISOString();
+    const startTime = new Date();
+    startTime.setFullYear(startTime.getFullYear() - 1);
+    await startSyncData(startTime.toISOString(), endTime);
+  } catch (e) {
+    ToastUtil.error(
+      'Sync data error',
+      'An error occurred while syncing data from Health Connect.',
+    );
+    return {
+      type: 'SYNC_CONNECTION_ERROR_HEALTHCONNECT',
+      message: 'An error occurred while syncing data from Health Connect.',
+    };
+  }
+
+  return {
+    type: 'SYNC_SUCCESS',
+    message: 'Data synced successfully.',
+  };
+};
+
 export const initializeHealthConnect = async (): Promise<boolean> => {
   try {
     const isInitialized = await initialize();

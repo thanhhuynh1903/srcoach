@@ -79,7 +79,7 @@ const CommunityScreen = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const PAGE_SIZE = 10;
   const loadingRef = useRef(false);
 
@@ -142,9 +142,7 @@ const CommunityScreen = () => {
 
           // Chỉ thêm các bài viết mới vào danh sách
           const updatedPosts = [...prevPosts, ...uniqueNewPosts];
-          console.log(
-            `Tổng số bài viết sau khi cập nhật:`,updatedPosts
-          );
+          console.log(`Tổng số bài viết sau khi cập nhật:`, updatedPosts);
 
           return updatedPosts;
         });
@@ -173,20 +171,9 @@ const CommunityScreen = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentPlaceholderIndex(
-          prevIndex => (prevIndex + 1) % PLACEHOLDER_TEXTS.length,
-        );
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-      });
+      setCurrentPlaceholderIndex(
+        prev => (prev + 1) % PLACEHOLDER_TEXTS.length,
+      );
     }, 3000);
     return () => clearInterval(interval);
   }, [fadeAnim]);
@@ -658,7 +645,8 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   placeholderText: {
-    color: '#999',
+    flex: 1,
+    color: '#828282',
   },
   sectionTitle: {
     marginVertical: 16,

@@ -5,8 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
-  RefreshControl,
   Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
@@ -16,7 +14,7 @@ import {useCallback, useState, useRef, useMemo} from 'react';
 import {
   ExerciseSession,
   fetchExerciseSessionRecords,
-  startSyncData,
+  handleSyncButtonPress,
 } from '../../utils/utils_healthconnect';
 import {format, parseISO} from 'date-fns';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -34,15 +32,14 @@ import {
 
 export default function ExerciseRecordsScreen() {
   const navigation = useNavigation();
-  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>(
-    [],
-  );
+  const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [accessDetailNavigation, setAccessDetailNavigation] = useState(true);
 
@@ -53,13 +50,9 @@ export default function ExerciseRecordsScreen() {
   const [maxSteps, setMaxSteps] = useState<number>(10000);
   const [minDistance, setMinDistance] = useState<number>(0);
   const [maxDistance, setMaxDistance] = useState<number>(10000);
-  const [selectedExerciseTypes, setSelectedExerciseTypes] = useState<string[]>(
-    [],
-  );
+  const [selectedExerciseTypes, setSelectedExerciseTypes] = useState<string[]>([]);
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>(
-    'start',
-  );
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
 
   // Calculate min/max values from data
   const {allExerciseTypes, stepsRange, distanceRange} = useMemo(() => {
@@ -100,35 +93,37 @@ export default function ExerciseRecordsScreen() {
       duration: 300,
       useNativeDriver: true,
     }).start();
+  };
 
-    setTimeout(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => setSyncStatus(null));
-    }, 5000);
+  const hideSyncStatus = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setSyncStatus(null));
   };
 
   const handleSyncPress = async () => {
     try {
-      showSyncStatus('Syncing data...');
+      setIsSyncing(true);
       setAccessDetailNavigation(false);
-      const success = await startSyncData(
-        startDate || new Date('2025-01-01T00:00:00.000Z').toISOString(),
-        endDate || new Date().toISOString(),
-      );
-      if (success) {
+      showSyncStatus('Syncing data...');
+      
+      const result = await handleSyncButtonPress();
+      
+      if (result.type === 'SYNC_SUCCESS') {
         showSyncStatus('Sync completed successfully');
-        readSampleData();
+        await readSampleData();
       } else {
-        showSyncStatus('Sync failed. Please try again');
+        showSyncStatus(result.message);
       }
     } catch (error) {
       showSyncStatus('Sync failed. Please try again');
       ToastUtil.error('Sync Error', 'Failed to sync exercise data');
     } finally {
+      setIsSyncing(false);
       setAccessDetailNavigation(true);
+      // Don't automatically hide the status - let user dismiss or it will hide on next sync
     }
   };
 
@@ -140,7 +135,7 @@ export default function ExerciseRecordsScreen() {
   };
 
   const getFilteredSampleData = () => {
-    let filteredSession = exerciseSessions
+    let filteredSession = exerciseSessions;
     if (selectedExerciseTypes && selectedExerciseTypes.length > 0) {
       filteredSession = exerciseSessions.filter(s =>
         selectedExerciseTypes.includes(s.exerciseType),
@@ -166,7 +161,7 @@ export default function ExerciseRecordsScreen() {
         s => new Date(s.startTime) <= new Date(endDate),
       );
     }
-    return filteredSession
+    return filteredSession;
   };
 
   const readSampleData = async () => {
@@ -360,11 +355,13 @@ export default function ExerciseRecordsScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={handleSyncPress}>
+          <TouchableOpacity 
+            onPress={handleSyncPress}
+            disabled={isSyncing}>
             <Icon
               name="sync"
               size={24}
-              color={theme.colors.primaryDark}
+              color={isSyncing ? '#cccccc' : theme.colors.primaryDark}
               style={styles.headerIcon}
             />
           </TouchableOpacity>
@@ -395,12 +392,17 @@ export default function ExerciseRecordsScreen() {
             styles.syncStatusContainer,
             {
               opacity: fadeAnim,
-              backgroundColor: syncStatus.includes('failed')
+              backgroundColor: syncStatus.includes('failed') || syncStatus.includes('error')
                 ? '#FF5252'
                 : theme.colors.primaryDark,
             },
           ]}>
           <Text style={styles.syncStatusText}>{syncStatus}</Text>
+          <TouchableOpacity 
+            style={styles.closeSyncStatusButton}
+            onPress={hideSyncStatus}>
+            <Icon name="close" size={20} color="white" />
+          </TouchableOpacity>
         </Animated.View>
       )}
 
@@ -535,14 +537,7 @@ export default function ExerciseRecordsScreen() {
 
       <ScrollView
         style={styles.container}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.colors.primaryDark]}
-            tintColor={theme.colors.primaryDark}
-          />
-        }>
+       >
         {loading ? (
           <ERSContainerSkeleton />
         ) : error ? (
@@ -593,17 +588,21 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     marginLeft: 20,
-    color: theme.colors.primaryDark,
   },
   syncStatusContainer: {
     padding: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   syncStatusText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+    flex: 1,
+  },
+  closeSyncStatusButton: {
+    marginLeft: 10,
   },
   filterBannerContainer: {
     flexDirection: 'row',

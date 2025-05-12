@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback, FlatList} from 'react-native';
+import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
@@ -195,78 +195,50 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
   const directMessageCount = directMessages.length;
   const pendingRequestCount = pendingRequests.length;
 
-  // Prepare flatlist data with proper keys
-  const data = [
-    expertSessions.length > 0 && {
-      type: 'header' as const,
-      title: isExpert ? 'Runner Sessions' : 'Expert Sessions',
-      iconName: isExpert ? 'people' : 'trophy',
-      count: expertSessionCount,
-      id: 'expert-sessions'
-    },
-    ...expertSessions.map(item => ({
-      type: 'item' as const,
-      data: item,
-      id: `expert-${item.id}`
-    })),
-    directMessages.length > 0 && {
-      type: 'header' as const,
-      title: 'Direct Messages',
-      iconName: 'chatbubbles',
-      count: directMessageCount,
-      id: 'direct-messages'
-    },
-    ...directMessages.map(item => ({
-      type: 'item' as const,
-      data: item,
-      id: `direct-${item.id}`
-    })),
-    pendingRequests.length > 0 && {
-      type: 'header' as const,
-      title: 'Pending Requests',
-      iconName: 'time',
-      count: pendingRequestCount,
-      id: 'pending-requests'
-    },
-    ...pendingRequests.map(item => ({
-      type: 'item' as const,
-      data: item,
-      id: `pending-${item.id}`
-    })),
-  ].filter(Boolean);
-
-  const renderItem = ({item}: {item: typeof data[0]}) => {
-    if (item.type === 'header') {
-      return <ChatCategory title={item.title} iconName={item.iconName} count={item.count} id={item.id} />;
-    }
+  const renderSection = (sessions: ChatListItemProps['session'][], title: string, iconName: string, count: string | number, id: string) => {
+    if (sessions.length === 0) return null;
+    
     return (
-      <ChatListItem
-        session={item.data}
-        onPress={() => onItemPress(item.data)}
-        onAccept={() => onAccept(item.data)}
-        onDeny={() => onDeny(item.data)}
-      />
+      <View key={id}>
+        <ChatCategory title={title} iconName={iconName} count={count} id={id} />
+        {sessions.map(session => (
+          <ChatListItem
+            key={session.id}
+            session={session}
+            onPress={() => onItemPress(session)}
+            onAccept={() => onAccept(session)}
+            onDeny={() => onDeny(session)}
+          />
+        ))}
+        <View style={styles.sectionSeparator} />
+      </View>
     );
   };
 
-  const getItemLayout = (data: any[] | null, index: number) => {
-    const item = data?.[index];
-    const length = item?.type === 'header' ? 40 : 100;
-    return {length, offset: length * index, index};
-  };
-
   return (
-    <FlatList
-      data={data}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      getItemLayout={getItemLayout as any}
-      initialNumToRender={10}
-      maxToRenderPerBatch={10}
-      windowSize={10}
-      contentContainerStyle={styles.listContainer}
-      ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-    />
+    <View style={styles.listContainer}>
+      {renderSection(
+        expertSessions,
+        isExpert ? 'Runner Sessions' : 'Expert Sessions',
+        isExpert ? 'people' : 'trophy',
+        expertSessionCount,
+        'expert-sessions'
+      )}
+      {renderSection(
+        directMessages,
+        'Direct Messages',
+        'chatbubbles',
+        directMessageCount,
+        'direct-messages'
+      )}
+      {renderSection(
+        pendingRequests,
+        'Pending Requests',
+        'time',
+        pendingRequestCount,
+        'pending-requests'
+      )}
+    </View>
   );
 };
 
@@ -275,14 +247,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 20,
   },
-  itemSeparator: {
-    height: 8,
+  sectionSeparator: {
+    height: 16,
   },
   categoryContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 12,
-    paddingBottom: 2,
+    paddingBottom: 4,
     paddingHorizontal: 8,
   },
   categoryIcon: {
