@@ -303,7 +303,7 @@ const RiskWarningScreen = () => {
               <Icon name="walk-outline" size={16} color="#64748B" />
               <Text style={styles.activityStatText}>
                 
-                {activityData?.distance.toFixed(2) || assessment?.distance.toFixed(2) || '0'} km
+                {activityData?.distance?.toFixed(2) || assessment?.distance?.toFixed(2) || '0'} km
               </Text>
             </View>
             <View style={styles.activityStat}>

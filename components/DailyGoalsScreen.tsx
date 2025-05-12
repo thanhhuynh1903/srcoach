@@ -215,7 +215,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const newSchedule = [...dailySchedule];
     const day = newSchedule[dayIndex];
     const date = day.day;
-    if (dailySchedule[dayIndex].details.some(s => s.status === 'MISSED')) {
+    if (dailySchedule[dayIndex].details.some(s => s.status === 'MISSED' || s.status === 'COMPLETED')) {
       return;
     }
     // Thêm buổi tập mới vào ngày với giá trị số đúng kiểu dữ liệu
@@ -425,7 +425,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                   const sessionKey = `${dayIndex}-${sessionIndex}`;
                   const sessionErrors = validationErrors[sessionKey] || {};
                   const hasMissedSession = day.details.some(
-                    s => s.status === 'MISSED',
+                    s => s.status === 'MISSED' || s.status === 'COMPLETED',
                   );
 
                   return (
@@ -451,7 +451,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                           </View>
                         )}
                         {day.details.length > 1 &&
-                          session.status !== 'MISSED' && (
+                          session.status !== 'MISSED' && session.status !== 'COMPLETED' && (
                             <TouchableOpacity
                               onPress={() =>
                                 removeSession(dayIndex, sessionIndex)
@@ -484,7 +484,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               value,
                             )
                           }
-                          editable={session.status !== 'MISSED'}
+                          editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                           placeholder="Describe your session"
                         />
                       </View>
@@ -509,7 +509,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               );
                             }}
                             placeholder="HH:MM"
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             keyboardType="numbers-and-punctuation"
                             maxLength={5}
                           />
@@ -527,7 +527,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 value,
                               )
                             }
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             placeholder="HH:MM"
                           />
                         </View>
@@ -576,7 +576,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 session.goal_distance,
                               );
                             }}
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             keyboardType="decimal-pad"
                             placeholder="0.00"
                             maxLength={5}
@@ -633,7 +633,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               );
                             }}
                             keyboardType="numeric"
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             maxLength={5}
                           />
                           <Text style={styles.goalUnit}>kcal</Text>
@@ -685,7 +685,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 session.goal_steps,
                               );
                             }}
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             keyboardType="numeric"
                             maxLength={5}
                           />
@@ -727,7 +727,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 );
                               }
                             }}
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             keyboardType="numeric"
                             maxLength={3}
                           />
@@ -754,7 +754,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 );
                               }
                             }}
-                            editable={session.status !== 'MISSED'}
+                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
                             keyboardType="numeric"
                             maxLength={3}
                           />

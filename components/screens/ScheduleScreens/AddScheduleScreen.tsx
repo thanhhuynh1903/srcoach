@@ -26,7 +26,7 @@ const AddScheduleScreen = () => {
   const [description, setDescription] = useState('');
   const [selectedDates, setSelectedDates] = useState({});
   const [currentMonth, setCurrentMonth] = useState('');
-  const [validDates, setValidDates] = useState({});
+  const [validDates, setValidDates] = useState<{[key: string]: any}>({});
   const {createSchedule, schedules, isLoading, message, fetchSelfSchedules} =
     useScheduleStore();
   const [isCreating, setIsCreating] = useState(false);
@@ -99,7 +99,7 @@ const AddScheduleScreen = () => {
     setCurrentMonth(todayStr);
 
     // Generate valid dates (today + 6 days)
-    const validDatesObj = {};
+const validDatesObj: {[key: string]: any} = {};
     for (let i = 0; i < MAX_DAYS_SELECTION; i++) {
       const date = new Date();
       date.setDate(today.getDate() + i);
@@ -191,7 +191,7 @@ const AddScheduleScreen = () => {
 
   // Combine marked dates (selected + valid dates)
   const getMarkedDates = () => {
-    const markedDates = {...validDates};
+    const markedDates: { [key: string]: any }  = {...validDates};
 
     // Add selected dates styling
     Object.keys(selectedDates).forEach(dateStr => {
