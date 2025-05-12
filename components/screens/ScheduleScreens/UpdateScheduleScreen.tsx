@@ -29,6 +29,7 @@ interface TrainingSession {
   goal_calories: number | null;
   goal_minbpms: number | null;
   goal_maxbpms: number | null;
+  status?: string;
 }
 
 interface DailySchedule {
@@ -42,7 +43,7 @@ const UpdateScheduleScreen = () => {
   const [description, setDescription] = useState('');
   const [selectedDates, setSelectedDates] = useState<Record<string, any>>({});
   const [currentMonth, setCurrentMonth] = useState('');
-  const [validDates, setValidDates] = useState({});
+  const [validDates, setValidDates] = useState<{[key: string]: any}>({});
   const {
     updateSchedule,
     schedules,
@@ -53,7 +54,7 @@ const UpdateScheduleScreen = () => {
   } = useScheduleStore();
   const [isCreating, setIsCreating] = useState(false);
   // Daily goals for each selected date
-  const [dailyGoals, setDailyGoals] = useState({});
+  const [dailyGoals, setDailyGoals] = useState<DailySchedule[]>([]);
   const route = useRoute();
   const {scheduleId} = route.params as {scheduleId: string};
   const [initialGoals, setInitialGoals] = useState<DailySchedule[]>([]);
@@ -70,26 +71,44 @@ const UpdateScheduleScreen = () => {
     try {
       setIsCreating(true);
 
+      const validDays = dailyGoals?.filter(
+        (day: DailySchedule) =>
+          !day.details.some(session => session.status === 'MISSED'),
+      );
+
+      // Kiểm tra nếu không còn ngày nào hợp lệ
+      if (validDays.length === 0) {
+        Alert.alert(
+          'Cannot Update',
+          'All selected days contain missed sessions that cannot be updated',
+          [{text: 'OK'}],
+        );
+        return;
+      }
+
+      const cleanedDays = validDays?.map((day: DailySchedule) => ({
+        ...day,
+        details: day.details.map(({status, ...rest}) => rest), // Giữ lại tất cả trường trừ status
+      }));
+
       const formData = {
         title,
         description,
-        days: dailyGoals,
+        days: cleanedDays,
       };
 
-      const result = await updateSchedule(scheduleId, formData)
-        if (result === 'success') {
-          Toast.show({
-            type: 'success',
-            text1: 'Success',
-            text2: 'Schedule updated successfully',
-          });
-          fetchSelfSchedules();
-          navigate.goBack();
-        }
-    
+      const result = await updateSchedule(scheduleId, formData);
+      if (result === 'success') {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Schedule updated successfully',
+        });
+        fetchSelfSchedules();
+        navigate.goBack();
+      }
     } catch (err) {
       console.log('Error updating schedule:', err);
-      
     } finally {
       setIsCreating(false);
     }
@@ -100,11 +119,8 @@ const UpdateScheduleScreen = () => {
     const today = new Date();
     const todayStr = formatDateString(today);
 
-    // Set current month for calendar
-    setCurrentMonth(todayStr);
-
-    // Generate valid dates (today + 6 days)
-    const validDatesObj = {};
+    // Tạo validDates cho 14 ngày tới
+    const validDatesObj: {[key: string]: any} = {};
     for (let i = 0; i < MAX_DAYS_SELECTION; i++) {
       const date = new Date();
       date.setDate(today.getDate() + i);
@@ -116,6 +132,18 @@ const UpdateScheduleScreen = () => {
       };
     }
 
+    // Thêm các ngày từ initialGoals vào validDates nếu là quá khứ
+    initialGoals.forEach(day => {
+      const dayDate = new Date(day.day);
+      if (dayDate < today && !validDatesObj[day.day]) {
+        validDatesObj[day.day] = {
+          disabled: true,
+          disableTouchEvent: true,
+          textColor: '#CBD5E1',
+        };
+      }
+    });
+
     // Highlight today
     validDatesObj[todayStr] = {
       ...validDatesObj[todayStr],
@@ -124,53 +152,53 @@ const UpdateScheduleScreen = () => {
     };
 
     setValidDates(validDatesObj);
-  }, []);
+  }, [initialGoals]);
 
- useEffect(() => {
-  const loadScheduleData = async () => {
-    try {
-      const scheduleData = await fetchDetail(scheduleId);
-      
-      if (!scheduleData) {
-        Alert.alert('Error', 'Schedule not found');
-        return;
+  useEffect(() => {
+    const loadScheduleData = async () => {
+      try {
+        const scheduleData = await fetchDetail(scheduleId);
+        console.log('scheduleData', scheduleData);
+
+        if (!scheduleData) {
+          Alert.alert('Error', 'Schedule not found');
+          return;
+        }
+
+        setTitle(scheduleData.title || '');
+        setDescription(scheduleData.description || '');
+
+        // Chuyển đổi dữ liệu từ API sang định dạng DailySection cần
+        const convertedDays = scheduleData?.ScheduleDay?.map(day => ({
+          day: new Date(day.day).toISOString().split('T')[0], // Format thành YYYY-MM-DD
+          details: day.ScheduleDetail.map(detail => ({
+            description: detail.description,
+            start_time: detail.start_time,
+            end_time: detail.end_time,
+            goal_steps: detail.goal_steps,
+            goal_distance: detail.goal_distance,
+            goal_calories: detail.goal_calories,
+            goal_minbpms: detail.goal_minbpms,
+            goal_maxbpms: detail.goal_maxbpms,
+            status: detail.status,
+          })),
+        }));
+
+        // Cập nhật selectedDates
+        const dates = convertedDays.reduce((acc, day) => {
+          acc[day.day] = {selected: true, selectedColor: '#0F2B5B'};
+          return acc;
+        }, {});
+
+        setSelectedDates(dates);
+        setInitialGoals(convertedDays);
+      } catch (error) {
+        console.error('Error loading schedule:', error);
       }
+    };
 
-      setTitle(scheduleData.title || '');
-      setDescription(scheduleData.description || '');
-
-      // Chuyển đổi dữ liệu từ API sang định dạng DailySection cần
-      const convertedDays = scheduleData?.ScheduleDay?.map(day => ({
-        day: new Date(day.day).toISOString().split('T')[0], // Format thành YYYY-MM-DD
-        details: day.ScheduleDetail.map(detail => ({
-          description: detail.description,
-          start_time: detail.start_time,
-          end_time: detail.end_time,
-          goal_steps: detail.goal_steps,
-          goal_distance: detail.goal_distance,
-          goal_calories: detail.goal_calories,
-          goal_minbpms: detail.goal_minbpms,
-          goal_maxbpms: detail.goal_maxbpms
-        }))
-      }));
-
-      // Cập nhật selectedDates
-      const dates = convertedDays.reduce((acc, day) => {
-        acc[day.day] = { selected: true, selectedColor: '#0F2B5B' };
-        return acc;
-      }, {});
-
-      setSelectedDates(dates);
-      setInitialGoals(convertedDays);
-    } catch (error) {
-      console.error('Error loading schedule:', error);
-    }
-  };
-
-  loadScheduleData();
-}, [scheduleId]);
-
-
+    loadScheduleData();
+  }, [scheduleId]);
 
   // Format date to YYYY-MM-DD
   const formatDateString = date => {
@@ -188,17 +216,25 @@ const UpdateScheduleScreen = () => {
   // Handle date selection with validation
   const onDayPress = day => {
     const dateStr = day.dateString;
+    const selectedDate = new Date(dateStr);
+    const today = new Date();
 
     // Check if date is in valid range
+    if (selectedDate < today && !initialGoals.find(d => d.day === dateStr)) {
+      Alert.alert('Invalid Selection', 'Cannot select past dates', [
+        {text: 'OK'},
+      ]);
+      return;
+    }
+
     if (!validDates[dateStr]) {
       Alert.alert(
         'Invalid Selection',
-        'You can only select days within the next 7 days starting from today.',
+        'You can only select days within the next 14 days starting from today.',
         [{text: 'OK'}],
       );
       return;
     }
-
     setSelectedDates(prevSelectedDates => {
       const newSelectedDates = {...prevSelectedDates};
 
@@ -242,9 +278,9 @@ const UpdateScheduleScreen = () => {
 
   // Combine marked dates (selected + valid dates)
   const getMarkedDates = () => {
-    const markedDates = { ...validDates, ...selectedDates };
+    const markedDates: {[key: string]: any} = {...validDates};
 
-    // Add selected dates styling
+    // Thêm các ngày đã chọn và initial goals
     Object.keys(selectedDates).forEach(dateStr => {
       markedDates[dateStr] = {
         ...markedDates[dateStr],
@@ -253,26 +289,57 @@ const UpdateScheduleScreen = () => {
       };
     });
 
-    // Mark all other dates as disabled
-    const today = new Date();
-    const todayStr = formatDateString(today);
+    // Thêm các ngày từ initialGoals
+    initialGoals.forEach(day => {
+      const dateStr = day.day;
+      const dayDate = new Date(dateStr);
+      const today = new Date();
 
-    // Get first day of current month
-    const firstDay = new Date(currentMonth || todayStr);
+      if (dayDate < today) {
+        if (initialGoals && initialGoals.length > 0) {
+          initialGoals.forEach(day => {
+            // Kiểm tra xem ngày này có bất kỳ buổi tập nào bị missed không
+            const hasMissedSession = day.details.some(
+              detail => detail.status === 'MISSED',
+            );
+
+            if (hasMissedSession) {
+              const dateStr = day.day;
+              markedDates[dateStr] = {
+                ...markedDates[dateStr],
+                selected: true,
+                selectedColor: '#EF4444',
+                disabled: true,
+                disableTouchEvent: true,
+              };
+            }
+          });
+        } else {
+          markedDates[dateStr] = {
+            ...markedDates[dateStr],
+            selected: true,
+            selectedColor: '#64748B', // Màu xám cho ngày quá khứ
+            disabled: true,
+            disableTouchEvent: true,
+          };
+        }
+      }
+    });
+
+    // Đánh dấu các ngày không hợp lệ khác
+    const today = new Date();
+    const firstDay = new Date(currentMonth || today);
     firstDay.setDate(1);
 
-    // Get last day of current month
     const lastDay = new Date(firstDay);
     lastDay.setMonth(lastDay.getMonth() + 1);
     lastDay.setDate(0);
 
-    // Loop through all days in current month
-    const currentDate = new Date(firstDay);
+    let currentDate = new Date(firstDay);
     while (currentDate <= lastDay) {
       const dateStr = formatDateString(currentDate);
 
-      // If not in valid dates, mark as disabled
-      if (!validDates[dateStr]) {
+      if (!validDates[dateStr] && !initialGoals.find(d => d.day === dateStr)) {
         markedDates[dateStr] = {
           disabled: true,
           disableTouchEvent: true,
@@ -280,7 +347,6 @@ const UpdateScheduleScreen = () => {
         };
       }
 
-      // Move to next day
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
@@ -439,9 +505,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   backButton: {
-    padding: 8,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
     marginRight: 12,
   },
   headerTitle: {

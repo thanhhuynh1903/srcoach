@@ -23,6 +23,7 @@ interface TrainingSession {
   goal_calories: number | null;
   goal_minbpms: number | null;
   goal_maxbpms: number | null;
+  status: string | null;
 }
 
 interface DailySchedule {
@@ -33,7 +34,7 @@ interface DailySchedule {
 interface DailyGoalsSectionProps {
   selectedDates: Record<string, any>;
   onGoalsChange: (schedule: DailySchedule[]) => void;
-  initialSchedules?: DailySchedule[]; // Thêm prop initial data
+  initialSchedules?: DailySchedule[];
 }
 
 const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
@@ -112,6 +113,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
         details: day.details.map(session => {
           return {
             description: session.description || 'Session',
+            status: session.status,
             start_time: session.start_time,
             end_time: session.end_time,
             goal_steps:
@@ -213,7 +215,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const newSchedule = [...dailySchedule];
     const day = newSchedule[dayIndex];
     const date = day.day;
-
+    if (dailySchedule[dayIndex].details.some(s => s.status === 'MISSED')) {
+      return;
+    }
     // Thêm buổi tập mới vào ngày với giá trị số đúng kiểu dữ liệu
     day.details.push({
       description: 'New Session',
@@ -224,6 +228,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       goal_calories: Number(defaultSessions.afternoon.goal_calories),
       goal_minbpms: Number(defaultSessions.afternoon.goal_minbpms),
       goal_maxbpms: Number(defaultSessions.afternoon.goal_maxbpms),
+      status: null,
     });
 
     setDailySchedule(newSchedule);
@@ -357,7 +362,20 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       return '00:00'; // Trả về giá trị mặc định nếu có lỗi
     }
   };
-
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'COMPLETED':
+        return '#22C55E'; // Xanh lá
+      case 'INCOMING':
+        return '#3B82F6'; // Xanh dương
+      case 'ONGOING':
+        return '#64748B';
+      case 'MISSED':
+        return '#CB0404';
+      default:
+        return '#64748B'; // Xám
+    }
+  };
   if (Object.keys(selectedDates).length === 0) {
     return null;
   }
@@ -406,6 +424,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                 {day.details.map((session, sessionIndex) => {
                   const sessionKey = `${dayIndex}-${sessionIndex}`;
                   const sessionErrors = validationErrors[sessionKey] || {};
+                  const hasMissedSession = day.details.some(
+                    s => s.status === 'MISSED',
+                  );
 
                   return (
                     <View key={sessionIndex} style={styles.sessionContainer}>
@@ -413,20 +434,40 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         <Text style={styles.sessionTitle}>
                           Session {sessionIndex + 1}
                         </Text>
-                        {day.details.length > 1 && (
-                          <TouchableOpacity
-                            onPress={() =>
-                              removeSession(dayIndex, sessionIndex)
-                            }
-                            style={styles.removeButton}>
-                            <Icon
-                              name="trash-outline"
-                              size={16}
-                              color="#EF4444"
-                            />
-                            <Text style={styles.removeButtonText}>Delete</Text>
-                          </TouchableOpacity>
+                        <View style={{flexDirection: 'row',gap: 8}}>
+                        {session.status && (
+                          <View
+                            style={[
+                              styles.statusBadge,
+                              {
+                                backgroundColor: getStatusColor(
+                                  session?.status,
+                                ),
+                              },
+                            ]}>
+                            <Text style={styles.statusText}>
+                              {session.status}
+                            </Text>
+                          </View>
                         )}
+                        {day.details.length > 1 &&
+                          session.status !== 'MISSED' && (
+                            <TouchableOpacity
+                              onPress={() =>
+                                removeSession(dayIndex, sessionIndex)
+                              }
+                              style={styles.removeButton}>
+                              <Icon
+                                name="trash-outline"
+                                size={16}
+                                color="#EF4444"
+                              />
+                              <Text style={styles.removeButtonText}>
+                                Delete
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                          </View>
                       </View>
 
                       {/* Mô tả buổi tập */}
@@ -443,6 +484,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               value,
                             )
                           }
+                          editable={session.status !== 'MISSED'}
                           placeholder="Describe your session"
                         />
                       </View>
@@ -467,6 +509,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               );
                             }}
                             placeholder="HH:MM"
+                            editable={session.status !== 'MISSED'}
                             keyboardType="numbers-and-punctuation"
                             maxLength={5}
                           />
@@ -484,6 +527,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 value,
                               )
                             }
+                            editable={session.status !== 'MISSED'}
                             placeholder="HH:MM"
                           />
                         </View>
@@ -532,6 +576,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 session.goal_distance,
                               );
                             }}
+                            editable={session.status !== 'MISSED'}
                             keyboardType="decimal-pad"
                             placeholder="0.00"
                             maxLength={5}
@@ -588,6 +633,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               );
                             }}
                             keyboardType="numeric"
+                            editable={session.status !== 'MISSED'}
                             maxLength={5}
                           />
                           <Text style={styles.goalUnit}>kcal</Text>
@@ -639,6 +685,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 session.goal_steps,
                               );
                             }}
+                            editable={session.status !== 'MISSED'}
                             keyboardType="numeric"
                             maxLength={5}
                           />
@@ -680,6 +727,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 );
                               }
                             }}
+                            editable={session.status !== 'MISSED'}
                             keyboardType="numeric"
                             maxLength={3}
                           />
@@ -706,6 +754,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 );
                               }
                             }}
+                            editable={session.status !== 'MISSED'}
                             keyboardType="numeric"
                             maxLength={3}
                           />
@@ -713,18 +762,34 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         </View>
                       </View>
 
-                      <View style={styles.divider} />
+                      {!hasMissedSession && (
+                        <>
+                          <View style={styles.divider} />
+                          <TouchableOpacity
+                            style={[
+                              styles.addButton,
+                              hasMissedSession && styles.disabledButton,
+                            ]}
+                            onPress={() => addSession(dayIndex)}
+                            disabled={hasMissedSession}>
+                            <Icon
+                              name="add-circle-outline"
+                              size={16}
+                              color={hasMissedSession ? '#94A3B8' : '#0F2B5B'}
+                            />
+                            <Text
+                              style={[
+                                styles.addButtonText,
+                                hasMissedSession && styles.disabledButtonText,
+                              ]}>
+                              Add more session
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   );
                 })}
-
-                {/* Nút thêm buổi tập */}
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => addSession(dayIndex)}>
-                  <Icon name="add-circle-outline" size={16} color="#0F2B5B" />
-                  <Text style={styles.addButtonText}>Add more session</Text>
-                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -815,6 +880,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
   },
+
   removeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -962,6 +1028,28 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#EF4444',
+  },
+  disabledButton: {
+    backgroundColor: '#F1F5F9',
+  },
+  disabledButtonText: {
+    color: '#94A3B8',
+  },
+  disabledInput: {
+    backgroundColor: '#F1F5F9',
+    color: '#64748B',
+  },
+
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FFF',
   },
 });
 

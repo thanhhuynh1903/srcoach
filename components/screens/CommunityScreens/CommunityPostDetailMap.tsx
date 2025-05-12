@@ -266,7 +266,7 @@ export default function CommunityPostDetailMap({ exerciseSessionRecordId }: { ex
       },
       {
         label: "Calories",
-        value: exerciseData.total_calories,
+        value: exerciseData.total_calories.toFixed(0),
         unit: "kcal",
         icon: "flame-outline",
       },

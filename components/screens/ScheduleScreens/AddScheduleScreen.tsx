@@ -387,9 +387,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   backButton: {
-    padding: 8,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
     marginRight: 12,
   },
   headerTitle: {

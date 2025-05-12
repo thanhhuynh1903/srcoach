@@ -483,10 +483,11 @@ const RunnerProfileScreen = () => {
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName}>{profile?.name}</Text>
                 <Text style={styles.profileUsername}>
-                  @{profile?.username || 'username'}
+                  @{profile?.username || 'Anonymous'}
                 </Text>
 
                 {/* Role Badge */}
+                <View style={{flexDirection: 'row',gap: 8}}>
                 {profile?.roles?.includes('runner') && (
                   <View style={styles.roleBadge}>
                     <Icon name="walk" size={14} color="#fff" />
@@ -499,6 +500,7 @@ const RunnerProfileScreen = () => {
                     <Text style={styles.roleBadgeText}>Expert</Text>
                   </View>
                 )}
+                </View>
               </View>
             </View>
 
@@ -529,8 +531,9 @@ const RunnerProfileScreen = () => {
                       styles.progressBar,
                       {
                         width: `${
-                          (profile?.points / profile?.points_to_next_level) *
-                          100
+                          profile?.points
+                            ? profile?.points_percentage 
+                            : 0
                         }%`,
                       },
                     ]}
@@ -1049,35 +1052,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  statDivider: {
-    width: 1,
-    height: '60%',
-    backgroundColor: '#F1F5F9',
-    alignSelf: 'center',
-  },
-  sectionContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 16,
-  },
+  
   profileBio: {
     fontSize: 16,
     color: '#64748B',

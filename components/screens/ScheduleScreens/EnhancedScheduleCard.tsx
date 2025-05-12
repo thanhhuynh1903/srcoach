@@ -187,23 +187,30 @@ const EnhancedScheduleCard = ({
 
       {/* Calendar Days */}
       <View style={styles.daysContainer}>
-        {days.map(day => (
-          <TouchableOpacity
-            key={day}
-            onPress={() => handleDaySelect(day)}
-            style={[
-              styles.dayCircle,
-              selectedDay === day && styles.selectedDayCircle,
-            ]}>
-            <Text
-              style={[
-                styles.dayText,
-                selectedDay === day && styles.selectedDayText,
-              ]}>
-              {day}
-            </Text>
-          </TouchableOpacity>
-        ))}
+       {days.map(day => {
+  const currentDaySchedule = daySchedules.find(schedule => schedule.day === day);
+  const hasMissed = currentDaySchedule?.workouts.some(workout => workout.status === 'MISSED');
+
+  return (
+    <TouchableOpacity
+      key={day}
+      onPress={() => handleDaySelect(day)}
+      style={[
+        styles.dayCircle,
+        selectedDay === day && styles.selectedDayCircle,
+        hasMissed && styles.missedDayCircle,
+      ]}>
+      <Text
+        style={[
+          styles.dayText,
+          selectedDay === day && styles.selectedDayText,
+          hasMissed && styles.missedText,
+        ]}>
+        {day}
+      </Text>
+    </TouchableOpacity>
+  );
+})}
       </View>
 
       {/* Workout Details for Selected Day */}
@@ -555,6 +562,13 @@ const styles = StyleSheet.create({
   },
   selectedDayCircle: {
     backgroundColor: '#1E3A8A',
+  },
+  missedDayCircle: {
+    color:'#FFF',
+    backgroundColor: '#EF4444',
+  },
+  missedText: {
+    color:'#FFF',
   },
   dayText: {
     fontSize: 14,

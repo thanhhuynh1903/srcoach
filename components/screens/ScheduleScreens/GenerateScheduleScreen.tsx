@@ -159,7 +159,6 @@ const GenerateScheduleScreen = () => {
             onPress={() => navigation.goBack()}>
             <BackButton size={24} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Schedule</Text>
         </View>
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={60} color="#EF4444" />
