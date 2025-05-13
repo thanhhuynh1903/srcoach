@@ -5,6 +5,7 @@ import CommonPanel from '../../../../commons/CommonPanel';
 import {theme} from '../../../../contants/theme';
 import ChatsPanelSendExerciseRecord from './ChatsPanelSendExerciseRecord';
 import ChatsPanelExpertRecommendation from './ChatsPanelExpertRecommendation';
+import ChatsPanelExpertTrainingPlan from './ChatsPanelExpertTrainingPlan';
 
 interface ChatsPanelExpertPOVExpertProps {
   visible: boolean;
@@ -21,6 +22,7 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
 }) => {
   const [showExercisePanel, setShowExercisePanel] = useState(false);
   const [showRecommendationPanel, setShowRecommendationPanel] = useState(false);
+  const [showTrainingPlanPanel, setShowTrainingPlanPanel] = useState(false);
 
   return (
     <>
@@ -32,9 +34,16 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
           <View style={styles.content}>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => console.log('Send Training Plan pressed')}
+              onPress={() => {
+                onClose();
+                setShowTrainingPlanPanel(true);
+              }}
               activeOpacity={0.7}>
-              <Icon name="calendar" size={25} color={theme.colors.primaryDark} />
+              <Icon
+                name="calendar"
+                size={25}
+                color={theme.colors.primaryDark}
+              />
               <Text style={styles.actionButtonText}>Send Training Plan</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -42,7 +51,9 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
               onPress={() => setShowRecommendationPanel(true)}
               activeOpacity={0.7}>
               <Icon name="medkit" size={25} color={theme.colors.primaryDark} />
-              <Text style={styles.actionButtonText}>Send Expert Recommendation</Text>
+              <Text style={styles.actionButtonText}>
+                Send Expert Recommendation
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
@@ -68,6 +79,12 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
       <ChatsPanelExpertRecommendation
         visible={showRecommendationPanel}
         onClose={() => setShowRecommendationPanel(false)}
+        sessionId={sessionId}
+        onSendSuccess={onSendSuccess}
+      />
+      <ChatsPanelExpertTrainingPlan
+        visible={showTrainingPlanPanel}
+        onClose={() => setShowTrainingPlanPanel(false)}
         sessionId={sessionId}
         onSendSuccess={onSendSuccess}
       />

@@ -43,6 +43,7 @@ interface CommonPanelProps {
   swipeToClose?: boolean;
   animationDuration?: number;
   borderRadius?: number;
+  disableBackdropClose?: boolean;
 }
 
 const CommonPanel: React.FC<CommonPanelProps> = ({
@@ -62,6 +63,7 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
   swipeToClose = true,
   animationDuration = 300,
   borderRadius = 16,
+  disableBackdropClose = false,
 }) => {
   const translateValue = React.useRef(new Animated.Value(0)).current;
   const [panelDimensions, setPanelDimensions] = React.useState({ width: 0, height: 0 });
@@ -121,15 +123,15 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
   }, [animatePanel, animationDuration, onClose]);
 
   const handleBackdropPress = React.useCallback(() => {
-    if (closeOnBackdropPress) {
+    if (closeOnBackdropPress && !disableBackdropClose) {
       handleClose();
     }
-  }, [closeOnBackdropPress, handleClose]);
+  }, [closeOnBackdropPress, disableBackdropClose, handleClose]);
 
   const panResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => swipeToClose,
+    onStartShouldSetPanResponder: () => swipeToClose && !disableBackdropClose,
     onPanResponderMove: (evt, gestureState) => {
-      if (!swipeToClose) return;
+      if (!swipeToClose || disableBackdropClose) return;
       
       const isHorizontal = direction === 'left' || direction === 'right';
       const moveDistance = isHorizontal ? gestureState.dx : gestureState.dy;
@@ -145,7 +147,7 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
       }
     },
     onPanResponderRelease: (evt, gestureState) => {
-      if (!swipeToClose) return;
+      if (!swipeToClose || disableBackdropClose) return;
       
       const isHorizontal = direction === 'left' || direction === 'right';
       const moveDistance = isHorizontal ? gestureState.dx : gestureState.dy;
@@ -162,7 +164,7 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
         animatePanel(true);
       }
     },
-  }), [swipeToClose, direction, panelDimensions, translateValue, handleClose, animatePanel]);
+  }), [swipeToClose, direction, panelDimensions, translateValue, handleClose, animatePanel, disableBackdropClose]);
 
   const onLayout = React.useCallback((event: any) => {
     const { width, height } = event.nativeEvent.layout;
@@ -224,10 +226,9 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
           <Animated.View
             style={getPanelStyle()}
             onLayout={onLayout}
-            {...panResponder.panHandlers}
+            {...(!disableBackdropClose ? panResponder.panHandlers : {})}
           >
             <View style={styles.panelContainer}>
-              {/* Header */}
               <View style={[styles.header, direction === 'bottom' ? { borderBottomWidth: 0 } : {}]}>
                 <Text style={[styles.title, titleStyle]}>{title}</Text>
                 <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
@@ -235,10 +236,8 @@ const CommonPanel: React.FC<CommonPanelProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Content */}
               <View style={[styles.content, contentStyle]}>{content}</View>
 
-              {/* Action Buttons */}
               {actionButtons.length > 0 && (
                 <View style={[styles.buttonContainer, buttonContainerStyle]}>
                   {actionButtons.map(renderActionButton)}

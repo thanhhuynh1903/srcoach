@@ -8,7 +8,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useRoute, useNavigation, useFocusEffect} from '@react-navigation/native';
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
 import ToastUtil from '../../../utils/utils_toast';
 import {
   createOrGetSession,
@@ -28,7 +32,7 @@ import * as ImagePicker from 'react-native-image-picker';
 import {CMSMessageContainer} from './CMSMessageContainer';
 import {CMSHeader} from './CMSHeader';
 import {CMSSidePanelInfo} from './CMSSidePanelInfo';
-import { getSocket, disconnectSocket } from '../../../utils/socket';
+import {getSocket, disconnectSocket} from '../../../utils/socket';
 
 type MessageItem = {
   id: string;
@@ -72,12 +76,14 @@ export default function ChatsMessageScreen() {
   const shouldScrollToEnd = useRef(false);
 
   const getPanelComponent = useCallback(() => {
-    const isExpertSession = otherUser?.roles?.includes('expert') || profile?.roles?.includes('expert');
-    return !isExpertSession 
-      ? ChatsPanelRunner 
-      : profile?.roles?.includes('expert') 
-        ? ChatsPanelExpertPOVExpert 
-        : ChatsPanelExpertPOVRunner;
+    const isExpertSession =
+      otherUser?.roles?.includes('expert') ||
+      profile?.roles?.includes('expert');
+    return !isExpertSession
+      ? ChatsPanelRunner
+      : profile?.roles?.includes('expert')
+      ? ChatsPanelExpertPOVExpert
+      : ChatsPanelExpertPOVRunner;
   }, [otherUser, profile]);
 
   const setupSocketListeners = useCallback(() => {
@@ -117,9 +123,13 @@ export default function ChatsMessageScreen() {
       setLoading(true);
       const response = await getSessionMessages(userId, 5000);
       if (response.status) {
-        setMessages(response.data.messages.sort((a, b) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        ));
+        setMessages(
+          response.data.messages.sort(
+            (a, b) =>
+              new Date(a.created_at).getTime() -
+              new Date(b.created_at).getTime(),
+          ),
+        );
         if (response.data.session?.status === 'PENDING' && !isInitiator) {
           setSessionStatus(response.data.session.status);
         }
@@ -135,16 +145,17 @@ export default function ChatsMessageScreen() {
 
   const handleSendMessage = async () => {
     if (!sessionId) return ToastUtil.error('Error', 'Session not initialized');
-    
+
     const socket = socketRef.current;
-    if (socket) socket.emit('typingMessage', { sessionId, toUserId: otherUser?.id });
+    if (socket)
+      socket.emit('typingMessage', {sessionId, toUserId: otherUser?.id});
 
     try {
-      const response = selectedImage 
+      const response = selectedImage
         ? await sendImageMessage(sessionId, selectedImage)
-        : messageText.trim() 
-          ? await sendNormalMessage(sessionId, messageText)
-          : { status: false };
+        : messageText.trim()
+        ? await sendNormalMessage(sessionId, messageText)
+        : {status: false};
 
       if (response.status) {
         setSelectedImage(null);
@@ -181,7 +192,7 @@ export default function ChatsMessageScreen() {
         }
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       };
-    }, [userId, initialMessage])
+    }, [userId, initialMessage]),
   );
 
   useEffect(() => initSocket(), [initSocket]);
@@ -202,13 +213,24 @@ export default function ChatsMessageScreen() {
     }
   };
 
+  const handleUpdateMessage = useCallback(
+    (messageId: string, updates: Partial<MessageItem>) => {
+      setMessages(prev =>
+        prev.map(msg => (msg.id === messageId ? {...msg, ...updates} : msg)),
+      );
+    },
+    [],
+  );
+
   const handleRespondToSession = async (accept: boolean) => {
     try {
       const response = await respondToSession(sessionId, accept);
       if (response.status) {
-        accept 
-          ? (ToastUtil.success('Success', 'Session accepted'), setSessionStatus('ACCEPTED'))
-          : (ToastUtil.success('Success', 'Session rejected'), navigation.goBack());
+        accept
+          ? (ToastUtil.success('Success', 'Session accepted'),
+            setSessionStatus('ACCEPTED'))
+          : (ToastUtil.success('Success', 'Session rejected'),
+            navigation.goBack());
       }
     } catch (error) {
       console.error('Error responding to session:', error);
@@ -223,20 +245,36 @@ export default function ChatsMessageScreen() {
       <CMSHeader
         otherUser={otherUser}
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => navigation.navigate('ChatsSessionMessageSearch', {sessionId})}
+        onSearchPress={() =>
+          navigation.navigate('ChatsSessionMessageSearch', {sessionId})
+        }
         onInfoPress={() => setInfoPanelVisible(true)}
       />
 
       {sessionStatus === 'PENDING' && (
-        <View style={[styles.pendingNotice, isInitiator ? styles.pendingNoticeWaiting : styles.pendingNoticeAction]}>
+        <View
+          style={[
+            styles.pendingNotice,
+            isInitiator
+              ? styles.pendingNoticeWaiting
+              : styles.pendingNoticeAction,
+          ]}>
           <Icon
             name="information-circle"
             size={16}
             color={isInitiator ? theme.colors.warning : theme.colors.white}
             style={styles.pendingIcon}
           />
-          <Text style={[styles.pendingNoticeText, isInitiator ? styles.pendingNoticeTextWaiting : styles.pendingNoticeTextAction]}>
-            {isInitiator ? 'Waiting for other party to accept this chat' : 'Accept this chat request?'}
+          <Text
+            style={[
+              styles.pendingNoticeText,
+              isInitiator
+                ? styles.pendingNoticeTextWaiting
+                : styles.pendingNoticeTextAction,
+            ]}>
+            {isInitiator
+              ? 'Waiting for other party to accept this chat'
+              : 'Accept this chat request?'}
           </Text>
 
           {!isInitiator && (
@@ -255,7 +293,9 @@ export default function ChatsMessageScreen() {
           )}
 
           <Text style={styles.pendingNote}>
-            {isInitiator ? 'You can send a message to remind them' : 'Sending a message will automatically accept'}
+            {isInitiator
+              ? 'You can send a message to remind them'
+              : 'Sending a message will automatically accept'}
           </Text>
         </View>
       )}
@@ -264,23 +304,26 @@ export default function ChatsMessageScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primaryDark} />
         </View>
-      ) : (
+      ) : showContent ? (
         <CMSMessageContainer
           messages={messages}
           profileId={profile?.id || ''}
-          showContent={showContent}
-          onExerciseRecordPress={(recordId) => navigation.navigate('ExerciseDetail', {recordId})}
+          showContent={true}
           shouldScrollToEnd={shouldScrollToEnd.current}
           sessionId={sessionId}
+          onUpdateMessage={handleUpdateMessage}
         />
-      )}
+      ) : null}
 
       <CMSMessageControl
         messageText={messageText}
-        setMessageText={(text) => {
+        setMessageText={text => {
           setMessageText(text);
           if (socketRef.current && text) {
-            socketRef.current.emit('typingMessage', { sessionId, toUserId: otherUser?.id });
+            socketRef.current.emit('typingMessage', {
+              sessionId,
+              toUserId: otherUser?.id,
+            });
           }
         }}
         typingUsername={otherUser?.username}

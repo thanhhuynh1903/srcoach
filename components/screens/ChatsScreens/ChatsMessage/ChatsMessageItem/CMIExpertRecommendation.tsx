@@ -14,25 +14,43 @@ interface CMIExpertRecommendationProps {
   message: any;
   isMe: boolean;
   onRefresh?: () => void;
+  onUpdateMessage?: (messageId: string, updates: Partial<any>) => void;
 }
 
 export const CMIExpertRecommendation = ({
   message,
   isMe,
   onRefresh,
+  onUpdateMessage,
 }: CMIExpertRecommendationProps) => {
   const {profile} = useLoginStore();
   const isPending = !message.content.is_accepted;
 
-  const handleAcceptRecommendation = () => {
-    if (isPending) {
-      acceptExpertRecommendation(message.id).then(() => {
-        onRefresh?.();
-      });
-    } else {
-      rejectExpertRecommendation(message.id).then(() => {
-        onRefresh?.();
-      });
+  const handleAcceptRecommendation = async () => {
+    try {
+      if (!message.content.is_accepted) {
+        const response = await acceptExpertRecommendation(message.id);
+        if (response.status && onUpdateMessage) {
+          onUpdateMessage(message.id, {
+            content: {
+              ...message.content,
+              is_accepted: true,
+            },
+          });
+        }
+      } else {
+        const response = await rejectExpertRecommendation(message.id);
+        if (response.status && onUpdateMessage) {
+          onUpdateMessage(message.id, {
+            content: {
+              ...message.content,
+              is_accepted: false,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error handling recommendation:', error);
     }
   };
 
@@ -59,21 +77,22 @@ export const CMIExpertRecommendation = ({
           <Text style={styles.contentText}>{message.content.text}</Text>
         </View>
 
-        {isPending ? (
-          <TouchableOpacity
-            style={styles.acceptButton}
-            onPress={handleAcceptRecommendation}
-            activeOpacity={0.7}>
-            <Text style={styles.acceptButtonText}>Save Recommendation</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.status, styles.accepted]}
-            onPress={handleAcceptRecommendation}
-            activeOpacity={0.7}>
-            <Text style={styles.statusText}>Remove Recommendation</Text>
-          </TouchableOpacity>
-        )}
+        {!isMe &&
+          (isPending ? (
+            <TouchableOpacity
+              style={styles.acceptButton}
+              onPress={handleAcceptRecommendation}
+              activeOpacity={0.7}>
+              <Text style={styles.acceptButtonText}>Save Recommendation</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.status, styles.accepted]}
+              onPress={handleAcceptRecommendation}
+              activeOpacity={0.7}>
+              <Text style={styles.statusText}>Remove Recommendation</Text>
+            </TouchableOpacity>
+          ))}
 
         <View style={styles.footer}>
           <Text style={styles.timeText}>

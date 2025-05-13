@@ -10,9 +10,12 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import {useTheme} from '@react-navigation/native';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import {
+  useNavigation,
+  useRoute,
+  useFocusEffect,
+} from '@react-navigation/native';
 import {
   searchUsers,
   searchExperts,
@@ -36,14 +39,19 @@ interface UserItem {
   points: number;
   user_level: number;
   roles: string[];
+  status?:
+    | 'ACCEPTED'
+    | 'PENDING'
+    | 'CLOSED_BY_RUNNER'
+    | 'CLOSED_BY_EXPERT'
+    | null;
 }
 
 interface RouteParams {
   searchQuery?: string;
 }
 
-const ChatsSearchScreen = () => {
-  const {colors} = useTheme();
+export default function ChatsSearchScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,14 +61,19 @@ const ChatsSearchScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  useEffect(() => {
-    const params = route.params as RouteParams;
-    if (params?.searchQuery) {
-      setSearchQuery(params.searchQuery);
-      setHasSearched(true);
-      handleSearch(params.searchQuery);
-    }
-  }, [route.params]);
+  useFocusEffect(
+    useCallback(() => {
+      const params = route.params as RouteParams;
+      if (params?.searchQuery) {
+        setSearchQuery(params.searchQuery);
+        setHasSearched(true);
+        handleSearch(params.searchQuery);
+      }
+      return () => {
+        // Cleanup if needed
+      };
+    }, [route.params]),
+  );
 
   const handleSearch = useCallback(
     async (query?: string) => {
@@ -120,21 +133,62 @@ const ChatsSearchScreen = () => {
     return null;
   };
 
+  const handleUserPress = useCallback(async (item: UserItem) => {
+    if (
+      item.status === 'CLOSED_BY_RUNNER' ||
+      item.status === 'CLOSED_BY_EXPERT'
+    ) {
+      return;
+    }
+
+    if (item.status === 'ACCEPTED') {
+      return navigation.navigate('ChatsMessageScreen', {userId: item.id});
+    }
+
+    if (item.status === 'PENDING') {
+      return;
+    }
+
+    // If status is null
+    if (item.roles?.includes('expert')) {
+      navigation.navigate('ChatsExpertNotiScreen', {userId: item.id});
+    } else {
+      navigation.navigate('ChatsMessageScreen', {userId: item.id});
+    }
+  }, []);
+
+  const renderStatusChip = (status: UserItem['status']) => {
+    if (
+      !status ||
+      status === 'CLOSED_BY_RUNNER' ||
+      status === 'CLOSED_BY_EXPERT'
+    ) {
+      return null;
+    }
+
+    const chipStyle = {
+      backgroundColor: status === 'ACCEPTED' ? '#4CAF50' : '#FFC107',
+    };
+
+    return (
+      <View style={[styles.statusChip, chipStyle]}>
+        <Ionicons
+          name={status === 'ACCEPTED' ? 'checkmark-circle' : 'time'}
+          size={14}
+          color="white"
+          style={styles.chipIcon}
+        />
+        <Text style={styles.chipText}>
+          {status === 'ACCEPTED' ? 'Accepted' : 'Pending'}
+        </Text>
+      </View>
+    );
+  };
+
   const renderUserItem = ({item}: {item: UserItem}) => (
     <TouchableOpacity
       style={[styles.itemContainer, {backgroundColor: '#FFFFFF'}]}
-      onPress={async () => {
-        if (!item.roles?.includes('expert')) {
-          return navigation.navigate('ChatsMessageScreen', {userId: item.id});
-        }
-
-        let status = item?.status;
-        if (status === null) {
-          navigation.navigate('ChatsExpertNotiScreen', {userId: item.id});
-        } else if (status === 'ACCEPTED') {
-          return navigation.navigate('ChatsMessageScreen', {userId: item.id});
-        }
-      }}>
+      onPress={() => handleUserPress(item)}>
       <View style={styles.userInfoContainer}>
         <CommonAvatar
           mode={getUserMode(item.roles)}
@@ -142,7 +196,10 @@ const ChatsSearchScreen = () => {
           size={40}
         />
         <View style={styles.userDetails}>
-          <Text style={styles.name}>{item.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{item.name}</Text>
+            {renderStatusChip(item.status)}
+          </View>
           <Text style={styles.username}>@{item.username}</Text>
           <View style={styles.userStats}>
             <View style={styles.statItem}>
@@ -197,7 +254,6 @@ const ChatsSearchScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Filter Tabs */}
         <View style={styles.tabsOuterContainer}>
           <ScrollView
             horizontal
@@ -233,7 +289,6 @@ const ChatsSearchScreen = () => {
         </View>
       </View>
 
-      {/* Search Results */}
       <View style={styles.contentContainer}>
         {isLoading && !refreshing ? (
           <View style={styles.loadingContainer}>
@@ -269,7 +324,7 @@ const ChatsSearchScreen = () => {
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -358,10 +413,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
   name: {
     fontSize: 15,
     fontWeight: '600',
     color: '#212121',
+    marginRight: 8,
   },
   username: {
     fontSize: 13,
@@ -398,6 +459,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#9E9E9E',
   },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 4,
+  },
+  chipIcon: {
+    marginRight: 4,
+  },
+  chipText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
 });
-
-export default ChatsSearchScreen;

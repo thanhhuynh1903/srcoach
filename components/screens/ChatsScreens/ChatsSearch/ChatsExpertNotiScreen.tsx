@@ -13,6 +13,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../../BackButton';
 import {theme} from '../../../contants/theme';
 import { createOrGetSession } from '../../../utils/useChatsAPI';
+import ToastUtil from '../../../utils/utils_toast';
 
 const ChatsExpertNotiScreen = () => {
   const {colors} = useTheme();
@@ -25,7 +26,8 @@ const ChatsExpertNotiScreen = () => {
   const handleProceed = () => {
     createOrGetSession(userId, message).then((response) => {
       if (response.status) {
-        navigation.navigate('ChatsMessageScreen', {userId});
+        ToastUtil.success('Success', "An invitation has been sent to the Expert!");
+        navigation.goBack();
       }
     });
   };
@@ -116,7 +118,7 @@ const ChatsExpertNotiScreen = () => {
           ]}
           onPress={handleProceed}
           disabled={message.length === 0}>
-          <Text style={styles.proceedButtonText}>Proceed to Chat</Text>
+          <Text style={styles.proceedButtonText}>Send Invitation to Expert</Text>
         </TouchableOpacity>
         <Text style={styles.termsText}>
           By proceeding, you agree to our Privacy Policy and Terms of Service

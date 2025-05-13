@@ -1,10 +1,16 @@
 import React from 'react';
-import {View, StyleSheet, TouchableOpacity, Text, TouchableWithoutFeedback} from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Text,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
-import { capitalizeFirstLetter } from '../../../utils/utils_format';
-import { useLoginStore } from '../../../utils/useLoginStore';
+import {capitalizeFirstLetter} from '../../../utils/utils_format';
+import {useLoginStore} from '../../../utils/useLoginStore';
 
 interface ChatListItemProps {
   session: {
@@ -46,9 +52,19 @@ interface ChatCategoryProps {
   id: string;
 }
 
-const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count, id}) => (
+const ChatCategory: React.FC<ChatCategoryProps> = ({
+  title,
+  iconName,
+  count,
+  id,
+}) => (
   <View style={styles.categoryContainer} testID={`category-${id}`}>
-    <Icon name={iconName} size={18} color={theme.colors.primaryDark} style={styles.categoryIcon} />
+    <Icon
+      name={iconName}
+      size={18}
+      color={theme.colors.primaryDark}
+      style={styles.categoryIcon}
+    />
     <Text style={styles.categoryText}>{title}</Text>
     <View style={styles.categoryBadge}>
       <Text style={styles.categoryBadgeText}>{count}</Text>
@@ -56,7 +72,12 @@ const ChatCategory: React.FC<ChatCategoryProps> = ({title, iconName, count, id})
   </View>
 );
 
-const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, onDeny}) => {
+const ChatListItem: React.FC<ChatListItemProps> = ({
+  session,
+  onPress,
+  onAccept,
+  onDeny,
+}) => {
   const getStatusColor = () => {
     switch (session.status) {
       case 'ACCEPTED':
@@ -70,7 +91,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
 
   const getMessagePreview = () => {
     if (!session.last_message) return {text: 'No messages yet', icon: null};
-    if (session.last_message.archived) return {text: 'Archived message', icon: null};
+    if (session.last_message.archived)
+      return {text: 'Archived message', icon: null};
 
     switch (session.last_message.message_type) {
       case 'NORMAL':
@@ -89,15 +111,27 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
   };
 
   const preview = getMessagePreview();
-  const isSpecialMessage = session.last_message?.message_type !== 'NORMAL' && session.last_message?.message_type !== undefined;
-  const getUserRole = () => session.other_user.roles.includes('expert') ? 'expert' : 'runner';
-  const showActionButtons = session.status === 'PENDING' && !session.is_initiator;
+  const isSpecialMessage =
+    session.last_message?.message_type !== 'NORMAL' &&
+    session.last_message?.message_type !== undefined;
+  const getUserRole = () =>
+    session.other_user.roles.includes('expert') ? 'expert' : 'runner';
+  const showActionButtons =
+    session.status === 'PENDING' && !session.is_initiator;
 
   return (
-    <View style={[styles.chatItemContainer, {borderLeftWidth: 4, borderLeftColor: getStatusColor()}]}>
+    <View
+      style={[
+        styles.chatItemContainer,
+        {borderLeftWidth: 4, borderLeftColor: getStatusColor()},
+      ]}>
       <TouchableOpacity style={styles.chatItem} onPress={onPress}>
         <View style={styles.avatarContainer}>
-          <CommonAvatar mode={getUserRole()} size={40} uri={session.other_user.image?.url} />
+          <CommonAvatar
+            mode={getUserRole()}
+            size={40}
+            uri={session.other_user.image?.url}
+          />
           {session.unread_count > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>{session.unread_count}</Text>
@@ -106,7 +140,9 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
         </View>
         <View style={styles.chatContent}>
           <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>{session.other_user.name}</Text>
+            <Text style={styles.userName} numberOfLines={1}>
+              {session.other_user.name}
+            </Text>
             <Text style={styles.username}>@{session.other_user.username}</Text>
           </View>
           <View style={styles.userStats}>
@@ -116,12 +152,27 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
             </View>
             <View style={styles.statItem}>
               <Icon name="medal" size={14} color={theme.colors.warning} />
-              <Text style={styles.statText}>{capitalizeFirstLetter(session.other_user.user_level)}</Text>
+              <Text style={styles.statText}>
+                {capitalizeFirstLetter(session.other_user.user_level)}
+              </Text>
             </View>
           </View>
           <View style={styles.previewContainer}>
-            {preview.icon && <Icon name={preview.icon} size={14} color="#828282" style={styles.previewIcon} />}
-            <Text style={[styles.chatPreview, session.unread_count > 0 && styles.unreadPreview, isSpecialMessage && styles.specialPreview]} numberOfLines={1}>
+            {preview.icon && (
+              <Icon
+                name={preview.icon}
+                size={14}
+                color="#828282"
+                style={styles.previewIcon}
+              />
+            )}
+            <Text
+              style={[
+                styles.chatPreview,
+                session.unread_count > 0 && styles.unreadPreview,
+                isSpecialMessage && styles.specialPreview,
+              ]}
+              numberOfLines={1}>
               {preview.text}
             </Text>
           </View>
@@ -130,27 +181,20 @@ const ChatListItem: React.FC<ChatListItemProps> = ({session, onPress, onAccept, 
           <View style={styles.rightContent}>
             {session.last_message && (
               <Text style={styles.chatTime}>
-                {new Date(session.last_message.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                {new Date(session.last_message.created_at).toLocaleTimeString(
+                  [],
+                  {hour: '2-digit', minute: '2-digit'},
+                )}
               </Text>
             )}
-            <Icon name="chevron-forward" size={20} color="#828282" />
+            {showActionButtons ? (
+              <Icon name="arrow-redo-outline" size={20} color="#828282" />
+            ) : (
+              <Icon name="chevron-forward" size={20} color="#828282" />
+            )}
           </View>
         )}
       </TouchableOpacity>
-      {showActionButtons && (
-        <View style={styles.actionButtons}>
-          <TouchableWithoutFeedback onPress={onDeny}>
-            <View style={[styles.actionButton, styles.denyButton]}>
-              <Icon name="close" size={20} color={theme.colors.white} />
-            </View>
-          </TouchableWithoutFeedback>
-          <TouchableWithoutFeedback onPress={onAccept}>
-            <View style={[styles.actionButton, styles.acceptButton]}>
-              <Icon name="checkmark" size={20} color={theme.colors.white} />
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      )}
     </View>
   );
 };
@@ -162,7 +206,12 @@ interface CHSChatListProps {
   onDeny: (session: ChatListItemProps['session']) => void;
 }
 
-const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccept, onDeny}) => {
+const CHSChatList: React.FC<CHSChatListProps> = ({
+  sessions,
+  onItemPress,
+  onAccept,
+  onDeny,
+}) => {
   const {profile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
 
@@ -174,7 +223,7 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
 
     sessions.forEach(session => {
       const otherIsExpert = session.other_user.roles.includes('expert');
-      
+
       if (session.status === 'PENDING') {
         pendingRequests.push(session);
       } else if (isExpert && otherIsExpert) {
@@ -186,18 +235,27 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
       }
     });
 
-    return { expertSessions, directMessages, pendingRequests };
+    return {expertSessions, directMessages, pendingRequests};
   };
 
-  const { expertSessions, directMessages, pendingRequests } = categorizeSessions();
+  const {expertSessions, directMessages, pendingRequests} =
+    categorizeSessions();
 
-  const expertSessionCount = isExpert ? `${expertSessions.length}/15` : `${expertSessions.length}/1`;
+  const expertSessionCount = isExpert
+    ? `${expertSessions.length}/15`
+    : `${expertSessions.length}/1`;
   const directMessageCount = directMessages.length;
   const pendingRequestCount = pendingRequests.length;
 
-  const renderSection = (sessions: ChatListItemProps['session'][], title: string, iconName: string, count: string | number, id: string) => {
+  const renderSection = (
+    sessions: ChatListItemProps['session'][],
+    title: string,
+    iconName: string,
+    count: string | number,
+    id: string,
+  ) => {
     if (sessions.length === 0) return null;
-    
+
     return (
       <View key={id}>
         <ChatCategory title={title} iconName={iconName} count={count} id={id} />
@@ -222,21 +280,21 @@ const CHSChatList: React.FC<CHSChatListProps> = ({sessions, onItemPress, onAccep
         isExpert ? 'Runner Sessions' : 'Expert Sessions',
         isExpert ? 'people' : 'trophy',
         expertSessionCount,
-        'expert-sessions'
+        'expert-sessions',
       )}
       {renderSection(
         directMessages,
         'Direct Messages',
         'chatbubbles',
         directMessageCount,
-        'direct-messages'
+        'direct-messages',
       )}
       {renderSection(
         pendingRequests,
         'Pending Requests',
         'time',
         pendingRequestCount,
-        'pending-requests'
+        'pending-requests',
       )}
     </View>
   );
@@ -383,7 +441,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    backgroundColor: theme.colors.primaryDark,
   },
   acceptButton: {
     backgroundColor: theme.colors.success,

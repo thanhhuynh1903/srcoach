@@ -10,6 +10,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {CommonAvatar} from '../../../../commons/CommonAvatar';
 import {theme} from '../../../../contants/theme';
 import {formatTimestampAgo} from '../../../../utils/utils_format';
+import { getNameFromExerciseType } from '../../../../contants/exerciseType';
 
 const {width} = Dimensions.get('window');
 const BUBBLE_WIDTH = width * 0.8;
@@ -128,7 +129,7 @@ export const CMIExerciseRecord = ({
                   color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
                 />
                 <Text style={[styles.statText, isMe && styles.myText]}>
-                  {message.content?.exercise_type || 'N/A'} type
+                  {getNameFromExerciseType(message.content?.exercise_type)}
                 </Text>
               </View>
             </View>

@@ -39,14 +39,12 @@ export const CMSMessageControl = ({
 
   React.useEffect(() => {
     if (showTyping) {
-      // Fade in animation when typing starts
       Animated.timing(typingAnimation, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
     } else {
-      // Fade out animation when typing stops
       Animated.timing(typingAnimation, {
         toValue: 0,
         duration: 200,
