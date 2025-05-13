@@ -6,6 +6,7 @@ import {CMIExerciseRecord} from './ChatsMessageItem/CMIExerciseRecord';
 import {CMIExpertRecommendation} from './ChatsMessageItem/CMIExpertRecommendation';
 import {CMIImage} from './ChatsMessageItem/CMIImage';
 import {MessageItem} from './ChatsMessageScreen';
+import {useNavigation} from '@react-navigation/native';
 
 type CMSMessageContainerProps = {
   messages: MessageItem[];
@@ -23,19 +24,33 @@ export const CMSMessageContainer = React.memo(
     showContent,
     onExerciseRecordPress,
     shouldScrollToEnd,
-    sessionId
+    sessionId,
   }: CMSMessageContainerProps) => {
+    const navigation = useNavigation();
     const flatListRef = useRef<FlatList>(null);
     const isInitialScrollDone = useRef(false);
+    const shouldAutoScroll = useRef(shouldScrollToEnd);
 
     useEffect(() => {
-      if (shouldScrollToEnd && messages.length > 0 && !isInitialScrollDone.current) {
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({animated: false});
+      shouldAutoScroll.current = shouldScrollToEnd;
+    }, [shouldScrollToEnd]);
+
+    useEffect(() => {
+      if (messages.length > 0 && shouldAutoScroll.current) {
+        const timer = setTimeout(() => {
+          flatListRef.current?.scrollToEnd({animated: isInitialScrollDone.current});
           isInitialScrollDone.current = true;
         }, 100);
+
+        return () => clearTimeout(timer);
       }
-    }, [shouldScrollToEnd, messages]);
+    }, [messages]);
+
+    useEffect(() => {
+      if (messages.length > 0 && shouldAutoScroll.current && isInitialScrollDone.current) {
+        flatListRef.current?.scrollToEnd({animated: true});
+      }
+    }, [messages.length]);
 
     const getMessageKey = useCallback((item: MessageItem) => {
       return `${item.id}_${item.created_at}`;
@@ -51,7 +66,7 @@ export const CMSMessageContainer = React.memo(
             height = 160;
             break;
           case 'EXERCISE_RECORD':
-            height = 150;
+            height = 200;
             break;
           case 'EXPERT_RECOMMENDATION':
             height = 180;
@@ -72,9 +87,9 @@ export const CMSMessageContainer = React.memo(
     const renderMessage = useCallback(
       ({item}: ListRenderItemInfo<MessageItem>) => {
         const isMe = item.sender.id === profileId;
-    
+
         if (!showContent) return null;
-    
+
         switch (item.message_type) {
           case 'NORMAL':
             return <CMINormal message={item} isMe={isMe} />;
@@ -85,18 +100,17 @@ export const CMSMessageContainer = React.memo(
               <CMIExerciseRecord
                 message={item}
                 isMe={isMe}
-                onPress={() =>
-                  onExerciseRecordPress(
-                    item.content.exercise_session_record_id,
-                  )
-                }
+                onViewMap={() => {
+                  console.log("BEFORE: " + item.content?.exercise_session_record_id);
+                  navigation.navigate('CMSMessageViewMap', {id: item.content?.exercise_session_record_id});
+                }}
               />
             );
           case 'EXPERT_RECOMMENDATION':
             return (
-              <CMIExpertRecommendation 
-                message={item} 
-                isMe={isMe} 
+              <CMIExpertRecommendation
+                message={item}
+                isMe={isMe}
                 onRefresh={() => {}}
               />
             );
@@ -123,6 +137,17 @@ export const CMSMessageContainer = React.memo(
           windowSize={21}
           removeClippedSubviews={true}
           inverted={false}
+          onContentSizeChange={() => {
+            if (shouldAutoScroll.current) {
+              flatListRef.current?.scrollToEnd({animated: true});
+            }
+          }}
+          onLayout={() => {
+            if (shouldAutoScroll.current && !isInitialScrollDone.current) {
+              flatListRef.current?.scrollToEnd({animated: false});
+              isInitialScrollDone.current = true;
+            }
+          }}
           maintainVisibleContentPosition={{
             minIndexForVisible: 0,
           }}

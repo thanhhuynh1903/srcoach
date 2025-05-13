@@ -4,6 +4,8 @@ import Icon from '@react-native-vector-icons/ionicons';
 import {getSessionInfo} from '../../../utils/useChatsAPI';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
+import ContentLoader from 'react-content-loader/native';
+import {Rect, Circle} from 'react-native-svg';
 
 type SessionInfoProps = {
   visible: boolean;
@@ -73,25 +75,55 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
+  const renderLoadingSkeleton = () => (
+    <View style={styles.contentContainer}>
+      <ContentLoader
+        speed={1}
+        width="100%"
+        height="100%"
+        viewBox="0 0 300 500"
+        backgroundColor="#f3f3f3"
+        foregroundColor="#ecebeb">
+        <Circle cx="40" cy="40" r="40" />
+        <Rect x="0" y="100" rx="4" ry="4" width="200" height="20" />
+        <Rect x="0" y="130" rx="4" ry="4" width="150" height="16" />
+        <Rect x="0" y="170" rx="4" ry="4" width="80" height="16" />
+        <Rect x="0" y="210" rx="4" ry="4" width="250" height="16" />
+        <Rect x="0" y="240" rx="4" ry="4" width="250" height="16" />
+        <Rect x="0" y="280" rx="4" ry="4" width="80" height="16" />
+        <Rect x="0" y="320" rx="4" ry="4" width="250" height="16" />
+        <Rect x="0" y="350" rx="4" ry="4" width="250" height="16" />
+      </ContentLoader>
+    </View>
+  );
+
+  const renderStatRow = (iconName: string, value: string | number, unit: string) => (
+    <View style={styles.statRow}>
+      <View style={styles.statIconContainer}>
+        <Icon name={iconName} size={20} color={theme.colors.primary} />
+      </View>
+      <View>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statUnit}>{unit}</Text>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.overlay}>
       <View style={styles.container}>
         <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Icon name="close" size={24} color={theme.colors.black} />
+          <Icon name="close" size={24} color="#000000" />
         </TouchableOpacity>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <Icon name="refresh" size={24} color={theme.colors.primary} />
-            <Text style={styles.loadingText}>Loading info...</Text>
-          </View>
+          renderLoadingSkeleton()
         ) : info ? (
           <View style={styles.contentContainer}>
             <View style={styles.userHeader}>
               <CommonAvatar
-                source={info.other_user.image?.url}
+                uri={info.other_user.image?.url}
                 size={80}
-                style={styles.avatar}
               />
               <Text style={styles.userName}>{info.other_user.name}</Text>
               <Text style={styles.username}>@{info.other_user.username}</Text>
@@ -112,36 +144,28 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
 
             <View style={styles.infoSection}>
               <Text style={styles.sectionTitle}>Stats</Text>
-              <View style={styles.infoRow}>
-                <Icon name="trophy" size={16} color={theme.colors.warning} />
-                <Text style={styles.infoText}>
-                  {info.other_user.points || 0} pts
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Icon name="medal" size={16} color={theme.colors.warning} />
-                <Text style={styles.infoText}>
-                  {capitalizeFirstLetter(info.other_user.user_level || 'No level')}
-                </Text>
-              </View>
+              {renderStatRow(
+                'trophy', 
+                info.other_user.points || 0, 
+                'points'
+              )}
+              {renderStatRow(
+                'medal', 
+                capitalizeFirstLetter(info.other_user.user_level || 'No level'), 
+                'level'
+              )}
             </View>
 
             <View style={styles.infoSection}>
               <Text style={styles.sectionTitle}>Session Info</Text>
               <View style={styles.infoRow}>
-                <Icon name="time" size={16} color={theme.colors.darkGray} />
+                <Icon name="time" size={16} color="#666666" />
                 <Text style={styles.infoText}>
                   Created: {new Date(info.session.created_at).toLocaleDateString()}
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Icon name="chatbubbles" size={16} color={theme.colors.darkGray} />
-                <Text style={styles.infoText}>
-                  Status: {info.session.status.toLowerCase()}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Icon name="star" size={16} color={theme.colors.darkGray} />
+                <Icon name="star" size={16} color="#666666" />
                 <Text style={styles.infoText}>
                   {info.session.is_expert_session ? 'Expert session' : 'Regular session'}
                 </Text>
@@ -150,7 +174,7 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
           </View>
         ) : (
           <View style={styles.errorContainer}>
-            <Icon name="warning" size={24} color={theme.colors.error} />
+            <Icon name="warning" size={24} color="#FF0000" />
             <Text style={styles.errorText}>Failed to load session info</Text>
           </View>
         )}
@@ -173,22 +197,13 @@ const styles = StyleSheet.create({
   container: {
     width: '80%',
     height: '100%',
-    backgroundColor: theme.colors.white,
+    backgroundColor: '#FFFFFF',
     padding: 16,
   },
   closeButton: {
     alignSelf: 'flex-end',
     padding: 8,
     marginBottom: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 8,
-    color: theme.colors.darkGray,
   },
   contentContainer: {
     flex: 1,
@@ -197,17 +212,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  avatar: {
-    marginBottom: 12,
-  },
   userName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.colors.black,
+    color: '#000000',
+    marginTop: 12,
   },
   username: {
     fontSize: 14,
-    color: theme.colors.darkGray,
+    color: '#888888',
     marginTop: 4,
     marginBottom: 8,
   },
@@ -223,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   runnerChip: {
-    backgroundColor: theme.colors.successDark,
+    backgroundColor: '#00851f',
   },
   expertChip: {
     backgroundColor: theme.colors.warning,
@@ -231,7 +244,7 @@ const styles = StyleSheet.create({
   roleChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: theme.colors.white,
+    color: '#FFFFFF',
   },
   roleSpacer: {
     width: 8,
@@ -245,7 +258,7 @@ const styles = StyleSheet.create({
     color: theme.colors.primaryDark,
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.lightGray,
+    borderBottomColor: '#EEEEEE',
     paddingBottom: 4,
   },
   infoRow: {
@@ -255,7 +268,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     marginLeft: 8,
-    color: theme.colors.darkGray,
+    color: '#666666',
   },
   errorContainer: {
     flex: 1,
@@ -264,6 +277,30 @@ const styles = StyleSheet.create({
   },
   errorText: {
     marginTop: 8,
-    color: theme.colors.error,
+    color: '#FF0000',
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  statUnit: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 2,
   },
 });

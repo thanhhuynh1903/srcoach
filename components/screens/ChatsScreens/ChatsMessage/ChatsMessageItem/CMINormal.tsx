@@ -90,7 +90,7 @@ export const CMINormal = ({ message, isMe }: CMINormalProps) => {
           <CommonAvatar
             size={32}
             uri={message.sender.image?.url}
-            mode={message.sender.roles.includes('EXPERT') ? 'expert' : 'runner'}
+            mode={message.sender.roles?.includes('expert') ? 'expert' : 'runner'}
           />
         </View>
       )}

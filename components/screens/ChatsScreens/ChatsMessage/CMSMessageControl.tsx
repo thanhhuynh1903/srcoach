@@ -33,7 +33,7 @@ export const CMSMessageControl = ({
   onImagePress,
   selectedImage,
   onRemoveImage,
-  setPanelVisible
+  setPanelVisible,
 }: CMSMessageControlProps) => {
   const typingAnimation = React.useRef(new Animated.Value(0)).current;
 
@@ -67,19 +67,20 @@ export const CMSMessageControl = ({
 
   return (
     <View style={styles.container}>
-      {/* Typing indicator */}
-      <Animated.View
-        style={[
-          styles.typingIndicatorContainer,
-          {
-            opacity: typingIndicatorOpacity,
-            transform: [{ translateY: typingIndicatorTranslateY }],
-          },
-        ]}>
-        <Text style={styles.typingIndicatorText}>
-          {typingUsername} is typing...
-        </Text>
-      </Animated.View>
+      {showTyping && (
+        <Animated.View
+          style={[
+            styles.typingIndicatorContainer,
+            {
+              opacity: typingIndicatorOpacity,
+              transform: [{translateY: typingIndicatorTranslateY}],
+            },
+          ]}>
+          <Text style={styles.typingIndicatorText}>
+            {typingUsername} is typing...
+          </Text>
+        </Animated.View>
+      )}
 
       {selectedImage && (
         <ScrollView
@@ -101,7 +102,9 @@ export const CMSMessageControl = ({
         </ScrollView>
       )}
       <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => setPanelVisible(true)}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setPanelVisible(true)}>
           <Icon name="add" size={24} color={theme.colors.primaryDark} />
         </TouchableOpacity>
 
