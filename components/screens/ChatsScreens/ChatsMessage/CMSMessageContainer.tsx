@@ -1,5 +1,5 @@
 import React, {useCallback, useRef, useEffect} from 'react';
-import {View, StyleSheet, ScrollView, Text} from 'react-native';
+import {View, StyleSheet, ScrollView, Text, findNodeHandle, UIManager} from 'react-native';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 import {CMINormal} from './ChatsMessageItem/CMINormal';
 import {CMIProfile} from './ChatsMessageItem/CMIProfile';
@@ -21,6 +21,7 @@ type CMSMessageContainerProps = {
   onUpdateMessage?: (messageId: string, updates: Partial<MessageItem>) => void;
   onProfileSubmit?: (data: any) => void;
   isLoading?: boolean;
+  teleportToMessageId?: string;
 };
 
 const MessageLoader = ({isMe}: {isMe: boolean}) => (
@@ -56,9 +57,7 @@ const WelcomeMessage = ({otherUser}: {otherUser: any}) => (
     <Text style={styles.welcomeText}>
       Have fun chatting! Please remember to be respectful and follow our community guidelines.
     </Text>
-    <Text style={styles.termsText}>
-      By continuing, you agree to our Terms of Service and Privacy Policy.
-    </Text>
+    <Text style={styles.termsText}>By continuing, you agree to our Terms of Service and Privacy Policy.</Text>
   </View>
 );
 
@@ -74,9 +73,11 @@ export const CMSMessageContainer = React.memo(
     onUpdateMessage,
     onProfileSubmit,
     isLoading = false,
+    teleportToMessageId,
   }: CMSMessageContainerProps) => {
     const navigation = useNavigation();
     const scrollViewRef = useRef<ScrollView>(null);
+    const messageRefs = useRef<{[key: string]: View}>({});
     const isInitialScrollDone = useRef(false);
     const shouldAutoScroll = useRef(shouldScrollToEnd);
 
@@ -84,67 +85,69 @@ export const CMSMessageContainer = React.memo(
       shouldAutoScroll.current = shouldScrollToEnd;
     }, [shouldScrollToEnd]);
 
+    const scrollToEnd = (animated: boolean) => {
+      scrollViewRef.current?.scrollToEnd({animated});
+    };
+
+    const scrollToMessage = (messageId: string) => {
+      const messageRef = messageRefs.current[messageId];
+      if (messageRef) {
+        const handle = findNodeHandle(messageRef);
+        if (handle && scrollViewRef.current) {
+          UIManager.measureLayout(
+            handle,
+            findNodeHandle(scrollViewRef.current),
+            () => {},
+            (x, y) => {
+              scrollViewRef.current?.scrollTo({y, animated: true});
+            }
+          );
+        }
+      }
+    };
+
     useEffect(() => {
-      if (messages.length > 0 && shouldAutoScroll.current) {
+      if (isLoading || !showContent) return;
+
+      if (teleportToMessageId) {
+        const timer = setTimeout(() => scrollToMessage(teleportToMessageId), 100);
+        return () => clearTimeout(timer);
+      } else if (messages.length > 0 && shouldAutoScroll.current) {
         const timer = setTimeout(() => {
           scrollToEnd(false);
           isInitialScrollDone.current = true;
         }, 100);
         return () => clearTimeout(timer);
       }
-    }, [messages]);
+    }, [messages, isLoading, showContent, teleportToMessageId]);
 
-    useEffect(() => {
-      if (messages.length > 0 && shouldAutoScroll.current && isInitialScrollDone.current) {
-        scrollToEnd(true);
-      }
-    }, [messages.length]);
-
-    const scrollToEnd = (animated: boolean) => {
-      scrollViewRef.current?.scrollToEnd({animated});
-    };
-
-    const getMessageKey = (item: MessageItem) => {
-      return `${item.id}_${item.created_at}`;
-    };
+    const getMessageKey = (item: MessageItem) => `${item.id}_${item.created_at}`;
 
     const renderMessage = useCallback(
       (item: MessageItem) => {
         const isMe = item.sender.id === profileId;
-
         if (!showContent) return null;
 
+        const commonProps = {
+          key: getMessageKey(item),
+          message: item,
+          isMe,
+          ref: (ref: View) => (messageRefs.current[item.id] = ref)
+        };
+
         switch (item.message_type) {
-          case 'NORMAL':
-            return <CMINormal key={getMessageKey(item)} message={item} isMe={isMe} />;
           case 'PROFILE':
-            return <CMIProfile key={getMessageKey(item)} message={item} isMe={isMe} onProfileSubmit={onProfileSubmit} />;
+            return <CMIProfile {...commonProps} onProfileSubmit={onProfileSubmit} />;
           case 'EXERCISE_RECORD':
-            return (
-              <CMIExerciseRecord
-                key={getMessageKey(item)}
-                message={item}
-                isMe={isMe}
-                onViewMap={() => {
-                  navigation.navigate('CMSMessageViewMap', {
-                    id: item.content?.exercise_session_record_id,
-                  });
-                }}
-              />
-            );
+            return <CMIExerciseRecord {...commonProps} onViewMap={() => navigation.navigate('CMSMessageViewMap', {
+              id: item.content?.exercise_session_record_id,
+            })} />;
           case 'EXPERT_RECOMMENDATION':
-            return (
-              <CMIExpertRecommendation
-                key={getMessageKey(item)}
-                message={item}
-                isMe={isMe}
-                onUpdateMessage={onUpdateMessage}
-              />
-            );
+            return <CMIExpertRecommendation {...commonProps} onUpdateMessage={onUpdateMessage} />;
           case 'IMAGE':
-            return <CMIImage key={getMessageKey(item)} message={item} isMe={isMe} />;
+            return <CMIImage {...commonProps} />;
           default:
-            return <CMINormal key={getMessageKey(item)} message={item} isMe={isMe} />;
+            return <CMINormal {...commonProps} />;
         }
       },
       [profileId, showContent, onExerciseRecordPress, sessionId, onUpdateMessage],
@@ -155,17 +158,8 @@ export const CMSMessageContainer = React.memo(
         <ScrollView
           ref={scrollViewRef}
           contentContainerStyle={styles.messagesContainer}
-          onContentSizeChange={() => {
-            if (shouldAutoScroll.current) {
-              scrollToEnd(false);
-            }
-          }}
-          onLayout={() => {
-            if (shouldAutoScroll.current && !isInitialScrollDone.current) {
-              scrollToEnd(false);
-              isInitialScrollDone.current = true;
-            }
-          }}>
+          onContentSizeChange={() => shouldAutoScroll.current && scrollToEnd(false)}
+          onLayout={() => shouldAutoScroll.current && !isInitialScrollDone.current && scrollToEnd(false)}>
           {isLoading ? (
             <>
               <MessageLoader isMe={false} />

@@ -22,6 +22,7 @@ import {
   respondToSession,
   markSessionMessagesAsRead,
   fillProfileMessage,
+  archiveSession,
 } from '../../../utils/useChatsAPI';
 import {useLoginStore} from '../../../utils/useLoginStore';
 import {theme} from '../../../contants/theme';
@@ -57,7 +58,7 @@ export default function ChatsMessageScreen() {
   const route = useRoute() as any;
   const navigation = useNavigation();
   const {profile} = useLoginStore();
-  const {userId, initialMessage} = route.params;
+  const {userId, initialMessage, teleportToMessageId} = route.params;
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -125,7 +126,7 @@ export default function ChatsMessageScreen() {
       socket.off('typingMessage');
       socket.off('newMessage');
       socket.off('messageArchived');
-      socket.off('messageProfileFilled')
+      socket.off('messageProfileFilled');
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [sessionId]);
@@ -189,18 +190,28 @@ export default function ChatsMessageScreen() {
     }
   };
 
-  const handleProfileSubmit = async(message_id: any, content: any) => {
+  const handleProfileSubmit = async (message_id: any, content: any) => {
     try {
       const response = await fillProfileMessage(message_id, content);
       if (response.status) {
-        ToastUtil.success('Success', "Profile filled");
+        ToastUtil.success('Success', 'Profile filled');
       } else {
         ToastUtil.error('Error', response.data.message);
       }
     } catch (error) {
       ToastUtil.error('Error', 'Failed to send');
     }
-  }
+  };
+
+  const handleCloseSession = async (userId: string) => {
+    const response = await archiveSession(userId);
+    if (!response.status) {
+      ToastUtil.error('Error', response.data.message);
+      return;
+    }
+    ToastUtil.success('Success', 'Session closed successfully');
+    navigation.goBack();
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -346,6 +357,7 @@ export default function ChatsMessageScreen() {
           sessionId={sessionId}
           onUpdateMessage={handleUpdateMessage}
           onProfileSubmit={handleProfileSubmit}
+          teleportToMessageId={teleportToMessageId}
         />
       ) : null}
 
@@ -380,6 +392,7 @@ export default function ChatsMessageScreen() {
         visible={infoPanelVisible}
         onClose={() => setInfoPanelVisible(false)}
         userId={userId}
+        handleCloseSession={handleCloseSession}
       />
     </SafeAreaView>
   );

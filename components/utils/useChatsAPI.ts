@@ -220,9 +220,9 @@ export const listSessions = async (status: string | null) => {
   return response.data;
 };
 
-export const archiveSession = async (sessionId: string) => {
-  const response = await api.post('/chats/sessions/archive', {
-    session_id: sessionId,
+export const archiveSession = async (userId: string) => {
+  const response = await api.post('/chats/session/archive', {
+    otherUserId: userId,
   });
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;

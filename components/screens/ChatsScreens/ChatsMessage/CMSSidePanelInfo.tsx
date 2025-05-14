@@ -15,11 +15,13 @@ import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
 import ContentLoader from 'react-content-loader/native';
 import {Rect, Circle} from 'react-native-svg';
+import {Button} from 'react-native';
 
 type SessionInfoProps = {
   visible: boolean;
   onClose: () => void;
   userId: string;
+  handleCloseSession: (userId: string) => void;
 };
 
 type ExpertRecommendation = {
@@ -85,6 +87,7 @@ export const CMSSidePanelInfo = ({
   visible,
   onClose,
   userId,
+  handleCloseSession = () => {},
 }: SessionInfoProps) => {
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<SessionInfoData | null>(null);
@@ -103,7 +106,6 @@ export const CMSSidePanelInfo = ({
           setLoading(true);
           const response = await getSessionInfo(userId);
           if (response.status) {
-            // Sort recommendations by date (newest first)
             const sortedData = {
               ...response.data,
               expert_recommendations: response.data.expert_recommendations
@@ -115,7 +117,7 @@ export const CMSSidePanelInfo = ({
                 : undefined,
             };
             setInfo(sortedData);
-            setRecommendationsLimit(3); // Reset limit when loading new data
+            setRecommendationsLimit(3);
           }
         } catch (error) {
           console.error('Error fetching session info:', error);
@@ -249,7 +251,9 @@ export const CMSSidePanelInfo = ({
               <View style={styles.profileStatsRow}>
                 <View style={styles.profileStat}>
                   <Text style={styles.profileStatLabel}>Height</Text>
-                  <Text style={styles.profileStatValue}>{profile.height} cm</Text>
+                  <Text style={styles.profileStatValue}>
+                    {profile.height} cm
+                  </Text>
                   <View
                     style={[
                       styles.profileStatChange,
@@ -258,7 +262,9 @@ export const CMSSidePanelInfo = ({
                         : styles.negativeChange,
                     ]}>
                     <Icon
-                      name={profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'}
+                      name={
+                        profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'
+                      }
                       size={12}
                       color="#FFF"
                     />
@@ -270,7 +276,9 @@ export const CMSSidePanelInfo = ({
 
                 <View style={styles.profileStat}>
                   <Text style={styles.profileStatLabel}>Weight</Text>
-                  <Text style={styles.profileStatValue}>{profile.weight} kg</Text>
+                  <Text style={styles.profileStatValue}>
+                    {profile.weight} kg
+                  </Text>
                   <View
                     style={[
                       styles.profileStatChange,
@@ -279,7 +287,9 @@ export const CMSSidePanelInfo = ({
                         : styles.negativeChange,
                     ]}>
                     <Icon
-                      name={profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'}
+                      name={
+                        profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'
+                      }
                       size={12}
                       color="#FFF"
                     />
@@ -312,7 +322,10 @@ export const CMSSidePanelInfo = ({
     );
   };
 
-  const renderSectionHeader = (title: string, sectionKey: keyof SectionState) => (
+  const renderSectionHeader = (
+    title: string,
+    sectionKey: keyof SectionState,
+  ) => (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <TouchableOpacity onPress={() => toggleSection(sectionKey)}>
@@ -359,7 +372,11 @@ export const CMSSidePanelInfo = ({
               {renderSectionHeader('Stats', SECTION_KEYS.STATS)}
               {sections.stats && (
                 <View style={styles.statContainer}>
-                  {renderStatRow('trophy', info.other_user.points || 0, 'points')}
+                  {renderStatRow(
+                    'trophy',
+                    info.other_user.points || 0,
+                    'points',
+                  )}
                   {renderStatRow(
                     'medal',
                     capitalizeFirstLetter(
@@ -438,6 +455,14 @@ export const CMSSidePanelInfo = ({
               )}
 
             {renderProfileStats()}
+            <TouchableOpacity
+              style={styles.btnArchiveSession}
+              onPress={() => {
+                onClose();
+                handleCloseSession(userId);
+              }}>
+              <Text style={styles.btnArchiveSessionText}>End this chat</Text>
+            </TouchableOpacity>
           </ScrollView>
         ) : (
           <View style={styles.errorContainer}>
@@ -472,9 +497,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   contentContainer: {
-    flex: 1,
     padding: 16,
-    marginBottom: 30
+    marginBottom: 20,
   },
   userHeader: {
     alignItems: 'center',
@@ -708,5 +732,19 @@ const styles = StyleSheet.create({
   loadMoreText: {
     color: theme.colors.primary,
     fontWeight: '600',
+  },
+  btnArchiveSession: {
+    width: '100%',
+    padding: 12,
+    backgroundColor: '#FF0000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  btnArchiveSessionText: {
+    color: '#fff',
+    fontWeight: '600',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
