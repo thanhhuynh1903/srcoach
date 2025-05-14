@@ -25,6 +25,7 @@ export interface Schedule {
   title: string;
   description: string;
   user_id: string | null;
+  expert_id : string | null;
   days: DailySchedule[];
   created_at?: string;
   updated_at?: string;
@@ -36,12 +37,14 @@ export interface Schedule {
 
 interface ScheduleState {
   schedules: Schedule[];
+  ExpertSchedule  : Schedule[];
   isLoading: boolean;
   error: string | null;
   currentSchedule: Schedule | null;
   message: string | null; // Thêm thuộc tính message để lưu thông báo từ API
   // Actions
   fetchSelfSchedules: () => Promise<void>;
+  fetchExpertSchedule: () => Promise<void>;
   fetchDetail: (scheduleId: string) => Promise<Schedule | null>;
   createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
   updateSchedule: (
@@ -60,6 +63,7 @@ const useScheduleStore = create<ScheduleState>()(
   persist(
     (set, get) => ({
       schedules: [],
+      ExpertSchedule: [],
       isLoading: false,
       error: null,
       currentSchedule: null,
@@ -73,6 +77,25 @@ const useScheduleStore = create<ScheduleState>()(
           console.log('response', response);
 
           set({schedules: response.data, isLoading: false});
+        } catch (error) {
+          console.error(
+            'Error getting personal training schedule list:',
+            error,
+          );
+          set({
+            error:
+              'Unable to get personal training schedule list. Please try again later..',
+            isLoading: false,
+          });
+        }
+      },
+      fetchExpertSchedule: async () => {
+        set({isLoading: true, error: null});
+        try {
+          const response = await api.fetchDataDetail(`/schedules/expert`);
+          console.log('response', response);
+
+          set({ExpertSchedule: response?.data, isLoading: false});
         } catch (error) {
           console.error(
             'Error getting personal training schedule list:',

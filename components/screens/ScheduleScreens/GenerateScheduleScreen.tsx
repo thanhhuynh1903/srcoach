@@ -21,8 +21,18 @@ import {theme} from '../../contants/theme';
 const GenerateScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
   const navigation = useNavigation();
-  const {schedules, isLoading, error, fetchSelfSchedules} = useScheduleStore();
+  const {
+    schedules,
+    ExpertSchedule,
+    isLoading,
+    error,
+    fetchSelfSchedules,
+    fetchExpertSchedule,
+  } = useScheduleStore();
   const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const combinedSchedules = useMemo(() => {
+    return [...schedules, ...(ExpertSchedule || [])];
+  }, [schedules, ExpertSchedule]);
 
   const hasActiveSchedule = useMemo(() => {
     return schedules?.some(
@@ -34,30 +44,40 @@ const GenerateScheduleScreen = () => {
   }, [schedules]);
 
   const handleBlockAddSchedule = () => {
-    !hasActiveSchedule ? navigation.navigate('AddScheduleScreen' as never) : setShowInfoDialog(true);
+    !hasActiveSchedule
+      ? navigation.navigate('AddScheduleScreen' as never)
+      : setShowInfoDialog(true);
   };
 
   useEffect(() => {
-    fetchSelfSchedules();
+    const loadData = async () => {
+      await fetchSelfSchedules();
+      await fetchExpertSchedule();
+    };
+    loadData();
   }, []);
 
   // Logic lọc dựa trên tab đang chọn
   const filteredSchedules = useMemo(() => {
-    if (!schedules || schedules.length === 0) return [];
+    if (!combinedSchedules || combinedSchedules.length === 0) return [];
 
     switch (activeTab) {
       case "Expert's Choice":
-        return schedules.filter(
-          schedule => schedule.schedule_type === 'EXPERT',
+        return combinedSchedules.filter(
+          schedule =>
+            schedule.schedule_type === 'EXPERT' &&
+            schedule.user_id !== schedule.expert_id,
         );
       case 'My Schedules':
-        return schedules.filter(
-          schedule => schedule.schedule_type !== 'EXPERT',
+        return combinedSchedules.filter(
+          schedule =>
+            schedule.schedule_type !== 'EXPERT' ||
+            schedule.user_id === schedule.expert_id,
         );
       default: // "All"
-        return schedules;
+        return combinedSchedules;
     }
-  }, [schedules, activeTab]);
+  }, [combinedSchedules, activeTab]);
 
   const formatScheduleData = schedule => {
     if (!schedule || !schedule.ScheduleDay) return null;
@@ -125,8 +145,12 @@ const GenerateScheduleScreen = () => {
       startDate: formattedStartDate,
       days: days,
       daySchedules: daySchedules,
-      isExpertChoice: schedule.schedule_type === 'EXPERT',
+      isExpertChoice:
+      schedule.schedule_type === 'EXPERT' && schedule.user_id !== schedule.expert_id,
       status: schedule.status,
+      user_id: schedule.user_id, 
+      expert_id: schedule.expert_id,
+      userName: schedule.User?.name,
     };
   };
 
@@ -193,9 +217,10 @@ const GenerateScheduleScreen = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => {
-            navigation.navigate('CalendarScreen' as never);
-          }}>
+          <TouchableOpacity
+            onPress={() => {
+              navigation.navigate('CalendarScreen' as never);
+            }}>
             <Icon
               name="calendar"
               size={24}
@@ -203,8 +228,7 @@ const GenerateScheduleScreen = () => {
               style={styles.headerIcon}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleBlockAddSchedule}>
+          <TouchableOpacity onPress={handleBlockAddSchedule}>
             <Icon
               name="add-circle-outline"
               size={24}
@@ -214,8 +238,8 @@ const GenerateScheduleScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
-            navigation.navigate('ScheduleHistoryScreen' as never);
-          }}>
+              navigation.navigate('ScheduleHistoryScreen' as never);
+            }}>
             <Icon
               name="time-outline"
               size={24}
@@ -272,6 +296,9 @@ const GenerateScheduleScreen = () => {
                   isExpertChoice={formattedSchedule.isExpertChoice}
                   daySchedules={formattedSchedule.daySchedules}
                   status={formattedSchedule.status}
+                  user_id={formattedSchedule.user_id}
+                  expert_id={formattedSchedule.expert_id}
+                  userName={formattedSchedule.userName}
                 />
               );
             })}
@@ -288,7 +315,6 @@ const GenerateScheduleScreen = () => {
                 ? 'No workout schedule from the expert'
                 : 'You have not created any workout schedule yet.'}
             </Text>
-          
           </View>
         )}
       </ScrollView>
