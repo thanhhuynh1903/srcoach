@@ -189,9 +189,7 @@ export const getSessionInfo = async (userId: string) => {
 };
 
 export const archiveMessage = async (messageId: string) => {
-  const response = await api.post('/chats/session/message/archive', {
-    message_id: messageId,
-  });
+  const response = await api.delete('/chats/session/message?message_id=' + messageId);
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
 };

@@ -65,13 +65,10 @@ export default function CMSMessageViewMap() {
   const navigate = useNavigation();
   const mapRef = useRef<MapView>(null);
   const panY = useRef(new Animated.Value(0)).current;
-  const translateY = panY.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: [0, 0, 1],
-  });
-  const [isInfoVisible, setIsInfoVisible] = useState(true);
   const { height } = Dimensions.get('window');
-  const infoContainerHeight = height * 0.35;
+  const infoContainerHeight = height * 0.25;
+  const [isInfoVisible, setIsInfoVisible] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -123,9 +120,12 @@ export default function CMSMessageViewMap() {
     const latDelta = (maxLat - minLat) * paddingFactor + 0.01;
     const lngDelta = (maxLng - minLng) * paddingFactor + 0.01;
 
+    const offsetLat = (maxLat + minLat) / 2 - 0.01;
+    const offsetLng = (maxLng + minLng) / 2 - 0;
+
     return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLng + maxLng) / 2,
+      latitude: offsetLat,
+      longitude: offsetLng,
       latitudeDelta: latDelta,
       longitudeDelta: lngDelta,
     };
@@ -148,11 +148,22 @@ export default function CMSMessageViewMap() {
   };
 
   const toggleInfoVisibility = () => {
-    Animated.spring(panY, {
-      toValue: isInfoVisible ? infoContainerHeight : 0,
-      useNativeDriver: true,
-    }).start();
-    setIsInfoVisible(!isInfoVisible);
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      setIsInfoVisible(true);
+      Animated.spring(panY, {
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.spring(panY, {
+        toValue: infoContainerHeight,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsCollapsed(true);
+        setIsInfoVisible(false);
+      });
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -172,11 +183,9 @@ export default function CMSMessageViewMap() {
       >
         <Rect x="16" y="16" rx="4" ry="4" width="30%" height="24" />
         <Rect x="16" y="56" rx="4" ry="4" width="100%" height="1" />
-        
         <Rect x="16" y="72" rx="4" ry="4" width="28%" height="60" />
         <Rect x="36%" y="72" rx="4" ry="4" width="28%" height="60" />
         <Rect x="72%" y="72" rx="4" ry="4" width="28%" height="60" />
-        
         <Rect x="16" y="148" rx="4" ry="4" width="28%" height="60" />
         <Rect x="36%" y="148" rx="4" ry="4" width="28%" height="60" />
         <Rect x="72%" y="148" rx="4" ry="4" width="28%" height="60" />
@@ -186,7 +195,6 @@ export default function CMSMessageViewMap() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header - always visible */}
       <View style={styles.header}>
         <View style={styles.headerLeftContainer}>
           <TouchableOpacity
@@ -226,7 +234,6 @@ export default function CMSMessageViewMap() {
         </TouchableOpacity>
       </View>
 
-      {/* Map View */}
       {loading ? (
         <View style={styles.mapPlaceholder}>
           <ContentLoader 
@@ -269,119 +276,129 @@ export default function CMSMessageViewMap() {
         </MapView>
       )}
 
-      {/* Floating info container with gesture */}
-      <Animated.View 
-        style={[
-          styles.infoContainer, 
-          { 
-            height: infoContainerHeight,
-            transform: [{ translateY }] 
-          }
-        ]}
-      >
+      {isCollapsed && (
         <TouchableOpacity 
-          style={styles.dragHandle} 
+          style={styles.expandButton} 
           onPress={toggleInfoVisibility}
         >
-          <View style={styles.dragHandleIndicator} />
+          <Icon name="chevron-up" size={24} color="#1E3A8A" />
         </TouchableOpacity>
-        
-        {loading ? (
-          renderLoadingSkeleton()
-        ) : !exerciseSession ? (
-          <View style={styles.noDataContainer}>
-            <Text>No exercise session data available</Text>
-          </View>
-        ) : (
-          <>
-            <View style={styles.infoRow}>
-              <View style={styles.infoItem}>
-                <Icon name="walk-outline" size={24} color="#1E3A8A" />
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Distance</Text>
-                  <Text style={styles.infoValue}>
-                    {(exerciseSession.total_distance / 1000).toFixed(2)} km
-                  </Text>
-                </View>
-              </View>
+      )}
 
-              <View style={styles.infoItem}>
-                <Icon name="time-outline" size={24} color="#1E3A8A" />
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Duration</Text>
-                  <Text style={styles.infoValue}>
-                    {formatDuration(exerciseSession.duration_minutes)}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.infoItem}>
-                <Icon name="footsteps-outline" size={24} color="#1E3A8A" />
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Steps</Text>
-                  <Text style={styles.infoValue}>{exerciseSession.total_steps}</Text>
-                </View>
-              </View>
+      {isInfoVisible && (
+        <Animated.View 
+          style={[
+            styles.infoContainer, 
+            { 
+              height: infoContainerHeight,
+              transform: [{ translateY: panY }] 
+            }
+          ]}
+        >
+          <TouchableOpacity 
+            style={styles.dragHandle} 
+            onPress={toggleInfoVisibility}
+          >
+            <View style={styles.dragHandleIndicator} />
+          </TouchableOpacity>
+          
+          {loading ? (
+            renderLoadingSkeleton()
+          ) : !exerciseSession ? (
+            <View style={styles.noDataContainer}>
+              <Text>No exercise session data available</Text>
             </View>
+          ) : (
+            <>
+              <View style={styles.infoRow}>
+                <View style={styles.infoItem}>
+                  <Icon name="walk-outline" size={24} color="#1E3A8A" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Distance</Text>
+                    <Text style={styles.infoValue}>
+                      {(exerciseSession.total_distance / 1000).toFixed(2)} km
+                    </Text>
+                  </View>
+                </View>
 
-            <View style={[styles.infoRow, {marginTop: 12}]}>
-              <View style={styles.infoItem}>
-                <Icon name="flame-outline" size={24} color="#1E3A8A" />
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Calories</Text>
-                  <Text style={styles.infoValue}>{exerciseSession.total_calories}</Text>
+                <View style={styles.infoItem}>
+                  <Icon name="time-outline" size={24} color="#1E3A8A" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Duration</Text>
+                    <Text style={styles.infoValue}>
+                      {formatDuration(exerciseSession.duration_minutes)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoItem}>
+                  <Icon name="footsteps-outline" size={24} color="#1E3A8A" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Steps</Text>
+                    <Text style={styles.infoValue}>{exerciseSession.total_steps}</Text>
+                  </View>
                 </View>
               </View>
 
-              <View style={styles.infoItem}>
-                <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Pace</Text>
-                  <Text style={styles.infoValue}>{exerciseSession.avg_pace || 'N/A'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.infoItem}>
-                <Icon name="heart-outline" size={24} color="#1E3A8A" />
-                <View style={styles.infoTextContainer}>
-                  <Text style={styles.infoLabel}>Heart Rate</Text>
-                  <Text style={styles.infoValue}>
-                    {exerciseSession.heart_rate?.avg || 'N/A'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {exerciseSession.heart_rate && (
               <View style={[styles.infoRow, {marginTop: 12}]}>
                 <View style={styles.infoItem}>
-                  <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                  <Icon name="flame-outline" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
-                    <Text style={styles.infoLabel}>Min HR</Text>
-                    <Text style={styles.infoValue}>{exerciseSession.heart_rate.min}</Text>
+                    <Text style={styles.infoLabel}>Calories</Text>
+                    <Text style={styles.infoValue}>{exerciseSession.total_calories}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoItem}>
+                  <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
+                  <View style={styles.infoTextContainer}>
+                    <Text style={styles.infoLabel}>Pace</Text>
+                    <Text style={styles.infoValue}>{exerciseSession.avg_pace || 'N/A'}</Text>
                   </View>
                 </View>
 
                 <View style={styles.infoItem}>
                   <Icon name="heart-outline" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
-                    <Text style={styles.infoLabel}>Avg HR</Text>
-                    <Text style={styles.infoValue}>{exerciseSession.heart_rate.avg}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.infoItem}>
-                  <Icon name="heart-outline" size={24} color="#1E3A8A" />
-                  <View style={styles.infoTextContainer}>
-                    <Text style={styles.infoLabel}>Max HR</Text>
-                    <Text style={styles.infoValue}>{exerciseSession.heart_rate.max}</Text>
+                    <Text style={styles.infoLabel}>Heart Rate</Text>
+                    <Text style={styles.infoValue}>
+                      {exerciseSession.heart_rate?.avg || 'N/A'}
+                    </Text>
                   </View>
                 </View>
               </View>
-            )}
-          </>
-        )}
-      </Animated.View>
+
+              {exerciseSession.heart_rate && (
+                <View style={[styles.infoRow, {marginTop: 12}]}>
+                  <View style={styles.infoItem}>
+                    <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Min HR</Text>
+                      <Text style={styles.infoValue}>{exerciseSession.heart_rate.min}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoItem}>
+                    <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Avg HR</Text>
+                      <Text style={styles.infoValue}>{exerciseSession.heart_rate.avg}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoItem}>
+                    <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Max HR</Text>
+                      <Text style={styles.infoValue}>{exerciseSession.heart_rate.max}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -515,5 +532,24 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  expandButton: {
+    position: 'absolute',
+    bottom: 16,
+    alignSelf: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });

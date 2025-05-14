@@ -102,9 +102,22 @@ export default function ChatsMessageScreen() {
       setIsTyping(false);
     });
 
+    socket.on('messageArchived', (prop: any) => {
+      setMessages(prev => {
+        const updatedMessages = prev.map(msg =>
+          msg.id === prop.id
+            ? {...msg, content: null, archived: true}
+            : msg,
+        );
+        console.log(updatedMessages);
+        return updatedMessages;
+      });
+    });
+
     return () => {
       socket.off('typingMessage');
       socket.off('newMessage');
+      socket.off('messageArchived');
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [sessionId]);
@@ -306,6 +319,7 @@ export default function ChatsMessageScreen() {
         </View>
       ) : showContent ? (
         <CMSMessageContainer
+          otherUser={otherUser}
           messages={messages}
           profileId={profile?.id || ''}
           showContent={true}
