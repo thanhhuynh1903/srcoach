@@ -72,8 +72,14 @@ export const searchSessionMessages = async (
   return response.data;
 };
 
-export const createOrGetSession = async (otherUserId: string, initialMessage: string) => {
-  const response = await api.post('/chats/session', {otherUserId, initial_message: initialMessage});
+export const createOrGetSession = async (
+  otherUserId: string,
+  initialMessage: string,
+) => {
+  const response = await api.post('/chats/session', {
+    otherUserId,
+    initial_message: initialMessage,
+  });
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
 };
@@ -87,18 +93,21 @@ export const sendNormalMessage = async (sessionId: string, content: string) => {
   return response.data;
 };
 
-export const sendProfileMessage = async (
-  sessionId: string,
-  profileData: {
-    age?: number;
-    height?: number;
-    weight?: number;
-    issues?: string;
-  },
-) => {
+export const sendProfileMessage = async (sessionId: string) => {
   const response = await api.post('/chats/session/message/profile', {
     session_id: sessionId,
-    ...profileData,
+  });
+  if (!response.data.status) ToastUtil.error('Error', response.data.message);
+  return response.data;
+};
+
+export const fillProfileMessage = async (message: string, content: any) => {
+  const response = await api.patch('/chats/session/message/profile', {
+    message_id: message,
+    height: content.height,
+    weight: content.weight,
+    issues: content.issues,
+    type: content.type
   });
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
@@ -189,7 +198,9 @@ export const getSessionInfo = async (userId: string) => {
 };
 
 export const archiveMessage = async (messageId: string) => {
-  const response = await api.delete('/chats/session/message?message_id=' + messageId);
+  const response = await api.delete(
+    '/chats/session/message?message_id=' + messageId,
+  );
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
 };

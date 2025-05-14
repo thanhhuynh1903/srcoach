@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {getSessionInfo} from '../../../utils/useChatsAPI';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
@@ -13,24 +13,48 @@ type SessionInfoProps = {
   userId: string;
 };
 
+type ExpertRecommendation = {
+  message_id: string;
+  content: string;
+  is_accepted: boolean;
+};
+
+type LatestProfile = {
+  message_id: string;
+  height: number;
+  weight: number;
+  issues?: string;
+  type?: string;
+  is_filled: boolean;
+  height_change: number;
+  weight_change: number;
+};
+
 type SessionInfoData = {
   session: {
     id: string;
     status: string;
     created_at: string;
+    accepted_at: string;
     is_expert_session: boolean;
     expert_rating_allowed: boolean;
+    user1_archived: boolean;
+    user2_archived: boolean;
     is_initiator: boolean;
+    initial_message?: string;
   };
   other_user: {
     id: string;
     name: string;
     username: string;
+    email?: string;
     image?: {url: string} | null;
     points?: number;
     user_level?: string;
     roles?: string[];
   };
+  expert_recommendations?: ExpertRecommendation[];
+  latest_profile?: LatestProfile | null;
 };
 
 export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) => {
@@ -109,6 +133,92 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
     </View>
   );
 
+  const renderRecommendationItem = ({item}: {item: ExpertRecommendation}) => (
+    <View style={styles.recommendationItem}>
+      <View style={styles.recommendationContent}>
+        <Text style={styles.recommendationText}>{item.content}</Text>
+      </View>
+      <View style={[
+        styles.recommendationStatus,
+        item.is_accepted ? styles.statusAccepted : styles.statusPending
+      ]}>
+        <Icon 
+          name={item.is_accepted ? 'checkmark-circle' : 'time'} 
+          size={16} 
+          color="#FFF" 
+        />
+        <Text style={styles.recommendationStatusText}>
+          {item.is_accepted ? 'Accepted' : 'Pending'}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderProfileStats = () => {
+    if (!info?.latest_profile) return null;
+
+    const profile = info.latest_profile;
+    return (
+      <View style={styles.profileContainer}>
+        <Text style={styles.sectionTitle}>Health Profile</Text>
+        
+        <View style={styles.profileStatsRow}>
+          <View style={styles.profileStat}>
+            <Text style={styles.profileStatLabel}>Height</Text>
+            <Text style={styles.profileStatValue}>{profile.height} cm</Text>
+            <View style={[
+              styles.profileStatChange, 
+              profile.height_change >= 0 ? styles.positiveChange : styles.negativeChange
+            ]}>
+              <Icon 
+                name={profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'} 
+                size={12} 
+                color="#FFF" 
+              />
+              <Text style={styles.profileStatChangeText}>
+                {Math.abs(profile.height_change)} cm
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.profileStat}>
+            <Text style={styles.profileStatLabel}>Weight</Text>
+            <Text style={styles.profileStatValue}>{profile.weight} kg</Text>
+            <View style={[
+              styles.profileStatChange, 
+              profile.weight_change >= 0 ? styles.positiveChange : styles.negativeChange
+            ]}>
+              <Icon 
+                name={profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'} 
+                size={12} 
+                color="#FFF" 
+              />
+              <Text style={styles.profileStatChangeText}>
+                {Math.abs(profile.weight_change)} kg
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {profile.issues && (
+          <View style={styles.profileIssues}>
+            <Text style={styles.profileIssuesLabel}>Health Notes:</Text>
+            <Text style={styles.profileIssuesText}>{profile.issues}</Text>
+          </View>
+        )}
+
+        {profile.type && (
+          <View style={styles.profileType}>
+            <Icon name="walk" size={16} color={theme.colors.primary} />
+            <Text style={styles.profileTypeText}>
+              {capitalizeFirstLetter(profile.type.replace('_', ' '))}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.overlay}>
       <View style={styles.container}>
@@ -119,7 +229,7 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
         {loading ? (
           renderLoadingSkeleton()
         ) : info ? (
-          <View style={styles.contentContainer}>
+          <ScrollView style={styles.contentContainer}>
             <View style={styles.userHeader}>
               <CommonAvatar
                 uri={info.other_user.image?.url}
@@ -170,8 +280,29 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
                   {info.session.is_expert_session ? 'Expert session' : 'Regular session'}
                 </Text>
               </View>
+              {info.session.initial_message && (
+                <View style={styles.initialMessageContainer}>
+                  <Text style={styles.initialMessageLabel}>Initial Message:</Text>
+                  <Text style={styles.initialMessageText}>{info.session.initial_message}</Text>
+                </View>
+              )}
             </View>
-          </View>
+
+            {info.expert_recommendations && info.expert_recommendations.length > 0 && (
+              <View style={styles.infoSection}>
+                <Text style={styles.sectionTitle}>Expert Recommendations</Text>
+                <FlatList
+                  data={info.expert_recommendations}
+                  renderItem={renderRecommendationItem}
+                  keyExtractor={(item) => item.message_id}
+                  scrollEnabled={false}
+                  ItemSeparatorComponent={() => <View style={styles.recommendationSeparator} />}
+                />
+              </View>
+            )}
+
+            {renderProfileStats()}
+          </ScrollView>
         ) : (
           <View style={styles.errorContainer}>
             <Icon name="warning" size={24} color="#FF0000" />
@@ -302,5 +433,121 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888888',
     marginTop: 2,
+  },
+  initialMessageContainer: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  initialMessageLabel: {
+    fontSize: 12,
+    color: '#888888',
+    marginBottom: 4,
+  },
+  initialMessageText: {
+    fontSize: 14,
+    color: '#333333',
+  },
+  recommendationItem: {
+    backgroundColor: '#F8F8F8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  recommendationContent: {
+    marginBottom: 8,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+  },
+  recommendationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusPending: {
+    backgroundColor: '#FFA500',
+  },
+  statusAccepted: {
+    backgroundColor: '#00851f',
+  },
+  recommendationStatusText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    marginLeft: 4,
+  },
+  recommendationSeparator: {
+    height: 8,
+  },
+  profileContainer: {
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  profileStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  profileStat: {
+    alignItems: 'center',
+    width: '48%',
+  },
+  profileStatLabel: {
+    fontSize: 12,
+    color: '#888888',
+    marginBottom: 4,
+  },
+  profileStatValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  profileStatChange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  positiveChange: {
+    backgroundColor: '#00851f',
+  },
+  negativeChange: {
+    backgroundColor: '#FF0000',
+  },
+  profileStatChangeText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    marginLeft: 2,
+  },
+  profileIssues: {
+    marginTop: 12,
+  },
+  profileIssuesLabel: {
+    fontSize: 12,
+    color: '#888888',
+    marginBottom: 4,
+  },
+  profileIssuesText: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+  },
+  profileType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  profileTypeText: {
+    fontSize: 14,
+    color: '#333333',
+    marginLeft: 8,
   },
 });

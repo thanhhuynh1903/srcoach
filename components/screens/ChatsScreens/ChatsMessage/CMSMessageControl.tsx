@@ -8,6 +8,7 @@ import {
   ScrollView,
   Text,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
@@ -22,6 +23,7 @@ interface CMSMessageControlProps {
   selectedImage: string | null;
   onRemoveImage: () => void;
   setPanelVisible: (visible: boolean) => void;
+  isUploading: boolean;
 }
 
 export const CMSMessageControl = ({
@@ -34,6 +36,7 @@ export const CMSMessageControl = ({
   selectedImage,
   onRemoveImage,
   setPanelVisible,
+  isUploading,
 }: CMSMessageControlProps) => {
   const typingAnimation = React.useRef(new Animated.Value(0)).current;
 
@@ -91,44 +94,79 @@ export const CMSMessageControl = ({
               style={styles.imagePreview}
               resizeMode="cover"
             />
-            <TouchableOpacity
-              style={styles.removeImageButton}
-              onPress={onRemoveImage}>
-              <Icon name="close" size={16} color="#000" />
-            </TouchableOpacity>
+            {!isUploading && (
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={onRemoveImage}>
+                <Icon name="close" size={16} color="#000" />
+              </TouchableOpacity>
+            )}
+            {isUploading && (
+              <View style={styles.uploadOverlay}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
           </View>
         </ScrollView>
       )}
       <View style={styles.inputContainer}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => setPanelVisible(true)}>
-          <Icon name="add" size={24} color={theme.colors.primaryDark} />
+          onPress={() => setPanelVisible(true)}
+          disabled={isUploading}>
+          <Icon
+            name="add"
+            size={24}
+            color={
+              isUploading ? theme.colors.gray : theme.colors.primaryDark
+            }
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={onImagePress}>
-          <Icon name="image" size={24} color="#000" />
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={onImagePress}
+          disabled={isUploading}>
+          <Icon
+            name="image"
+            size={24}
+            color={isUploading ? theme.colors.gray : '#000'}
+          />
         </TouchableOpacity>
 
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            isUploading && styles.disabledInput,
+          ]}
           value={messageText}
           onChangeText={setMessageText}
           placeholder="Type a message..."
           placeholderTextColor="#999"
           onSubmitEditing={handleSendMessage}
           multiline
+          editable={!isUploading}
         />
         <TouchableOpacity
           style={[
             styles.sendButton,
             {
-              opacity: messageText.trim() || selectedImage ? 1 : 0.5,
+              opacity:
+                (messageText.trim() || selectedImage) && !isUploading
+                  ? 1
+                  : 0.5,
+              backgroundColor: isUploading
+                ? theme.colors.gray
+                : theme.colors.primaryDark,
             },
           ]}
           onPress={handleSendMessage}
-          disabled={!messageText.trim() && !selectedImage}>
-          <Icon name="send" size={24} color="#fff" />
+          disabled={(!messageText.trim() && !selectedImage) || isUploading}>
+          {isUploading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Icon name="send" size={24} color="#fff" />
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -202,6 +240,16 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  uploadOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -222,8 +270,11 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     fontSize: 16,
   },
+  disabledInput: {
+    backgroundColor: '#f5f5f5',
+    color: '#999',
+  },
   sendButton: {
-    backgroundColor: theme.colors.primaryDark,
     width: 40,
     height: 40,
     borderRadius: 20,

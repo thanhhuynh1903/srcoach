@@ -21,6 +21,7 @@ import {
   sendImageMessage,
   respondToSession,
   markSessionMessagesAsRead,
+  fillProfileMessage,
 } from '../../../utils/useChatsAPI';
 import {useLoginStore} from '../../../utils/useLoginStore';
 import {theme} from '../../../contants/theme';
@@ -107,7 +108,15 @@ export default function ChatsMessageScreen() {
         const updatedMessages = prev.map(msg =>
           msg.id === prop.id ? {...msg, content: null, archived: true} : msg,
         );
-        console.log(updatedMessages);
+        return updatedMessages;
+      });
+    });
+
+    socket.on('messageProfileFilled', (prop: any) => {
+      setMessages(prev => {
+        const updatedMessages = prev.map(msg =>
+          msg.id === prop.message_id ? {...msg, content: prop.content} : msg,
+        );
         return updatedMessages;
       });
     });
@@ -116,6 +125,7 @@ export default function ChatsMessageScreen() {
       socket.off('typingMessage');
       socket.off('newMessage');
       socket.off('messageArchived');
+      socket.off('messageProfileFilled')
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [sessionId]);
@@ -175,10 +185,22 @@ export default function ChatsMessageScreen() {
         ToastUtil.error('Error', response.data.message || 'Failed to send');
       }
     } catch (error) {
-      console.error('Error sending:', error);
       ToastUtil.error('Error', 'Failed to send');
     }
   };
+
+  const handleProfileSubmit = async(message_id: any, content: any) => {
+    try {
+      const response = await fillProfileMessage(message_id, content);
+      if (response.status) {
+        ToastUtil.success('Success', "Profile filled");
+      } else {
+        ToastUtil.error('Error', response.data.message);
+      }
+    } catch (error) {
+      ToastUtil.error('Error', 'Failed to send');
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -219,7 +241,6 @@ export default function ChatsMessageScreen() {
         setSelectedImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
       ToastUtil.error('Error', 'Failed to select image');
     }
   };
@@ -244,7 +265,6 @@ export default function ChatsMessageScreen() {
             navigation.goBack());
       }
     } catch (error) {
-      console.error('Error responding to session:', error);
       ToastUtil.error('Error', 'Failed to respond to session');
     }
   };
@@ -325,6 +345,7 @@ export default function ChatsMessageScreen() {
           shouldScrollToEnd={shouldScrollToEnd.current}
           sessionId={sessionId}
           onUpdateMessage={handleUpdateMessage}
+          onProfileSubmit={handleProfileSubmit}
         />
       ) : null}
 

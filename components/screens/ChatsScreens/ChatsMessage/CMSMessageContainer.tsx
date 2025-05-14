@@ -19,6 +19,7 @@ type CMSMessageContainerProps = {
   shouldScrollToEnd: boolean;
   sessionId: string;
   onUpdateMessage?: (messageId: string, updates: Partial<MessageItem>) => void;
+  onProfileSubmit?: (data: any) => void;
   isLoading?: boolean;
 };
 
@@ -71,6 +72,7 @@ export const CMSMessageContainer = React.memo(
     shouldScrollToEnd,
     sessionId,
     onUpdateMessage,
+    onProfileSubmit,
     isLoading = false,
   }: CMSMessageContainerProps) => {
     const navigation = useNavigation();
@@ -116,7 +118,7 @@ export const CMSMessageContainer = React.memo(
           case 'NORMAL':
             return <CMINormal key={getMessageKey(item)} message={item} isMe={isMe} />;
           case 'PROFILE':
-            return <CMIProfile key={getMessageKey(item)} message={item} isMe={isMe} />;
+            return <CMIProfile key={getMessageKey(item)} message={item} isMe={isMe} onProfileSubmit={onProfileSubmit} />;
           case 'EXERCISE_RECORD':
             return (
               <CMIExerciseRecord

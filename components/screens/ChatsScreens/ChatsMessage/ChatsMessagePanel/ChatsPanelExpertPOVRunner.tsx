@@ -4,7 +4,6 @@ import Icon from '@react-native-vector-icons/ionicons';
 import CommonPanel from '../../../../commons/CommonPanel';
 import {theme} from '../../../../contants/theme';
 import ChatsPanelSendExerciseRecord from './ChatsPanelSendExerciseRecord';
-import ChatsPanelRunnerProfile from './ChatsPanelRunnerProfile';
 
 interface ChatsPanelExpertPOVRunnerProps {
   visible: boolean;
@@ -20,12 +19,11 @@ const ChatsPanelExpertPOVRunner: React.FC<ChatsPanelExpertPOVRunnerProps> = ({
   onSendSuccess,
 }) => {
   const [showExercisePanel, setShowExercisePanel] = useState(false);
-  const [showProfilePanel, setShowProfilePanel] = useState(false);
 
   return (
     <>
       <CommonPanel
-        visible={visible && !showExercisePanel && !showProfilePanel}
+        visible={visible && !showExercisePanel}
         onClose={onClose}
         title="Quick actions"
         content={
@@ -36,13 +34,6 @@ const ChatsPanelExpertPOVRunner: React.FC<ChatsPanelExpertPOVRunnerProps> = ({
               activeOpacity={0.7}>
               <Icon name="walk" size={25} color={theme.colors.primaryDark} />
               <Text style={styles.actionButtonText}>Send Exercise Record</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => setShowProfilePanel(true)}
-              activeOpacity={0.7}>
-              <Icon name="medkit" size={25} color={theme.colors.primaryDark} />
-              <Text style={styles.actionButtonText}>Send Health Profile</Text>
             </TouchableOpacity>
           </View>
         }
@@ -55,12 +46,6 @@ const ChatsPanelExpertPOVRunner: React.FC<ChatsPanelExpertPOVRunnerProps> = ({
       <ChatsPanelSendExerciseRecord
         visible={showExercisePanel}
         onClose={() => setShowExercisePanel(false)}
-        sessionId={sessionId}
-        onSendSuccess={onSendSuccess}
-      />
-      <ChatsPanelRunnerProfile
-        visible={showProfilePanel}
-        onClose={() => setShowProfilePanel(false)}
         sessionId={sessionId}
         onSendSuccess={onSendSuccess}
       />

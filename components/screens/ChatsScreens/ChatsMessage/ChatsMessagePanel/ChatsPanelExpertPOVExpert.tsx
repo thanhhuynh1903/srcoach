@@ -6,6 +6,9 @@ import {theme} from '../../../../contants/theme';
 import ChatsPanelSendExerciseRecord from './ChatsPanelSendExerciseRecord';
 import ChatsPanelExpertRecommendation from './ChatsPanelExpertRecommendation';
 import ChatsPanelExpertTrainingPlan from './ChatsPanelExpertTrainingPlan';
+import ChatsPanelProfileConfirm from './ChatsPanelProfileConfirm';
+import ToastUtil from '../../../../utils/utils_toast';
+import { sendProfileMessage } from '../../../../utils/useChatsAPI';
 
 interface ChatsPanelExpertPOVExpertProps {
   visible: boolean;
@@ -23,6 +26,18 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
   const [showExercisePanel, setShowExercisePanel] = useState(false);
   const [showRecommendationPanel, setShowRecommendationPanel] = useState(false);
   const [showTrainingPlanPanel, setShowTrainingPlanPanel] = useState(false);
+  const [showProfileConfirmDialog, setShowProfileConfirmDialog] = useState(false);
+
+  const handleProfileRequest = () => {
+    setShowProfileConfirmDialog(true);
+    onClose();
+  };
+
+  const handleProfileConfirm = async () => {
+    await sendProfileMessage(sessionId);
+    ToastUtil.success('Success', 'Profile sent to user successfully');
+    setShowProfileConfirmDialog(false);
+  };
 
   return (
     <>
@@ -62,6 +77,15 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
               <Icon name="walk" size={25} color={theme.colors.primaryDark} />
               <Text style={styles.actionButtonText}>View Exercise Records</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleProfileRequest}
+              activeOpacity={0.7}>
+              <Icon name="person-circle-outline" size={25} color={theme.colors.primaryDark} />
+              <Text style={styles.actionButtonText}>
+                Request for profile submission
+              </Text>
+            </TouchableOpacity>
           </View>
         }
         direction="bottom"
@@ -70,6 +94,7 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
         backdropOpacity={0.5}
         contentStyle={{padding: 0}}
       />
+      
       <ChatsPanelSendExerciseRecord
         visible={showExercisePanel}
         onClose={() => setShowExercisePanel(false)}
@@ -87,6 +112,11 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
         onClose={() => setShowTrainingPlanPanel(false)}
         sessionId={sessionId}
         onSendSuccess={onSendSuccess}
+      />
+      <ChatsPanelProfileConfirm
+        visible={showProfileConfirmDialog}
+        onClose={() => setShowProfileConfirmDialog(false)}
+        onConfirm={handleProfileConfirm}
       />
     </>
   );
