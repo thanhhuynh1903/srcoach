@@ -1,5 +1,12 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  FlatList,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {getSessionInfo} from '../../../utils/useChatsAPI';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
@@ -57,7 +64,11 @@ type SessionInfoData = {
   latest_profile?: LatestProfile | null;
 };
 
-export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) => {
+export const CMSSidePanelInfo = ({
+  visible,
+  onClose,
+  userId,
+}: SessionInfoProps) => {
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<SessionInfoData | null>(null);
 
@@ -121,7 +132,11 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
     </View>
   );
 
-  const renderStatRow = (iconName: string, value: string | number, unit: string) => (
+  const renderStatRow = (
+    iconName: string,
+    value: string | number,
+    unit: string,
+  ) => (
     <View style={styles.statRow}>
       <View style={styles.statIconContainer}>
         <Icon name={iconName} size={20} color={theme.colors.primary} />
@@ -138,18 +153,16 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
       <View style={styles.recommendationContent}>
         <Text style={styles.recommendationText}>{item.content}</Text>
       </View>
-      <View style={[
-        styles.recommendationStatus,
-        item.is_accepted ? styles.statusAccepted : styles.statusPending
-      ]}>
-        <Icon 
-          name={item.is_accepted ? 'checkmark-circle' : 'time'} 
-          size={16} 
-          color="#FFF" 
+      <View
+        style={[
+          styles.recommendationStatus,
+          item.is_accepted ? styles.statusAccepted : styles.statusPending,
+        ]}>
+        <Icon
+          name={item.is_accepted ? 'checkmark-circle' : 'time'}
+          size={16}
+          color="#FFF"
         />
-        <Text style={styles.recommendationStatusText}>
-          {item.is_accepted ? 'Accepted' : 'Pending'}
-        </Text>
       </View>
     </View>
   );
@@ -161,19 +174,22 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
     return (
       <View style={styles.profileContainer}>
         <Text style={styles.sectionTitle}>Health Profile</Text>
-        
+
         <View style={styles.profileStatsRow}>
           <View style={styles.profileStat}>
             <Text style={styles.profileStatLabel}>Height</Text>
             <Text style={styles.profileStatValue}>{profile.height} cm</Text>
-            <View style={[
-              styles.profileStatChange, 
-              profile.height_change >= 0 ? styles.positiveChange : styles.negativeChange
-            ]}>
-              <Icon 
-                name={profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'} 
-                size={12} 
-                color="#FFF" 
+            <View
+              style={[
+                styles.profileStatChange,
+                profile.height_change >= 0
+                  ? styles.positiveChange
+                  : styles.negativeChange,
+              ]}>
+              <Icon
+                name={profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'}
+                size={12}
+                color="#FFF"
               />
               <Text style={styles.profileStatChangeText}>
                 {Math.abs(profile.height_change)} cm
@@ -184,14 +200,17 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
           <View style={styles.profileStat}>
             <Text style={styles.profileStatLabel}>Weight</Text>
             <Text style={styles.profileStatValue}>{profile.weight} kg</Text>
-            <View style={[
-              styles.profileStatChange, 
-              profile.weight_change >= 0 ? styles.positiveChange : styles.negativeChange
-            ]}>
-              <Icon 
-                name={profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'} 
-                size={12} 
-                color="#FFF" 
+            <View
+              style={[
+                styles.profileStatChange,
+                profile.weight_change >= 0
+                  ? styles.positiveChange
+                  : styles.negativeChange,
+              ]}>
+              <Icon
+                name={profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'}
+                size={12}
+                color="#FFF"
               />
               <Text style={styles.profileStatChangeText}>
                 {Math.abs(profile.weight_change)} kg
@@ -231,13 +250,10 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
         ) : info ? (
           <ScrollView style={styles.contentContainer}>
             <View style={styles.userHeader}>
-              <CommonAvatar
-                uri={info.other_user.image?.url}
-                size={80}
-              />
+              <CommonAvatar uri={info.other_user.image?.url} size={80} />
               <Text style={styles.userName}>{info.other_user.name}</Text>
               <Text style={styles.username}>@{info.other_user.username}</Text>
-              
+
               {info.other_user.roles && info.other_user.roles.length > 0 && (
                 <View style={styles.rolesContainer}>
                   {info.other_user.roles.map((role, index) => (
@@ -254,16 +270,16 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
 
             <View style={styles.infoSection}>
               <Text style={styles.sectionTitle}>Stats</Text>
-              {renderStatRow(
-                'trophy', 
-                info.other_user.points || 0, 
-                'points'
-              )}
-              {renderStatRow(
-                'medal', 
-                capitalizeFirstLetter(info.other_user.user_level || 'No level'), 
-                'level'
-              )}
+              <View style={styles.statContainer}>
+                {renderStatRow('trophy', info.other_user.points || 0, 'points')}
+                {renderStatRow(
+                  'medal',
+                  capitalizeFirstLetter(
+                    info.other_user.user_level || 'No level',
+                  ),
+                  'level',
+                )}
+              </View>
             </View>
 
             <View style={styles.infoSection}>
@@ -271,35 +287,47 @@ export const CMSSidePanelInfo = ({visible, onClose, userId}: SessionInfoProps) =
               <View style={styles.infoRow}>
                 <Icon name="time" size={16} color="#666666" />
                 <Text style={styles.infoText}>
-                  Created: {new Date(info.session.created_at).toLocaleDateString()}
+                  Created:{' '}
+                  {new Date(info.session.created_at).toLocaleDateString()}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Icon name="star" size={16} color="#666666" />
                 <Text style={styles.infoText}>
-                  {info.session.is_expert_session ? 'Expert session' : 'Regular session'}
+                  {info.session.is_expert_session
+                    ? 'Expert session'
+                    : 'Regular session'}
                 </Text>
               </View>
               {info.session.initial_message && (
                 <View style={styles.initialMessageContainer}>
-                  <Text style={styles.initialMessageLabel}>Initial Message:</Text>
-                  <Text style={styles.initialMessageText}>{info.session.initial_message}</Text>
+                  <Text style={styles.initialMessageLabel}>
+                    Initial Message:
+                  </Text>
+                  <Text style={styles.initialMessageText}>
+                    {info.session.initial_message}
+                  </Text>
                 </View>
               )}
             </View>
 
-            {info.expert_recommendations && info.expert_recommendations.length > 0 && (
-              <View style={styles.infoSection}>
-                <Text style={styles.sectionTitle}>Expert Recommendations</Text>
-                <FlatList
-                  data={info.expert_recommendations}
-                  renderItem={renderRecommendationItem}
-                  keyExtractor={(item) => item.message_id}
-                  scrollEnabled={false}
-                  ItemSeparatorComponent={() => <View style={styles.recommendationSeparator} />}
-                />
-              </View>
-            )}
+            {info.expert_recommendations &&
+              info.expert_recommendations.length > 0 && (
+                <View style={styles.infoSection}>
+                  <Text style={styles.sectionTitle}>
+                    Expert Recommendations
+                  </Text>
+                  <FlatList
+                    data={info.expert_recommendations}
+                    renderItem={renderRecommendationItem}
+                    keyExtractor={item => item.message_id}
+                    scrollEnabled={false}
+                    ItemSeparatorComponent={() => (
+                      <View style={styles.recommendationSeparator} />
+                    )}
+                  />
+                </View>
+              )}
 
             {renderProfileStats()}
           </ScrollView>
@@ -392,6 +420,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EEEEEE',
     paddingBottom: 4,
   },
+  statContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 25,
+  },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -454,6 +487,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   recommendationContent: {
     marginBottom: 8,
@@ -472,7 +507,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusPending: {
-    backgroundColor: '#FFA500',
+    backgroundColor: '#979797',
   },
   statusAccepted: {
     backgroundColor: '#00851f',
