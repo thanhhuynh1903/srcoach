@@ -246,7 +246,7 @@ const OtherProfileScreen = ({route}) => {
           <Text style={styles.tagText}>{tags[2]}</Text>
         </View>
         <View style={styles.tag}>
-          <Text style={styles.tagText}>+{tags.length - 3}</Text>
+          <Text style={styles.tagText}>+{tags?.length - 3}</Text>
         </View>
       </View>
     );
@@ -325,7 +325,7 @@ const OtherProfileScreen = ({route}) => {
                   @{userData?.user?.username || 'username'}
                 </Text>
                 <View style={{flexDirection: 'row', gap: 8}}>
-                {userData?.user.UserRole[0]?.Role?.role_name?.includes(
+                {userData?.user?.roles?.includes(
                   'runner',
                 ) && (
                   <View style={styles.roleBadge}>
@@ -333,7 +333,7 @@ const OtherProfileScreen = ({route}) => {
                     <Text style={styles.roleBadgeText}>Runner</Text>
                   </View>
                 )}
-                {userData?.user.UserRole[1]?.Role?.role_name?.includes(
+                {userData?.user?.roles?.includes(
                   'expert',
                 ) && (
                   <View style={styles.roleBadgeEx}>

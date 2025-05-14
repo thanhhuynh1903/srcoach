@@ -784,10 +784,6 @@ const CommunityPostDetailScreen = () => {
                 <Text style={styles.commentsSectionTitle}>
                   Comments ({FilterComment(comments)})
                 </Text>
-                <TouchableOpacity style={styles.sortButton}>
-                  <Text style={styles.sortButtonText}>Sort by: Best</Text>
-                  <Icon name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
               </View>
 
               {/* Comments */}
