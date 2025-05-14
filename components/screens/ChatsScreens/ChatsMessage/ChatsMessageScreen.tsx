@@ -105,9 +105,7 @@ export default function ChatsMessageScreen() {
     socket.on('messageArchived', (prop: any) => {
       setMessages(prev => {
         const updatedMessages = prev.map(msg =>
-          msg.id === prop.id
-            ? {...msg, content: null, archived: true}
-            : msg,
+          msg.id === prop.id ? {...msg, content: null, archived: true} : msg,
         );
         console.log(updatedMessages);
         return updatedMessages;
@@ -256,6 +254,7 @@ export default function ChatsMessageScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <CMSHeader
+        profile={profile}
         otherUser={otherUser}
         onBackPress={() => navigation.goBack()}
         onSearchPress={() =>
