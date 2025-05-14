@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  Animated,
+  LayoutAnimation,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {getSessionInfo} from '../../../utils/useChatsAPI';
@@ -24,6 +26,7 @@ type ExpertRecommendation = {
   message_id: string;
   content: string;
   is_accepted: boolean;
+  created_at: string;
 };
 
 type LatestProfile = {
@@ -64,6 +67,20 @@ type SessionInfoData = {
   latest_profile?: LatestProfile | null;
 };
 
+type SectionState = {
+  stats: boolean;
+  sessionInfo: boolean;
+  recommendations: boolean;
+  healthProfile: boolean;
+};
+
+const SECTION_KEYS = {
+  STATS: 'stats',
+  SESSION_INFO: 'sessionInfo',
+  RECOMMENDATIONS: 'recommendations',
+  HEALTH_PROFILE: 'healthProfile',
+};
+
 export const CMSSidePanelInfo = ({
   visible,
   onClose,
@@ -71,6 +88,13 @@ export const CMSSidePanelInfo = ({
 }: SessionInfoProps) => {
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<SessionInfoData | null>(null);
+  const [recommendationsLimit, setRecommendationsLimit] = useState(3);
+  const [sections, setSections] = useState<SectionState>({
+    stats: true,
+    sessionInfo: true,
+    recommendations: true,
+    healthProfile: true,
+  });
 
   useEffect(() => {
     if (visible && userId) {
@@ -79,7 +103,19 @@ export const CMSSidePanelInfo = ({
           setLoading(true);
           const response = await getSessionInfo(userId);
           if (response.status) {
-            setInfo(response.data);
+            // Sort recommendations by date (newest first)
+            const sortedData = {
+              ...response.data,
+              expert_recommendations: response.data.expert_recommendations
+                ? [...response.data.expert_recommendations].sort(
+                    (a, b) =>
+                      new Date(b.created_at).getTime() -
+                      new Date(a.created_at).getTime(),
+                  )
+                : undefined,
+            };
+            setInfo(sortedData);
+            setRecommendationsLimit(3); // Reset limit when loading new data
           }
         } catch (error) {
           console.error('Error fetching session info:', error);
@@ -90,6 +126,16 @@ export const CMSSidePanelInfo = ({
       fetchSessionInfo();
     }
   }, [visible, userId]);
+
+  const toggleSection = (section: keyof SectionState) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSections(prev => ({...prev, [section]: !prev[section]}));
+  };
+
+  const loadMoreRecommendations = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setRecommendationsLimit(prev => prev + 3);
+  };
 
   if (!visible) return null;
 
@@ -108,6 +154,15 @@ export const CMSSidePanelInfo = ({
 
   const capitalizeFirstLetter = (str: string) => {
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   const renderLoadingSkeleton = () => (
@@ -152,6 +207,9 @@ export const CMSSidePanelInfo = ({
     <View style={styles.recommendationItem}>
       <View style={styles.recommendationContent}>
         <Text style={styles.recommendationText}>{item.content}</Text>
+        <Text style={styles.recommendationDate}>
+          {formatDate(item.created_at)}
+        </Text>
       </View>
       <View
         style={[
@@ -172,71 +230,100 @@ export const CMSSidePanelInfo = ({
 
     const profile = info.latest_profile;
     return (
-      <View style={styles.profileContainer}>
-        <Text style={styles.sectionTitle}>Health Profile</Text>
-
-        <View style={styles.profileStatsRow}>
-          <View style={styles.profileStat}>
-            <Text style={styles.profileStatLabel}>Height</Text>
-            <Text style={styles.profileStatValue}>{profile.height} cm</Text>
-            <View
-              style={[
-                styles.profileStatChange,
-                profile.height_change >= 0
-                  ? styles.positiveChange
-                  : styles.negativeChange,
-              ]}>
+      <Animated.View style={sections.healthProfile ? {} : {height: 0}}>
+        <View style={styles.profileContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Health Profile</Text>
+            <TouchableOpacity
+              onPress={() => toggleSection(SECTION_KEYS.HEALTH_PROFILE)}>
               <Icon
-                name={profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'}
-                size={12}
-                color="#FFF"
+                name={sections.healthProfile ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#666"
               />
-              <Text style={styles.profileStatChangeText}>
-                {Math.abs(profile.height_change)} cm
-              </Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.profileStat}>
-            <Text style={styles.profileStatLabel}>Weight</Text>
-            <Text style={styles.profileStatValue}>{profile.weight} kg</Text>
-            <View
-              style={[
-                styles.profileStatChange,
-                profile.weight_change >= 0
-                  ? styles.positiveChange
-                  : styles.negativeChange,
-              ]}>
-              <Icon
-                name={profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'}
-                size={12}
-                color="#FFF"
-              />
-              <Text style={styles.profileStatChangeText}>
-                {Math.abs(profile.weight_change)} kg
-              </Text>
-            </View>
-          </View>
+          {sections.healthProfile && (
+            <>
+              <View style={styles.profileStatsRow}>
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatLabel}>Height</Text>
+                  <Text style={styles.profileStatValue}>{profile.height} cm</Text>
+                  <View
+                    style={[
+                      styles.profileStatChange,
+                      profile.height_change >= 0
+                        ? styles.positiveChange
+                        : styles.negativeChange,
+                    ]}>
+                    <Icon
+                      name={profile.height_change >= 0 ? 'arrow-up' : 'arrow-down'}
+                      size={12}
+                      color="#FFF"
+                    />
+                    <Text style={styles.profileStatChangeText}>
+                      {Math.abs(profile.height_change)} cm
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.profileStat}>
+                  <Text style={styles.profileStatLabel}>Weight</Text>
+                  <Text style={styles.profileStatValue}>{profile.weight} kg</Text>
+                  <View
+                    style={[
+                      styles.profileStatChange,
+                      profile.weight_change >= 0
+                        ? styles.positiveChange
+                        : styles.negativeChange,
+                    ]}>
+                    <Icon
+                      name={profile.weight_change >= 0 ? 'arrow-up' : 'arrow-down'}
+                      size={12}
+                      color="#FFF"
+                    />
+                    <Text style={styles.profileStatChangeText}>
+                      {Math.abs(profile.weight_change)} kg
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {profile.issues && (
+                <View style={styles.profileIssues}>
+                  <Text style={styles.profileIssuesLabel}>Health Notes:</Text>
+                  <Text style={styles.profileIssuesText}>{profile.issues}</Text>
+                </View>
+              )}
+
+              {profile.type && (
+                <View style={styles.profileType}>
+                  <Icon name="walk" size={16} color={theme.colors.primary} />
+                  <Text style={styles.profileTypeText}>
+                    {capitalizeFirstLetter(profile.type.replace('_', ' '))}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
-
-        {profile.issues && (
-          <View style={styles.profileIssues}>
-            <Text style={styles.profileIssuesLabel}>Health Notes:</Text>
-            <Text style={styles.profileIssuesText}>{profile.issues}</Text>
-          </View>
-        )}
-
-        {profile.type && (
-          <View style={styles.profileType}>
-            <Icon name="walk" size={16} color={theme.colors.primary} />
-            <Text style={styles.profileTypeText}>
-              {capitalizeFirstLetter(profile.type.replace('_', ' '))}
-            </Text>
-          </View>
-        )}
-      </View>
+      </Animated.View>
     );
   };
+
+  const renderSectionHeader = (title: string, sectionKey: keyof SectionState) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <TouchableOpacity onPress={() => toggleSection(sectionKey)}>
+        <Icon
+          name={sections[sectionKey] ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color="#666"
+        />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.overlay}>
@@ -269,63 +356,84 @@ export const CMSSidePanelInfo = ({
             </View>
 
             <View style={styles.infoSection}>
-              <Text style={styles.sectionTitle}>Stats</Text>
-              <View style={styles.statContainer}>
-                {renderStatRow('trophy', info.other_user.points || 0, 'points')}
-                {renderStatRow(
-                  'medal',
-                  capitalizeFirstLetter(
-                    info.other_user.user_level || 'No level',
-                  ),
-                  'level',
-                )}
-              </View>
+              {renderSectionHeader('Stats', SECTION_KEYS.STATS)}
+              {sections.stats && (
+                <View style={styles.statContainer}>
+                  {renderStatRow('trophy', info.other_user.points || 0, 'points')}
+                  {renderStatRow(
+                    'medal',
+                    capitalizeFirstLetter(
+                      info.other_user.user_level || 'No level',
+                    ),
+                    'level',
+                  )}
+                </View>
+              )}
             </View>
 
             <View style={styles.infoSection}>
-              <Text style={styles.sectionTitle}>Session Info</Text>
-              <View style={styles.infoRow}>
-                <Icon name="time" size={16} color="#666666" />
-                <Text style={styles.infoText}>
-                  Created:{' '}
-                  {new Date(info.session.created_at).toLocaleDateString()}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Icon name="star" size={16} color="#666666" />
-                <Text style={styles.infoText}>
-                  {info.session.is_expert_session
-                    ? 'Expert session'
-                    : 'Regular session'}
-                </Text>
-              </View>
-              {info.session.initial_message && (
-                <View style={styles.initialMessageContainer}>
-                  <Text style={styles.initialMessageLabel}>
-                    Initial Message:
-                  </Text>
-                  <Text style={styles.initialMessageText}>
-                    {info.session.initial_message}
-                  </Text>
-                </View>
+              {renderSectionHeader('Session Info', SECTION_KEYS.SESSION_INFO)}
+              {sections.sessionInfo && (
+                <>
+                  <View style={styles.infoRow}>
+                    <Icon name="time" size={16} color="#666666" />
+                    <Text style={styles.infoText}>
+                      Created: {formatDate(info.session.created_at)}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Icon name="star" size={16} color="#666666" />
+                    <Text style={styles.infoText}>
+                      {info.session.is_expert_session
+                        ? 'Expert session'
+                        : 'Regular session'}
+                    </Text>
+                  </View>
+                  {info.session.initial_message && (
+                    <View style={styles.initialMessageContainer}>
+                      <Text style={styles.initialMessageLabel}>
+                        Initial Message:
+                      </Text>
+                      <Text style={styles.initialMessageText}>
+                        {info.session.initial_message}
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
             </View>
 
             {info.expert_recommendations &&
               info.expert_recommendations.length > 0 && (
                 <View style={styles.infoSection}>
-                  <Text style={styles.sectionTitle}>
-                    Expert Recommendations
-                  </Text>
-                  <FlatList
-                    data={info.expert_recommendations}
-                    renderItem={renderRecommendationItem}
-                    keyExtractor={item => item.message_id}
-                    scrollEnabled={false}
-                    ItemSeparatorComponent={() => (
-                      <View style={styles.recommendationSeparator} />
-                    )}
-                  />
+                  {renderSectionHeader(
+                    'Expert Recommendations',
+                    SECTION_KEYS.RECOMMENDATIONS,
+                  )}
+                  {sections.recommendations && (
+                    <>
+                      <FlatList
+                        data={info.expert_recommendations.slice(
+                          0,
+                          recommendationsLimit,
+                        )}
+                        renderItem={renderRecommendationItem}
+                        keyExtractor={item => item.message_id}
+                        scrollEnabled={false}
+                        ItemSeparatorComponent={() => (
+                          <View style={styles.recommendationSeparator} />
+                        )}
+                      />
+                      {recommendationsLimit <
+                        info.expert_recommendations.length && (
+                        <TouchableOpacity
+                          style={styles.loadMoreButton}
+                          onPress={loadMoreRecommendations}>
+                          <Text style={styles.loadMoreText}>Load more</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
                 </View>
               )}
 
@@ -357,7 +465,6 @@ const styles = StyleSheet.create({
     width: '80%',
     height: '100%',
     backgroundColor: '#FFFFFF',
-    padding: 16,
   },
   closeButton: {
     alignSelf: 'flex-end',
@@ -366,6 +473,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    padding: 16,
+    marginBottom: 30
   },
   userHeader: {
     alignItems: 'center',
@@ -411,14 +520,19 @@ const styles = StyleSheet.create({
   infoSection: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+    paddingBottom: 4,
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: theme.colors.primaryDark,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-    paddingBottom: 4,
   },
   statContainer: {
     flexDirection: 'row',
@@ -491,12 +605,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   recommendationContent: {
-    marginBottom: 8,
+    flex: 1,
+    marginRight: 8,
   },
   recommendationText: {
     fontSize: 14,
     color: '#333333',
     lineHeight: 20,
+  },
+  recommendationDate: {
+    fontSize: 12,
+    color: '#888888',
+    marginTop: 4,
   },
   recommendationStatus: {
     flexDirection: 'row',
@@ -511,11 +631,6 @@ const styles = StyleSheet.create({
   },
   statusAccepted: {
     backgroundColor: '#00851f',
-  },
-  recommendationStatusText: {
-    fontSize: 12,
-    color: '#FFFFFF',
-    marginLeft: 4,
   },
   recommendationSeparator: {
     height: 8,
@@ -584,5 +699,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333333',
     marginLeft: 8,
+  },
+  loadMoreButton: {
+    padding: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  loadMoreText: {
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
 });

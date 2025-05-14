@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, TextInput, Keyboard} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, TextInput, Keyboard, ActivityIndicator} from 'react-native';
 import CommonPanel from '../../../../commons/CommonPanel';
 import {theme} from '../../../../contants/theme';
 import { sendExpertRecommendation } from '../../../../utils/useChatsAPI';
@@ -16,14 +16,14 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
   visible,
   onClose,
   sessionId,
-  onSendSuccess,
+  onSendSuccess = () => {},
 }) => {
   const [content, setContent] = useState<string>('');
   const [affectsTraining, setAffectsTraining] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (isSubmitting || !affectsTraining) return;
+    if (isSubmitting || !affectsTraining || !content.trim()) return;
     
     Keyboard.dismiss();
     setIsSubmitting(true);
@@ -31,13 +31,15 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
     try {
       await sendExpertRecommendation(sessionId, content);
       onSendSuccess();
-      handleClose();
+      resetAndClose();
+    } catch (error) {
+      console.error('Error sending recommendation:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleClose = () => {
+  const resetAndClose = () => {
     setContent('');
     setAffectsTraining(false);
     onClose();
@@ -50,7 +52,7 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
   return (
     <CommonPanel
       visible={visible}
-      onClose={handleClose}
+      onClose={resetAndClose}
       title="Expert Recommendation"
       content={
         <View style={styles.content}>
@@ -75,16 +77,21 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
               {affectsTraining && <Icon name="checkmark" size={16} color="white" />}
             </View>
             <Text style={styles.checkboxLabel}>
-              This recommendation affects the user's running style and training schedule
+              I agree this recommendation affects the user's running style and training schedule
             </Text>
           </TouchableOpacity>
         </View>
       }
       actionButtons={[
         {
-          label: 'Send Recommendation',
+          label: isSubmitting ? (
+            <ActivityIndicator color={theme.colors.white} />
+          ) : (
+            'Send Recommendation'
+          ),
           variant: 'contained',
           handler: handleSubmit,
+          color: !affectsTraining || !content.trim() ? '#c9c9c9' : theme.colors.primaryDark,
           disabled: !affectsTraining || !content.trim() || isSubmitting,
         },
       ]}
@@ -149,6 +156,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: theme.colors.primaryDark,
+  },
+  disabledButton: {
+    backgroundColor: theme.colors.gray,
   },
 });
 

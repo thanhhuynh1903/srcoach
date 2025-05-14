@@ -176,7 +176,6 @@ export const CMIProfile = ({
           )}
         </View>
 
-        {/* Type Picker Modal */}
         <Modal
           visible={showTypePicker}
           transparent={true}
@@ -221,50 +220,66 @@ export const CMIProfile = ({
     );
   }
 
-  // Filled profile case
   return (
     <View style={styles.filledContainer}>
       <View
         style={[
           styles.filledBubble,
-          isMe ? styles.myFilledBubble : styles.otherFilledBubble,
+          isMe && styles.filledBubbleMe,
         ]}>
         <View style={styles.filledHeader}>
-          <Icon
-            name="person"
-            size={20}
-            color={isMe ? '#fff' : theme.colors.primaryDark}
-          />
-          <Text style={[styles.filledTitle, isMe && styles.myText]}>
-            {!isMe
-              ? 'You have filled your profile'
-              : `${message.sender.name} has filled their profile`}
+          <View style={[styles.profileIcon, isMe && styles.profileIconMe]}>
+            <Icon
+              name="person"
+              size={16}
+              color={isMe ? theme.colors.primaryDark : '#fff'}
+            />
+          </View>
+          <Text style={[styles.filledTitle, isMe && styles.filledTitleMe]}>
+            {!isMe ? 'Your Profile' : `${message.sender.name}'s Profile`}
           </Text>
         </View>
-        <View style={styles.details}>
+        
+        <View style={styles.detailsContainer}>
           {message.content.height && (
-            <Text style={[styles.text, isMe && styles.myText]}>
-              Height: {message.content.height} cm
-            </Text>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Height</Text>
+              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
+                {message.content.height} cm
+              </Text>
+            </View>
           )}
+          
           {message.content.weight && (
-            <Text style={[styles.text, isMe && styles.myText]}>
-              Weight: {message.content.weight} kg
-            </Text>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Weight</Text>
+              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
+                {message.content.weight} kg
+              </Text>
+            </View>
           )}
+          
           {message.content.type && (
-            <Text style={[styles.text, isMe && styles.myText]}>
-              Running Type: {message.content.type.replace(/_/g, ' ')}
-            </Text>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Activity</Text>
+              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
+                {message.content.type.replace(/_/g, ' ')}
+              </Text>
+            </View>
           )}
+          
           {message.content.issues && (
-            <Text style={[styles.text, isMe && styles.myText]}>
-              Health Issues: {message.content.issues}
-            </Text>
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Health Notes</Text>
+              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
+                {message.content.issues}
+              </Text>
+            </View>
           )}
         </View>
+        
         <View style={styles.footer}>
-          <Text style={isMe ? styles.myTime : styles.otherTime}>
+          <Text style={[styles.timeText, isMe && styles.timeTextMe]}>
             {formatTimestampAgo(message.created_at)}
           </Text>
           {isMe && (
@@ -286,86 +301,6 @@ export const CMIProfile = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    marginBottom: 12,
-    alignItems: 'flex-end',
-  },
-  myContainer: {
-    justifyContent: 'flex-end',
-  },
-  otherContainer: {
-    justifyContent: 'flex-start',
-  },
-  avatar: {
-    marginRight: 8,
-  },
-  bubble: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 16,
-  },
-  myBubble: {
-    backgroundColor: theme.colors.primaryDark,
-    borderBottomRightRadius: 4,
-  },
-  otherBubble: {
-    backgroundColor: '#e5e5ea',
-    borderBottomLeftRadius: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  details: {
-    marginLeft: 28,
-  },
-  text: {
-    fontSize: 14,
-    color: '#000',
-    marginBottom: 4,
-  },
-  myText: {
-    color: '#fff',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  myTime: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-  },
-  otherTime: {
-    fontSize: 12,
-    color: '#666',
-  },
-  icon: {
-    marginLeft: 4,
-  },
-  requiredIndicator: {
-    color: 'red',
-  },
-  loadingInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 48,
-  },
-
-  // Form styles
   centeredContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -436,8 +371,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // Picker Modal styles
+  loadingInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 48,
+  },
+  requiredIndicator: {
+    color: 'red',
+  },
   pickerModalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -477,27 +422,83 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   filledBubble: {
-    maxWidth: '80%',
-    padding: 12,
+    width: '75%',
+    padding: 16,
     borderRadius: 16,
+    backgroundColor: '#ffffff',
   },
-  myFilledBubble: {
+  filledBubbleMe: {
     backgroundColor: theme.colors.primaryDark,
-    borderBottomRightRadius: 4,
-  },
-  otherFilledBubble: {
-    backgroundColor: '#e5e5ea',
-    borderBottomLeftRadius: 4,
   },
   filledHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  profileIcon: {
+    backgroundColor: theme.colors.primaryDark,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  profileIconMe: {
+    backgroundColor: '#fff',
   },
   filledTitle: {
-    marginLeft: 8,
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: '#333',
+  },
+  filledTitleMe: {
+    color: '#fff',
+  },
+  detailsContainer: {
+    marginLeft: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    flex: 1,
+  },
+  detailLabelMe: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+  detailValueMe: {
+    color: '#fff',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  timeTextMe: {
+    color: 'rgba(255,255,255,0.7)',
+  },
+  icon: {
+    marginLeft: 4,
   },
 });
