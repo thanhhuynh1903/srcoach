@@ -134,12 +134,6 @@ export default function ChatsSearchScreen() {
   };
 
   const handleUserPress = useCallback(async (item: UserItem) => {
-    if (
-      item.status === 'CLOSED_BY_RUNNER' ||
-      item.status === 'CLOSED_BY_EXPERT'
-    ) {
-      return;
-    }
 
     if (item.status === 'ACCEPTED') {
       return navigation.navigate('ChatsMessageScreen', {userId: item.id});

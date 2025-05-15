@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {View, StyleSheet, ScrollView, Text, RefreshControl} from 'react-native';
 import {theme} from '../../../contants/theme';
 import CHSHeader from './CHSHeader';
@@ -10,6 +10,7 @@ import {listSessions, respondToSession} from '../../../utils/useChatsAPI';
 import CHSChatList from './CHSChatList';
 import ToastUtil from '../../../utils/utils_toast';
 import {useLoginStore} from '../../../utils/useLoginStore';
+import {getSocket} from '../../../utils/socket';
 
 interface ChatSession {
   id: string;
@@ -46,14 +47,15 @@ const ChatsHomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation();
+  const socketRef = useRef<any>(null);
 
   const {profile} = useLoginStore();
 
   useFocusEffect(
     React.useCallback(() => {
       fetchSessions();
-    }, [activeFilter])
-  )
+    }, [activeFilter]),
+  );
 
   const fetchSessions = async () => {
     try {
@@ -77,11 +79,14 @@ const ChatsHomeScreen = () => {
 
   const handleChatPress = (session: ChatSession) => {
     if (
-      profile.roles && profile.roles.includes('expert') &&
+      profile.roles &&
+      profile.roles.includes('expert') &&
       session.other_user?.roles?.includes('runner') &&
       session.status == 'PENDING'
     ) {
-      navigation.navigate('ChatsExpertConfirmScreen', {userId: session.other_user.id});
+      navigation.navigate('ChatsExpertConfirmScreen', {
+        userId: session.other_user.id,
+      });
       return;
     }
 
@@ -118,6 +123,38 @@ const ChatsHomeScreen = () => {
     setRefreshing(true);
     fetchSessions();
   };
+
+  const setupSocketListeners = useCallback(() => {
+    const socket = socketRef.current;
+    socket.on('chat_home', (data: any) => {
+      console.log(data)
+      if (data.type === 'update') {
+        const updatedSessions = sessions.map(session => {
+          if (session.id === data.data.id) {
+            return data.data;
+          }
+          return session;
+        });
+        setSessions(updatedSessions);
+      }
+    });
+    
+    return () => {
+      socket.off('chat_home');
+    };
+  }, []);
+
+  const initSocket = useCallback(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
+    return setupSocketListeners();
+  }, [setupSocketListeners]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      initSocket();
+    }, [initSocket]),
+  );
 
   return (
     <View style={styles.container}>

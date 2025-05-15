@@ -236,7 +236,7 @@ export const CMIProfile = ({
             />
           </View>
           <Text style={[styles.filledTitle, isMe && styles.filledTitleMe]}>
-            {!isMe ? 'Your Profile' : `${message.sender.name}'s Profile`}
+            {!isMe ? 'Your Profile' : `Runner's Profile`}
           </Text>
         </View>
         

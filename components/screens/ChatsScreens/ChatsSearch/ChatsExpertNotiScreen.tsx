@@ -34,14 +34,12 @@ const ChatsExpertNotiScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
         <BackButton size={24} />
         <Text style={styles.headerTitle}>Expert Verification</Text>
         <View style={{width: 24}} />
       </View>
 
-      {/* Content */}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.warningContainer}>
           <Ionicons
@@ -88,7 +86,6 @@ const ChatsExpertNotiScreen = () => {
             consult with a medical professional for health-related concerns.
           </Text>
 
-          {/* Initial Message Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>
               Initial Message <Text style={styles.requiredStar}>*</Text>
@@ -109,7 +106,6 @@ const ChatsExpertNotiScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[

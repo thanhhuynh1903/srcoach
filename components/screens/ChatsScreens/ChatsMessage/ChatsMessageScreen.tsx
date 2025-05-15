@@ -122,11 +122,14 @@ export default function ChatsMessageScreen() {
       });
     });
 
+    socket.on('chatExpertArchived', () => navigation.goBack());
+
     return () => {
       socket.off('typingMessage');
       socket.off('newMessage');
       socket.off('messageArchived');
       socket.off('messageProfileFilled');
+      socket.off('chatExpertArchived');
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [sessionId]);

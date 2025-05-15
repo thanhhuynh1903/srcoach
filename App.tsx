@@ -14,6 +14,7 @@ import {
   stackScreens,
 } from './components/routes/routes';
 import useAuthStore from './components/utils/useAuthStore';
+import { getSocket } from './components/utils/socket';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -97,10 +98,13 @@ const HomeTabs = () => {
 };
 
 const App = () => {
+
   const {loadToken} = useAuthStore();
+
   useEffect(() => {
     loadToken();
   }, []);
+
   return (
     <>
       <NavigationContainer>
