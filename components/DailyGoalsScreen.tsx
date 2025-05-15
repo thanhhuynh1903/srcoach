@@ -13,7 +13,6 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {format} from 'date-fns';
 import {US} from 'date-fns/locale';
-
 interface TrainingSession {
   description: string;
   start_time: string;
@@ -35,19 +34,20 @@ interface DailyGoalsSectionProps {
   selectedDates: Record<string, any>;
   onGoalsChange: (schedule: DailySchedule[]) => void;
   initialSchedules?: DailySchedule[];
+  view?: boolean
 }
 
 const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   selectedDates,
   onGoalsChange,
   initialSchedules = [],
+  view
 }) => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [dailySchedule, setDailySchedule] = useState<DailySchedule[]>([]);
   const [validationErrors, setValidationErrors] = useState<
     Record<string, Record<string, string>>
   >({});
-
   // Thời gian mặc định cho các buổi tập
   const defaultSessions = {
     morning: {
@@ -85,22 +85,22 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   // Hàm kiểm tra và sửa lỗi dữ liệu trước khi gửi đi
   const getDistanceError = (value: number | null) => {
     if (value == null) return null; // Không lỗi nếu không có mục tiêu
-    if (value < 1.0) return 'Khoảng cách phải ít nhất 1.0 km';
-    if (value > 25) return 'Khoảng cách phải tối đa 25 km';
+    if (value < 1.0) return 'Khoảng cách phải ít nhất 1.0 km từ 25km';
+    if (value > 25) return 'Khoảng cách phải ít nhất 1.0 km từ 25km';
     return null;
   };
 
   const getCaloriesError = (value: number | null) => {
     if (value == null) return null;
-    if (value < 10) return 'Calo phải ít nhất 10';
-    if (value > 2000) return 'Calo phải tối đa 2000';
+    if (value < 10) return 'Calo phải ít nhất 10 và tối đa 2000';
+    if (value > 2000) return 'Calo phải ít nhất 10 và tối đa 2000';
     return null;
   };
 
   const getStepsError = (value: number | null) => {
     if (value == null) return null;
-    if (value < 1500) return 'Bước chân phải ít nhất 1500';
-    if (value > 35000) return 'Bước chân phải tối đa 35000';
+    if (value < 1500) return 'Bước chân phải ít nhất 1500 và tối đa 35000';
+    if (value > 35000) return 'Bước chân phải ít nhất 1500 tối đa 35000';
     return null;
   };
 
@@ -206,6 +206,22 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const date = new Date(dateString);
     return format(date, 'EEE, dd/MM', {locale: US});
   };
+
+  const canEditSession = (session: TrainingSession, view: boolean) => {
+  if (view) return false;
+  if (session.status === 'MISSED' || session.status === 'COMPLETED') return false;
+  if (!session.start_time) return false;
+  try {
+    const now = new Date();
+    const start = new Date(session.start_time);
+    // If start_time is invalid, fallback to not editable
+    if (isNaN(start.getTime())) return false;
+    // Check if now is at least 3 hours before start
+    return (start.getTime() - now.getTime()) > 3 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+};
 
   const toggleDay = (date: string) => {
     setExpandedDay(expandedDay === date ? null : date);
@@ -397,7 +413,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
             <TouchableOpacity
               style={styles.dayHeader}
               onPress={() => toggleDay(day.day)}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              >
               <View style={styles.dayHeaderLeft}>
                 <View style={styles.dateCircle}>
                   <Text style={styles.dateNumber}>
@@ -451,7 +468,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                           </View>
                         )}
                         {day.details.length > 1 &&
-                          session.status !== 'MISSED' && session.status !== 'COMPLETED' && (
+                          canEditSession(session, view) && (
                             <TouchableOpacity
                               onPress={() =>
                                 removeSession(dayIndex, sessionIndex)
@@ -484,7 +501,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               value,
                             )
                           }
-                          editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                          editable={canEditSession(session, view)}
                           placeholder="Describe your session"
                         />
                       </View>
@@ -509,7 +526,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               );
                             }}
                             placeholder="HH:MM"
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             keyboardType="numbers-and-punctuation"
                             maxLength={5}
                           />
@@ -527,7 +544,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 value,
                               )
                             }
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             placeholder="HH:MM"
                           />
                         </View>
@@ -576,7 +593,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 session.goal_distance,
                               );
                             }}
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             keyboardType="decimal-pad"
                             placeholder="0.00"
                             maxLength={5}
@@ -633,7 +650,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               );
                             }}
                             keyboardType="numeric"
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             maxLength={5}
                           />
                           <Text style={styles.goalUnit}>kcal</Text>
@@ -685,7 +702,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 session.goal_steps,
                               );
                             }}
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             keyboardType="numeric"
                             maxLength={5}
                           />
@@ -727,7 +744,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 );
                               }
                             }}
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             keyboardType="numeric"
                             maxLength={3}
                           />
@@ -754,7 +771,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                 );
                               }
                             }}
-                            editable={session.status !== 'MISSED' && session?.status !== 'COMPLETED'}
+                            editable={canEditSession(session, view)}
                             keyboardType="numeric"
                             maxLength={3}
                           />
@@ -762,7 +779,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         </View>
                       </View>
 
-                      {!hasMissedSession && (
+                      {!hasMissedSession && day.details.every(s => canEditSession(s, view)) && !view && (
                         <>
                           <View style={styles.divider} />
                           <TouchableOpacity

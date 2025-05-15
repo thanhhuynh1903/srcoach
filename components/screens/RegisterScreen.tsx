@@ -34,48 +34,92 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 
   // Hàm validate đầu vào
   const validateInputs = (): boolean => {
-    if (!username.trim() || !name.trim()) {
-      Alert.alert('Error', 'Username and Name are required.');
-      return false;
-    }
-    if (!gender.trim()) {
-      Alert.alert('Error', 'Please select your gender.');
-      return false;
-    }
+  // Trim các giá trị đầu vào
+  const trimmedName = name.trim();
+  const trimmedUsername = username.trim();
+  const trimmedGender = gender.trim().toLowerCase();
+  const trimmedDob = dob.trim();
+  const trimmedEmail = email.trim();
+  const trimmedPassword = password.trim();
+  const trimmedPasswordCf = passwordCf.trim();
 
-    // Date of birth validation (yyyy-mm-dd format)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dob.trim() || !dateRegex.test(dob)) {
-      Alert.alert(
-        'Error',
-        'Please enter a valid date of birth in yyyy-mm-dd format.',
-      );
-      return false;
-    }
+  // Validate Name (3-25 ký tự)
+  const nameRegex = /^[a-zA-ZÀ-ỹ\s']{3,25}$/;
+  if (!trimmedName) {
+    Alert.alert('Error', 'Name is required.');
+    return false;
+  }
+  if (!nameRegex.test(trimmedName)) {
+    Alert.alert(
+      'Invalid Name',
+      'Name must be 3-25 characters, only letters and accents are allowed.'
+    );
+    return false;
+  }
 
-    // Calculate age based on date of birth
-    const dobDate = new Date(dob);
-    const age = Math.floor((new Date() - dobDate) / 31536000000); // 31536000000 is the number of milliseconds in a year
+  // Validate Username (8-40 ký tự)
+  const usernameRegex = /^[a-zA-Z0-9_]{8,40}$/;
+  if (!trimmedUsername) {
+    Alert.alert('Error', 'Username is required.');
+    return false;
+  }
+  if (!usernameRegex.test(trimmedUsername)) {
+    Alert.alert(
+      'Invalid Username',
+      'Username must be 8-40 characters, only letters, numbers and underscores are allowed.'
+    );
+    return false;
+  }
 
-    if (age < 13) {
-      Alert.alert('Error', 'You must be at least 13 years old to register.');
-      return false;
-    }
+  // Validate Gender (chính xác các giá trị yêu cầu)
+  const validGenders = ['male', 'female', 'others'];
+  if (!validGenders.includes(trimmedGender)) {
+    Alert.alert('Error', 'Please select a valid gender (Male/Female/Others).');
+    return false;
+  }
 
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter a valid email address.');
-      return false;
-    }
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters.');
-      return false;
-    }
-    if (password !== passwordCf) {
-      Alert.alert('Error', 'Passwords do not match.');
-      return false;
-    }
-    return true;
-  };
+  // Validate Date of Birth
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!trimmedDob || !dateRegex.test(trimmedDob)) {
+    Alert.alert(
+      'Error',
+      'Please enter a valid date of birth in yyyy-mm-dd format.'
+    );
+    return false;
+  }
+
+  // Validate Age >= 13
+  const dobDate = new Date(trimmedDob);
+  const age = new Date().getFullYear() - dobDate.getFullYear();
+  if (age < 13) {
+    Alert.alert('Error', 'You must be at least 13 years old to register.');
+    return false;
+  }
+
+  // Validate Email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+    Alert.alert('Error', 'Please enter a valid email address.');
+    return false;
+  }
+
+  // Validate Password (8-40 ký tự)
+  if (trimmedPassword.length < 8 || trimmedPassword.length > 40) {
+    Alert.alert(
+      'Error',
+      'Password must be between 8 and 40 characters.'
+    );
+    return false;
+  }
+
+  // Validate Password Confirmation
+  if (trimmedPassword !== trimmedPasswordCf) {
+    Alert.alert('Error', 'Passwords do not match.');
+    return false;
+  }
+
+  return true;
+};
 
   useEffect(() => {
     clear();
