@@ -57,6 +57,7 @@ const UpdateScheduleScreen = () => {
   const [dailyGoals, setDailyGoals] = useState<DailySchedule[]>([]);
   const route = useRoute();
   const {scheduleId} = route.params as {scheduleId: string};
+  const {view} = route.params as {view: boolean};
   const [initialGoals, setInitialGoals] = useState<DailySchedule[]>([]);
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
@@ -385,6 +386,7 @@ const UpdateScheduleScreen = () => {
           value={title}
           onChangeText={setTitle}
           placeholderTextColor="#A1A1AA"
+          editable={!view}
         />
 
         {/* Selection limit info */}
@@ -456,7 +458,8 @@ const UpdateScheduleScreen = () => {
         <DailyGoalsSection
           selectedDates={selectedDates}
           onGoalsChange={handleDailyGoalsChange}
-          initialSchedules={initialGoals} // Truyền dữ liệu ban đầu
+          initialSchedules={initialGoals}
+          view={view}
         />
         {/* Description */}
         <Text style={styles.sectionTitle}>Description</Text>
@@ -467,25 +470,28 @@ const UpdateScheduleScreen = () => {
           onChangeText={setDescription}
           multiline
           placeholderTextColor="#A1A1AA"
+          editable={!view}
         />
-        <TouchableOpacity
-          style={[
-            styles.createButton,
-            getSelectedDatesCount() < 3 || isCreating
-              ? styles.disabledButton
-              : null,
-          ]}
-          disabled={getSelectedDatesCount() < 3 || isCreating}
-          onPress={handleUpdateSchedule}>
-          {isCreating ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.createButtonText}>
-              Update Schedule ({getSelectedDatesCount()}{' '}
-              {getSelectedDatesCount() === 1 ? 'day' : 'days'})
-            </Text>
-          )}
-        </TouchableOpacity>
+        {!view && (
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              getSelectedDatesCount() < 3 || isCreating
+                ? styles.disabledButton
+                : null,
+            ]}
+            disabled={getSelectedDatesCount() < 3 || isCreating}
+            onPress={handleUpdateSchedule}>
+            {isCreating ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.createButtonText}>
+                Update Schedule ({getSelectedDatesCount()}{' '}
+                {getSelectedDatesCount() === 1 ? 'day' : 'days'})
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
