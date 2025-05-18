@@ -25,19 +25,19 @@ export interface Schedule {
   title: string;
   description: string;
   user_id: string | null;
-  expert_id : string | null;
+  expert_id: string | null;
   days: DailySchedule[];
   created_at?: string;
   updated_at?: string;
   is_expert_choice?: boolean;
   alarm_enabled?: boolean;
   schedule_type?: string;
-  status: string;
+  status?: string;
 }
 
 interface ScheduleState {
   schedules: Schedule[];
-  ExpertSchedule  : Schedule[];
+  ExpertSchedule: Schedule[];
   isLoading: boolean;
   error: string | null;
   currentSchedule: Schedule | null;
@@ -68,15 +68,13 @@ const useScheduleStore = create<ScheduleState>()(
       error: null,
       currentSchedule: null,
       message: null,
-      // Lấy danh sách lịch tập
 
       fetchSelfSchedules: async () => {
         set({isLoading: true, error: null});
         try {
-          const response = await api.fetchData(`/schedules/self`);
-          console.log('response', response);
+          const response = await api.fetchData(`/schedules/self/current`);
 
-          set({schedules: response.data, isLoading: false});
+          set({schedules: response?.data, isLoading: false});
         } catch (error) {
           console.error(
             'Error getting personal training schedule list:',
@@ -92,7 +90,7 @@ const useScheduleStore = create<ScheduleState>()(
       fetchExpertSchedule: async () => {
         set({isLoading: true, error: null});
         try {
-          const response = await api.fetchDataDetail(`/schedules/expert`);
+          const response = await api.fetchDataDetail(`/schedules/expert/current-created`);
           console.log('response', response);
 
           set({ExpertSchedule: response?.data, isLoading: false});
@@ -149,16 +147,17 @@ const useScheduleStore = create<ScheduleState>()(
               };
           console.log('Payload tạo lịch tập:', payload);
 
-          const response = await api.postData(`/schedules/create`, payload);
-          const newSchedule = response?.data;
+          const response: any = await api.postData(
+            `/schedules/self-create`,
+            payload,
+          );
 
           console.log('Kết quả tạo lịch tập:', response?.message);
-          set(state => ({
-            schedules: [...state.schedules, newSchedule],
+          set({
+            message: response?.message,
             isLoading: false,
-          }));
-
-          return newSchedule;
+          });
+          return response;
         } catch (error: any) {
           const serverMessage =
             error.response?.data?.message || 'Unknown error';
@@ -177,36 +176,42 @@ const useScheduleStore = create<ScheduleState>()(
         });
       },
       // Cập nhật lịch tập
-    updateSchedule: async (scheduleId, data) => {
-    try {
-      set({ isLoading: true });
-      const response = await api.putData(`/schedules/${scheduleId}`, data);
-      const updateSchedule = response?.status ;
-      console.log('Kết quả cập nhật lịch tập:', updateSchedule);
-      
-      return updateSchedule;
-    } catch (error) {
-      console.log('Error while updating schedule:', error);
-      return null;
-    } finally {
-      set({ isLoading: false });
-    }
-  },
+      updateSchedule: async (scheduleId, data) => {
+        try {
+          set({isLoading: true});
+          const response = await api.putData(`/schedules/self/${scheduleId}`, data);
+          const updateSchedule = response?.status;
+          console.log('Kết quả cập nhật lịch tập:', updateSchedule);
 
+          return updateSchedule;
+        } catch (error) {
+          console.log('Error while updating schedule:', error);
+          return null;
+        } finally {
+          set({isLoading: false});
+        }
+      },
 
       // Xóa lịch tập
       deleteSchedule: async id => {
         set({isLoading: true, error: null, message: null});
         try {
           const response = await api.deleteData(`/schedules/cancel/${id}`);
-          if (response.status === 'success') {
-            set(state => ({
-              schedules: state.schedules.filter(s => s.id !== id),
-              message: response.message,
+          console.log('Kết quả xóa lịch tập:', response?.message);
+
+          if (response?.status === 'success') {
+            // Sau khi xóa thành công, gọi lại fetchSelfSchedules để đồng bộ dữ liệu mới nhất từ backend
+            await get().fetchSelfSchedules();
+            set({
+              message: response?.message,
               isLoading: false,
-            }));
+            });
             return true;
           }
+          set({
+            message: response?.message || 'Delete failed.',
+            isLoading: false,
+          });
           return false;
         } catch (error) {
           console.error('Error while deleting workout schedule:', error);
