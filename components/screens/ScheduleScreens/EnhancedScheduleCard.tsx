@@ -180,7 +180,7 @@ const EnhancedScheduleCard = ({
     switch (status) {
       case 'COMPLETED':
         return '#22C55E'; // Green
-      case 'INCOMING':
+      case 'UPCOMING':
         return '#3B82F6'; // Blue
       case 'ONGOING':
         return '#6366F1'; // Indigo
@@ -304,7 +304,7 @@ const EnhancedScheduleCard = ({
                         backgroundColor:
                           workout.status === 'COMPLETED'
                             ? '#22C55E'
-                            : workout.status === 'INCOMING'
+                            : workout.status === 'UPCOMING'
                             ? '#3B82F6'
                             : workout.status === 'ONGOING'
                             ? '#6366F1'

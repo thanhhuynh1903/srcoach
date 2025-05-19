@@ -34,13 +34,13 @@ const AddScheduleScreen = () => {
   const [dailyGoals, setDailyGoals] = useState({});
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
-  useEffect(() => {
-    if (message) {
-      Alert.alert('Validation Error', message, [{text: 'OK'}]);
-      // Reset message sau khi hiển thị
-      useScheduleStore.getState().clear();
-    }
-  }, [message]);
+  // useEffect(() => {
+  //   if (message) {
+  //     Alert.alert('Validation Error', message, [{text: 'OK'}]);
+  //     // Reset message sau khi hiển thị
+  //     useScheduleStore.getState().clear();
+  //   }
+  // }, [message]);
   const handleCreateSchedule = async () => {
     useScheduleStore.getState().clear();
 
@@ -71,13 +71,19 @@ const AddScheduleScreen = () => {
       const result = await createSchedule(formData);
       console.log('Schedules after creation:', message);
       await fetchSelfSchedules();
-      if (result) {
+      if (result?.status === 'success') {
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Schedule created successfully',
+          text2: result?.message || 'Schedule created successfully',
         });
         navigate.goBack();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: result?.message || 'Failed to create schedule',
+        });
       }
     } catch (err) {
       console.error('Error creating workout schedule:', err);
@@ -86,7 +92,6 @@ const AddScheduleScreen = () => {
         'An error occurred while creating the workout schedule. Please try again later.',
       );
     } finally {
-      // Kết thúc loading
       setIsCreating(false);
     }
   };
@@ -99,7 +104,7 @@ const AddScheduleScreen = () => {
     setCurrentMonth(todayStr);
 
     // Generate valid dates (today + 6 days)
-const validDatesObj: {[key: string]: any} = {};
+    const validDatesObj: {[key: string]: any} = {};
     for (let i = 0; i < MAX_DAYS_SELECTION; i++) {
       const date = new Date();
       date.setDate(today.getDate() + i);
@@ -191,7 +196,7 @@ const validDatesObj: {[key: string]: any} = {};
 
   // Combine marked dates (selected + valid dates)
   const getMarkedDates = () => {
-    const markedDates: { [key: string]: any }  = {...validDates};
+    const markedDates: {[key: string]: any} = {...validDates};
 
     // Add selected dates styling
     Object.keys(selectedDates).forEach(dateStr => {

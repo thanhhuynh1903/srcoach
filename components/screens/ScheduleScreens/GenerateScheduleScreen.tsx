@@ -31,15 +31,25 @@ const GenerateScheduleScreen = () => {
   } = useScheduleStore();
   const [showInfoDialog, setShowInfoDialog] = useState(false);
   const combinedSchedules = useMemo(() => {
-    return [...schedules, ...(ExpertSchedule || [])];
+    const safeSchedules = Array.isArray(schedules)
+      ? schedules
+      : schedules
+      ? [schedules]
+      : [];
+    const safeExpert = Array.isArray(ExpertSchedule)
+      ? ExpertSchedule
+      : ExpertSchedule
+      ? [ExpertSchedule]
+      : [];
+    return [...safeSchedules, ...safeExpert];
   }, [schedules, ExpertSchedule]);
-
   const hasActiveSchedule = useMemo(() => {
-    return schedules?.some(
+    return [schedules]?.some(
       schedule =>
-        schedule.status === 'IN_PROGRESS' ||
-        schedule.status === 'PENDING' ||
-        schedule.status === 'ONGOING',
+        schedule?.status === 'COMPLETED' ||
+        schedule?.status === 'PENDING' ||
+        schedule?.status === 'INCOMING' ||
+        schedule?.status === 'ONGOING',
     );
   }, [schedules]);
 
@@ -59,23 +69,27 @@ const GenerateScheduleScreen = () => {
 
   // Logic lọc dựa trên tab đang chọn
   const filteredSchedules = useMemo(() => {
-    if (!combinedSchedules || combinedSchedules.length === 0) return [];
+    if (!combinedSchedules) return [];
+    // Nếu combinedSchedules là object đơn, chuyển thành mảng
+    const safeSchedules = Array.isArray(combinedSchedules)
+      ? combinedSchedules
+      : [combinedSchedules];
 
     switch (activeTab) {
       case "Expert's Choice":
-        return combinedSchedules.filter(
+        return safeSchedules.filter(
           schedule =>
             schedule.schedule_type === 'EXPERT' &&
             schedule.user_id !== schedule.expert_id,
         );
       case 'My Schedules':
-        return combinedSchedules.filter(
+        return safeSchedules.filter(
           schedule =>
             schedule.schedule_type !== 'EXPERT' ||
             schedule.user_id === schedule.expert_id,
         );
       default: // "All"
-        return combinedSchedules;
+        return safeSchedules;
     }
   }, [combinedSchedules, activeTab]);
 
@@ -146,9 +160,10 @@ const GenerateScheduleScreen = () => {
       days: days,
       daySchedules: daySchedules,
       isExpertChoice:
-      schedule.schedule_type === 'EXPERT' && schedule.user_id !== schedule.expert_id,
+        schedule.schedule_type === 'EXPERT' &&
+        schedule.user_id !== schedule.expert_id,
       status: schedule.status,
-      user_id: schedule.user_id, 
+      user_id: schedule.user_id,
       expert_id: schedule.expert_id,
       userName: schedule.User?.name,
     };
@@ -277,12 +292,11 @@ const GenerateScheduleScreen = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}>
-        {filteredSchedules && filteredSchedules.length > 0 ? (
+        {Array.isArray(filteredSchedules) && filteredSchedules.length > 0 ? (
           <>
-            {filteredSchedules.map(schedule => {
+            {filteredSchedules?.map(schedule => {
               const formattedSchedule = formatScheduleData(schedule);
               if (!formattedSchedule) return null;
-
               return (
                 <EnhancedScheduleCard
                   key={formattedSchedule.id}

@@ -61,59 +61,72 @@ const UpdateScheduleScreen = () => {
   const [initialGoals, setInitialGoals] = useState<DailySchedule[]>([]);
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
-  useEffect(() => {
-    if (message) {
-      Alert.alert('Validation Error', message, [{text: 'OK'}]);
-      // Reset message sau khi hiển thị
-      useScheduleStore.getState().clear();
-    }
-  }, [message]);
+  // useEffect(() => {
+  //   if (message) {
+  //     Alert.alert('Validation Error', message, [{text: 'OK'}]);
+  //     // Reset message sau khi hiển thị
+  //     useScheduleStore.getState().clear();
+  //   }
+  // }, [message]);
   const handleUpdateSchedule = async () => {
-    try {
-      setIsCreating(true);
+  try {
+    setIsCreating(true);
 
-      const validDays = dailyGoals?.filter(
-        (day: DailySchedule) =>
-          !day.details.some(session => session.status === 'MISSED'),
+    const validDays = dailyGoals?.filter(
+      (day: DailySchedule) =>
+        !day.details.some(session => session.status === 'MISSED'),
+    );
+
+    // Kiểm tra nếu không còn ngày nào hợp lệ
+    if (validDays.length === 0) {
+      Alert.alert(
+        'Cannot Update',
+        'All selected days contain missed sessions that cannot be updated',
+        [{ text: 'OK' }],
       );
-
-      // Kiểm tra nếu không còn ngày nào hợp lệ
-      if (validDays.length === 0) {
-        Alert.alert(
-          'Cannot Update',
-          'All selected days contain missed sessions that cannot be updated',
-          [{text: 'OK'}],
-        );
-        return;
-      }
-
-      const cleanedDays = validDays?.map((day: DailySchedule) => ({
-        ...day,
-        details: day.details.map(({status, ...rest}) => rest), // Giữ lại tất cả trường trừ status
-      }));
-
-      const formData = {
-        title,
-        description,
-        days: cleanedDays,
-      };
-
-      const result = await updateSchedule(scheduleId, formData);
-      if (result === 'success') {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Schedule updated successfully',
-        });
-        fetchSelfSchedules();
-        navigate.goBack();
-      }
-    } catch (err) {
-      console.log('Error updating schedule:', err);
-    } finally {
       setIsCreating(false);
+      return;
     }
-  };
+
+    const cleanedDays = validDays?.map((day: DailySchedule) => ({
+      ...day,
+      details: day.details.map(({ status, ...rest }) => rest), // Bỏ trường status
+    }));
+
+    const formData = {
+      title,
+      description,
+      days: cleanedDays,
+    };
+
+    const result = await updateSchedule(scheduleId, formData);
+
+    if (result === 'success') {
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Schedule updated successfully',
+      });
+      await fetchSelfSchedules();
+      navigate.goBack();
+    } else {
+      Toast.show({
+        type: 'error',
+        text1: 'Update failed',
+        text2: 'Could not update schedule. Please try again.',
+      });
+    }
+  } catch (err) {
+    console.log('Error updating schedule:', err);
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: 'An error occurred while updating the schedule.',
+    });
+  } finally {
+    setIsCreating(false);
+  }
+};
 
   // Initialize with current date and set valid date range (today + 6 days)
   useEffect(() => {
