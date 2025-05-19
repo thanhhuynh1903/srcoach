@@ -38,6 +38,7 @@ export interface Schedule {
 interface ScheduleState {
   schedules: Schedule[];
   ExpertSchedule: Schedule[];
+  historySchedule: Schedule[];
   isLoading: boolean;
   error: string | null;
   currentSchedule: Schedule | null;
@@ -46,6 +47,7 @@ interface ScheduleState {
   fetchSelfSchedules: () => Promise<void>;
   fetchExpertSchedule: () => Promise<void>;
   fetchDetail: (scheduleId: string) => Promise<Schedule | null>;
+  fetchHistorySchedule: () => Promise<void>;
   createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
   updateSchedule: (
     id: string,
@@ -64,6 +66,7 @@ const useScheduleStore = create<ScheduleState>()(
     (set, get) => ({
       schedules: [],
       ExpertSchedule: [],
+      historySchedule: [],
       isLoading: false,
       error: null,
       currentSchedule: null,
@@ -127,6 +130,26 @@ const useScheduleStore = create<ScheduleState>()(
           return null;
         }
       },
+
+      fetchHistorySchedule: async () => {
+        set({isLoading: true, error: null});
+        try {
+          const response = await api.fetchData(`/schedules/self/history-full`);
+
+          set({historySchedule: response?.data, isLoading: false});
+        } catch (error) {
+          console.error(
+            'Error getting personal history schedule list:',
+            error,
+          );
+          set({
+            error:
+              'Unable to get personal history schedule list. Please try again later..',
+            isLoading: false,
+          });
+        }
+      },
+
       // Tạo lịch tập mới
       createSchedule: async scheduleData => {
         set({isLoading: true, error: null, message: null});
@@ -196,7 +219,7 @@ const useScheduleStore = create<ScheduleState>()(
       deleteSchedule: async id => {
         set({isLoading: true, error: null, message: null});
         try {
-          const response = await api.deleteData(`/schedules/cancel/${id}`);
+          const response = await api.deleteData(`/schedules/self/${id}`);
           console.log('Kết quả xóa lịch tập:', response?.message);
 
           if (response?.status === 'success') {
