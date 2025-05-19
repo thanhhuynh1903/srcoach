@@ -245,7 +245,7 @@ const EnhancedHistoryCard = ({
           <Icon name="calendar-outline" size={14} color="#64748B" style={styles.headerIcon} />
           <Text style={styles.startedText}>Started {startDate}</Text>
         </View>
-        <View style={styles.headerRight}>
+        {/* <View style={styles.headerRight}>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{status}</Text>
           </View>
@@ -256,7 +256,7 @@ const EnhancedHistoryCard = ({
           >
             <Icon name="ellipsis-vertical" size={18} color="#64748B" />
           </TouchableOpacity>
-        </View>
+        </View> */}
       </View>
 
       {/* Card Title and Description */}
