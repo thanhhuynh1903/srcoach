@@ -34,6 +34,12 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
   const {dataUser, status, message, register, clear} = useRegisterStore();
   const [loading, setLoading] = useState(false);
 
+  const emailValidated = (): boolean | null => {
+    if (!email) return null;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Hàm validate đầu vào
   const validateInputs = (): boolean => {
     // Trim các giá trị đầu vào
@@ -54,7 +60,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     if (!nameRegex.test(trimmedName)) {
       Alert.alert(
         'Invalid Name',
-        'Name must be 3-25 characters, only letters and accents are allowed.'
+        'Name must be 3-25 characters, only letters and accents are allowed.',
       );
       return false;
     }
@@ -68,7 +74,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     if (!usernameRegex.test(trimmedUsername)) {
       Alert.alert(
         'Invalid Username',
-        'Username must be 8-40 characters, only letters, numbers and underscores are allowed.'
+        'Username must be 8-40 characters, only letters, numbers and underscores are allowed.',
       );
       return false;
     }
@@ -76,7 +82,10 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     // Validate Gender (chính xác các giá trị yêu cầu)
     const validGenders = ['male', 'female', 'others'];
     if (!validGenders.includes(trimmedGender)) {
-      Alert.alert('Error', 'Please select a valid gender (Male/Female/Others).');
+      Alert.alert(
+        'Error',
+        'Please select a valid gender (Male/Female/Others).',
+      );
       return false;
     }
 
@@ -85,7 +94,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     if (!trimmedDob || !dateRegex.test(trimmedDob)) {
       Alert.alert(
         'Error',
-        'Please enter a valid date of birth in yyyy-mm-dd format.'
+        'Please enter a valid date of birth in yyyy-mm-dd format.',
       );
       return false;
     }
@@ -107,10 +116,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 
     // Validate Password (8-40 ký tự)
     if (trimmedPassword.length < 8 || trimmedPassword.length > 40) {
-      Alert.alert(
-        'Error',
-        'Password must be between 8 and 40 characters.'
-      );
+      Alert.alert('Error', 'Password must be between 8 and 40 characters.');
       return false;
     }
 
@@ -144,7 +150,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     setDob(`${year}-${month}-${day}`);
     hideDatePicker();
   };
-  
+
   // Handle registration
   const handleRegister = async () => {
     if (!validateInputs()) return;
@@ -181,7 +187,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{flex: 1, backgroundColor: 'white'}}>
-      <ScrollView 
+      <ScrollView
         style={{flex: 1}}
         contentContainerStyle={{paddingBottom: 30}}
         showsVerticalScrollIndicator={false}>
@@ -189,35 +195,47 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
           <View style={styles.backButtonWrapper}>
             <BackButton size={26} />
           </View>
-          
+
           <View style={styles.headerContainer}>
             <Text style={styles.welcomeText}>Join the Journey 🏃</Text>
             <Text style={styles.welcomeSubText}>
               Create your account to start tracking your fitness goals
             </Text>
           </View>
-          
+
           <View style={styles.form}>
             <Input
-              icon={<Icon name="person-circle-outline" size={22} color={theme.colors.primary} />}
+              icon={
+                <Icon
+                  name="person-circle-outline"
+                  size={22}
+                  color={theme.colors.primary}
+                />
+              }
               placeholder="Username (8-40 characters)"
               onChangeText={setUsername}
               value={username}
               keyboardType="default"
               containerStyle={styles.inputContainer}
             />
-            
+
             <Input
-              icon={<Icon name="person-outline" size={22} color={theme.colors.primary} />}
+              icon={
+                <Icon
+                  name="person-outline"
+                  size={22}
+                  color={theme.colors.primary}
+                />
+              }
               placeholder="Full Name"
               onChangeText={setName}
               value={name}
               keyboardType="default"
               containerStyle={styles.inputContainer}
             />
-            
+
             <View style={styles.rowContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.genderPickerContainer}
                 activeOpacity={0.8}
                 onPress={() => {
@@ -237,11 +255,15 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
                   style={styles.genderPicker}
                   dropdownIconColor={theme.colors.primary}>
                   <Picker.Item
-                    label="Select Gender"
+                    label="Gender"
                     value=""
                     style={{fontSize: 14, color: '#999'}}
                   />
-                  <Picker.Item label="Male" value="Male" style={{fontSize: 14}} />
+                  <Picker.Item
+                    label="Male"
+                    value="Male"
+                    style={{fontSize: 14}}
+                  />
                   <Picker.Item
                     label="Female"
                     value="Female"
@@ -254,14 +276,19 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
                   />
                 </Picker>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.datePickerButton}
                 onPress={showDatePicker}
                 activeOpacity={0.8}>
-                <Icon name="calendar-outline" size={22} color={theme.colors.primary} style={styles.dateIcon} />
+                <Icon
+                  name="calendar-outline"
+                  size={22}
+                  color={theme.colors.primary}
+                  style={styles.dateIcon}
+                />
                 <Text style={[styles.dateText, !dob && styles.placeholderText]}>
-                  {dob || "Date of Birth"}
+                  {dob || 'Date of Birth'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -280,32 +307,39 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             />
 
             <Input
-              icon={<Icon name="mail-outline" size={22} color={theme.colors.primary} />}
+              icon={
+                <Icon
+                  name="mail-outline"
+                  size={22}
+                  color={theme.colors.primary}
+                />
+              }
               placeholder="Email Address"
               onChangeText={setEmail}
               value={email}
-              keyboardType="email-address"
+              keyboardType="email"
+              validated={emailValidated()}
               containerStyle={styles.inputContainer}
             />
-            
+
             <Input
-              icon={<Icon name="lock-closed-outline" size={22} color={theme.colors.primary} />}
               placeholder="Password (8-40 characters)"
+              keyboardType="password"
               onChangeText={setPassword}
               value={password}
               secureTextEntry
               containerStyle={styles.inputContainer}
             />
-            
+
             <Input
-              icon={<Icon name="shield-checkmark-outline" size={22} color={theme.colors.primary} />}
               placeholder="Confirm Password"
+              keyboardType="password"
               onChangeText={setPasswordCf}
               value={passwordCf}
               secureTextEntry
               containerStyle={styles.inputContainer}
             />
-            
+
             {message ? (
               <Text
                 style={[
@@ -316,14 +350,14 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
               </Text>
             ) : null}
           </View>
-          
+
           <ButtonModify
             title="Create Account"
             onPress={handleRegister}
             loading={loading}
             style={styles.registerButton}
           />
-          
+
           <View style={styles.termsContainer}>
             <Text style={styles.termsText}>
               By signing up, you agree to our{' '}
@@ -340,10 +374,10 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
-            <Pressable 
+            <Pressable
               onPress={() => navigation.push('LoginScreen')}
               hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Text style={styles.footerLinkText}>Sign In</Text>
@@ -357,7 +391,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1, 
+    flex: 1,
     paddingHorizontal: wp(6),
     paddingTop: hp(2),
   },
@@ -366,6 +400,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     marginBottom: hp(4),
+    marginTop: hp(2),
   },
   welcomeText: {
     fontSize: hp(3.5),
@@ -384,10 +419,9 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: hp(2),
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E8E8E8',
-    backgroundColor: '#FAFAFA',
   },
   rowContainer: {
     flexDirection: 'row',
@@ -446,7 +480,7 @@ const styles = StyleSheet.create({
     marginBottom: hp(5),
   },
   termsContainer: {
-    marginTop:hp(1),
+    marginTop: hp(1),
     alignItems: 'center',
     marginBottom: hp(1),
   },

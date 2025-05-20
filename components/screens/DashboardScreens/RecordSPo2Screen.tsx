@@ -158,8 +158,6 @@ const SPo2Screen = () => {
   const readSpo2Data = async () => {
     try {
       setIsLoading(true);
-      const isInitialized = await initializeHealthConnect();
-      if (!isInitialized) return console.log('Health Connect initialization failed');
 
       let startDate: Date;
       let endDate: Date;
