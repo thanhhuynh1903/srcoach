@@ -42,6 +42,7 @@ const LoginScreen: React.FC<{
   const canGoBack = navigation.canGoBack();
   const {loadToken} = useAuthStore();
   const prevStatusRef = useRef('');
+  const [invalidPassword, setInvalidPassword] = useState(false);
 
   useEffect(() => {
     clear();
@@ -57,16 +58,19 @@ const LoginScreen: React.FC<{
         await setupNotifications();
         showToast('success', message, 'Welcome back!');
         navigation.navigate('HomeTabs');
+        setInvalidPassword(false);
         clear();
       } else if (status === 'wait') {
         navigation.navigate('VerifyLoginScreen', {
           emailLabel: email,
           password: password,
         });
+        setInvalidPassword(false);
         clear();
       } else if (status === 'error' && message) {
         showToast('error', message.toString());
         clear();
+        setInvalidPassword(true);
       }
     };
 
@@ -106,10 +110,10 @@ const LoginScreen: React.FC<{
   };
 
   const emailValidated = (): boolean | null => {
-    if (!email) return null;
+    if (!email || !email.includes('@')) return null;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-  }
+  };
 
   const setupNotifications = async () => {
     try {
@@ -153,6 +157,7 @@ const LoginScreen: React.FC<{
                     value={email}
                     containerStyle={styles.inputContainer}
                     validated={emailValidated()}
+                    errorMsg={invalidPassword ? 'Invalid credentials' : ''}
                   />
                   <Input
                     keyboardType="password"
@@ -160,10 +165,13 @@ const LoginScreen: React.FC<{
                     onChangeText={setPassword}
                     value={password}
                     containerStyle={styles.inputContainer}
+                    errorMsg={invalidPassword ? 'Invalid credentials' : ''}
                   />
                   <Pressable
                     style={styles.forgotPasswordContainer}
-                    onPress={() => navigation.navigate('PasswordRecoveryScreen')}>
+                    onPress={() =>
+                      navigation.navigate('PasswordRecoveryScreen')
+                    }>
                     <Text style={styles.forgotPassword}>Forgot password?</Text>
                   </Pressable>
                 </View>
@@ -181,8 +189,7 @@ const LoginScreen: React.FC<{
             {/* Footer stays at bottom */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Don't have an account?</Text>
-              <Pressable
-                onPress={() => navigation.navigate('RegisterScreen')}>
+              <Pressable onPress={() => navigation.navigate('RegisterScreen')}>
                 <Text style={styles.footerLinkText}>Sign Up</Text>
               </Pressable>
             </View>
@@ -258,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: hp(1.5),
     height: hp(6.5),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 6,
