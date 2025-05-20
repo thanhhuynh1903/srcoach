@@ -21,6 +21,7 @@ import {formatTimeAgo} from '../../utils/utils_format';
 import {CommonAvatar} from '../../commons/CommonAvatar';
 import {SaveDraftButton} from './SaveDraftButton';
 import SkeletonPostList from './SkeletonPostList';
+
 // Interface cho User
 interface User {
   id: string;
