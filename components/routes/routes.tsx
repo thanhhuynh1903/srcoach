@@ -23,7 +23,7 @@ import CaloriesScreen from '../screens/DashboardScreens/RecordCaloriesScreen';
 import VerifyScreen from '../screens/VerifyScreen';
 import GenerateScheduleScreen from '../screens/ScheduleScreens/GenerateScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
-import HistoryScheduleScreen from '../screens/HistoryCalendarScreen';
+import HistoryScheduleScreen from '../screens/ScheduleScreens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginScreen';
 import PrivacyPolicyScreen from '../screens/SettingsScreens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/SettingsScreens/TermsOfServiceScreen';

@@ -656,11 +656,12 @@ const styles = StyleSheet.create({
   selectedDayCircle: {
     backgroundColor: '#1E40AF',
     borderColor: '#1E40AF',
-    shadowColor: '#1E40AF',
-    shadowOffset: {width: 0, height: 2},
+    shadowColor: "#1E40AF",
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
+    transform: [{ scale: 1.05 }],
   },
   missedDayCircle: {
     backgroundColor: '#FEE2E2',
@@ -717,8 +718,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   timeChildContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+   flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   timeText: {
     fontSize: 14,
