@@ -1,26 +1,29 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useState, useRef} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  SafeAreaView,
   ScrollView,
   Dimensions,
+  Animated,
+  Platform,
   Modal,
   ActivityIndicator,
-  Animated,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
 import {LineChart} from 'react-native-gifted-charts';
-import ContentLoader, { Rect } from 'react-content-loader/native';
+import ContentLoader, {Rect} from 'react-content-loader/native';
 import BackButton from '../../BackButton';
-import ScreenWrapper from '../../ScreenWrapper';
-import {useFocusEffect} from '@react-navigation/native';
+import {parseISO, format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears} from 'date-fns';
+import Icon from '@react-native-vector-icons/ionicons';
 import {fetchOxygenSaturationRecords, initializeHealthConnect} from '../../utils/utils_healthconnect';
-import {format, startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear} from 'date-fns';
+import {useFocusEffect} from '@react-navigation/native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const {width} = Dimensions.get('window');
 const CHART_WIDTH = width - 32;
+const PRIMARY_COLOR = '#10B981';
 
 interface ChartPointDetail {
   time: string;
@@ -29,31 +32,143 @@ interface ChartPointDetail {
 }
 
 const SPo2Screen = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [spo2Records, setSpO2Records] = useState<OxygenSaturationRecord[]>([]);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [spo2Records, setSpO2Records] = useState<any[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<ChartPointDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasData, setHasData] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [showPointDetails, setShowPointDetails] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'month' | 'year'>('date');
+  const pointDetailsPosition = useRef(new Animated.Value(0)).current;
+  const spinValue = useRef(new Animated.Value(0)).current;
 
-  const fetchHealthData = async () => {
+  const spinAnimation = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const startSpin = () => {
+    setIsSyncing(true);
+    spinValue.setValue(0);
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+    readSpo2Data();
+  };
+
+  const filterRecordsByPeriod = (records: any[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (view) {
+      case 'day':
+        startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'week':
+        startDate = startOfWeek(date);
+        endDate = endOfWeek(date);
+        break;
+      case 'month':
+        startDate = startOfMonth(date);
+        endDate = endOfMonth(date);
+        break;
+      case 'year':
+        startDate = startOfYear(date);
+        endDate = endOfYear(date);
+        break;
+      default:
+        startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+    }
+
+    return records.filter(record => {
+      const recordDate = parseISO(record.time);
+      return recordDate >= startDate && recordDate <= endDate;
+    });
+  };
+
+  const prepareLineChartData = (records: any[]) => {
+    if (records.length === 0) return [];
+    
+    const sortedRecords = [...records].sort((a, b) => 
+      new Date(a.time).getTime() - new Date(b.time).getTime()
+    );
+
+    if (activeView === 'day') {
+      return sortedRecords.map((record, index) => ({
+        value: record.percentage,
+        label: index % 3 === 0 ? format(parseISO(record.time), 'h:mm a') : '',
+        date: format(parseISO(record.time), 'MM/dd/yyyy h:mm a'),
+        originalValue: record.percentage,
+        labelTextStyle: {width: 50, color: '#94A3B8', fontSize: 10},
+      }));
+    }
+
+    const dailyData: Record<string, {sum: number, count: number, date: Date}> = {};
+    
+    sortedRecords.forEach(record => {
+      const date = parseISO(record.time);
+      const dayKey = format(date, 'yyyy-MM-dd');
+      
+      if (!dailyData[dayKey]) {
+        dailyData[dayKey] = {sum: 0, count: 0, date};
+      }
+      
+      dailyData[dayKey].sum += record.percentage;
+      dailyData[dayKey].count++;
+    });
+    
+    return Object.keys(dailyData).map((dayKey, index) => {
+      const {sum, count, date} = dailyData[dayKey];
+      const avg = Math.round(sum / count);
+      return {
+        value: avg,
+        label: index % 2 === 0 ? format(date, 'MMM d') : '',
+        date: format(date, 'MM/dd/yyyy'),
+        originalValue: avg,
+        labelTextStyle: {width: 50, color: '#94A3B8', fontSize: 10},
+      };
+    });
+  };
+
+  const calculateStats = (records: any[]) => {
+    if (records.length === 0) return {average: 0, max: 0, min: 0, current: 0};
+    
+    const values = records.map(r => r.percentage);
+    const sum = values.reduce((a, b) => a + b, 0);
+    return {
+      average: Math.round(sum / values.length),
+      max: Math.max(...values),
+      min: Math.min(...values),
+      current: records[records.length - 1]?.percentage || 0
+    };
+  };
+
+  const readSpo2Data = async () => {
     try {
       setIsLoading(true);
-      setHasData(false);
       const isInitialized = await initializeHealthConnect();
-      if (!isInitialized) {
-        console.log('Health Connect initialization failed');
-      }
+      if (!isInitialized) return console.log('Health Connect initialization failed');
 
-      let startDate = new Date(currentDate);
-      let endDate = new Date(currentDate);
+      let startDate: Date;
+      let endDate: Date;
 
       switch(activeView) {
         case 'day':
-          startDate = startOfDay(currentDate);
-          endDate = new Date(startDate);
+          startDate = new Date(currentDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(currentDate);
           endDate.setHours(23, 59, 59, 999);
           break;
         case 'week':
@@ -70,390 +185,244 @@ const SPo2Screen = () => {
           break;
       }
 
-      const records = await fetchOxygenSaturationRecords(startDate.toISOString(), endDate.toISOString());
-      setSpO2Records(records);
-      setHasData(records.length > 0);
+      const spo2Data = await fetchOxygenSaturationRecords(
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+      setSpO2Records(spo2Data);
     } catch (error) {
-      console.error('Error fetching health data:', error);
-      setHasData(false);
+      console.log('Error reading SPO2 data:', error);
     } finally {
       setIsLoading(false);
       setIsSyncing(false);
+      Animated.timing(spinValue).stop();
     }
   };
 
-  const handleSyncPress = () => {
-    setIsSyncing(true);
-    fetchHealthData();
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      let newDate = selectedDate;
+      
+      if (activeView === 'week') {
+        newDate = startOfWeek(selectedDate);
+      } else if (activeView === 'month') {
+        newDate = startOfMonth(selectedDate);
+      } else if (activeView === 'year') {
+        newDate = startOfYear(selectedDate);
+      }
+      
+      setCurrentDate(newDate);
+    }
   };
 
-  const changeView = (view: 'day' | 'week' | 'month' | 'year') => {
+  const showPicker = () => {
+    if (Platform.OS === 'android') {
+      if (activeView === 'month') {
+        setPickerMode('month');
+      } else if (activeView === 'year') {
+        setPickerMode('year');
+      } else {
+        setPickerMode('date');
+      }
+    }
+    setShowDatePicker(true);
+  };
+
+  const handleViewChange = (view: 'day' | 'week' | 'month' | 'year') => {
     setActiveView(view);
   };
 
   const changeDate = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
+    let newDate = new Date(currentDate);
     
     switch(activeView) {
       case 'day':
-        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -1 : 1));
+        newDate = direction === 'prev' ? subDays(newDate, 1) : addDays(newDate, 1);
         break;
       case 'week':
-        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -7 : 7));
+        newDate = direction === 'prev' ? subWeeks(newDate, 1) : addWeeks(newDate, 1);
         break;
       case 'month':
-        newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
+        newDate = direction === 'prev' ? subMonths(newDate, 1) : addMonths(newDate, 1);
         break;
       case 'year':
-        newDate.setFullYear(newDate.getFullYear() + (direction === 'prev' ? -1 : 1));
+        newDate = direction === 'prev' ? subYears(newDate, 1) : addYears(newDate, 1);
         break;
     }
     
     setCurrentDate(newDate);
   };
 
-  const formatDate = (date: Date) => {
-    switch(activeView) {
+  const formatDate = (date: Date, view: 'day' | 'week' | 'month' | 'year') => {
+    switch(view) {
       case 'day':
-        return format(date, 'EEEE, MMMM d, yyyy');
+        return format(date, 'EEEE, MMMM do, yyyy');
       case 'week':
-        const start = startOfWeek(date);
-        const end = endOfWeek(date);
-        return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
+        return `${format(startOfWeek(date), 'MMM d')} - ${format(endOfWeek(date), 'MMM d, yyyy')}`;
       case 'month':
         return format(date, 'MMMM yyyy');
       case 'year':
-        return date.getFullYear().toString();
+        return format(date, 'yyyy');
     }
   };
 
-  useFocusEffect(useCallback(() => {
-    fetchHealthData();
-  }, [currentDate, activeView]));
-
-  // Group records by time period and calculate averages
-  const processChartData = () => {
-    if (spo2Records.length === 0) return {data: [], xAxisLabelText: ''};
-
-    let groupedData: Record<string, {sum: number; count: number}> = {};
-    let xAxisLabelText = 'Time';
-
-    // Group records based on active view
-    spo2Records.forEach(record => {
-      let key;
-      const date = new Date(record.time);
-
-      switch (activeView) {
-        case 'day':
-          key = format(date, 'HH:00');
-          xAxisLabelText = 'Hour';
-          break;
-        case 'week':
-          key = format(date, 'EEE');
-          xAxisLabelText = 'Day';
-          break;
-        case 'month':
-          key = format(date, 'd MMM');
-          xAxisLabelText = 'Date';
-          break;
-        case 'year':
-          key = format(date, 'MMM');
-          xAxisLabelText = 'Month';
-          break;
-        default:
-          key = format(date, 'HH:00');
-      }
-
-      if (!groupedData[key]) {
-        groupedData[key] = {sum: 0, count: 0};
-      }
-      groupedData[key].sum += record.percentage;
-      groupedData[key].count++;
-    });
-
-    // Convert to chart data format
-    const chartData = Object.entries(groupedData).map(([key, {sum, count}]) => {
-      const average = Math.round(sum / count);
-      return {
-        value: average,
-        label: key,
-        labelTextStyle: {width: 60},
-        dataPointText: average.toString(),
-        onPress: () => {
-          setSelectedPoint({
-            time: key,
-            value: average,
-            period: activeView,
-          });
-          setDetailModalVisible(true);
-        },
-      };
-    });
-
-    return {data: chartData, xAxisLabelText};
+  const viewLabels = {
+    day: 'Day',
+    week: 'Week',
+    month: 'Month',
+    year: 'Year'
   };
 
-  // Calculate statistics
-  const calculateStatistics = () => {
-    if (spo2Records.length === 0) {
-      return {
-        average: '--',
-        highest: {value: '--', time: '--'},
-        lowest: {value: '--', time: '--'},
-        current: '--',
-      };
-    }
+  useFocusEffect(useCallback(() => { readSpo2Data(); }, [currentDate, activeView]));
 
-    let sum = 0;
-    let highest = {value: -Infinity, time: ''};
-    let lowest = {value: Infinity, time: ''};
-
-    spo2Records.forEach(record => {
-      sum += record.percentage;
-      
-      if (record.percentage > highest.value) {
-        highest = {
-          value: record.percentage, 
-          time: format(new Date(record.time), 'HH:mm, MMM d')
-        };
-      }
-      
-      if (record.percentage < lowest.value) {
-        lowest = {
-          value: record.percentage, 
-          time: format(new Date(record.time), 'HH:mm, MMM d')
-        };
-      }
-    });
-
-    const average = Math.round(sum / spo2Records.length);
-    const current = spo2Records[spo2Records.length - 1]?.percentage || '--';
-
-    return {
-      average: average || '--',
-      highest: {
-        value: highest.value !== -Infinity ? highest.value : '--',
-        time: highest.time || '--'
-      },
-      lowest: {
-        value: lowest.value !== Infinity ? lowest.value : '--',
-        time: lowest.time || '--'
-      },
-      current
-    };
-  };
-
-  const {data: chartData, xAxisLabelText} = processChartData();
-  const stats = calculateStatistics();
+  const filteredRecords = filterRecordsByPeriod(spo2Records, activeView, currentDate);
+  const lineData = prepareLineChartData(filteredRecords);
+  const stats = calculateStats(filteredRecords);
 
   return (
-    <ScreenWrapper bg={'#F5F8FA'}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>SPO2</Text>
-        <TouchableOpacity 
-          style={styles.syncButton} 
-          onPress={handleSyncPress}
-          disabled={isSyncing}
-        >
-          {isSyncing ? (
-            <ActivityIndicator size="small" color="#3B82F6" />
-          ) : (
-            <Icon name="sync" size={24} color="#3B82F6" />
-          )}
+        <Text style={styles.headerTitle}>Oxygen Saturation (SPo2)</Text>
+        <TouchableOpacity onPress={startSpin} disabled={isSyncing}>
+          <Animated.View style={{transform: [{rotate: spinAnimation}]}}>
+            <Icon name="sync" size={24} color={PRIMARY_COLOR} />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 
-      {/* View Toggle */}
       <View style={styles.viewToggleContainer}>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'day' && styles.activeToggle]}
-          onPress={() => changeView('day')}>
-          <Text style={[styles.viewToggleText, activeView === 'day' && styles.activeToggleText]}>Day</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'week' && styles.activeToggle]}
-          onPress={() => changeView('week')}>
-          <Text style={[styles.viewToggleText, activeView === 'week' && styles.activeToggleText]}>Week</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'month' && styles.activeToggle]}
-          onPress={() => changeView('month')}>
-          <Text style={[styles.viewToggleText, activeView === 'month' && styles.activeToggleText]}>Month</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'year' && styles.activeToggle]}
-          onPress={() => changeView('year')}>
-          <Text style={[styles.viewToggleText, activeView === 'year' && styles.activeToggleText]}>Year</Text>
-        </TouchableOpacity>
+        {(['day', 'week', 'month', 'year'] as const).map(view => (
+          <TouchableOpacity 
+            key={view}
+            style={[styles.viewToggleButton, activeView === view && styles.activeToggle]}
+            onPress={() => handleViewChange(view)}>
+            <Text style={[styles.viewToggleText, activeView === view && styles.activeToggleText]}>{viewLabels[view]}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Date Navigation */}
       <View style={styles.dateNavigation}>
         <TouchableOpacity onPress={() => changeDate('prev')}>
-          <Text style={styles.navArrow}>{'<'}</Text>
+          <Icon name="chevron-back" size={20} color={PRIMARY_COLOR} />
         </TouchableOpacity>
-        <Text style={styles.currentDateText}>{formatDate(currentDate)}</Text>
+        <TouchableOpacity onPress={showPicker}>
+          <Text style={styles.currentDateText}>{formatDate(currentDate, activeView)}</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => changeDate('next')}>
-          <Text style={styles.navArrow}>{'>'}</Text>
+          <Icon name="chevron-forward" size={20} color={PRIMARY_COLOR} />
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ScrollView style={styles.content} contentContainerStyle={styles.loadingContent}>
-          {/* Current Reading Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={120}
-            viewBox="0 0 380 120"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-          >
-            <Rect x="120" y="20" rx="4" ry="4" width="140" height="40" />
-            <Rect x="150" y="70" rx="4" ry="4" width="80" height="20" />
-            <Rect x="120" y="100" rx="4" ry="4" width="140" height="16" />
+        <View style={styles.content}>
+          <ContentLoader speed={1} width="100%" height={100} viewBox="0 0 380 100" backgroundColor="#f3f3f3" foregroundColor="#ecebeb">
+            <Rect x="0" y="0" rx="16" ry="16" width="100%" height="100" />
           </ContentLoader>
-
-          {/* Chart Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={220}
-            viewBox="0 0 380 220"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.chartContainer}
-          >
-            <Rect x="100" y="0" rx="4" ry="4" width="180" height="20" />
-            <Rect x="0" y="40" rx="8" ry="8" width="100%" height="180" />
+          <ContentLoader speed={1} width="100%" height={250} viewBox="0 0 380 250" backgroundColor="#f3f3f3" foregroundColor="#ecebeb" style={styles.chartContainer}>
+            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
+            <Rect x="0" y="34" rx="4" ry="4" width="180" height="16" />
+            <Rect x="0" y="70" rx="8" ry="8" width="100%" height="180" />
           </ContentLoader>
-
-          {/* Stats Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={120}
-            viewBox="0 0 380 120"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.statsContainer}
-          >
-            <Rect x="0" y="0" rx="8" ry="8" width="110" height="120" />
-            <Rect x="125" y="0" rx="8" ry="8" width="110" height="120" />
-            <Rect x="250" y="0" rx="8" ry="8" width="110" height="120" />
-          </ContentLoader>
-        </ScrollView>
+        </View>
       ) : (
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-          {/* Current SpO2 Reading */}
-          <View style={styles.readingContainer}>
-            <Text style={styles.readingValue}>{stats.current}%</Text>
-            <Text style={styles.readingLabel}>SPO2</Text>
-            <View style={styles.rangeContainer}>
-              <View style={styles.rangeDot} />
-              <Text style={styles.rangeText}>Normal Range</Text>
+        <ScrollView style={styles.content}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Current</Text>
+            <Text style={styles.summaryValue}>{stats.current || '--'}%</Text>
+            <View style={[styles.progressChip, {backgroundColor: stats.current >= 95 ? '#D1FAE5' : stats.current >= 90 ? '#FEF3C7' : '#FEE2E2'}]}>
+              <Text style={[styles.progressText, {color: stats.current >= 95 ? '#065F46' : stats.current >= 90 ? '#92400E' : '#92400E'}]}>
+                {stats.current >= 95 ? 'Normal' : stats.current >= 90 ? 'Moderate' : 'Low'}
+              </Text>
             </View>
           </View>
 
-          {/* SpO2 Chart */}
           <View style={styles.chartContainer}>
-            {hasData && chartData.length > 0 ? (
-              <>
-                <Text style={styles.chartTitle}>SPO2 ({activeView === 'day' ? 'Daily' : 
-                  activeView === 'week' ? 'Weekly' : 
-                  activeView === 'month' ? 'Monthly' : 'Yearly'} View)</Text>
-                <LineChart
-                  data={chartData}
-                  width={CHART_WIDTH}
-                  height={200}
-                  color="#3B82F6"
-                  textColor="#64748B"
-                  yAxisTextStyle={{color: '#64748B'}}
-                  yAxisLabelSuffix="%"
-                  yAxisThickness={1}
-                  xAxisThickness={1}
-                  spacing={CHART_WIDTH / chartData.length + 50}
-                  initialSpacing={25}
-                  curved
-                  noOfSections={4}
-                  hideDataPoints={false}
-                  dataPointsColor="#3B82F6"
-                  dataPointsRadius={4}
-                  startFillColor="#E0F2FE"
-                  endFillColor="#FFFFFF"
-                  startOpacity={0.5}
-                  endOpacity={0.1}
-                  showYAxisIndices
-                  yAxisIndicesWidth={1}
-                  yAxisIndicesColor="#E2E8F0"
-                  showXAxisIndices
-                  xAxisIndicesWidth={1}
-                  xAxisIndicesColor="#E2E8F0"
-                  yAxisExtraHeight={10}
-                  yAxisOffset={70}
-                  isAnimated
-                  rulesType="solid"
-                  rulesColor="#E2E8F0"
-                  xAxisLabelText={xAxisLabelText}
-                  xAxisLabelTextStyle={{width: 60}}
-                  showStripOnPress
-                  stripColor="#E2E8F0"
-                  stripWidth={1}
-                  focusedDataPointColor="#3B82F6"
-                  focusedDataPointRadius={6}
-                />
-              </>
+            <Text style={styles.chartTitle}>{formatDate(currentDate, activeView)}</Text>
+            {lineData.length > 0 ? (
+              <LineChart
+                data={lineData}
+                height={250}
+                width={CHART_WIDTH}
+                noOfSections={5}
+                spacing={width < 400 ? 10 : 15}
+                yAxisLabelWidth={40}
+                yAxisTextStyle={styles.yAxisText}
+                xAxisLabelTextStyle={{...styles.xAxisText, width: width < 400 ? 40 : undefined}}
+                dataPointsColor={PRIMARY_COLOR}
+                dataPointsRadius={4}
+                startFillColor={`${PRIMARY_COLOR}20`}
+                endFillColor={`${PRIMARY_COLOR}00`}
+                color={PRIMARY_COLOR}
+                thickness={2}
+                yAxisThickness={1}
+                xAxisThickness={1}
+                yAxisColor="#E2E8F0"
+                xAxisColor="#E2E8F0"
+                rulesColor="#E2E8F0"
+                initialSpacing={10}
+                endSpacing={10}
+                maxValue={100}
+                minValue={80}
+                pointerConfig={{
+                  pointerStripHeight: 160,
+                  pointerStripColor: 'lightgray',
+                  pointerStripWidth: 2,
+                  pointerColor: 'lightgray',
+                  radius: 6,
+                  pointerLabelComponent: (items: any[]) => (
+                    <View style={styles.pointerLabel}>
+                      <Text style={styles.pointerLabelText}>{items[0].date}</Text>
+                      <Text style={styles.pointerLabelValue}>{items[0].value}%</Text>
+                    </View>
+                  ),
+                }}
+                onPress={(item: any) => {
+                  setSelectedPoint({
+                    time: item.date,
+                    value: item.value,
+                    period: activeView
+                  });
+                  setShowPointDetails(true);
+                  Animated.timing(pointDetailsPosition, {toValue: 1, duration: 200, useNativeDriver: true}).start();
+                }}
+              />
             ) : (
-              <Text style={styles.noDataText}>No SPO2 data available</Text>
+              <View style={styles.noDataContainer}>
+                <Text style={styles.noDataText}>No SPO2 data available</Text>
+              </View>
             )}
           </View>
 
-          {/* Statistics */}
           <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Icon name="stats-chart-outline" size={20} color="#3B82F6" />
-              <Text style={styles.statTitle}>Average</Text>
-              <Text style={styles.statValue}>{stats.average}%</Text>
-              <Text style={styles.statTime}>Today</Text>
-            </View>
-
-            <View style={styles.statItem}>
-              <Icon name="trending-up" size={20} color="#3B82F6" />
-              <Text style={styles.statTitle}>Highest</Text>
-              <Text style={styles.statValue}>{stats.highest.value}%</Text>
-              <Text style={styles.statTime}>{stats.highest.time}</Text>
-            </View>
-
-            <View style={styles.statItem}>
-              <Icon name="trending-down" size={20} color="#3B82F6" />
-              <Text style={styles.statTitle}>Lowest</Text>
-              <Text style={styles.statValue}>{stats.lowest.value}%</Text>
-              <Text style={styles.statTime}>{stats.lowest.time}</Text>
+            <Text style={styles.sectionTitle}>Statistics</Text>
+            <View style={styles.statsGrid}>
+              {['average', 'max', 'min'].map(stat => (
+                <View key={stat} style={styles.statsItem}>
+                  <Text style={styles.statsLabel}>{stat.charAt(0).toUpperCase() + stat.slice(1)}</Text>
+                  <Text style={styles.statsValue}>{stats[stat]}%</Text>
+                </View>
+              ))}
             </View>
           </View>
 
-          {/* About SpO2 */}
           <View style={styles.infoContainer}>
             <Text style={styles.sectionTitle}>About SPO2</Text>
-            
             <View style={styles.infoCard}>
               <Text style={styles.infoTitle}>What is SPO2?</Text>
               <Text style={styles.infoText}>
                 SPO2 measures the oxygen saturation level in your blood, indicating how well oxygen is being transported to parts of your body.
               </Text>
             </View>
-            
             <View style={styles.infoCard}>
               <Text style={styles.infoTitle}>Normal Range</Text>
               <Text style={styles.infoText}>
                 A normal SPO2 level is typically between 95% and 100%. Levels below 90% are considered low and may require medical attention.
               </Text>
             </View>
-            
             <View style={styles.infoCard}>
               <Text style={styles.infoTitle}>Factors Affecting SPO2</Text>
               <Text style={styles.infoText}>
@@ -468,12 +437,11 @@ const SPo2Screen = () => {
         </ScrollView>
       )}
 
-      {/* Point Detail Modal */}
       <Modal
-        visible={detailModalVisible}
+        visible={showPointDetails}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setDetailModalVisible(false)}>
+        onRequestClose={() => setShowPointDetails(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>SPO2 Details</Text>
@@ -489,214 +457,64 @@ const SPo2Screen = () => {
             )}
             <TouchableOpacity
               style={styles.modalButton}
-              onPress={() => setDetailModalVisible(false)}>
+              onPress={() => setShowPointDetails(false)}>
               <Text style={styles.modalButtonText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </ScreenWrapper>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={currentDate}
+          mode={pickerMode}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleDateChange}
+          minimumDate={new Date(2000, 0, 1)}
+          maximumDate={new Date(2100, 0, 1)}
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  backButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-    textAlign: 'center',
-  },
-  syncButton: {
-    marginLeft: 'auto',
-    padding: 4,
-  },
-  viewToggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    backgroundColor: '#FFFFFF',
-  },
-  viewToggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  activeToggle: {
-    backgroundColor: '#3B82F6',
-  },
-  viewToggleText: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  activeToggleText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  dateNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    backgroundColor: '#FFFFFF',
-  },
-  currentDateText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000000',
-  },
-  navArrow: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3B82F6',
-    paddingHorizontal: 16,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContent: {
-    paddingBottom: 32,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  readingContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  readingValue: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  readingLabel: {
-    fontSize: 16,
-    color: '#64748B',
-    marginBottom: 8,
-  },
-  rangeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    borderRadius: 15,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F0FDF4',
-  },
-  rangeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    marginRight: 6,
-  },
-  rangeText: {
-    fontSize: 14,
-    color: '#10B981',
-  },
-  updatedText: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  chartContainer: {
-    marginBottom: 24,
-  },
-  chart: {
-    borderRadius: 16,
-    paddingRight: 0,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  statItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '30%',
-  },
-  statTitle: {
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  statTime: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  infoContainer: {
-    marginBottom: 24,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 16,
-  },
-  infoCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3B82F6',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#64748B',
-    lineHeight: 20,
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
+  container: {flex: 1, backgroundColor: '#FFFFFF'},
+  header: {flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'},
+  backButton: {marginRight: 16},
+  headerTitle: {fontSize: 16, fontWeight: '600', flex: 1, textAlign: 'center'},
+  content: {flex: 1, padding: 16},
+  viewToggleContainer: {flexDirection: 'row', justifyContent: 'space-around', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'},
+  viewToggleButton: {paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16},
+  activeToggle: {backgroundColor: '#10B981'},
+  viewToggleText: {fontSize: 14, color: '#64748B'},
+  activeToggleText: {color: '#FFFFFF', fontWeight: '600'},
+  dateNavigation: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16},
+  currentDateText: {fontSize: 16, fontWeight: '500'},
+  summaryItem: {backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2},
+  summaryLabel: {fontSize: 14, color: '#64748B', marginBottom: 4},
+  summaryValue: {fontSize: 24, fontWeight: '700'},
+  progressChip: {alignSelf: 'flex-start', borderRadius: 12, paddingVertical: 4, paddingHorizontal: 8, marginTop: 8},
+  progressText: {fontSize: 12, fontWeight: '600'},
+  chartContainer: {backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 16},
+  chartTitle: {fontSize: 18, fontWeight: '600', marginBottom: 16},
+  yAxisText: {fontSize: 12, color: '#94A3B8'},
+  xAxisText: {fontSize: 12, color: '#94A3B8'},
+  statsContainer: {backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 16},
+  sectionTitle: {fontSize: 18, fontWeight: '600', marginBottom: 16},
+  statsGrid: {flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between'},
+  statsItem: {width: '48%', marginBottom: 16, backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2},
+  statsLabel: {fontSize: 14, color: '#64748B', marginBottom: 4},
+  statsValue: {fontSize: 16, fontWeight: '600'},
+  noDataContainer: {justifyContent: 'center', alignItems: 'center', height: 180},
+  noDataText: {fontSize: 16, color: '#64748B'},
+  pointerLabel: {backgroundColor: 'white', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB'},
+  pointerLabelText: {color: '#64748B', fontSize: 12},
+  pointerLabelValue: {color: '#000', fontSize: 14, fontWeight: 'bold'},
+  infoContainer: {marginBottom: 24, backgroundColor: '#fff', padding: 16, borderRadius: 16},
+  infoCard: {backgroundColor: '#F9FAFB', borderRadius: 8, padding: 16, marginBottom: 16},
+  infoTitle: {fontSize: 16, fontWeight: '600', color: PRIMARY_COLOR, marginBottom: 8},
+  infoText: {fontSize: 14, color: '#64748B', lineHeight: 20},
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -730,11 +548,6 @@ const styles = StyleSheet.create({
   modalButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  },
-  noDataText: {
-    textAlign: 'center', 
-    color: '#64748B',
-    marginVertical: 20,
   },
 });
 

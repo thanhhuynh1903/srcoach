@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useEffect} from 'react';
+import React, {useCallback, useState, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,25 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  FlatList,
+  Dimensions,
+  Animated,
+  Platform,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
-import BackButton from '../../BackButton';
 import {PieChart} from 'react-native-gifted-charts';
-import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
+import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
+import BackButton from '../../BackButton';
+import {parseISO, format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears} from 'date-fns';
+import Icon from '@react-native-vector-icons/ionicons';
+import {fetchSleepRecords, initializeHealthConnect} from '../../utils/utils_healthconnect';
 import {useFocusEffect} from '@react-navigation/native';
-import { fetchSleepRecords, initializeHealthConnect } from '../../utils/utils_healthconnect';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { ChevronDown, ChevronUp } from 'react-native-feather';
+
+const {width} = Dimensions.get('window');
+const CHART_WIDTH = width - 32;
+const PRIMARY_COLOR = '#6C5CE7';
 
 const SleepType = {
   UNKNOWN: 0,
@@ -65,19 +76,42 @@ interface ProcessedSleepData {
 }
 
 const SleepScreen = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasData, setHasData] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<any>(null);
+  const [showPointDetails, setShowPointDetails] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'date' | 'month' | 'year'>('date');
+  const pointDetailsPosition = useRef(new Animated.Value(0)).current;
+  const spinValue = useRef(new Animated.Value(0)).current;
   const [expandedSections, setExpandedSections] = useState({
-    stages: true,
-    metrics: true,
-    weekly: true,
-    insights: true,
+    stages: false,
+    metrics: false,
+    weekly: false,
+    insights: false,
   });
 
-  // Group records by their ID
+  const spinAnimation = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const startSpin = () => {
+    setIsSyncing(true);
+    spinValue.setValue(0);
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+    readSleepData();
+  };
+
   const groupRecordsById = (records: SleepRecord[]) => {
     const grouped: {[key: string]: SleepRecord[]} = {};
     
@@ -219,105 +253,165 @@ const SleepScreen = () => {
     return 'Poor';
   };
 
-  const initializeHealthData = async () => {
+  const filterRecordsByPeriod = (records: SleepRecord[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
+    let startDate: Date;
+    let endDate: Date;
+
+    switch (view) {
+      case 'day':
+        startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+        break;
+      case 'week':
+        startDate = startOfWeek(date);
+        endDate = endOfWeek(date);
+        break;
+      case 'month':
+        startDate = startOfMonth(date);
+        endDate = endOfMonth(date);
+        break;
+      case 'year':
+        startDate = startOfYear(date);
+        endDate = endOfYear(date);
+        break;
+      default:
+        startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+    }
+
+    return records.filter(record => {
+      const recordDate = parseISO(record.startTime);
+      return recordDate >= startDate && recordDate <= endDate;
+    });
+  };
+
+  const readSleepData = async () => {
     try {
       setIsLoading(true);
-      setHasData(false);
       const isInitialized = await initializeHealthConnect();
-      if (!isInitialized) {
-        console.log('Health Connect initialization failed');
-      }
+      if (!isInitialized) return console.log('Health Connect initialization failed');
 
-      let startDate = new Date(currentDate);
-      let endDate = new Date(currentDate);
+      let startDate: Date;
+      let endDate: Date;
 
       switch(activeView) {
         case 'day':
+          startDate = new Date(currentDate);
           startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(currentDate);
           endDate.setHours(23, 59, 59, 999);
           break;
         case 'week':
-          startDate.setDate(startDate.getDate() - startDate.getDay());
-          endDate.setDate(startDate.getDate() + 6);
-          endDate.setHours(23, 59, 59, 999);
+          startDate = startOfWeek(currentDate);
+          endDate = endOfWeek(currentDate);
           break;
         case 'month':
-          startDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-          endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-          endDate.setHours(23, 59, 59, 999);
+          startDate = startOfMonth(currentDate);
+          endDate = endOfMonth(currentDate);
           break;
         case 'year':
-          startDate = new Date(startDate.getFullYear(), 0, 1);
-          endDate = new Date(startDate.getFullYear(), 11, 31);
-          endDate.setHours(23, 59, 59, 999);
+          startDate = startOfYear(currentDate);
+          endDate = endOfYear(currentDate);
           break;
       }
 
-      const records = await fetchSleepRecords(startDate.toISOString(), endDate.toISOString());
-      setSleepRecords(records);
-      setHasData(records.length > 0);
+      const sleepData = await fetchSleepRecords(
+        startDate.toISOString(),
+        endDate.toISOString()
+      );
+      setSleepRecords(sleepData);
     } catch (error) {
-      console.error('Error initializing health data:', error);
-      setHasData(false);
+      console.log('Error reading sleep data:', error);
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
+      Animated.timing(spinValue).stop();
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      initializeHealthData();
-    }, [currentDate, activeView]),
-  );
-
-  const formatDate = (date: Date) => {
-    switch(activeView) {
-      case 'day':
-        return date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
-        });
-      case 'week':
-        const start = new Date(date);
-        start.setDate(start.getDate() - start.getDay());
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-      case 'month':
-        return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      case 'year':
-        return date.getFullYear().toString();
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      let newDate = selectedDate;
+      
+      if (activeView === 'week') {
+        newDate = startOfWeek(selectedDate);
+      } else if (activeView === 'month') {
+        newDate = startOfMonth(selectedDate);
+      } else if (activeView === 'year') {
+        newDate = startOfYear(selectedDate);
+      }
+      
+      setCurrentDate(newDate);
     }
   };
 
-  const changeView = (view: 'day' | 'week' | 'month' | 'year') => {
+  const showPicker = () => {
+    if (Platform.OS === 'android') {
+      if (activeView === 'month') {
+        setPickerMode('month');
+      } else if (activeView === 'year') {
+        setPickerMode('year');
+      } else {
+        setPickerMode('date');
+      }
+    }
+    setShowDatePicker(true);
+  };
+
+  const handleViewChange = (view: 'day' | 'week' | 'month' | 'year') => {
     setActiveView(view);
   };
 
   const changeDate = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
+    let newDate = new Date(currentDate);
     
     switch(activeView) {
       case 'day':
-        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -1 : 1));
+        newDate = direction === 'prev' ? subDays(newDate, 1) : addDays(newDate, 1);
         break;
       case 'week':
-        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -7 : 7));
+        newDate = direction === 'prev' ? subWeeks(newDate, 1) : addWeeks(newDate, 1);
         break;
       case 'month':
-        newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
+        newDate = direction === 'prev' ? subMonths(newDate, 1) : addMonths(newDate, 1);
         break;
       case 'year':
-        newDate.setFullYear(newDate.getFullYear() + (direction === 'prev' ? -1 : 1));
+        newDate = direction === 'prev' ? subYears(newDate, 1) : addYears(newDate, 1);
         break;
     }
     
     setCurrentDate(newDate);
   };
 
-  const sleepDataGroups = processSleepData(sleepRecords);
+  const formatDate = (date: Date, view: 'day' | 'week' | 'month' | 'year') => {
+    switch(view) {
+      case 'day':
+        return format(date, 'EEEE, MMMM do, yyyy');
+      case 'week':
+        return `${format(startOfWeek(date), 'MMM d')} - ${format(endOfWeek(date), 'MMM d, yyyy')}`;
+      case 'month':
+        return format(date, 'MMMM yyyy');
+      case 'year':
+        return format(date, 'yyyy');
+    }
+  };
+
+  const viewLabels = {
+    day: 'Day',
+    week: 'Week',
+    month: 'Month',
+    year: 'Year'
+  };
+
+  useFocusEffect(useCallback(() => { readSleepData(); }, [currentDate, activeView]));
+
+  const filteredRecords = filterRecordsByPeriod(sleepRecords, activeView, currentDate);
+  const sleepDataGroups = processSleepData(filteredRecords);
   const chartData = Array(7).fill(0).map((_, i) => ({
     day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i],
     hours: Math.random() * 2 + 5
@@ -325,123 +419,58 @@ const SleepScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sleep measurement</Text>
+        <Text style={styles.headerTitle}>Sleep</Text>
+        <TouchableOpacity onPress={startSpin} disabled={isSyncing}>
+          <Animated.View style={{transform: [{rotate: spinAnimation}]}}>
+            <Icon name="sync" size={24} color={PRIMARY_COLOR} />
+          </Animated.View>
+        </TouchableOpacity>
       </View>
 
-      {/* View Toggle */}
       <View style={styles.viewToggleContainer}>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'day' && styles.activeToggle]}
-          onPress={() => changeView('day')}>
-          <Text style={[styles.viewToggleText, activeView === 'day' && styles.activeToggleText]}>Day</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'week' && styles.activeToggle]}
-          onPress={() => changeView('week')}>
-          <Text style={[styles.viewToggleText, activeView === 'week' && styles.activeToggleText]}>Week</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'month' && styles.activeToggle]}
-          onPress={() => changeView('month')}>
-          <Text style={[styles.viewToggleText, activeView === 'month' && styles.activeToggleText]}>Month</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleButton, activeView === 'year' && styles.activeToggle]}
-          onPress={() => changeView('year')}>
-          <Text style={[styles.viewToggleText, activeView === 'year' && styles.activeToggleText]}>Year</Text>
-        </TouchableOpacity>
+        {(['day', 'week', 'month', 'year'] as const).map(view => (
+          <TouchableOpacity 
+            key={view}
+            style={[styles.viewToggleButton, activeView === view && styles.activeToggle]}
+            onPress={() => handleViewChange(view)}>
+            <Text style={[styles.viewToggleText, activeView === view && styles.activeToggleText]}>{viewLabels[view]}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      {/* Date Navigation */}
       <View style={styles.dateNavigation}>
         <TouchableOpacity onPress={() => changeDate('prev')}>
-          <Text style={styles.navArrow}>{'<'}</Text>
+          <Icon name="chevron-back" size={20} color={PRIMARY_COLOR} />
         </TouchableOpacity>
-        <Text style={styles.currentDateText}>{formatDate(currentDate)}</Text>
+        <TouchableOpacity onPress={showPicker}>
+          <Text style={styles.currentDateText}>{formatDate(currentDate, activeView)}</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => changeDate('next')}>
-          <Text style={styles.navArrow}>{'>'}</Text>
+          <Icon name="chevron-forward" size={20} color={PRIMARY_COLOR} />
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ScrollView style={styles.content} contentContainerStyle={styles.loadingContent}>
-          {/* Duration Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={120}
-            viewBox="0 0 380 120"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.loadingSection}
-          >
-            <Rect x="120" y="20" rx="4" ry="4" width="140" height="40" />
-            <Rect x="150" y="70" rx="4" ry="4" width="80" height="20" />
-            <Rect x="120" y="100" rx="4" ry="4" width="140" height="16" />
+        <View style={styles.content}>
+          <ContentLoader speed={1} width="100%" height={100} viewBox="0 0 380 100" backgroundColor="#f3f3f3" foregroundColor="#ecebeb">
+            <Rect x="0" y="0" rx="16" ry="16" width="100%" height="100" />
           </ContentLoader>
-
-          {/* Pie Chart Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={300}
-            viewBox="0 0 380 300"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.loadingSection}
-          >
+          <ContentLoader speed={1} width="100%" height={250} viewBox="0 0 380 250" backgroundColor="#f3f3f3" foregroundColor="#ecebeb" style={styles.chartContainer}>
             <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
-            <Circle cx="190" cy="150" r="80" />
-            <Circle cx="190" cy="150" r="60" />
-            <Rect x="50" y="250" rx="4" ry="4" width="120" height="16" />
-            <Rect x="210" y="250" rx="4" ry="4" width="120" height="16" />
+            <Rect x="0" y="34" rx="4" ry="4" width="180" height="16" />
+            <Rect x="0" y="70" rx="8" ry="8" width="100%" height="180" />
           </ContentLoader>
-
-          {/* Metrics Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={120}
-            viewBox="0 0 380 120"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.loadingSection}
-          >
-            <Rect x="0" y="0" rx="8" ry="8" width="180" height="100" />
-            <Rect x="200" y="0" rx="8" ry="8" width="180" height="100" />
-          </ContentLoader>
-
-          {/* Weekly Chart Loader */}
-          <ContentLoader 
-            speed={1}
-            width="100%"
-            height={200}
-            viewBox="0 0 380 200"
-            backgroundColor="#f3f3f3"
-            foregroundColor="#ecebeb"
-            style={styles.loadingSection}
-          >
-            <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
-            <Rect x="0" y="40" rx="4" ry="4" width="40" height="100" />
-            <Rect x="60" y="60" rx="4" ry="4" width="40" height="80" />
-            <Rect x="120" y="40" rx="4" ry="4" width="40" height="100" />
-            <Rect x="180" y="60" rx="4" ry="4" width="40" height="80" />
-            <Rect x="240" y="30" rx="4" ry="4" width="40" height="110" />
-            <Rect x="300" y="50" rx="4" ry="4" width="40" height="90" />
-          </ContentLoader>
-        </ScrollView>
-      ) : !hasData ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No sleep data available</Text>
+        </View>
+      ) : sleepDataGroups.length === 0 ? (
+        <View style={styles.noDataContainer}>
+          <Text style={styles.noDataText}>No sleep data available</Text>
         </View>
       ) : (
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-          {/* Sleep Sessions */}
+        <ScrollView style={styles.content}>
           {sleepDataGroups.map((group, index) => (
             <View key={group.id} style={styles.sessionContainer}>
               <View style={styles.sessionHeader}>
@@ -451,16 +480,15 @@ const SleepScreen = () => {
               <Text style={styles.sessionTime}>{group.timeRange}</Text>
               <Text style={styles.sessionQuality}>{group.quality} sleep quality</Text>
 
-              {/* Sleep Stages */}
               <TouchableOpacity 
                 style={styles.sectionHeader}
                 onPress={() => toggleSection('stages')}
               >
                 <Text style={styles.sectionTitle}>Sleep Stages</Text>
                 {expandedSections.stages ? (
-                  <ChevronUp width={20} height={20} color="#6C5CE7" />
+                  <ChevronUp width={20} height={20} color={PRIMARY_COLOR} />
                 ) : (
-                  <ChevronDown width={20} height={20} color="#6C5CE7" />
+                  <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />
                 )}
               </TouchableOpacity>
               
@@ -513,16 +541,15 @@ const SleepScreen = () => {
                 </>
               )}
 
-              {/* Health Metrics */}
               <TouchableOpacity 
                 style={styles.sectionHeader}
                 onPress={() => toggleSection('metrics')}
               >
                 <Text style={styles.sectionTitle}>Health Metrics</Text>
                 {expandedSections.metrics ? (
-                  <ChevronUp width={20} height={20} color="#6C5CE7" />
+                  <ChevronUp width={20} height={20} color={PRIMARY_COLOR} />
                 ) : (
-                  <ChevronDown width={20} height={20} color="#6C5CE7" />
+                  <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />
                 )}
               </TouchableOpacity>
               
@@ -531,7 +558,7 @@ const SleepScreen = () => {
                   <View style={styles.metricRow}>
                     <View style={styles.metricItem}>
                       <Text style={styles.metricLabel}>Sleep Score</Text>
-                      <Text style={[styles.metricValue, {color: '#6C5CE7'}]}>
+                      <Text style={[styles.metricValue, {color: PRIMARY_COLOR}]}>
                         {group.metrics.score}
                       </Text>
                     </View>
@@ -564,7 +591,6 @@ const SleepScreen = () => {
             </View>
           ))}
 
-          {/* Weekly Chart */}
           <TouchableOpacity 
             style={styles.sectionHeader}
             onPress={() => toggleSection('weekly')}
@@ -575,9 +601,9 @@ const SleepScreen = () => {
               activeView === 'month' ? 'Monthly Overview' : 'Yearly Overview'}
             </Text>
             {expandedSections.weekly ? (
-              <ChevronUp width={20} height={20} color="#6C5CE7" />
+              <ChevronUp width={20} height={20} color={PRIMARY_COLOR} />
             ) : (
-              <ChevronDown width={20} height={20} color="#6C5CE7" />
+              <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />
             )}
           </TouchableOpacity>
           
@@ -592,7 +618,7 @@ const SleepScreen = () => {
                         height: `${(item.hours / 10) * 100}%`,
                         backgroundColor:
                           index === 2 || index === 4 || index === 6
-                            ? '#6C5CE7'
+                            ? PRIMARY_COLOR
                             : '#A29BFE',
                       },
                     ]}
@@ -603,285 +629,98 @@ const SleepScreen = () => {
             </View>
           )}
 
-          {/* Insights */}
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('insights')}
-          >
-            <Text style={styles.sectionTitle}>Insights</Text>
-            {expandedSections.insights ? (
-              <ChevronUp width={20} height={20} color="#6C5CE7" />
-            ) : (
-              <ChevronDown width={20} height={20} color="#6C5CE7" />
-            )}
-          </TouchableOpacity>
-          
-          {expandedSections.insights && sleepDataGroups.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {sleepDataGroups[0].quality === 'Excellent' && (
-                <View style={[styles.tag, {backgroundColor: '#F0EEFF'}]}>
-                  <Text style={[styles.tagText, {color: '#6C5CE7'}]}>Excellent sleep quality</Text>
-                </View>
-              )}
-              {sleepDataGroups[0].quality === 'Good' && (
-                <View style={[styles.tag, {backgroundColor: '#E6F7EF'}]}>
-                  <Text style={[styles.tagText, {color: '#10B981'}]}>Good sleep quality</Text>
-                </View>
-              )}
-              {sleepDataGroups[0].metrics.score > 80 && (
-                <View style={[styles.tag, {backgroundColor: '#EFF6FF'}]}>
-                  <Text style={[styles.tagText, {color: '#3B82F6'}]}>High sleep score</Text>
-                </View>
-              )}
+          <View style={styles.infoContainer}>
+            <Text style={styles.sectionTitle}>About Sleep</Text>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>Why is Sleep Important?</Text>
+              <Text style={styles.infoText}>
+                Quality sleep is essential for physical health, mental clarity, and emotional well-being. 
+                Adults typically need 7-9 hours of sleep per night for optimal health.
+              </Text>
             </View>
-          )}
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>Sleep Stages</Text>
+              <Text style={styles.infoText}>
+                • Deep Sleep: Restores physical energy{"\n"}
+                • Light Sleep: Prepares body for deep sleep{"\n"}
+                • REM Sleep: Important for memory and learning{"\n"}
+                • Awake: Brief awakenings are normal
+              </Text>
+            </View>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoTitle}>Tips for Better Sleep</Text>
+              <Text style={styles.infoText}>
+                • Maintain a consistent sleep schedule{"\n"}
+                • Create a restful environment{"\n"}
+                • Limit screen time before bed{"\n"}
+                • Avoid caffeine and large meals before bedtime{"\n"}
+                • Exercise regularly
+              </Text>
+            </View>
+          </View>
         </ScrollView>
+      )}
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={currentDate}
+          mode={pickerMode}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleDateChange}
+          minimumDate={new Date(2000, 0, 1)}
+          maximumDate={new Date(2100, 0, 1)}
+        />
       )}
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  backButton: {
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  viewToggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  viewToggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  activeToggle: {
-    backgroundColor: '#6C5CE7',
-  },
-  viewToggleText: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  activeToggleText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  dateNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  currentDateText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#000000',
-  },
-  navArrow: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6C5CE7',
-    paddingHorizontal: 16,
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  loadingContent: {
-    paddingBottom: 32,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  loadingSection: {
-    marginBottom: 24,
-  },
-  sessionContainer: {
-    marginBottom: 24,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-  },
-  sessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  sessionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  sessionDuration: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6C5CE7',
-  },
-  sessionTime: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  sessionQuality: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#6C5CE7',
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  chartContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  centerLabel: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centerLabelText: {
-    fontSize: 14,
-    color: '#000000',
-  },
-  stagesLegend: {
-    marginTop: 8,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  legendItem: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    width: '45%',
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginBottom: 4,
-  },
-  legendLabel: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  legendValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
-  },
-  metricsContainer: {
-    marginBottom: 16,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  metricItem: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: '48%',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  metricLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  metricValue: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  metricUnit: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#64748B',
-  },
-  weeklyChart: {
-    height: 120,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 24,
-  },
-  weeklyBarContainer: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 4,
-    alignItems: 'center',
-  },
-  weeklyBar: {
-    width: '100%',
-    borderRadius: 4,
-  },
-  weeklyBarLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 4,
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
-  },
-  tag: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  tagText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#64748B',
-  },
+  container: {flex: 1, backgroundColor: '#FFFFFF'},
+  header: {flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'},
+  backButton: {marginRight: 16},
+  headerTitle: {fontSize: 16, fontWeight: '600', flex: 1, textAlign: 'center'},
+  content: {flex: 1, padding: 16},
+  viewToggleContainer: {flexDirection: 'row', justifyContent: 'space-around', padding: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9'},
+  viewToggleButton: {paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16},
+  activeToggle: {backgroundColor: '#6C5CE7'},
+  viewToggleText: {fontSize: 14, color: '#64748B'},
+  activeToggleText: {color: '#FFFFFF', fontWeight: '600'},
+  dateNavigation: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16},
+  currentDateText: {fontSize: 16, fontWeight: '500'},
+  sessionContainer: {backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2},
+  sessionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
+  sessionTitle: {fontSize: 18, fontWeight: '600'},
+  sessionDuration: {fontSize: 16, fontWeight: '600', color: '#6C5CE7'},
+  sessionTime: {fontSize: 14, color: '#64748B', marginBottom: 4},
+  sessionQuality: {fontSize: 14, fontWeight: '500', color: '#6C5CE7', marginBottom: 16},
+  sectionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingVertical: 8},
+  sectionTitle: {fontSize: 18, fontWeight: '600'},
+  chartContainer: {alignItems: 'center', marginBottom: 16},
+  centerLabel: {alignItems: 'center', justifyContent: 'center'},
+  centerLabelText: {fontSize: 14, color: '#000000'},
+  stagesLegend: {marginTop: 8},
+  legendRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
+  legendItem: {flexDirection: 'column', alignItems: 'flex-start', width: '45%'},
+  legendDot: {width: 10, height: 10, borderRadius: 5, marginBottom: 4},
+  legendLabel: {fontSize: 14, color: '#64748B'},
+  legendValue: {fontSize: 14, fontWeight: '500', color: '#000000'},
+  metricsContainer: {marginBottom: 16},
+  metricRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
+  metricItem: {backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, width: '48%', borderWidth: 1, borderColor: '#E5E7EB'},
+  metricLabel: {fontSize: 14, color: '#64748B', marginBottom: 4},
+  metricValue: {fontSize: 24, fontWeight: '600'},
+  metricUnit: {fontSize: 14, fontWeight: '400', color: '#64748B'},
+  weeklyChart: {height: 120, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24},
+  weeklyBarContainer: {flex: 1, height: '100%', justifyContent: 'flex-end', paddingHorizontal: 4, alignItems: 'center'},
+  weeklyBar: {width: '100%', borderRadius: 4},
+  weeklyBarLabel: {fontSize: 12, color: '#64748B', marginTop: 4},
+  infoContainer: {marginBottom: 24, backgroundColor: '#fff', padding: 16, borderRadius: 16},
+  infoCard: {backgroundColor: '#F9FAFB', borderRadius: 8, padding: 16, marginBottom: 16},
+  infoTitle: {fontSize: 16, fontWeight: '600', color: '#6C5CE7', marginBottom: 8},
+  infoText: {fontSize: 14, color: '#64748B', lineHeight: 20},
+  noDataContainer: {justifyContent: 'center', alignItems: 'center', height: 180},
+  noDataText: {fontSize: 16, color: '#64748B'},
 });
 
 export default SleepScreen;

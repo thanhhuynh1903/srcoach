@@ -33,16 +33,6 @@ type MetricInfo = {
   content: string;
 };
 
-type MetricInfoMap = {
-  heartRate: MetricInfo;
-  steps: MetricInfo;
-  distance: MetricInfo;
-  calories: MetricInfo;
-  oxygenSaturation: MetricInfo;
-  sleep: MetricInfo;
-  totalCalories: MetricInfo;
-};
-
 type SummaryDataItem = {
   value: number;
   percentage: number;
@@ -58,7 +48,7 @@ type SummaryData = {
   totalCalories: SummaryDataItem;
 };
 
-const METRIC_INFO: MetricInfoMap = {
+const METRIC_INFO = {
   heartRate: {
     title: 'Heart Rate',
     content:
@@ -94,6 +84,11 @@ const METRIC_INFO: MetricInfoMap = {
     content:
       'Total calories include both active calories burned through movement and calories burned at rest (BMR).',
   },
+  running: {
+    title: 'Running Time',
+    content:
+      'Running time is the total time you have spent running. It can help you track your fitness goals and improve your overall health.',
+  }
 };
 
 const HomeScreen = () => {
