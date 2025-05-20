@@ -18,7 +18,7 @@ import ContentLoader, {Rect} from 'react-content-loader/native';
 import BackButton from '../../BackButton';
 
 type RootStackParamList = {
-  NewsDetail: {id: string};
+  NewsDetail: {id: string; newsItem: any};
 };
 
 type NewsDetailRouteProp = RouteProp<RootStackParamList, 'NewsDetail'>;
@@ -37,27 +37,26 @@ type NewsDetail = {
 export default function NewsDetailScreen() {
   const route = useRoute<NewsDetailRouteProp>();
   const {width} = Dimensions.get('window');
-  const [newsDetail, setNewsDetail] = useState<NewsDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [newsDetail, setNewsDetail] = useState<any>(
+    route.params.newsItem || null,
+  );
+  const [loading, setLoading] = useState(!route.params.newsItem);
 
   useEffect(() => {
-    const fetchNewsDetail = async () => {
-      try {
-        setLoading(true);
-        const response = await getNewsDetail(route.params.id);
-        if (response.status === 'success') {
-          setNewsDetail(response.data);
-        }
-      } catch (error) {
-        console.error('Failed to fetch news detail:', error);
-        Alert.alert('Error', 'Failed to load news detail');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNewsDetail();
-  }, [route.params.id]);
+    if (!route.params.newsItem && route.params.id) {
+      setLoading(true);
+      getNewsDetail(route.params.id)
+        .then(response => {
+          if (response.status === 'success') {
+            setNewsDetail(response.data);
+          }
+        })
+        .catch(() => {
+          Alert.alert('Error', 'Failed to load news detail');
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [route.params.id, route.params.newsItem]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -109,7 +108,7 @@ export default function NewsDetailScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <BackButton />
-        
+
         {loading ? (
           <ContentLoader
             speed={1}
@@ -169,7 +168,14 @@ export default function NewsDetailScreen() {
               viewBox={`0 0 ${width - 32} 16`}
               backgroundColor="#f3f3f3"
               foregroundColor="#ecebeb">
-              <Rect x="0" y="0" rx="4" ry="4" width={i % 2 ? '80%' : '100%'} height="16" />
+              <Rect
+                x="0"
+                y="0"
+                rx="4"
+                ry="4"
+                width={i % 2 ? '80%' : '100%'}
+                height="16"
+              />
             </ContentLoader>
           ))}
         </ScrollView>
@@ -179,7 +185,9 @@ export default function NewsDetailScreen() {
           <View style={styles.metadataContainer}>
             <View style={styles.metadata}>
               <Text style={styles.type}>{newsDetail?.news_type}</Text>
-              <Text style={styles.date}>{formatDate(newsDetail.created_at)}</Text>
+              <Text style={styles.date}>
+                {formatDate(newsDetail.created_at)}
+              </Text>
             </View>
           </View>
           <View style={styles.contentContainer}>
