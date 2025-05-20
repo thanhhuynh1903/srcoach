@@ -1,26 +1,24 @@
-import React, {useState, useEffect,useRef} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   Image,
   View,
   Text,
   StyleSheet,
   Pressable,
-  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import {wp, hp} from '../helpers/common';
 import ScreenWrapper from '../ScreenWrapper';
 import Icon from '@react-native-vector-icons/ionicons';
-import BackButton from '../BackButton';
 import {NavigationProp, useNavigation} from '@react-navigation/native';
-import {theme} from '../contants/theme';
 import Input from '../Input';
 import ButtonModify from '../Button';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
-import auth from '@react-native-firebase/auth';
 import Toast from 'react-native-toast-message';
 import {useLoginStore} from '../utils/useLoginStore';
 import useAuthStore from '../utils/useAuthStore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NotificationService from '../services/NotificationService';
 
 type RootStackParamList = {
@@ -30,6 +28,8 @@ type RootStackParamList = {
     emailLabel: string;
     password: string;
   };
+  PasswordRecoveryScreen: undefined;
+  RegisterScreen: undefined;
 };
 
 const LoginScreen: React.FC<{
@@ -38,7 +38,6 @@ const LoginScreen: React.FC<{
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const {login, message, status, clear} = useLoginStore();
   const canGoBack = navigation.canGoBack();
   const {loadToken} = useAuthStore();
@@ -46,21 +45,12 @@ const LoginScreen: React.FC<{
 
   useEffect(() => {
     clear();
-    GoogleSignin.configure({
-      webClientId:
-        '235721584474-qo8doaih4g3lln7jia221pl7vjphfeq6.apps.googleusercontent.com',
-    });
   }, [clear]);
 
   useEffect(() => {
-    console.log('status', status);
-    
-    // Nếu status không thay đổi, không làm gì cả
     if (status === prevStatusRef.current) return;
-    
-    // Cập nhật ref với status hiện tại
     prevStatusRef.current = status;
-    
+
     const handleAuthStatus = async () => {
       if (status === 'success') {
         await loadToken();
@@ -68,7 +58,6 @@ const LoginScreen: React.FC<{
         showToast('success', message, 'Welcome back!');
         navigation.navigate('HomeTabs');
         clear();
-        // Không gọi clear() ở đây để tránh trigger useEffect lại
       } else if (status === 'wait') {
         navigation.navigate('VerifyLoginScreen', {
           emailLabel: email,
@@ -76,18 +65,16 @@ const LoginScreen: React.FC<{
         });
         clear();
       } else if (status === 'error' && message) {
-        console.log('message', message);
         showToast('error', message.toString());
         clear();
       }
     };
-    
+
     handleAuthStatus();
   }, [status, message, email, password, navigation, loadToken]);
-  
+
   useEffect(() => {
     if (status === 'success' && prevStatusRef.current === 'success') {
-      // Chỉ clear sau khi đã xử lý thành công
       setTimeout(() => {
         clear();
       }, 500);
@@ -118,196 +105,184 @@ const LoginScreen: React.FC<{
     }
   };
 
+  const emailValidated = (): boolean | null => {
+    if (!email) return null;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
   const setupNotifications = async () => {
     try {
-      console.log('Đang khởi tạo dịch vụ thông báo...');
       await NotificationService.init();
       await NotificationService.setupNotificationOpenHandlers(navigation);
-      console.log('Đã khởi tạo dịch vụ thông báo thành công');
     } catch (error) {
-      console.error('Lỗi khi thiết lập thông báo:', error);
+      console.error('Notification setup error:', error);
     }
-  };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      const hasPlayServices = await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-
-      if (!hasPlayServices) {
-        throw new Error('Google Play Services not available');
-      }
-
-      const signInResult = await GoogleSignin.signIn();
-      if (!signInResult.data?.idToken) {
-        showToast('error', 'Login Failed', 'No ID token found');
-        return;
-      }
-
-      const googleCredential = auth.GoogleAuthProvider.credential(
-        signInResult.data.idToken,
-      );
-      await auth().signInWithCredential(googleCredential);
-      console.log(      'Google Sign-In successful:', signInResult);
-      
-      showToast('success', 'Login Successful', 'Welcome to the homepage!');
-      navigation.navigate('HomeTabs');
-    } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      showToast(
-        'error',
-        'Login Failed',
-        'Invalid username or password. Please try again.',
-      );
-    }
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
   };
 
   return (
     <ScreenWrapper bg={'white'}>
-      <View style={styles.container}>
-        <View style={styles.backButtonContainer}>
-          {canGoBack && <BackButton size={26} />}
-        </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.container}>
+            {/* Centered Content */}
+            <View style={styles.centeredContent}>
+              <View style={styles.header}>
+                <Image
+                  source={require('../assets/logo.png')}
+                  style={styles.logo}
+                />
+                <View style={styles.textContainer}>
+                  <Text style={styles.welcomeText}>Welcome, runners!</Text>
+                  <Text style={styles.welcomeSubText}>
+                    Sign in to continue your running journey
+                  </Text>
+                </View>
+              </View>
 
-        <View style={styles.header}>
-          <Text style={styles.welcomeText}>Hello 😉,</Text>
-          <Text style={styles.welcomeSubText}>
-            Health is the most important in everyone's life
-          </Text>
-        </View>
+              <View style={styles.formContainer}>
+                <View style={styles.form}>
+                  <Input
+                    keyboardType="email"
+                    placeholder="Email or username"
+                    onChangeText={setEmail}
+                    value={email}
+                    containerStyle={styles.inputContainer}
+                    validated={emailValidated()}
+                  />
+                  <Input
+                    keyboardType="password"
+                    placeholder="Password"
+                    onChangeText={setPassword}
+                    value={password}
+                    containerStyle={styles.inputContainer}
+                  />
+                  <Pressable
+                    style={styles.forgotPasswordContainer}
+                    onPress={() => navigation.navigate('PasswordRecoveryScreen')}>
+                    <Text style={styles.forgotPassword}>Forgot password?</Text>
+                  </Pressable>
+                </View>
 
-        <View style={styles.form}>
-          <Text style={styles.formHeaderText}>Please login to continue</Text>
-          <Input
-            icon={<Icon name="mail-outline" size={24} color="black" />}
-            placeholder="Enter email or username"
-            onChangeText={setEmail}
-            value={email}
-            keyboardType="email-address"
-          />
-          <Input
-            icon={<Icon name="lock-closed-outline" size={24} color="black" />}
-            placeholder="Enter password"
-            onChangeText={setPassword}
-            value={password}
-            isPassword
-          />
-          <Pressable
-            onPress={() =>
-              navigation.navigate('PasswordRecoveryScreen' as never)
-            }>
-            <Text style={styles.forgotPassword}>Forgot password?</Text>
-          </Pressable>
-        </View>
+                <ButtonModify
+                  title="Sign In"
+                  onPress={handleLogin}
+                  loading={loading}
+                  style={styles.loginButton}
+                  textStyle={styles.loginButtonText}
+                />
+              </View>
+            </View>
 
-        <ButtonModify title="Login" onPress={handleLogin} loading={loading} />
-
-        <View style={styles.socialContainer}>
-          <Text style={styles.orText}>or continue with</Text>
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={handleGoogleSignIn}>
-            <Image
-              source={{
-                uri: 'https://upload.wikimedia.org/wikipedia/commons/0/09/IOS_Google_icon.png',
-              }}
-              style={styles.socialIcon}
-            />
-            <Text style={styles.socialText}>Google</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <Pressable
-            onPress={() => navigation.navigate('RegisterScreen' as never)}>
-            <Text style={styles.footerLinkText}>Sign Up</Text>
-          </Pressable>
-        </View>
-      </View>
+            {/* Footer stays at bottom */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <Pressable
+                onPress={() => navigation.navigate('RegisterScreen')}>
+                <Text style={styles.footerLinkText}>Sign Up</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'space-between',
+  },
   container: {
     flex: 1,
-    gap: 30,
-    paddingHorizontal: wp(5),
+    paddingHorizontal: wp(6),
+    justifyContent: 'space-between',
   },
-  backButtonContainer: {
-    alignSelf: "flex-start",
-    marginTop: 20,
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginTop: hp(-10),
   },
   header: {
-    gap: 8,
+    alignItems: 'center',
+    marginBottom: hp(4),
+  },
+  logo: {
+    width: hp(8),
+    height: hp(8),
+    marginBottom: hp(2),
+  },
+  textContainer: {
+    alignItems: 'center',
   },
   welcomeText: {
-    fontSize: hp(4),
-    fontWeight: 'bold',
-    color: theme.colors.text,
+    fontSize: hp(3.2),
+    fontWeight: '700',
+    color: '#212121',
+    marginBottom: hp(1),
   },
   welcomeSubText: {
-    fontSize: hp(2.4),
-    fontWeight: '500',
-    color: theme.colors.text,
+    fontSize: hp(2),
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: hp(2.8),
+  },
+  formContainer: {
+    marginTop: hp(2),
   },
   form: {
-    gap: 25,
+    marginBottom: hp(3),
   },
-  formHeaderText: {
-    fontSize: hp(1.5),
-    color: theme.colors.textLight,
+  inputContainer: {
+    marginBottom: hp(2),
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginTop: hp(1),
   },
   forgotPassword: {
-    textAlign: 'right',
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  socialContainer: {
-    gap: 20,
-  },
-  orText: {
-    color: theme.colors.textLight,
-    textAlign: 'center',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 8,
-  },
-  socialIcon: {
-    width: 20,
-    height: 20,
-  },
-  socialText: {
-    marginLeft: 8,
-    fontSize: 14,
+    color: '#1E40AF',
+    fontSize: hp(1.8),
     fontWeight: '500',
+  },
+  loginButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: hp(1.5),
+    height: hp(6.5),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: hp(2),
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 5,
+    paddingBottom: hp(4),
+    gap: wp(1.5),
   },
   footerText: {
-    textAlign: 'center',
-    color: theme.colors.text,
-    fontSize: hp(1.6),
+    color: '#6B7280',
+    fontSize: hp(1.8),
   },
   footerLinkText: {
-    color: theme.fontColor.SemiboldBlue,
-    fontWeight: 'bold',
-    fontSize: hp(1.6),
+    color: '#1E40AF',
+    fontWeight: '600',
+    fontSize: hp(1.8),
   },
 });
 
