@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {View, StyleSheet, ScrollView, Text, RefreshControl} from 'react-native';
 import {theme} from '../../../contants/theme';
 import CHSHeader from './CHSHeader';
@@ -10,6 +10,7 @@ import {listSessions, respondToSession} from '../../../utils/useChatsAPI';
 import CHSChatList from './CHSChatList';
 import ToastUtil from '../../../utils/utils_toast';
 import {useLoginStore} from '../../../utils/useLoginStore';
+import {getSocket} from '../../../utils/socket';
 
 interface ChatSession {
   id: string;
@@ -42,18 +43,25 @@ interface ChatSession {
 const ChatsHomeScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const sessionsRef = useRef<ChatSession[]>([]);
+  const [, setRender] = useState(false); // Used to force re-render
   const navigation = useNavigation();
+  const socketRef = useRef<any>(null);
 
   const {profile} = useLoginStore();
+
+  const setSessions = (data: ChatSession[]) => {
+    sessionsRef.current = data;
+    setRender(prev => !prev); // Force re-render
+  };
 
   useFocusEffect(
     React.useCallback(() => {
       fetchSessions();
-    }, [activeFilter])
-  )
+    }, [activeFilter]),
+  );
 
   const fetchSessions = async () => {
     try {
@@ -64,7 +72,6 @@ const ChatsHomeScreen = () => {
         setSessions(response.data);
       }
     } catch (error) {
-      console.error('Error fetching sessions:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -77,11 +84,14 @@ const ChatsHomeScreen = () => {
 
   const handleChatPress = (session: ChatSession) => {
     if (
-      profile.roles && profile.roles.includes('expert') &&
+      profile.roles &&
+      profile.roles.includes('expert') &&
       session.other_user?.roles?.includes('runner') &&
       session.status == 'PENDING'
     ) {
-      navigation.navigate('ChatsExpertConfirmScreen', {userId: session.other_user.id});
+      navigation.navigate('ChatsExpertConfirmScreen', {
+        userId: session.other_user.id,
+      });
       return;
     }
 
@@ -110,7 +120,7 @@ const ChatsHomeScreen = () => {
         fetchSessions();
       }
     } catch (error) {
-      console.error('Error responding to session:', error);
+      ToastUtil.error('Error', 'Failed to respond to session');
     }
   };
 
@@ -118,6 +128,37 @@ const ChatsHomeScreen = () => {
     setRefreshing(true);
     fetchSessions();
   };
+
+  const setupSocketListeners = useCallback(() => {
+    const socket = socketRef.current;
+    socket.on('chat_home', (data: any) => {
+      if (data.type === 'update') {
+        const updatedSessions = sessionsRef.current.map(session => {
+          if (session.id === data.data.id) {
+            return data.data;
+          }
+          return session;
+        });
+        setSessions(updatedSessions);
+      }
+    });
+
+    return () => {
+      socket.off('chat_home');
+    };
+  }, []);
+
+  const initSocket = useCallback(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
+    return setupSocketListeners();
+  }, [setupSocketListeners]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      initSocket();
+    }, [initSocket]),
+  );
 
   return (
     <View style={styles.container}>
@@ -146,7 +187,7 @@ const ChatsHomeScreen = () => {
           <View style={styles.loadingContainer}>
             <Text>Loading chats...</Text>
           </View>
-        ) : sessions.length === 0 ? (
+        ) : sessionsRef.current.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Icon name="chatbubbles-outline" size={48} color={'#c2c2c2'} />
             <Text style={styles.emptyText}>
@@ -155,7 +196,7 @@ const ChatsHomeScreen = () => {
           </View>
         ) : (
           <CHSChatList
-            sessions={sessions}
+            sessions={sessionsRef.current}
             onItemPress={handleChatPress}
             onAccept={handleAccept}
             onDeny={handleDeny}

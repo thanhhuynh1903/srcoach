@@ -8,8 +8,12 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
-import { theme } from '../../contants/theme';
-import { wp } from '../../helpers/common';
+import {theme} from '../../contants/theme';
+import {wp} from '../../helpers/common';
+import {PRIMARY_COLOR as STEP_PRIMARY_COLOR} from './RecordStepsScreen';
+import {PRIMARY_COLOR as CALORIES_PRIMARY_COLOR} from './RecordCaloriesScreen';
+import { PRIMARY_COLOR as HEART_RATE_PRIMARY_COLOR } from './RecordHeartRateScreen';
+import {LineChart} from 'react-native-chart-kit';
 
 interface SummaryData {
   steps: {
@@ -27,10 +31,12 @@ interface SummaryData {
   heartRate: {
     value: number;
     percentage: number;
+    timeSeries: Array<{time: Date; value: number}>;
   };
   oxygenSaturation: {
     value: number;
     percentage: number;
+    timeSeries: Array<{time: Date; value: number}>;
   };
   sleep: {
     value: number;
@@ -39,6 +45,9 @@ interface SummaryData {
   totalCalories: {
     value: number;
     percentage: number;
+  };
+  running: {
+    totalTime: number;
   };
 }
 
@@ -57,16 +66,15 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
   navigation,
   showInfoDialog,
 }) => {
-  // Set consistent heights for all cards
   const CARD_HEIGHT = 120;
-  const COMPACT_CARD_HEIGHT = 80;
+  const COMPACT_CARD_HEIGHT = 110;
 
   const MetricSkeleton = () => (
     <ContentLoader
       speed={1}
-      width={wp(30)}
-      height={CARD_HEIGHT}
-      viewBox={`0 0 ${wp(30)} ${CARD_HEIGHT}`}
+      width={wp(45)}
+      height={COMPACT_CARD_HEIGHT}
+      viewBox={`0 0 ${wp(45)} ${COMPACT_CARD_HEIGHT}`}
       backgroundColor="#f3f3f3"
       foregroundColor="#ecebeb">
       <Circle cx="25" cy="25" r="20" />
@@ -84,26 +92,69 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
       oxygenSaturation: {title: 'SpO2', icon: 'water'},
       sleep: {title: 'Sleep', icon: 'moon'},
       totalCalories: {title: 'Total Calories', icon: 'nutrition'},
+      running: {title: 'Running Time', icon: 'timer'},
     };
 
     return (
-      <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+      <View style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
         <View style={styles.metricHeader}>
-          <Icon name={metricInfo[metric]?.icon || 'warning'} size={20} color="#64748B" />
+          <Icon
+            name={metricInfo[metric]?.icon || 'warning'}
+            size={20}
+            color="#64748B"
+          />
           <TouchableOpacity
             onPress={() => showInfoDialog(metric)}
             style={styles.infoButton}>
-            <Icon
-              name="information-circle-outline"
-              size={16}
-              color="#64748B"
-            />
+            <Icon name="information-circle-outline" size={16} color="#64748B" />
           </TouchableOpacity>
         </View>
-        <Text style={[styles.healthMetricValue, {color: '#64748B'}]}>--</Text>
-        <Text style={styles.healthMetricLabel}>
+        <Text style={[styles.compactMetricValue, {color: '#64748B'}]}>--</Text>
+        <Text style={styles.compactMetricLabel}>
           {metricInfo[metric]?.title || metric}
         </Text>
+      </View>
+    );
+  };
+
+  const renderMiniChart = (
+    data: Array<{time: Date; value: number}>,
+    color: string,
+  ) => {
+    if (!data || data.length === 0) return null;
+
+    const chartData = {
+      labels: data.map((_, i) => i.toString()),
+      datasets: [
+        {
+          data: data.map(item => item.value),
+          color: () => color,
+        },
+      ],
+    };
+
+    return (
+      <View style={styles.chartContainer}>
+        <LineChart
+          data={chartData}
+          width={100}
+          height={60}
+          withDots={false}
+          withShadow={false}
+          withInnerLines={false}
+          withOuterLines={false}
+          chartConfig={{
+            backgroundGradientFrom: '#ffffff',
+            backgroundGradientTo: '#ffffff',
+            decimalPlaces: 0,
+            color: () => color,
+            propsForLabels: {
+              fontSize: '0',
+            },
+          }}
+          bezier
+          style={styles.chart}
+        />
       </View>
     );
   };
@@ -112,32 +163,20 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
     <View style={styles.mainMetricsContainer}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleContainer}>
-          <Text style={styles.sectionTitle}>Daily stats</Text>
+          <Text style={styles.sectionTitle}>Daily Activity</Text>
         </View>
       </View>
-      <View style={styles.mainMetricsRow}>
+      <View style={styles.mainMetricsGrid}>
         {/* Steps */}
         {errors.steps ? (
           <MetricErrorCard metric="steps" />
         ) : (
           <TouchableWithoutFeedback
             onPress={() => navigation.navigate('StepsScreen')}>
-            <View style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
-              <View style={styles.compactMetricTopRow}>
-                <Icon name="footsteps" size={20} color="#2563EB" />
-                <Text style={styles.compactMetricValue}>
-                  {summaryData?.steps.value.toLocaleString() || '--'}
-                </Text>
-              </View>
-              <View style={styles.compactPercentageRow}>
-                <View style={[styles.compactChip, {backgroundColor: '#EFF6FF'}]}>
-                  <Text style={[styles.compactChipText, {color: '#2563EB'}]}>
-                    {summaryData?.steps.percentage.toFixed(0) || '--'}%
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.compactMetricBottomRow}>
-                <Text style={styles.compactMetricLabel}>Steps</Text>
+            <View
+              style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
+              <View style={styles.metricHeader}>
+                <Icon name="footsteps" size={20} color={STEP_PRIMARY_COLOR} />
                 <TouchableOpacity
                   onPress={() => showInfoDialog('steps')}
                   style={styles.infoButton}>
@@ -148,6 +187,33 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
                   />
                 </TouchableOpacity>
               </View>
+              <View
+                style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
+                <Text
+                  style={[
+                    styles.compactMetricValue,
+                    {color: STEP_PRIMARY_COLOR},
+                  ]}>
+                  {summaryData?.steps.value.toLocaleString() || '--'}
+                </Text>
+                <View style={styles.compactPercentageRow}>
+                  <View
+                    style={[
+                      styles.compactChip,
+                      {backgroundColor: `${STEP_PRIMARY_COLOR}10`},
+                    ]}>
+                    <Text
+                      style={[
+                        styles.compactChipText,
+                        {color: STEP_PRIMARY_COLOR},
+                      ]}>
+                      {summaryData?.steps.percentage.toFixed(0) || '--'}%
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text style={styles.compactMetricLabel}>Steps</Text>
             </View>
           </TouchableWithoutFeedback>
         )}
@@ -158,22 +224,10 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
         ) : (
           <TouchableWithoutFeedback
             onPress={() => navigation.navigate('DistanceScreen')}>
-            <View style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
-              <View style={styles.compactMetricTopRow}>
+            <View
+              style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
+              <View style={styles.metricHeader}>
                 <Icon name="walk" size={20} color="#11ac00" />
-                <Text style={styles.compactMetricValue}>
-                  {summaryData?.distance.value.toFixed(1) || '--'} km
-                </Text>
-              </View>
-              <View style={styles.compactPercentageRow}>
-                <View style={[styles.compactChip, {backgroundColor: "#e8fce6"}]}>
-                  <Text style={[styles.compactChipText, {color: "#11ac00"}]}>
-                    {summaryData?.distance.percentage.toFixed(0) || '--'}%
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.compactMetricBottomRow}>
-                <Text style={styles.compactMetricLabel}>Distance</Text>
                 <TouchableOpacity
                   onPress={() => showInfoDialog('distance')}
                   style={styles.infoButton}>
@@ -184,6 +238,22 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
                   />
                 </TouchableOpacity>
               </View>
+              <View
+                style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
+                <Text style={[styles.compactMetricValue, {color: '#11ac00'}]}>
+                  {summaryData?.distance.value.toFixed(1) || '--'} km
+                </Text>
+                <View style={styles.compactPercentageRow}>
+                  <View
+                    style={[styles.compactChip, {backgroundColor: '#e8fce6'}]}>
+                    <Text style={[styles.compactChipText, {color: '#11ac00'}]}>
+                      {summaryData?.distance.percentage.toFixed(0) || '--'}%
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text style={styles.compactMetricLabel}>Distance</Text>
             </View>
           </TouchableWithoutFeedback>
         )}
@@ -194,22 +264,10 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
         ) : (
           <TouchableWithoutFeedback
             onPress={() => navigation.navigate('CaloriesScreen')}>
-            <View style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
-              <View style={styles.compactMetricTopRow}>
-                <Icon name="flame" size={20} color="#EF4444" />
-                <Text style={styles.compactMetricValue}>
-                  {summaryData?.activeCalories.value.toFixed(0) || '--'} cal
-                </Text>
-              </View>
-              <View style={styles.compactPercentageRow}>
-                <View style={[styles.compactChip, {backgroundColor: '#FEE2E2'}]}>
-                  <Text style={[styles.compactChipText, {color: '#EF4444'}]}>
-                    {summaryData?.activeCalories.percentage.toFixed(0) || '--'}%
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.compactMetricBottomRow}>
-                <Text style={styles.compactMetricLabel}>Calories</Text>
+            <View
+              style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
+              <View style={styles.metricHeader}>
+                <Icon name="flame" size={20} color={CALORIES_PRIMARY_COLOR} />
                 <TouchableOpacity
                   onPress={() => showInfoDialog('calories')}
                   style={styles.infoButton}>
@@ -220,6 +278,55 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
                   />
                 </TouchableOpacity>
               </View>
+              <View
+                style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
+                <Text style={[styles.compactMetricValue, {color: CALORIES_PRIMARY_COLOR}]}>
+                  {summaryData?.activeCalories.value.toFixed(0) || '--'} cal
+                </Text>
+                <View style={styles.compactPercentageRow}>
+                  <View
+                    style={[styles.compactChip, {backgroundColor: `${CALORIES_PRIMARY_COLOR}10`}]}>
+                    <Text style={[styles.compactChipText, {color: CALORIES_PRIMARY_COLOR}]}>
+                      {summaryData?.activeCalories.percentage.toFixed(0) ||
+                        '--'}
+                      %
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text style={styles.compactMetricLabel}>Active Calories</Text>
+            </View>
+          </TouchableWithoutFeedback>
+        )}
+
+        {/* Running Time */}
+        {errors.running ? (
+          <MetricErrorCard metric="running" />
+        ) : (
+          <TouchableWithoutFeedback>
+            <View
+              style={[styles.compactMetricItem, {height: COMPACT_CARD_HEIGHT}]}>
+              <View style={styles.metricHeader}>
+                <Icon name="timer" size={20} color="#3B82F6" />
+                <TouchableOpacity
+                  onPress={() => showInfoDialog('running')}
+                  style={styles.infoButton}>
+                  <Icon
+                    name="information-circle-outline"
+                    size={16}
+                    color="#64748B"
+                  />
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.compactMetricValue, {color: '#3B82F6'}]}>
+                {summaryData?.running?.totalTime
+                  ? `${Math.floor(
+                      summaryData.running?.totalTime / 60,
+                    )}h ${Math.floor(summaryData.running?.totalTime % 60)}m`
+                  : '--'}
+              </Text>
+              <Text style={styles.compactMetricLabel}>Running Time</Text>
             </View>
           </TouchableWithoutFeedback>
         )}
@@ -228,119 +335,120 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
   );
 
   const renderHealthMetrics = () => (
-    <View style={styles.metricsGrid}>
+    <View style={styles.healthMetricsContainer}>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleContainer}>
+          <Text style={styles.sectionTitle}>Health Metrics</Text>
+        </View>
+      </View>
+
       {/* Heart Rate */}
       {errors.heartRate ? (
-        <MetricErrorCard metric="heartRate" />
+        <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+          <MetricErrorCard metric="heartRate" />
+        </View>
       ) : (
         <TouchableWithoutFeedback
           onPress={() => navigation.navigate('HeartRateScreen')}>
-          <View
-            style={[styles.healthMetricCard, {height: CARD_HEIGHT, backgroundColor: '#FFF1F2'}]}>
-            <View style={styles.metricHeader}>
-              <Icon name="heart" size={20} color="#FF4D4F" />
-              <TouchableOpacity
-                onPress={() => showInfoDialog('heartRate')}
-                style={styles.infoButton}>
-                <Icon
-                  name="information-circle-outline"
-                  size={16}
-                  color="#64748B"
-                />
-              </TouchableOpacity>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <View style={styles.healthMetricContent}>
+              <View style={styles.healthMetricText}>
+                <View style={styles.metricHeader}>
+                  <Icon name="heart" size={20} color={HEART_RATE_PRIMARY_COLOR} />
+                  <TouchableOpacity
+                    onPress={() => showInfoDialog('heartRate')}
+                    style={styles.infoButton}>
+                    <Icon
+                      name="information-circle-outline"
+                      size={16}
+                      color="#64748B"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.healthMetricValue, {color: HEART_RATE_PRIMARY_COLOR}]}>
+                  {summaryData?.heartRate.value.toFixed(0) || '--'} bpm
+                </Text>
+                <Text style={styles.healthMetricLabel}>Heart Rate</Text>
+              </View>
+              {renderMiniChart(
+                summaryData?.heartRate.timeSeries || [],
+                HEART_RATE_PRIMARY_COLOR,
+              )}
             </View>
-            <Text style={styles.healthMetricValue}>
-              {summaryData?.heartRate.value.toFixed(0) || '--'} bpm
-            </Text>
-            <Text style={styles.healthMetricLabel}>Heart Rate</Text>
           </View>
         </TouchableWithoutFeedback>
       )}
 
       {/* Oxygen Saturation */}
       {errors.oxygenSaturation ? (
-        <MetricErrorCard metric="oxygenSaturation" />
+        <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+          <MetricErrorCard metric="oxygenSaturation" />
+        </View>
       ) : (
         <TouchableWithoutFeedback
           onPress={() => navigation.navigate('SPo2Screen')}>
-          <View
-            style={[styles.healthMetricCard, {height: CARD_HEIGHT, backgroundColor: '#ECFDF5'}]}>
-            <View style={styles.metricHeader}>
-              <Icon name="water" size={20} color="#10B981" />
-              <TouchableOpacity
-                onPress={() => showInfoDialog('oxygenSaturation')}
-                style={styles.infoButton}>
-                <Icon
-                  name="information-circle-outline"
-                  size={16}
-                  color="#64748B"
-                />
-              </TouchableOpacity>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <View style={styles.healthMetricContent}>
+              <View style={styles.healthMetricText}>
+                <View style={styles.metricHeader}>
+                  <Icon name="water" size={20} color="#10B981" />
+                  <TouchableOpacity
+                    onPress={() => showInfoDialog('oxygenSaturation')}
+                    style={styles.infoButton}>
+                    <Icon
+                      name="information-circle-outline"
+                      size={16}
+                      color="#64748B"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.healthMetricValue, {color: '#10B981'}]}>
+                  {summaryData?.oxygenSaturation.value.toFixed(0) || '--'}%
+                </Text>
+                <Text style={styles.healthMetricLabel}>SpO2</Text>
+              </View>
+              {renderMiniChart(
+                summaryData?.oxygenSaturation.timeSeries || [],
+                '#10B981',
+              )}
             </View>
-            <Text style={styles.healthMetricValue}>
-              {summaryData?.oxygenSaturation.value.toFixed(0) || '--'}%
-            </Text>
-            <Text style={styles.healthMetricLabel}>SpO2</Text>
           </View>
         </TouchableWithoutFeedback>
       )}
 
       {/* Sleep */}
       {errors.sleep ? (
-        <MetricErrorCard metric="sleep" />
+        <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+          <MetricErrorCard metric="sleep" />
+        </View>
       ) : (
         <TouchableWithoutFeedback
           onPress={() => navigation.navigate('SleepScreen')}>
-          <View
-            style={[styles.healthMetricCard, {height: CARD_HEIGHT, backgroundColor: '#EEF2FF'}]}>
-            <View style={styles.metricHeader}>
-              <Icon name="moon" size={20} color="#6366F1" />
-              <TouchableOpacity
-                onPress={() => showInfoDialog('sleep')}
-                style={styles.infoButton}>
-                <Icon
-                  name="information-circle-outline"
-                  size={16}
-                  color="#64748B"
-                />
-              </TouchableOpacity>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <View style={styles.healthMetricContent}>
+              <View style={styles.healthMetricText}>
+                <View style={styles.metricHeader}>
+                  <Icon name="moon" size={20} color="#6366F1" />
+                  <TouchableOpacity
+                    onPress={() => showInfoDialog('sleep')}
+                    style={styles.infoButton}>
+                    <Icon
+                      name="information-circle-outline"
+                      size={16}
+                      color="#64748B"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.healthMetricValue, {color: '#6366F1'}]}>
+                  {summaryData
+                    ? `${Math.floor(summaryData.sleep.value)}h ${Math.round(
+                        (summaryData.sleep.value % 1) * 60,
+                      )}m`
+                    : '--'}
+                </Text>
+                <Text style={styles.healthMetricLabel}>Sleep</Text>
+              </View>
             </View>
-            <Text style={styles.healthMetricValue}>
-              {summaryData
-                ? `${Math.floor(summaryData.sleep.value)}h ${Math.round(
-                    (summaryData.sleep.value % 1) * 60,
-                  )}m`
-                : '--'}
-            </Text>
-            <Text style={styles.healthMetricLabel}>Sleep</Text>
-          </View>
-        </TouchableWithoutFeedback>
-      )}
-
-      {/* Total Calories */}
-      {errors.totalCalories ? (
-        <MetricErrorCard metric="totalCalories" />
-      ) : (
-        <TouchableWithoutFeedback
-          onPress={() => navigation.navigate('CaloriesScreen')}>
-          <View
-            style={[styles.healthMetricCard, {height: CARD_HEIGHT, backgroundColor: '#FFF7E6'}]}>
-            <View style={styles.metricHeader}>
-              <Icon name="nutrition" size={20} color="#FAAD14" />
-              <TouchableOpacity
-                onPress={() => showInfoDialog('totalCalories')}
-                style={styles.infoButton}>
-                <Icon
-                  name="information-circle-outline"
-                  size={16}
-                  color="#64748B"
-                />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.healthMetricValue}>
-              {summaryData?.totalCalories.value.toFixed(0) || '--'}
-            </Text>
-            <Text style={styles.healthMetricLabel}>Total Calories</Text>
           </View>
         </TouchableWithoutFeedback>
       )}
@@ -350,16 +458,35 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
   if (loading) {
     return (
       <View style={styles.skeletonContainer}>
-        <View style={styles.highlightedRow}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={styles.sectionTitle}>Daily Activity</Text>
+          </View>
+        </View>
+        <View style={styles.mainMetricsGrid}>
+          <MetricSkeleton />
           <MetricSkeleton />
           <MetricSkeleton />
           <MetricSkeleton />
         </View>
-        <View style={styles.metricsGrid}>
-          <MetricSkeleton />
-          <MetricSkeleton />
-          <MetricSkeleton />
-          <MetricSkeleton />
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <Text style={styles.sectionTitle}>Health Metrics</Text>
+          </View>
+        </View>
+        <View style={styles.healthMetricsContainer}>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <MetricSkeleton />
+          </View>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <MetricSkeleton />
+          </View>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <MetricSkeleton />
+          </View>
+          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+            <MetricSkeleton />
+          </View>
         </View>
       </View>
     );
@@ -381,10 +508,24 @@ const styles = StyleSheet.create({
   mainMetricsContainer: {
     marginBottom: 16,
   },
+  mainMetricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 9,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    gap: 8,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 12,
+    paddingLeft: 4,
   },
   sectionTitleContainer: {
     backgroundColor: theme.colors.primaryDark,
@@ -392,7 +533,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 14,
@@ -400,46 +540,37 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     lineHeight: 18,
   },
-  mainMetricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   compactMetricItem: {
-    flex: 1,
-    paddingHorizontal: 8,
+    width: '48%',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  compactMetricTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  compactPercentageRow: {
-    marginBottom: 4,
-  },
-  compactMetricBottomRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  infoButton: {
+    padding: 4,
   },
   compactMetricValue: {
-    fontSize: 19,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1E293B',
-    marginLeft: 8,
-    flex: 1,
+    marginBottom: 4,
   },
   compactMetricLabel: {
     fontSize: 14,
     color: '#64748B',
-    marginRight: 4,
+  },
+  compactPercentageRow: {
+    marginBottom: 8,
   },
   compactChip: {
     borderRadius: 10,
@@ -451,31 +582,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  metricHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  infoButton: {
-    padding: 4,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
   healthMetricCard: {
-    width: '48%',
-    borderRadius: 16,
+    width: '100%',
+    marginBottom: 12,
     padding: 16,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  healthMetricContent: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  healthMetricText: {
+    flex: 1,
   },
   healthMetricValue: {
     fontSize: 22,
@@ -487,13 +612,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
   },
-  skeletonContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
+  chartContainer: {
+    width: 100,
+    height: 60,
+    marginLeft: 16,
   },
-  highlightedRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  chart: {
+    borderRadius: 8,
+  },
+  skeletonContainer: {
     paddingHorizontal: 16,
     marginBottom: 16,
   },

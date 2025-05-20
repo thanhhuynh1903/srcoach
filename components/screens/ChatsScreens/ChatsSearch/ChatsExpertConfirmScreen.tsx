@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,15 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useFocusEffect, useTheme } from '@react-navigation/native';
+import {useFocusEffect, useTheme} from '@react-navigation/native';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../../BackButton';
-import { theme } from '../../../contants/theme';
-import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
-import { getSessionInfo, respondToSession } from '../../../utils/useChatsAPI';
-import { capitalizeFirstLetter } from '../../../utils/utils_format';
+import {theme} from '../../../contants/theme';
+import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
+import {getSessionInfo, respondToSession} from '../../../utils/useChatsAPI';
+import {capitalizeFirstLetter} from '../../../utils/utils_format';
+import {CommonAvatar} from '../../../commons/CommonAvatar';
 
 interface SessionData {
   session: {
@@ -42,10 +43,10 @@ interface SessionData {
 }
 
 const ChatsExpertConfirmScreen = () => {
-  const { colors } = useTheme();
+  const {colors} = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { userId } = route.params as { userId: string };
+  const {userId} = route.params as {userId: string};
   const [loading, setLoading] = useState(true);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +75,7 @@ const ChatsExpertConfirmScreen = () => {
 
   const handleAccept = async () => {
     await respondToSession(userId, true);
-    navigation.replace('ChatsMessageScreen', { userId });
+    navigation.replace('ChatsMessageScreen', {userId});
     return;
   };
 
@@ -95,10 +96,10 @@ const ChatsExpertConfirmScreen = () => {
   if (loading && !sessionData) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
+        <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
           <BackButton size={24} />
-          <Text style={styles.headerTitle}>Session Request</Text>
-          <View style={{ width: 24 }} />
+          <Text style={styles.headerTitle}>Runner Session Request</Text>
+          <View style={{width: 24}} />
         </View>
         <ScrollView contentContainerStyle={styles.content}>
           <ContentLoader
@@ -124,15 +125,21 @@ const ChatsExpertConfirmScreen = () => {
   if (error) {
     return (
       <View style={styles.container}>
-        <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
+        <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
           <BackButton size={24} />
           <Text style={styles.headerTitle}>Session Request</Text>
-          <View style={{ width: 24 }} />
+          <View style={{width: 24}} />
         </View>
         <View style={styles.errorContainer}>
-          <Ionicons name="warning-outline" size={48} color={theme.colors.warning} />
+          <Ionicons
+            name="warning-outline"
+            size={48}
+            color={theme.colors.warning}
+          />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchSessionInfo}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchSessionInfo}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -143,35 +150,25 @@ const ChatsExpertConfirmScreen = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
         <BackButton size={24} />
         <Text style={styles.headerTitle}>Session Request</Text>
-        <View style={{ width: 24 }} />
+        <View style={{width: 24}} />
       </View>
 
       {/* Content */}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.profileContainer}>
-          {/* User Avatar */}
           <View style={styles.avatarContainer}>
-            {sessionData?.other_user.image ? (
-              <Image
-                source={{ uri: sessionData.other_user.image }}
-                style={styles.avatar}
-              />
-            ) : (
-              <Ionicons
-                name="person-circle-outline"
-                size={80}
-                color="#CCCCCC"
-              />
-            )}
+            <CommonAvatar
+              size={100}
+              uri={sessionData?.other_user?.image?.url}
+            />
+            <Text style={styles.userName}>{sessionData?.other_user.name}</Text>
+            <Text style={styles.username}>
+              @{sessionData?.other_user.username}
+            </Text>
           </View>
-
-          {/* User Info */}
-          <Text style={styles.userName}>{sessionData?.other_user.name}</Text>
-          <Text style={styles.username}>@{sessionData?.other_user.username}</Text>
-
           {/* Roles */}
           <View style={styles.rolesContainer}>
             {sessionData?.other_user.roles.map((role, index) => (
@@ -180,15 +177,15 @@ const ChatsExpertConfirmScreen = () => {
                 style={[
                   styles.roleBadge,
                   role === 'expert'
-                    ? { backgroundColor: theme.colors.warningLight }
-                    : { backgroundColor: theme.colors.primaryLight },
+                    ? {backgroundColor: theme.colors.warningLight}
+                    : {backgroundColor: theme.colors.primaryLight},
                 ]}>
                 <Text
                   style={[
                     styles.roleText,
                     role === 'expert'
-                      ? { color: theme.colors.warningDark }
-                      : { color: theme.colors.primaryDark },
+                      ? {color: theme.colors.warningDark}
+                      : {color: theme.colors.primaryDark},
                   ]}>
                   {role.charAt(0).toUpperCase() + role.slice(1)}
                 </Text>
@@ -199,21 +196,13 @@ const ChatsExpertConfirmScreen = () => {
           {/* Points and Level */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Ionicons
-                name="trophy"
-                size={20}
-                color={theme.colors.warning}
-              />
+              <Ionicons name="trophy" size={20} color={theme.colors.warning} />
               <Text style={styles.statText}>
                 {sessionData?.other_user.points} pts
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons
-                name="medal"
-                size={20}
-                color={theme.colors.warning}
-              />
+              <Ionicons name="medal" size={20} color={theme.colors.warning} />
               <Text style={styles.statText}>
                 {capitalizeFirstLetter(sessionData?.other_user?.user_level)}
               </Text>
@@ -295,7 +284,7 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
@@ -314,12 +303,13 @@ const styles = StyleSheet.create({
     color: '#212121',
     textAlign: 'center',
     marginBottom: 4,
+    marginTop: 8,
   },
   username: {
     fontSize: 14,
     color: '#757575',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 3,
   },
   rolesContainer: {
     flexDirection: 'row',

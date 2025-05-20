@@ -8,7 +8,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useRoute, useNavigation, useFocusEffect} from '@react-navigation/native';
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from '@react-navigation/native';
 import ToastUtil from '../../../utils/utils_toast';
 import {
   createOrGetSession,
@@ -17,6 +21,8 @@ import {
   sendImageMessage,
   respondToSession,
   markSessionMessagesAsRead,
+  fillProfileMessage,
+  archiveSession,
 } from '../../../utils/useChatsAPI';
 import {useLoginStore} from '../../../utils/useLoginStore';
 import {theme} from '../../../contants/theme';
@@ -28,7 +34,7 @@ import * as ImagePicker from 'react-native-image-picker';
 import {CMSMessageContainer} from './CMSMessageContainer';
 import {CMSHeader} from './CMSHeader';
 import {CMSSidePanelInfo} from './CMSSidePanelInfo';
-import { getSocket, disconnectSocket } from '../../../utils/socket';
+import {getSocket, disconnectSocket} from '../../../utils/socket';
 
 type MessageItem = {
   id: string;
@@ -52,7 +58,7 @@ export default function ChatsMessageScreen() {
   const route = useRoute() as any;
   const navigation = useNavigation();
   const {profile} = useLoginStore();
-  const {userId, initialMessage} = route.params;
+  const {userId, initialMessage, teleportToMessageId} = route.params;
 
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [messageText, setMessageText] = useState('');
@@ -65,76 +71,150 @@ export default function ChatsMessageScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [panelVisible, setPanelVisible] = useState(false);
   const [infoPanelVisible, setInfoPanelVisible] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
-  const isInitialLoad = useRef(true);
-  const shouldScrollToEnd = useRef(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<any>(null);
+  const shouldScrollToEnd = useRef(false);
 
-  // Determine which panel to show based on user roles
   const getPanelComponent = useCallback(() => {
     const isExpertSession =
       otherUser?.roles?.includes('expert') ||
       profile?.roles?.includes('expert');
-
-    if (!isExpertSession) {
-      return ChatsPanelRunner;
-    }
-
-    return profile?.roles?.includes('expert')
+    return !isExpertSession
+      ? ChatsPanelRunner
+      : profile?.roles?.includes('expert')
       ? ChatsPanelExpertPOVExpert
       : ChatsPanelExpertPOVRunner;
   }, [otherUser, profile]);
 
-  const setupSocket = useCallback(() => {
+  const setupSocketListeners = useCallback(() => {
+    if (!sessionId || !socketRef.current) return;
+
+    const socket = socketRef.current;
+    socket.on('typingMessage', () => {
+      setIsTyping(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
+    });
+
+    socket.on('newMessage', (message: MessageItem) => {
+      setMessages(prev => [...prev, message]);
+      shouldScrollToEnd.current = true;
+      setIsTyping(false);
+    });
+
+    socket.on('messageArchived', (prop: any) => {
+      setMessages(prev => {
+        const updatedMessages = prev.map(msg =>
+          msg.id === prop.id ? {...msg, content: null, archived: true} : msg,
+        );
+        return updatedMessages;
+      });
+    });
+
+    socket.on('messageProfileFilled', (prop: any) => {
+      setMessages(prev => {
+        const updatedMessages = prev.map(msg =>
+          msg.id === prop.message_id ? {...msg, content: prop.content} : msg,
+        );
+        return updatedMessages;
+      });
+    });
+
+    socket.on('chatExpertArchived', () => navigation.goBack());
+
+    return () => {
+      socket.off('typingMessage');
+      socket.off('newMessage');
+      socket.off('messageArchived');
+      socket.off('messageProfileFilled');
+      socket.off('chatExpertArchived');
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [sessionId]);
+
+  const initSocket = useCallback(() => {
     if (!sessionId) return;
 
     const socket = getSocket();
     socketRef.current = socket;
-    
     socket.emit('joinSession', sessionId);
-
-    socket.on('newMessage', (message: MessageItem) => {
-      setMessages(prevMessages => [...prevMessages, message]);
-      shouldScrollToEnd.current = true;
-    });
-
-    return () => {
-      socket.emit('leaveSession', sessionId);
-      socket.off('newMessage');
-    };
-  }, [sessionId]);
+    return setupSocketListeners();
+  }, [sessionId, setupSocketListeners]);
 
   const loadInitialMessages = useCallback(async () => {
     try {
       setLoading(true);
-      setShowContent(false);
-
       const response = await getSessionMessages(userId, 5000);
       if (response.status) {
-        const newMessages = response.data.messages;
-
         setMessages(
-          newMessages.sort(
+          response.data.messages.sort(
             (a, b) =>
               new Date(a.created_at).getTime() -
               new Date(b.created_at).getTime(),
           ),
         );
-
         if (response.data.session?.status === 'PENDING' && !isInitiator) {
           setSessionStatus(response.data.session.status);
         }
-
-        setShowContent(true);
         shouldScrollToEnd.current = true;
       }
+      setShowContent(true);
     } catch (error) {
       console.error('Error loading messages:', error);
-      setShowContent(true);
     } finally {
       setLoading(false);
     }
   }, [userId, isInitiator]);
+
+  const handleSendMessage = async () => {
+    if (!sessionId) return ToastUtil.error('Error', 'Session not initialized');
+
+    const socket = socketRef.current;
+    if (socket)
+      socket.emit('typingMessage', {sessionId, toUserId: otherUser?.id});
+
+    try {
+      const response = selectedImage
+        ? await sendImageMessage(sessionId, selectedImage)
+        : messageText.trim()
+        ? await sendNormalMessage(sessionId, messageText)
+        : {status: false};
+
+      if (response.status) {
+        setSelectedImage(null);
+        setMessageText('');
+      } else {
+        ToastUtil.error('Error', response.data.message || 'Failed to send');
+      }
+    } catch (error) {
+      ToastUtil.error('Error', 'Failed to send');
+    }
+  };
+
+  const handleProfileSubmit = async (message_id: any, content: any) => {
+    try {
+      const response = await fillProfileMessage(message_id, content);
+      if (response.status) {
+        ToastUtil.success('Success', 'Profile filled');
+      } else {
+        ToastUtil.error('Error', response.data.message);
+      }
+    } catch (error) {
+      ToastUtil.error('Error', 'Failed to send');
+    }
+  };
+
+  const handleCloseSession = async (userId: string) => {
+    const response = await archiveSession(userId);
+    if (!response.status) {
+      ToastUtil.error('Error', response.data.message);
+      return;
+    }
+    ToastUtil.success('Success', 'Session closed successfully');
+    navigation.goBack();
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -154,128 +234,67 @@ export default function ChatsMessageScreen() {
       return () => {
         if (socketRef.current) {
           socketRef.current.emit('leaveSession', sessionId);
+          socketRef.current.off('typingMessage');
           socketRef.current.off('newMessage');
         }
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       };
-    }, [userId])
+    }, [userId, initialMessage]),
   );
 
-  useEffect(() => {
-    const cleanup = setupSocket();
-    return cleanup;
-  }, [setupSocket]);
+  useEffect(() => initSocket(), [initSocket]);
 
-  const handleSendMessage = async () => {
-    if (!sessionId) {
-      ToastUtil.error('Error', 'Session not initialized');
-      return;
-    }
-
-    if (selectedImage) {
-      try {
-        const response = await sendImageMessage(sessionId, selectedImage);
-        if (response.status) {
-          setSelectedImage(null);
-        } else {
-          ToastUtil.error(
-            'Error',
-            response.data.message || 'Failed to send image',
-          );
-        }
-      } catch (error) {
-        console.error('Error sending image:', error);
-        ToastUtil.error('Error', 'Failed to send image');
-      }
-    } else if (messageText.trim()) {
-      try {
-        const response = await sendNormalMessage(sessionId, messageText);
-        if (response.status) {
-          setMessageText('');
-        } else {
-          ToastUtil.error(
-            'Error',
-            response.data.message || 'Failed to send message',
-          );
-        }
-      } catch (error) {
-        console.error('Error sending message:', error);
-        ToastUtil.error('Error', 'Failed to send message');
-      }
-    }
-  };
-
-  const handleImagePress = useCallback(async () => {
+  const handleImagePress = async () => {
     try {
       const result = await ImagePicker.launchImageLibrary({
         mediaType: 'photo',
         quality: 0.8,
         selectionLimit: 1,
       });
-
-      if (!result.didCancel && result.assets && result.assets.length > 0) {
-        const selected = result.assets[0];
-        setSelectedImage(selected.uri || null);
+      if (!result.didCancel && result.assets?.[0]?.uri) {
+        setSelectedImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
       ToastUtil.error('Error', 'Failed to select image');
     }
-  }, []);
+  };
 
-  const handleRemoveImage = useCallback(() => {
-    setSelectedImage(null);
-  }, []);
+  const handleUpdateMessage = useCallback(
+    (messageId: string, updates: Partial<MessageItem>) => {
+      setMessages(prev =>
+        prev.map(msg => (msg.id === messageId ? {...msg, ...updates} : msg)),
+      );
+    },
+    [],
+  );
 
   const handleRespondToSession = async (accept: boolean) => {
     try {
       const response = await respondToSession(sessionId, accept);
       if (response.status) {
-        if (accept) {
-          ToastUtil.success('Success', 'Session accepted successfully');
-          setSessionStatus('ACCEPTED');
-        } else {
-          ToastUtil.success('Success', 'Session rejected successfully');
-          navigation.goBack();
-        }
+        accept
+          ? (ToastUtil.success('Success', 'Session accepted'),
+            setSessionStatus('ACCEPTED'))
+          : (ToastUtil.success('Success', 'Session rejected'),
+            navigation.goBack());
       }
     } catch (error) {
-      console.error('Error responding to session:', error);
       ToastUtil.error('Error', 'Failed to respond to session');
     }
   };
-
-  const handleExerciseRecordPress = useCallback(
-    (recordId: string) => {
-      navigation.navigate('ExerciseDetail', {
-        recordId,
-      });
-    },
-    [navigation],
-  );
-
-  const handleTypeMessage = function(text: string) {
-    const socket = getSocket()
-
-    socket.emit('typingMessage', {
-      sessionId: sessionId,
-      toUserId: otherUser?.id
-    });
-    setMessageText(text);
-  }
 
   const PanelComponent = getPanelComponent();
 
   return (
     <SafeAreaView style={styles.container}>
       <CMSHeader
+        profile={profile}
         otherUser={otherUser}
         onBackPress={() => navigation.goBack()}
-        onSearchPress={() => {
-          navigation.navigate('ChatsSessionMessageSearch', {sessionId});
-        }}
-        onInfoPress={() => {
-          setInfoPanelVisible(true);
-        }}
+        onSearchPress={() =>
+          navigation.navigate('ChatsSessionMessageSearch', {sessionId})
+        }
+        onInfoPress={() => setInfoPanelVisible(true)}
       />
 
       {sessionStatus === 'PENDING' && (
@@ -331,27 +350,39 @@ export default function ChatsMessageScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primaryDark} />
         </View>
-      ) : (
+      ) : showContent ? (
         <CMSMessageContainer
+          otherUser={otherUser}
           messages={messages}
           profileId={profile?.id || ''}
-          showContent={showContent}
-          onExerciseRecordPress={handleExerciseRecordPress}
+          showContent={true}
           shouldScrollToEnd={shouldScrollToEnd.current}
           sessionId={sessionId}
+          onUpdateMessage={handleUpdateMessage}
+          onProfileSubmit={handleProfileSubmit}
+          teleportToMessageId={teleportToMessageId}
         />
-      )}
+      ) : null}
 
       <CMSMessageControl
         messageText={messageText}
-        setMessageText={handleTypeMessage}
+        setMessageText={text => {
+          setMessageText(text);
+          if (socketRef.current && text) {
+            socketRef.current.emit('typingMessage', {
+              sessionId,
+              toUserId: otherUser?.id,
+            });
+          }
+        }}
+        typingUsername={otherUser?.username}
         handleSendMessage={handleSendMessage}
         onImagePress={handleImagePress}
         selectedImage={selectedImage}
-        onRemoveImage={handleRemoveImage}
+        onRemoveImage={() => setSelectedImage(null)}
         disabled={loading || (sessionStatus === 'PENDING' && isInitiator)}
         setPanelVisible={setPanelVisible}
-        showTyping={true}
+        showTyping={isTyping}
       />
 
       <PanelComponent
@@ -364,6 +395,7 @@ export default function ChatsMessageScreen() {
         visible={infoPanelVisible}
         onClose={() => setInfoPanelVisible(false)}
         userId={userId}
+        handleCloseSession={handleCloseSession}
       />
     </SafeAreaView>
   );

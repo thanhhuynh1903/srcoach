@@ -64,6 +64,7 @@ import ChatsExpertConfirmScreen from '../screens/ChatsScreens/ChatsSearch/ChatsE
 import WhatsNewScreen from '../screens/SettingsScreens/SettingsAboutScreens/WhatsNewScreen';
 import UpdateScheduleScreen from '../screens/ScheduleScreens/UpdateScheduleScreen';
 import NewsDetailScreen from '../screens/NewsScreens/NewsDetailScreen';
+import CMSMessageViewMap from '../screens/ChatsScreens/ChatsMessage/CMSMessageViewMap';
 
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
@@ -131,6 +132,7 @@ export const stackScreens = [
   {name: 'ChatsExpertNotiScreen', component: ChatsExpertNotiScreen},
   {name: 'ChatsSessionMessageSearch', component: ChatsSessionMessageSearch},
   {name: 'ChatsExpertConfirmScreen', component: ChatsExpertConfirmScreen},
+  {name: "CMSMessageViewMap", component: CMSMessageViewMap},
 
   // About Screens
   {name: 'PrivacyPolicyScreen', component: PrivacyPolicyScreen},

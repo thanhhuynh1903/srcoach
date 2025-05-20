@@ -5,6 +5,10 @@ import CommonPanel from '../../../../commons/CommonPanel';
 import {theme} from '../../../../contants/theme';
 import ChatsPanelSendExerciseRecord from './ChatsPanelSendExerciseRecord';
 import ChatsPanelExpertRecommendation from './ChatsPanelExpertRecommendation';
+import ChatsPanelExpertTrainingPlan from './ChatsPanelExpertTrainingPlan';
+import ChatsPanelProfileConfirm from './ChatsPanelProfileConfirm';
+import ToastUtil from '../../../../utils/utils_toast';
+import { sendProfileMessage } from '../../../../utils/useChatsAPI';
 
 interface ChatsPanelExpertPOVExpertProps {
   visible: boolean;
@@ -21,6 +25,19 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
 }) => {
   const [showExercisePanel, setShowExercisePanel] = useState(false);
   const [showRecommendationPanel, setShowRecommendationPanel] = useState(false);
+  const [showTrainingPlanPanel, setShowTrainingPlanPanel] = useState(false);
+  const [showProfileConfirmDialog, setShowProfileConfirmDialog] = useState(false);
+
+  const handleProfileRequest = () => {
+    setShowProfileConfirmDialog(true);
+    onClose();
+  };
+
+  const handleProfileConfirm = async () => {
+    await sendProfileMessage(sessionId);
+    ToastUtil.success('Success', 'Profile sent to user successfully');
+    setShowProfileConfirmDialog(false);
+  };
 
   return (
     <>
@@ -32,9 +49,16 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
           <View style={styles.content}>
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => console.log('Send Training Plan pressed')}
+              onPress={() => {
+                onClose();
+                setShowTrainingPlanPanel(true);
+              }}
               activeOpacity={0.7}>
-              <Icon name="calendar" size={25} color={theme.colors.primaryDark} />
+              <Icon
+                name="calendar"
+                size={25}
+                color={theme.colors.primaryDark}
+              />
               <Text style={styles.actionButtonText}>Send Training Plan</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -42,7 +66,9 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
               onPress={() => setShowRecommendationPanel(true)}
               activeOpacity={0.7}>
               <Icon name="medkit" size={25} color={theme.colors.primaryDark} />
-              <Text style={styles.actionButtonText}>Send Expert Recommendation</Text>
+              <Text style={styles.actionButtonText}>
+                Send Expert Recommendation
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
@@ -50,6 +76,15 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
               activeOpacity={0.7}>
               <Icon name="walk" size={25} color={theme.colors.primaryDark} />
               <Text style={styles.actionButtonText}>View Exercise Records</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleProfileRequest}
+              activeOpacity={0.7}>
+              <Icon name="person-circle-outline" size={25} color={theme.colors.primaryDark} />
+              <Text style={styles.actionButtonText}>
+                Request for profile submission
+              </Text>
             </TouchableOpacity>
           </View>
         }
@@ -59,6 +94,7 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
         backdropOpacity={0.5}
         contentStyle={{padding: 0}}
       />
+      
       <ChatsPanelSendExerciseRecord
         visible={showExercisePanel}
         onClose={() => setShowExercisePanel(false)}
@@ -70,6 +106,17 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
         onClose={() => setShowRecommendationPanel(false)}
         sessionId={sessionId}
         onSendSuccess={onSendSuccess}
+      />
+      <ChatsPanelExpertTrainingPlan
+        visible={showTrainingPlanPanel}
+        onClose={() => setShowTrainingPlanPanel(false)}
+        sessionId={sessionId}
+        onSendSuccess={onSendSuccess}
+      />
+      <ChatsPanelProfileConfirm
+        visible={showProfileConfirmDialog}
+        onClose={() => setShowProfileConfirmDialog(false)}
+        onConfirm={handleProfileConfirm}
       />
     </>
   );

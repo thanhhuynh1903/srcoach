@@ -76,7 +76,7 @@ const HomeFunFactCard: React.FC<HomeFunFactCardProps> = ({ style }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 8,
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 25,

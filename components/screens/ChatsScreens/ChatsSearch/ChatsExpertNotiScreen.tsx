@@ -13,6 +13,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import BackButton from '../../../BackButton';
 import {theme} from '../../../contants/theme';
 import { createOrGetSession } from '../../../utils/useChatsAPI';
+import ToastUtil from '../../../utils/utils_toast';
 
 const ChatsExpertNotiScreen = () => {
   const {colors} = useTheme();
@@ -25,21 +26,20 @@ const ChatsExpertNotiScreen = () => {
   const handleProceed = () => {
     createOrGetSession(userId, message).then((response) => {
       if (response.status) {
-        navigation.navigate('ChatsMessageScreen', {userId});
+        ToastUtil.success('Success', "An invitation has been sent to the Expert!");
+        navigation.goBack();
       }
     });
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
         <BackButton size={24} />
         <Text style={styles.headerTitle}>Expert Verification</Text>
         <View style={{width: 24}} />
       </View>
 
-      {/* Content */}
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.warningContainer}>
           <Ionicons
@@ -86,7 +86,6 @@ const ChatsExpertNotiScreen = () => {
             consult with a medical professional for health-related concerns.
           </Text>
 
-          {/* Initial Message Input */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>
               Initial Message <Text style={styles.requiredStar}>*</Text>
@@ -107,7 +106,6 @@ const ChatsExpertNotiScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[
@@ -116,7 +114,7 @@ const ChatsExpertNotiScreen = () => {
           ]}
           onPress={handleProceed}
           disabled={message.length === 0}>
-          <Text style={styles.proceedButtonText}>Proceed to Chat</Text>
+          <Text style={styles.proceedButtonText}>Send Invitation to Expert</Text>
         </TouchableOpacity>
         <Text style={styles.termsText}>
           By proceeding, you agree to our Privacy Policy and Terms of Service

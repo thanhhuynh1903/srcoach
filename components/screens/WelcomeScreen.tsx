@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View, Text, Image, Animated, Easing} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {startSyncData} from '../utils/utils_healthconnect';
@@ -8,6 +8,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import ToastUtil from '../utils/utils_toast';
 import {theme} from '../contants/theme';
 import NotificationService from '../services/NotificationService';
+import {getSocket} from '../utils/socket';
 
 const WelcomeScreen = () => {
   const navigation = useNavigation();
@@ -15,6 +16,7 @@ const WelcomeScreen = () => {
   const [loadingStatus, setLoadingStatus] = useState<string>('Loading...');
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [animation] = useState(new Animated.Value(0));
+  const [loginSuccess, setLoginSuccess] = useState<boolean>(false);
 
   // Footstep animation
   useEffect(() => {
@@ -70,6 +72,22 @@ const WelcomeScreen = () => {
     outputRange: [0.8, 1.2, 0.8],
   });
 
+  const socketRef = useRef(null as any);
+  const {profile} = useLoginStore();
+
+  useEffect(() => {
+    if (loginSuccess) {
+      socketRef.current = getSocket();
+      socketRef.current.emit('joinUser', {userId: profile.id});
+    }
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [loginSuccess]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -98,6 +116,7 @@ const WelcomeScreen = () => {
             if (profileSuccess) {
               setLoadingStatus('Success');
               setShowSuccess(true);
+              setLoginSuccess(true);
 
               await setupNotifications();
               // Wait a moment to show success state before navigating

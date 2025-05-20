@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,25 +8,44 @@ import {
   Dimensions,
   Image as RNImage,
   PanResponder,
-  StyleSheet
+  StyleSheet,
+  Pressable,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { CommonAvatar } from '../../../../commons/CommonAvatar';
 import { theme } from '../../../../contants/theme';
 import { formatTimestampAgo } from '../../../../utils/utils_format';
+import CommonDialog from '../../../../commons/CommonDialog';
+import { archiveMessage } from '../../../../utils/useChatsAPI';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_IMAGE_WIDTH = SCREEN_WIDTH * 0.7;
 const MAX_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.3;
 
 interface CMIImageProps {
-  message: any;
+  message: {
+    id: string;
+    content: { url: string } | null;
+    created_at: string;
+    read_at?: string;
+    archived?: boolean;
+    sender: {
+      image?: {
+        url: string;
+      };
+      roles?: string[];
+    };
+  };
   isMe: boolean;
 }
 
-export const CMIImage = ({ message, isMe }: CMIImageProps) => {
+export const CMIImage: React.FC<CMIImageProps> = ({ message, isMe }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isArchived, setIsArchived] = useState(message?.archived || false);
+  const [isPressed, setIsPressed] = useState(false);
 
   // Animation refs
   const scale = useRef(new Animated.Value(1)).current;
@@ -40,6 +59,8 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
   const isPinching = useRef(false);
 
   const handleImageLoad = (event: any) => {
+    if (isArchived || !message.content) return;
+    
     const { width, height } = event.nativeEvent.source;
     const aspectRatio = width / height;
     
@@ -60,7 +81,6 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
         if (e.nativeEvent.touches.length === 2) {
-          // Handle pinch start
           isPinching.current = true;
           const touch1 = e.nativeEvent.touches[0];
           const touch2 = e.nativeEvent.touches[1];
@@ -69,7 +89,6 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
             touch2.pageY - touch1.pageY
           );
         } else {
-          // Handle pan start
           isPinching.current = false;
           translateX.setOffset(currentTranslate.current.x);
           translateY.setOffset(currentTranslate.current.y);
@@ -79,7 +98,6 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
       },
       onPanResponderMove: (e, gestureState) => {
         if (isPinching.current && e.nativeEvent.touches.length === 2) {
-          // Handle pinch move
           const touch1 = e.nativeEvent.touches[0];
           const touch2 = e.nativeEvent.touches[1];
           const distance = Math.hypot(
@@ -90,13 +108,11 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
           const newScale = (distance / pinchDistance.current) * currentScale.current;
           scale.setValue(Math.min(Math.max(newScale, 0.5), 3));
         } else if (!isPinching.current) {
-          // Handle pan move
           translateX.setValue(gestureState.dx);
           translateY.setValue(gestureState.dy);
         }
       },
       onPanResponderRelease: () => {
-        // Update current values after gesture
         currentTranslate.current = {
           x: translateX._value + currentTranslate.current.x,
           y: translateY._value + currentTranslate.current.y
@@ -117,8 +133,8 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
   ).current;
 
   const openModal = () => {
+    if (isArchived || !message.content) return;
     setModalVisible(true);
-    // Reset values when opening modal
     scale.setValue(1);
     translateX.setValue(0);
     translateY.setValue(0);
@@ -143,19 +159,94 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
     ]).start(() => setModalVisible(false));
   };
 
-  return (
-    <>
-      <View style={[styles.container, isMe ? styles.myContainer : styles.otherContainer]}>
+  const handleArchive = async () => {
+    setShowArchiveDialog(false);
+    const response = await archiveMessage(message.id);
+    if (response.status) {
+      setIsArchived(true);
+      setShowConfirmDialog(false);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (isMe && !isArchived) {
+      setShowArchiveDialog(true);
+    }
+  };
+
+  useEffect(() => {
+    setIsArchived(message?.archived || false);
+  }, [message?.archived]);
+
+  if (isArchived || !message.content) {
+    return (
+      <View
+        style={[
+          styles.container,
+          isMe ? styles.myContainer : styles.otherContainer,
+        ]}>
         {!isMe && (
           <View style={styles.avatar}>
             <CommonAvatar
               size={32}
               uri={message.sender.image?.url}
-              mode={message.sender.roles.includes('EXPERT') ? 'expert' : 'runner'}
+              mode={message.sender.roles?.includes('expert') ? 'expert' : 'runner'}
             />
           </View>
         )}
-        <View style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}>
+        <View
+          style={[
+            styles.bubble,
+            isMe ? styles.myBubble : styles.otherBubble,
+            isMe ? styles.archivedBubble : styles.archivedOtherBubble,
+          ]}>
+          <Text style={[styles.archivedText, isMe && styles.myArchivedText]}>
+            Image deleted{isMe ? ' by you' : ''}
+          </Text>
+          <View style={styles.footer}>
+            <Text style={isMe ? styles.myTime : styles.otherTime}>
+              {formatTimestampAgo(message.created_at)}
+            </Text>
+            {isMe && (
+              <Icon
+                name={message.read_at ? 'checkmark-done' : 'checkmark'}
+                size={14}
+                color={message.read_at ? theme.colors.primaryDark : 'rgba(255,255,255,0.5)'}
+                style={styles.icon}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <Pressable
+        style={[
+          styles.container,
+          isMe ? styles.myContainer : styles.otherContainer,
+        ]}
+        onLongPress={handleLongPress}
+        onPressIn={() => setIsPressed(true)}
+        onPressOut={() => setIsPressed(false)}
+        delayLongPress={300}>
+        {!isMe && (
+          <View style={styles.avatar}>
+            <CommonAvatar
+              size={32}
+              uri={message.sender.image?.url}
+              mode={message.sender.roles?.includes('expert') ? 'expert' : 'runner'}
+            />
+          </View>
+        )}
+        <View
+          style={[
+            styles.bubble,
+            isMe ? styles.myBubble : styles.otherBubble,
+            isPressed && isMe && styles.pressedBubble,
+          ]}>
           <View style={styles.header}>
             <Icon name="image" size={20} color={isMe ? '#fff' : theme.colors.primaryDark} />
             <Text style={[styles.title, isMe && styles.myText]}>Image</Text>
@@ -190,7 +281,7 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
             )}
           </View>
         </View>
-      </View>
+      </Pressable>
 
       <Modal visible={modalVisible} transparent={true} onRequestClose={closeModal}>
         <View style={styles.modalContainer}>
@@ -224,6 +315,53 @@ export const CMIImage = ({ message, isMe }: CMIImageProps) => {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      <CommonDialog
+        visible={showArchiveDialog}
+        onClose={() => setShowArchiveDialog(false)}
+        title="Message Options"
+        content={
+          <View>
+            <Text style={styles.dialogContentText}>
+              What would you like to do with this image?
+            </Text>
+            <TouchableOpacity
+              style={styles.dialogActionButton}
+              onPress={() => {
+                setShowArchiveDialog(false);
+                setShowConfirmDialog(true);
+              }}>
+              <Icon name="archive" size={20} color={theme.colors.primaryDark} />
+              <Text style={styles.dialogActionButtonText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
+
+      <CommonDialog
+        visible={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        title="Confirm Delete"
+        content={
+          <View>
+            <Text style={styles.dialogContentText}>
+              Are you sure you want to delete this image?
+            </Text>
+            <View style={styles.dialogButtonGroup}>
+              <TouchableOpacity
+                style={[styles.dialogButton, styles.dialogCancelButton]}
+                onPress={() => setShowConfirmDialog(false)}>
+                <Text style={styles.dialogCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dialogButton, styles.dialogConfirmButton]}
+                onPress={handleArchive}>
+                <Text style={styles.dialogConfirmButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        }
+      />
     </>
   );
 };
@@ -256,6 +394,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e5ea',
     borderBottomLeftRadius: 4,
   },
+  archivedBubble: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: theme.colors.primaryDark,
+  },
+  archivedOtherBubble: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f9f9f9',
+  },
+  pressedBubble: { opacity: 0.8 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -271,14 +420,14 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   imageContainer: {
-    maxWidth: MAX_IMAGE_WIDTH, // Ensure container doesn't exceed max width
-    overflow: 'hidden', // Prevent image from overflowing
+    maxWidth: MAX_IMAGE_WIDTH,
+    overflow: 'hidden',
   },
   image: {
     borderRadius: 8,
     marginBottom: 8,
     alignSelf: 'center',
-    maxWidth: '100%', // Ensure image doesn't exceed container width
+    maxWidth: '100%',
   },
   footer: {
     flexDirection: 'row',
@@ -326,5 +475,56 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  archivedText: {
+    fontStyle: 'italic',
+    color: '#999',
+    fontSize: 14,
+  },
+  myArchivedText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  dialogContentText: {
+    color: '#000',
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  dialogActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    marginBottom: 8,
+  },
+  dialogActionButtonText: {
+    color: '#000',
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  dialogButtonGroup: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  dialogButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 4,
+    marginLeft: 10,
+  },
+  dialogCancelButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.primaryDark,
+  },
+  dialogConfirmButton: {
+    backgroundColor: '#d30000',
+  },
+  dialogCancelButtonText: {
+    color: theme.colors.primaryDark,
+  },
+  dialogConfirmButtonText: {
+    color: '#fff',
   },
 });
