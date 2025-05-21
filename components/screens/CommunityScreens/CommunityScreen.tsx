@@ -27,6 +27,7 @@ import {SaveDraftButton} from './SaveDraftButton';
 import SkeletonPostList from './SkeletonPostList';
 import {getAllNews} from '../../utils/useNewsAPI';
 import {getNewsColorByType} from '../../contants/newsConst';
+import CommunityNewsList from './CommunityNewsList';
 // Interface cho User
 interface User {
   id: string;
@@ -96,8 +97,6 @@ const CommunityScreen = () => {
   );
   const PAGE_SIZE = 10;
   const loadingRef = useRef(false);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [newsLoading, setNewsLoading] = useState(true);
 
   const loadInitialNews = () => {
     getAllNews().then(data => {
@@ -223,22 +222,7 @@ const CommunityScreen = () => {
           </Animated.Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.sectionTitle}>Official News</Text>
-      {newsLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={theme.colors.primaryDark} />
-          <Text style={styles.loadingText}>Loading news...</Text>
-        </View>
-      ) : (
-        <FlatList
-          style={styles.newsList}
-          data={news}
-          renderItem={renderNewsItem}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={item => item.id}
-        />
-      )}
+      <CommunityNewsList />
       <Text style={styles.sectionTitle}>Community Posts</Text>
     </View>
   );
@@ -263,78 +247,6 @@ const CommunityScreen = () => {
       </View>
     );
   };
-
-  const renderNewsItem = ({item}: {item: NewsItem}) => (
-    <TouchableOpacity
-      style={styles.newsItem}
-      activeOpacity={0.85}
-      onPress={() => {
-        navigation.navigate('NewsDetailScreen', {
-          id: item.id,
-          newsItem: item,
-        });
-      }}>
-      {/* News Image */}
-      <View style={styles.newsImageContainer}>
-        {item.image_url ? (
-          <Image source={{uri: item.image_url}} style={styles.newsImage} />
-        ) : (
-          <View style={[styles.newsImage, styles.newsImagePlaceholder]}>
-            <Icon name="newspaper-outline" size={36} color="#A0AEC0" />
-          </View>
-        )}
-        <View
-          style={[
-            styles.newsBadge,
-            {backgroundColor: getNewsColorByType(item?.news_type || 'Unknown')},
-          ]}>
-          <Text style={styles.newsBadgeText}>
-            {capitalizeFirstLetter(item?.news_type || 'Unknown', true)}
-          </Text>
-        </View>
-      </View>
-      {/* News Content */}
-      <View style={styles.newsContent}>
-        <Text style={styles.newsTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.newsDescription} numberOfLines={3}>
-          {item.content?.length > 80
-            ? `${stripHtml(item.content).substring(0, 100)}...`
-            : stripHtml(item.content)}
-        </Text>
-        <View style={styles.newsFooter}>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Icon
-              name="calendar-outline"
-              size={14}
-              color="#A0AEC0"
-              style={{marginRight: 4}}
-            />
-            <Text style={styles.newsTime}>
-              {new Date(item.created_at).toLocaleDateString()}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.readMoreButton}
-            onPress={() => {
-              navigation.navigate('NewsDetailScreen', {
-                id: item.id,
-                newsItem: item,
-              });
-            }}>
-            <Text style={styles.readMoreText}>Read more</Text>
-            <Icon
-              name="chevron-forward"
-              size={14}
-              color={theme.colors.primaryDark}
-              style={{marginLeft: 2}}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
 
   const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity

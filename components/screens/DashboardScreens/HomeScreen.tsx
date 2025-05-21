@@ -27,6 +27,7 @@ import ToastUtil from '../../utils/utils_toast';
 // Constants
 import {theme} from '../../contants/theme';
 import HomeExpertContactCard from './HomeExpertContactCard';
+import CommunityNewsList from '../CommunityScreens/CommunityNewsList';
 
 type MetricInfo = {
   title: string;
@@ -201,6 +202,7 @@ const HomeScreen = () => {
           showInfoDialog={showInfoDialog}
         />
         <HomeFunFactCard />
+        <CommunityNewsList />
         <HomeExpertContactCard />
         <WellnessAndMedication navigation={navigation} />
       </ScrollView>

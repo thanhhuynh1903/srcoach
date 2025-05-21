@@ -44,6 +44,7 @@ export default function HomeExpertContactCard() {
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 25,
     marginBottom: 24,
     paddingHorizontal: 16,
   },
