@@ -93,7 +93,9 @@ const useScheduleStore = create<ScheduleState>()(
       fetchExpertSchedule: async () => {
         set({isLoading: true, error: null});
         try {
-          const response = await api.fetchDataDetail(`/schedules/expert/current-created`);
+          const response = await api.fetchDataDetail(
+            `/schedules/expert/current-created`,
+          );
           console.log('response', response);
 
           set({ExpertSchedule: response?.data, isLoading: false});
@@ -138,10 +140,7 @@ const useScheduleStore = create<ScheduleState>()(
 
           set({historySchedule: response?.data, isLoading: false});
         } catch (error) {
-          console.error(
-            'Error getting personal history schedule list:',
-            error,
-          );
+          console.error('Error getting personal history schedule list:', error);
           set({
             error:
               'Unable to get personal history schedule list. Please try again later..',
@@ -184,6 +183,8 @@ const useScheduleStore = create<ScheduleState>()(
         } catch (error: any) {
           const serverMessage =
             error.response?.data?.message || 'Unknown error';
+          console.log('serverMessage', serverMessage);
+
           set({
             message: serverMessage, // Cập nhật message trực tiếp từ server
             isLoading: false,
@@ -202,7 +203,10 @@ const useScheduleStore = create<ScheduleState>()(
       updateSchedule: async (scheduleId, data) => {
         try {
           set({isLoading: true});
-          const response = await api.putData(`/schedules/self/${scheduleId}`, data);
+          const response = await api.putData(
+            `/schedules/self/${scheduleId}`,
+            data,
+          );
           const updateSchedule = response?.status;
           console.log('Kết quả cập nhật lịch tập:', updateSchedule);
 

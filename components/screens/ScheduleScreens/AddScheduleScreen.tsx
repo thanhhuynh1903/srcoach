@@ -344,6 +344,7 @@ const AddScheduleScreen = () => {
         <DailyGoalsSection
           selectedDates={selectedDates}
           onGoalsChange={handleDailyGoalsChange}
+          view={false}
         />
         {/* Description */}
         <Text style={styles.sectionTitle}>Description</Text>
@@ -358,11 +359,11 @@ const AddScheduleScreen = () => {
         <TouchableOpacity
           style={[
             styles.createButton,
-            getSelectedDatesCount() < 3 || isCreating
+            getSelectedDatesCount() < 0 || isCreating
               ? styles.disabledButton
               : null,
           ]}
-          disabled={getSelectedDatesCount() < 3 || isCreating}
+          disabled={getSelectedDatesCount() < 0 || isCreating}
           onPress={handleCreateSchedule}>
           {isCreating ? (
             <ActivityIndicator color="#FFFFFF" />

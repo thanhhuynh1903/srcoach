@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,15 @@ import {
   Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {Calendar} from 'react-native-calendars';
+import { Calendar } from 'react-native-calendars';
 import DailyGoalsSection from '../../DailyGoalsScreen';
 import BackButton from '../../BackButton';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import useScheduleStore from '../../utils/useScheduleStore';
-import {ActivityIndicator} from 'react-native-paper';
-import {is} from 'date-fns/locale';
+import { ActivityIndicator } from 'react-native-paper';
+import { is } from 'date-fns/locale';
 import Toast from 'react-native-toast-message';
-import {useRoute} from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 interface TrainingSession {
   description: string;
   start_time: string;
@@ -43,7 +43,7 @@ const UpdateScheduleScreen = () => {
   const [description, setDescription] = useState('');
   const [selectedDates, setSelectedDates] = useState<Record<string, any>>({});
   const [currentMonth, setCurrentMonth] = useState('');
-  const [validDates, setValidDates] = useState<{[key: string]: any}>({});
+  const [validDates, setValidDates] = useState<{ [key: string]: any }>({});
   const {
     updateSchedule,
     schedules,
@@ -56,8 +56,8 @@ const UpdateScheduleScreen = () => {
   // Daily goals for each selected date
   const [dailyGoals, setDailyGoals] = useState<DailySchedule[]>([]);
   const route = useRoute();
-  const {scheduleId} = route.params as {scheduleId: string};
-  const {view} = route.params as {view: boolean};
+  const { scheduleId } = route.params as { scheduleId: string };
+  const { view } = route.params as { view: boolean };
   const [initialGoals, setInitialGoals] = useState<DailySchedule[]>([]);
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
@@ -69,64 +69,64 @@ const UpdateScheduleScreen = () => {
   //   }
   // }, [message]);
   const handleUpdateSchedule = async () => {
-  try {
-    setIsCreating(true);
+    try {
+      setIsCreating(true);
 
-    const validDays = dailyGoals?.filter(
-      (day: DailySchedule) =>
-        !day.details.some(session => session.status === 'MISSED'),
-    );
-
-    // Kiểm tra nếu không còn ngày nào hợp lệ
-    if (validDays.length === 0) {
-      Alert.alert(
-        'Cannot Update',
-        'All selected days contain missed sessions that cannot be updated',
-        [{ text: 'OK' }],
+      const validDays = dailyGoals?.filter(
+        (day: DailySchedule) =>
+          !day.details.some(session => session.status === 'MISSED'),
       );
-      setIsCreating(false);
-      return;
-    }
 
-    const cleanedDays = validDays?.map((day: DailySchedule) => ({
-      ...day,
-      details: day.details.map(({ status, ...rest }) => rest), // Bỏ trường status
-    }));
+      // Kiểm tra nếu không còn ngày nào hợp lệ
+      if (validDays.length === 0) {
+        Alert.alert(
+          'Cannot Update',
+          'All selected days contain missed sessions that cannot be updated',
+          [{ text: 'OK' }],
+        );
+        setIsCreating(false);
+        return;
+      }
 
-    const formData = {
-      title,
-      description,
-      days: cleanedDays,
-    };
+      const cleanedDays = validDays?.map((day: DailySchedule) => ({
+        ...day,
+        details: day.details.map(({ status, ...rest }) => rest), // Bỏ trường status
+      }));
 
-    const result = await updateSchedule(scheduleId, formData);
+      const formData = {
+        title,
+        description,
+        days: cleanedDays,
+      };
 
-    if (result === 'success') {
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'Schedule updated successfully',
-      });
-      await fetchSelfSchedules();
-      navigate.goBack();
-    } else {
+      const result = await updateSchedule(scheduleId, formData);
+
+      if (result === 'success') {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Schedule updated successfully',
+        });
+        await fetchSelfSchedules();
+        navigate.goBack();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Update failed',
+          text2: 'Could not update schedule. Please try again.',
+        });
+      }
+    } catch (err) {
+      console.log('Error updating schedule:', err);
       Toast.show({
         type: 'error',
-        text1: 'Update failed',
-        text2: 'Could not update schedule. Please try again.',
+        text1: 'Error',
+        text2: 'An error occurred while updating the schedule.',
       });
+    } finally {
+      setIsCreating(false);
     }
-  } catch (err) {
-    console.log('Error updating schedule:', err);
-    Toast.show({
-      type: 'error',
-      text1: 'Error',
-      text2: 'An error occurred while updating the schedule.',
-    });
-  } finally {
-    setIsCreating(false);
-  }
-};
+  };
 
   // Initialize with current date and set valid date range (today + 6 days)
   useEffect(() => {
@@ -134,7 +134,7 @@ const UpdateScheduleScreen = () => {
     const todayStr = formatDateString(today);
 
     // Tạo validDates cho 14 ngày tới
-    const validDatesObj: {[key: string]: any} = {};
+    const validDatesObj: { [key: string]: any } = {};
     for (let i = 0; i < MAX_DAYS_SELECTION; i++) {
       const date = new Date();
       date.setDate(today.getDate() + i);
@@ -200,7 +200,7 @@ const UpdateScheduleScreen = () => {
 
         // Cập nhật selectedDates
         const dates = convertedDays.reduce((acc, day) => {
-          acc[day.day] = {selected: true, selectedColor: '#0F2B5B'};
+          acc[day.day] = { selected: true, selectedColor: '#0F2B5B' };
           return acc;
         }, {});
 
@@ -236,7 +236,7 @@ const UpdateScheduleScreen = () => {
     // Check if date is in valid range
     if (selectedDate < today && !initialGoals.find(d => d.day === dateStr)) {
       Alert.alert('Invalid Selection', 'Cannot select past dates', [
-        {text: 'OK'},
+        { text: 'OK' },
       ]);
       return;
     }
@@ -245,12 +245,12 @@ const UpdateScheduleScreen = () => {
       Alert.alert(
         'Invalid Selection',
         'You can only select days within the next 14 days starting from today.',
-        [{text: 'OK'}],
+        [{ text: 'OK' }],
       );
       return;
     }
     setSelectedDates(prevSelectedDates => {
-      const newSelectedDates = {...prevSelectedDates};
+      const newSelectedDates = { ...prevSelectedDates };
 
       if (newSelectedDates[dateStr]) {
         // If already selected, remove it
@@ -287,12 +287,12 @@ const UpdateScheduleScreen = () => {
 
   const formatDate = dateString => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   // Combine marked dates (selected + valid dates)
   const getMarkedDates = () => {
-    const markedDates: {[key: string]: any} = {...validDates};
+    const markedDates: { [key: string]: any } = { ...validDates };
 
     // Thêm các ngày đã chọn và initial goals
     Object.keys(selectedDates).forEach(dateStr => {
@@ -472,7 +472,7 @@ const UpdateScheduleScreen = () => {
           selectedDates={selectedDates}
           onGoalsChange={handleDailyGoalsChange}
           initialSchedules={initialGoals}
-          view={view}
+          view={view === undefined ? false : view}
         />
         {/* Description */}
         <Text style={styles.sectionTitle}>Description</Text>
@@ -489,11 +489,11 @@ const UpdateScheduleScreen = () => {
           <TouchableOpacity
             style={[
               styles.createButton,
-              getSelectedDatesCount() < 3 || isCreating
+              getSelectedDatesCount() < 0 || isCreating
                 ? styles.disabledButton
                 : null,
             ]}
-            disabled={getSelectedDatesCount() < 3 || isCreating}
+            disabled={getSelectedDatesCount() < 0 || isCreating}
             onPress={handleUpdateSchedule}>
             {isCreating ? (
               <ActivityIndicator color="#FFFFFF" />

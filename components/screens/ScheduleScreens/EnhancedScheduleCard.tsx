@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,10 @@ import {
   Easing,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import WorkoutComparison from './Comparison';
 import useScheduleStore from '../../utils/useScheduleStore';
-import {theme} from '../../contants/theme';
+import { theme } from '../../contants/theme';
 import Toast from 'react-native-toast-message';
 
 interface Workout {
@@ -70,12 +70,27 @@ const EnhancedScheduleCard = ({
   const [selectedDay, setSelectedDay] = useState(initialSelectedDay);
   const [alarmEnabled, setAlarmEnabled] = useState(initialAlarmEnabled);
   const [expanded, setExpanded] = useState(false);
-  const {deleteSchedule, message, clear} = useScheduleStore();
+  const { deleteSchedule, message, clear } = useScheduleStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [expandAnimation] = useState(new Animated.Value(0));
 
   const handleMorePress = () => {
     setModalVisible(true);
+  };
+  const calculateTotals = (schedules: DaySchedule[]) => {
+    let totalSteps = 0;
+    let totalDistance = 0;
+    let totalCalories = 0;
+
+    schedules.forEach(day => {
+      day.workouts.forEach(workout => {
+        totalSteps += workout.steps || 0;
+        totalDistance += workout.distance || 0;
+        totalCalories += workout.calories || 0;
+      });
+    });
+
+    return { totalSteps, totalDistance, totalCalories };
   };
 
   const handleDelete = () => {
@@ -83,7 +98,7 @@ const EnhancedScheduleCard = ({
       'Delete Schedule',
       'Are you sure you want to delete this schedule?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
@@ -111,11 +126,11 @@ const EnhancedScheduleCard = ({
   };
 
   const handleEdit = async () => {
-    await navigation.navigate('UpdateScheduleScreen', {scheduleId: id});
+    await navigation.navigate('UpdateScheduleScreen', { scheduleId: id });
     setModalVisible(false);
   };
   const handleViewDetail = async () => {
-    await navigation.navigate('UpdateScheduleScreen', {scheduleId: id, view: true});
+    await navigation.navigate('UpdateScheduleScreen', { scheduleId: id, view: true });
     setModalVisible(false);
   };
   const handleContact = async () => {
@@ -223,13 +238,13 @@ const EnhancedScheduleCard = ({
         </View>
         <View style={styles.headerRight}>
           <View
-            style={[styles.statusBadge, {backgroundColor: getStatusColor()}]}>
+            style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{status}</Text>
           </View>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleMorePress}
-            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Icon name="ellipsis-vertical" size={18} color="#64748B" />
           </TouchableOpacity>
         </View>
@@ -240,7 +255,34 @@ const EnhancedScheduleCard = ({
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={styles.cardDescription}>{description}</Text>
       </View>
+      <View style={styles.totalsContainer}>
+        {/* Steps */}
+        <View style={styles.totalItem}>
+          <Icon name="footsteps-outline" size={20} color="#3B82F6" />
+          <Text style={styles.totalValue}>
+            {calculateTotals(daySchedules).totalSteps.toLocaleString()}
+          </Text>
+          <Text style={styles.totalLabel}>Total Steps</Text>
+        </View>
 
+        {/* Distance */}
+        <View style={styles.totalItem}>
+          <Icon name="map-outline" size={20} color="#3B82F6" />
+          <Text style={styles.totalValue}>
+            {calculateTotals(daySchedules).totalDistance.toFixed(1)} km
+          </Text>
+          <Text style={styles.totalLabel}>Total Distance</Text>
+        </View>
+
+        {/* Calories */}
+        <View style={styles.totalItem}>
+          <Icon name="flame-outline" size={20} color="#F97316" />
+          <Text style={styles.totalValue}>
+            {calculateTotals(daySchedules).totalCalories.toLocaleString()}
+          </Text>
+          <Text style={styles.totalLabel}>Total Calories</Text>
+        </View>
+      </View>
       {/* Calendar Days */}
       <View style={styles.daysContainer}>
         {days?.map(day => {
@@ -282,7 +324,7 @@ const EnhancedScheduleCard = ({
       <Animated.View
         style={[
           styles.workoutDetailsWrapper,
-          {maxHeight, opacity: expandAnimation},
+          { maxHeight, opacity: expandAnimation },
         ]}>
         {selectedDaySchedule && selectedDaySchedule.workouts.length > 0 && (
           <View style={styles.workoutDetailsContainer}>
@@ -305,10 +347,10 @@ const EnhancedScheduleCard = ({
                           workout.status === 'COMPLETED'
                             ? '#22C55E'
                             : workout.status === 'UPCOMING'
-                            ? '#3B82F6'
-                            : workout.status === 'ONGOING'
-                            ? '#6366F1'
-                            : '#EF4444',
+                              ? '#3B82F6'
+                              : workout.status === 'ONGOING'
+                                ? '#6366F1'
+                                : '#EF4444',
                       },
                     ]}>
                     <Text style={styles.workoutStatusText}>
@@ -498,7 +540,7 @@ const EnhancedScheduleCard = ({
           <Switch
             value={alarmEnabled}
             onValueChange={setAlarmEnabled}
-            trackColor={{false: '#E2E8F0', true: '#3B82F6'}}
+            trackColor={{ false: '#E2E8F0', true: '#3B82F6' }}
             thumbColor={alarmEnabled ? '#fff' : '#fff'}
             ios_backgroundColor="#E2E8F0"
           />
@@ -536,7 +578,7 @@ const EnhancedScheduleCard = ({
                   style={styles.modalOption}
                   onPress={handleDelete}>
                   <Icon name="trash-outline" size={24} color="#EF4444" />
-                  <Text style={[styles.modalOptionText, {color: '#EF4444'}]}>
+                  <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>
                     Delete
                   </Text>
                 </TouchableOpacity>
@@ -589,7 +631,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
@@ -706,7 +748,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
@@ -718,7 +760,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   timeChildContainer: {
-   flexDirection: "row",
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
     paddingHorizontal: 10,
@@ -800,7 +842,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#3B82F6',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
@@ -950,6 +992,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.primaryDark,
   },
+  totalsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 16,
+    paddingHorizontal: 16,
+  },
+  totalItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  totalValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 8,
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 4,
+  },
+
 });
 
 export default EnhancedScheduleCard;
