@@ -1,11 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator} from 'react-native';
+import {View, Text, StyleSheet, FlatList, TouchableOpacity, Image} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import {useNavigation} from '@react-navigation/native';
 import {getAllNews} from '../../utils/useNewsAPI';
 import {getNewsColorByType} from '../../contants/newsConst';
 import {stripHtml, capitalizeFirstLetter} from '../../utils/utils_format';
+import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
 
 interface NewsItem {
   id: string;
@@ -15,6 +16,26 @@ interface NewsItem {
   created_at: string;
   news_type?: string;
 }
+
+const NewsItemLoader = () => (
+  <View style={styles.newsItem}>
+    <ContentLoader 
+      speed={1}
+      width={240}
+      height={200}
+      viewBox="0 0 240 200"
+      backgroundColor="#f3f3f3"
+      foregroundColor="#ecebeb"
+    >
+      <Rect x="0" y="0" rx="10" ry="10" width="216" height="100" />
+      <Rect x="0" y="115" rx="4" ry="4" width="180" height="15" />
+      <Rect x="0" y="140" rx="4" ry="4" width="216" height="10" />
+      <Rect x="0" y="155" rx="4" ry="4" width="216" height="10" />
+      <Rect x="0" y="170" rx="4" ry="4" width="150" height="10" />
+      <Rect x="170" y="180" rx="4" ry="4" width="46" height="15" />
+    </ContentLoader>
+  </View>
+);
 
 const CommunityNewsList = () => {
   const navigation = useNavigation();
@@ -85,7 +106,11 @@ const CommunityNewsList = () => {
               style={{marginRight: 4}}
             />
             <Text style={styles.newsTime}>
-              {new Date(item.created_at).toLocaleDateString()}
+              {`${new Date(item.created_at).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+              })} ${new Date(item.created_at).toLocaleTimeString()}`}
             </Text>
           </View>
           <TouchableOpacity
@@ -96,7 +121,6 @@ const CommunityNewsList = () => {
                 newsItem: item,
               });
             }}>
-            <Text style={styles.readMoreText}>Read more</Text>
             <Icon
               name="chevron-forward"
               size={14}
@@ -109,26 +133,28 @@ const CommunityNewsList = () => {
     </TouchableOpacity>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={theme.colors.primaryDark} />
-        <Text style={styles.loadingText}>Loading news...</Text>
-      </View>
-    );
-  }
-
   return (
     <View>
       <Text style={styles.sectionTitle}>Official News</Text>
-      <FlatList
-        style={styles.newsList}
-        data={news}
-        renderItem={renderNewsItem}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={item => item.id}
-      />
+      {loading ? (
+        <FlatList
+          style={styles.newsList}
+          data={[1, 2, 3]} // Dummy data for loading
+          renderItem={() => <NewsItemLoader />}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.toString()}
+        />
+      ) : (
+        <FlatList
+          style={styles.newsList}
+          data={news}
+          renderItem={renderNewsItem}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={item => item.id}
+        />
+      )}
     </View>
   );
 };
@@ -222,15 +248,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     marginRight: 2,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
   },
 });
 

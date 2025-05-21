@@ -18,15 +18,12 @@ import {usePostStore} from '../../utils/usePostStore';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
 import {
-  capitalizeFirstLetter,
   formatTimeAgo,
-  stripHtml,
 } from '../../utils/utils_format';
 import {CommonAvatar} from '../../commons/CommonAvatar';
 import {SaveDraftButton} from './SaveDraftButton';
 import SkeletonPostList from './SkeletonPostList';
 import {getAllNews} from '../../utils/useNewsAPI';
-import {getNewsColorByType} from '../../contants/newsConst';
 import CommunityNewsList from './CommunityNewsList';
 // Interface cho User
 interface User {
@@ -62,13 +59,6 @@ interface Post {
   is_saved: boolean;
   is_downvoted: boolean;
 }
-interface NewsItem {
-  id: string;
-  title: string;
-  content: string;
-  image_url?: string;
-  created_at: string;
-}
 
 const PLACEHOLDER_TEXTS = [
   'Sharing your wonderful running record',
@@ -97,13 +87,6 @@ const CommunityScreen = () => {
   );
   const PAGE_SIZE = 10;
   const loadingRef = useRef(false);
-
-  const loadInitialNews = () => {
-    getAllNews().then(data => {
-      setNews(Array.isArray(data) ? data : []);
-      setNewsLoading(false);
-    });
-  };
 
   const loadInitialPosts = async () => {
     if (loadingRef.current) return;
@@ -188,7 +171,6 @@ const CommunityScreen = () => {
 
   useEffect(() => {
     clearCurrent();
-    loadInitialNews();
     loadInitialPosts();
   }, []);
 
@@ -670,87 +652,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
     marginHorizontal: 16,
-  },
-  newsList: {
-    paddingHorizontal: 16,
-    marginRight: 16,
-  },
-  newsItem: {
-    width: 240,
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 12,
-    marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  newsImageContainer: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  newsBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: theme.colors.primaryDark,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    zIndex: 2,
-  },
-  newsBadgeText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-    marginLeft: 3,
-    letterSpacing: 0.5,
-  },
-  newsImage: {
-    width: '100%',
-    height: 100,
-    borderRadius: 10,
-    backgroundColor: '#E5E7EB',
-  },
-  newsImagePlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  newsContent: {flex: 1},
-  newsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E3A8A',
-    marginBottom: 4,
-  },
-  newsDescription: {
-    color: '#475569',
-    fontSize: 12,
-    marginBottom: 10,
-  },
-  newsFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  newsTime: {color: '#6a6a6a', fontSize: 12},
-  readMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-    backgroundColor: '#EEF2FF',
-  },
-  readMoreText: {
-    color: theme.colors.primaryDark,
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginRight: 2,
   },
   postItem: {
     marginBottom: 20,
