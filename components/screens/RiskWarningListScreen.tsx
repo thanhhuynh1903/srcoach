@@ -684,6 +684,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   riskItemContainer: {
+    marginTop: 16,
     marginBottom: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
