@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Components
 import HomeHeader from '../../HomeHeader';
@@ -27,6 +26,7 @@ import ToastUtil from '../../utils/utils_toast';
 
 // Constants
 import {theme} from '../../contants/theme';
+import HomeExpertContactCard from './HomeExpertContactCard';
 
 type MetricInfo = {
   title: string;
@@ -201,6 +201,7 @@ const HomeScreen = () => {
           showInfoDialog={showInfoDialog}
         />
         <HomeFunFactCard />
+        <HomeExpertContactCard />
         <WellnessAndMedication navigation={navigation} />
       </ScrollView>
 

@@ -16,23 +16,14 @@ import Icon from '@react-native-vector-icons/ionicons';
 import ToastUtil from '../../utils/utils_toast';
 import ContentLoader, {Rect} from 'react-content-loader/native';
 import BackButton from '../../BackButton';
+import { capitalizeFirstLetter } from '../../utils/utils_format';
+import { getNewsColorByType } from '../../contants/newsConst';
 
 type RootStackParamList = {
   NewsDetail: {id: string; newsItem: any};
 };
 
 type NewsDetailRouteProp = RouteProp<RootStackParamList, 'NewsDetail'>;
-
-type NewsDetail = {
-  id: string;
-  title: string;
-  content: string;
-  news_type: string;
-  created_at: string;
-  AdminUser: {
-    username: string;
-  };
-};
 
 export default function NewsDetailScreen() {
   const route = useRoute<NewsDetailRouteProp>();
@@ -184,7 +175,9 @@ export default function NewsDetailScreen() {
           <Text style={styles.title}>{newsDetail.title}</Text>
           <View style={styles.metadataContainer}>
             <View style={styles.metadata}>
-              <Text style={styles.type}>{newsDetail?.news_type}</Text>
+              <Text style={[styles.type, { backgroundColor: getNewsColorByType(newsDetail?.news_type) }]}>
+                {capitalizeFirstLetter(newsDetail?.news_type, true)}
+              </Text>
               <Text style={styles.date}>
                 {formatDate(newsDetail.created_at)}
               </Text>
@@ -257,16 +250,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   type: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
     paddingVertical: 4,
     paddingHorizontal: 8,
-    backgroundColor: '#e0e0e0',
+    color: '#FFFFFF',
     borderRadius: 16,
-    color: '#333',
     textAlign: 'center',
     textAlignVertical: 'center',
-    height: 24,
   },
   date: {
     fontSize: 14,

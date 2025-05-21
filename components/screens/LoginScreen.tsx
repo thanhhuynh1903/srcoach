@@ -38,7 +38,7 @@ const LoginScreen: React.FC<{
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const {login, message, status, clear} = useLoginStore();
+  const {data, profile, login, message, status, clear} = useLoginStore();
   const canGoBack = navigation.canGoBack();
   const {loadToken} = useAuthStore();
   const prevStatusRef = useRef('');
@@ -62,7 +62,7 @@ const LoginScreen: React.FC<{
         clear();
       } else if (status === 'wait') {
         navigation.navigate('VerifyLoginScreen', {
-          emailLabel: email,
+          emailLabel: data.user.email,
           password: password,
         });
         setInvalidPassword(false);

@@ -72,15 +72,16 @@ const PasswordRecoveryScreen = () => {
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <Input
-            icon={<Icon name="mail-outline" size={24} color="black" />}
+            icon={'mail-outline'}
             placeholder="Email"
             value={email}
             onChangeText={text => setEmail(text)}
-            keyboardType="email-address"
+            keyboardType="email"
+            validated={isValidEmail}
+            errorMsg={
+              isValidEmail === false && 'Please enter a valid email address'
+            }
           />
-          {isValidEmail === false && (
-            <Text style={styles.errorText}>Please enter a valid email</Text>
-          )}
         </View>
 
         {/* Submit Button */}

@@ -7,7 +7,6 @@ import {
   Pressable,
   TouchableOpacity,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -15,24 +14,33 @@ import {wp, hp} from '../helpers/common';
 import BackButton from '../BackButton';
 import {theme} from '../contants/theme';
 import Input from '../Input';
-import Icon from '@react-native-vector-icons/ionicons';
 import ButtonModify from '../Button';
 import {useRegisterStore} from '../utils/useRegisterStore';
-import {Picker} from '@react-native-picker/picker';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import CommonDialog from '../commons/CommonDialog';
 
 const SignUpScreen = ({navigation}: {navigation: any}) => {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
-  const [gender, setGender] = useState('');
+  const [gender, setGender] = useState('male');
   const [dob, setDob] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordCf, setPasswordCf] = useState('');
-  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogContent, setDialogContent] = useState('');
+  const [dialogTitle, setDialogTitle] = useState('');
 
   const {dataUser, status, message, register, clear} = useRegisterStore();
   const [loading, setLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({
+    username: '',
+    name: '',
+    gender: '',
+    dob: '',
+    email: '',
+    password: '',
+    passwordCf: '',
+  });
 
   const emailValidated = (): boolean | null => {
     if (!email) return null;
@@ -40,123 +48,107 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
     return emailRegex.test(email);
   };
 
-  // Hàm validate đầu vào
-  const validateInputs = (): boolean => {
-    // Trim các giá trị đầu vào
-    const trimmedName = name.trim();
-    const trimmedUsername = username.trim();
-    const trimmedGender = gender.trim().toLowerCase();
-    const trimmedDob = dob.trim();
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
-    const trimmedPasswordCf = passwordCf.trim();
+  const showDialog = (title: string, content: string) => {
+    setDialogTitle(title);
+    setDialogContent(content);
+    setDialogVisible(true);
+  };
 
-    // Validate Name (3-25 ký tự)
+  const validateInputs = (): boolean => {
+    const errors = {
+      username: '',
+      name: '',
+      gender: '',
+      dob: '',
+      email: '',
+      password: '',
+      passwordCf: '',
+    };
+    let isValid = true;
+
+    // Validate Name
+    const trimmedName = name.trim();
     const nameRegex = /^[a-zA-ZÀ-ỹ\s']{3,25}$/;
     if (!trimmedName) {
-      Alert.alert('Error', 'Name is required.');
-      return false;
-    }
-    if (!nameRegex.test(trimmedName)) {
-      Alert.alert(
-        'Invalid Name',
-        'Name must be 3-25 characters, only letters and accents are allowed.',
-      );
-      return false;
+      errors.name = 'Name is required';
+      isValid = false;
+    } else if (!nameRegex.test(trimmedName)) {
+      errors.name = '3-25 characters, only letters and accents allowed';
+      isValid = false;
     }
 
-    // Validate Username (8-40 ký tự)
+    // Validate Username
+    const trimmedUsername = username.trim();
     const usernameRegex = /^[a-zA-Z0-9_]{8,40}$/;
     if (!trimmedUsername) {
-      Alert.alert('Error', 'Username is required.');
-      return false;
-    }
-    if (!usernameRegex.test(trimmedUsername)) {
-      Alert.alert(
-        'Invalid Username',
-        'Username must be 8-40 characters, only letters, numbers and underscores are allowed.',
-      );
-      return false;
+      errors.username = 'Username is required';
+      isValid = false;
+    } else if (!usernameRegex.test(trimmedUsername)) {
+      errors.username =
+        '8-40 characters, letters, numbers and underscores only';
+      isValid = false;
     }
 
-    // Validate Gender (chính xác các giá trị yêu cầu)
+    // Validate Gender
+    const trimmedGender = gender.trim().toLowerCase();
     const validGenders = ['male', 'female', 'others'];
     if (!validGenders.includes(trimmedGender)) {
-      Alert.alert(
-        'Error',
-        'Please select a valid gender (Male/Female/Others).',
-      );
-      return false;
+      errors.gender = 'Please select a valid gender';
+      isValid = false;
     }
 
     // Validate Date of Birth
+    const trimmedDob = dob.trim();
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!trimmedDob || !dateRegex.test(trimmedDob)) {
-      Alert.alert(
-        'Error',
-        'Please enter a valid date of birth in yyyy-mm-dd format.',
-      );
-      return false;
-    }
-
-    // Validate Age >= 13
-    const dobDate = new Date(trimmedDob);
-    const age = new Date().getFullYear() - dobDate.getFullYear();
-    if (age < 13) {
-      Alert.alert('Error', 'You must be at least 13 years old to register.');
-      return false;
+      errors.dob = 'Please enter a valid date (yyyy-mm-dd)';
+      isValid = false;
+    } else {
+      const dobDate = new Date(trimmedDob);
+      const age = new Date().getFullYear() - dobDate.getFullYear();
+      if (age < 13) {
+        errors.dob = 'You must be at least 13 years old';
+        isValid = false;
+      }
     }
 
     // Validate Email
+    const trimmedEmail = email.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
-      Alert.alert('Error', 'Please enter a valid email address.');
-      return false;
+      errors.email = 'Please enter a valid email address';
+      isValid = false;
     }
 
-    // Validate Password (8-40 ký tự)
+    // Validate Password
+    const trimmedPassword = password.trim();
     if (trimmedPassword.length < 8 || trimmedPassword.length > 40) {
-      Alert.alert('Error', 'Password must be between 8 and 40 characters.');
-      return false;
+      errors.password = 'Password must be 8-40 characters';
+      isValid = false;
     }
 
     // Validate Password Confirmation
+    const trimmedPasswordCf = passwordCf.trim();
     if (trimmedPassword !== trimmedPasswordCf) {
-      Alert.alert('Error', 'Passwords do not match.');
-      return false;
+      errors.passwordCf = 'Passwords do not match';
+      isValid = false;
     }
 
-    return true;
+    setValidationErrors(errors);
+    return isValid;
   };
 
   useEffect(() => {
     clear();
   }, [navigation]);
 
-  const showDatePicker = () => {
-    setDatePickerVisibility(true);
-  };
-
-  const hideDatePicker = () => {
-    setDatePickerVisibility(false);
-  };
-
-  // Xử lý khi xác nhận chọn ngày
-  const handleConfirm = date => {
-    // Format date to yyyy-mm-dd
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    setDob(`${year}-${month}-${day}`);
-    hideDatePicker();
-  };
-
-  // Handle registration
   const handleRegister = async () => {
-    if (!validateInputs()) return;
-    setLoading(true); // Start loading
-    console.log('status register', status);
+    if (!validateInputs()) {
+      showDialog('Validation Error', 'Please fix all errors before submitting');
+      return;
+    }
 
+    setLoading(true);
     try {
       await register(
         name.trim(),
@@ -167,7 +159,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
         password,
       );
     } catch (error) {
-      console.error(error);
+      showDialog('Registration Error', 'An error occurred during registration');
     } finally {
       setLoading(false);
     }
@@ -175,7 +167,6 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 
   useEffect(() => {
     if (status === 'success') {
-      console.log('dataUser', dataUser);
       navigation.navigate('VerifyScreen', {
         emailLabel: email,
       });
@@ -205,121 +196,65 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
 
           <View style={styles.form}>
             <Input
-              icon={
-                <Icon
-                  name="person-circle-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                />
-              }
+              icon="person-circle-outline"
               placeholder="Username (8-40 characters)"
               onChangeText={setUsername}
               value={username}
               keyboardType="default"
               containerStyle={styles.inputContainer}
+              errorMsg={validationErrors.username}
             />
 
             <Input
-              icon={
-                <Icon
-                  name="person-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                />
-              }
-              placeholder="Full Name"
+              icon="person-outline"
+              placeholder="Full name (John Doe)"
               onChangeText={setName}
               value={name}
               keyboardType="default"
               containerStyle={styles.inputContainer}
+              errorMsg={validationErrors.name}
             />
 
             <View style={styles.rowContainer}>
-              <TouchableOpacity
-                style={styles.genderPickerContainer}
-                activeOpacity={0.8}
-                onPress={() => {
-                  // This is just to make it look more interactive
-                  // The actual picker will still open as normal
-                }}>
-                <View style={styles.pickerIconContainer}>
-                  <Icon
-                    name="people-outline"
-                    size={22}
-                    color={theme.colors.primary}
-                  />
-                </View>
-                <Picker
-                  selectedValue={gender}
-                  onValueChange={itemValue => setGender(itemValue)}
-                  style={styles.genderPicker}
-                  dropdownIconColor={theme.colors.primary}>
-                  <Picker.Item
-                    label="Gender"
-                    value=""
-                    style={{fontSize: 14, color: '#999'}}
-                  />
-                  <Picker.Item
-                    label="Male"
-                    value="Male"
-                    style={{fontSize: 14}}
-                  />
-                  <Picker.Item
-                    label="Female"
-                    value="Female"
-                    style={{fontSize: 14}}
-                  />
-                  <Picker.Item
-                    label="Other"
-                    value="Other"
-                    style={{fontSize: 14}}
-                  />
-                </Picker>
-              </TouchableOpacity>
+              <Input
+                icon="transgender-outline"
+                placeholder="Select Gender"
+                value={gender}
+                onChangeText={setGender}
+                keyboardType="picker"
+                pickerItems={[
+                  {label: 'Male', value: 'male'},
+                  {label: 'Female', value: 'female'},
+                  {label: 'Others', value: 'others'},
+                ]}
+                containerStyle={[styles.inputContainer, {width: '48%'}]}
+                errorMsg={validationErrors.gender}
+              />
 
-              <TouchableOpacity
-                style={styles.datePickerButton}
-                onPress={showDatePicker}
-                activeOpacity={0.8}>
-                <Icon
-                  name="calendar-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                  style={styles.dateIcon}
-                />
-                <Text style={[styles.dateText, !dob && styles.placeholderText]}>
-                  {dob || 'Date of Birth'}
-                </Text>
-              </TouchableOpacity>
+              <Input
+                icon="calendar-outline"
+                placeholder="Date of Birth"
+                value={dob}
+                onDateConfirm={date => {
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  setDob(`${year}-${month}-${day}`);
+                }}
+                keyboardType="date"
+                containerStyle={[styles.inputContainer, {width: '48%'}]}
+                errorMsg={validationErrors.dob}
+              />
             </View>
 
-            <DateTimePickerModal
-              isVisible={isDatePickerVisible}
-              mode="date"
-              onConfirm={handleConfirm}
-              onCancel={hideDatePicker}
-              maximumDate={new Date()}
-              minimumDate={new Date(1900, 0, 1)}
-              display="spinner"
-              confirmTextIOS="Confirm"
-              cancelTextIOS="Cancel"
-              headerTextIOS="Select Date of Birth"
-            />
-
             <Input
-              icon={
-                <Icon
-                  name="mail-outline"
-                  size={22}
-                  color={theme.colors.primary}
-                />
-              }
               placeholder="Email Address"
               onChangeText={setEmail}
               value={email}
               keyboardType="email"
               validated={emailValidated()}
               containerStyle={styles.inputContainer}
+              errorMsg={validationErrors.email}
             />
 
             <Input
@@ -329,6 +264,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
               value={password}
               secureTextEntry
               containerStyle={styles.inputContainer}
+              errorMsg={validationErrors.password}
             />
 
             <Input
@@ -338,6 +274,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
               value={passwordCf}
               secureTextEntry
               containerStyle={styles.inputContainer}
+              errorMsg={validationErrors.passwordCf}
             />
 
             {message ? (
@@ -356,6 +293,7 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
             onPress={handleRegister}
             loading={loading}
             style={styles.registerButton}
+            textStyle={styles.registerButtonText}
           />
 
           <View style={styles.termsContainer}>
@@ -385,6 +323,20 @@ const SignUpScreen = ({navigation}: {navigation: any}) => {
           </View>
         </View>
       </ScrollView>
+
+      <CommonDialog
+        visible={dialogVisible}
+        onClose={() => setDialogVisible(false)}
+        title={dialogTitle}
+        content={<Text>{dialogContent}</Text>}
+        actionButtons={[
+          {
+            label: 'OK',
+            variant: 'contained',
+            handler: () => setDialogVisible(false),
+          },
+        ]}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -419,14 +371,10 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: hp(2),
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
   },
   rowContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: hp(2),
   },
   genderPickerContainer: {
     width: '48%',
@@ -479,13 +427,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: hp(5),
   },
+  registerButtonText: {
+    color: 'white',
+    fontSize: hp(2),
+    fontWeight: '600',
+  },
   termsContainer: {
     marginTop: hp(1),
     alignItems: 'center',
     marginBottom: hp(1),
   },
   termsText: {
-    fontSize: hp(1.6),
+    fontSize: 14,
     color: theme.colors.textLight,
     textAlign: 'center',
   },
@@ -496,45 +449,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryDark,
     fontWeight: '600',
-    fontSize: hp(1.6),
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: hp(3),
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E8E8E8',
-  },
-  orText: {
-    paddingHorizontal: wp(4),
-    color: theme.colors.textLight,
-    fontSize: hp(1.6),
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: hp(2),
-    borderRadius: 12,
-    marginBottom: hp(3),
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-  },
-  socialIcon: {
-    width: hp(2.5),
-    height: hp(2.5),
-    marginRight: wp(2),
-  },
-  socialText: {
-    fontSize: hp(1.8),
-    fontWeight: '500',
-    color: theme.colors.text,
+    fontSize: 14,
   },
   footer: {
     flexDirection: 'row',
@@ -547,7 +464,7 @@ const styles = StyleSheet.create({
     fontSize: hp(1.8),
   },
   footerLinkText: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryDark,
     fontWeight: 'bold',
     fontSize: hp(1.8),
   },

@@ -10,9 +10,10 @@ import {useCallback, useEffect, useState} from 'react';
 import {getAllNews} from '../../../utils/useNewsAPI';
 import {useFocusEffect} from '@react-navigation/native';
 import {useNavigation} from '@react-navigation/native';
-import {formatTimeAgo} from '../../../utils/utils_format';
+import {capitalizeFirstLetter, formatTimeAgo} from '../../../utils/utils_format';
 import BackButton from '../../../BackButton';
 import ContentLoader, {Rect} from 'react-content-loader/native';
+import { getNewsColorByType } from '../../../contants/newsConst';
 
 type NewsItem = {
   id: string;
@@ -109,9 +110,9 @@ export default function WhatsNewScreen() {
               <Text style={styles.newsContent} numberOfLines={3}>
                 {truncateText(stripHtml(item.content), 120)}
               </Text>
-              <View style={styles.newsTypeContainer}>
+              <View style={[styles.newsTypeContainer, {backgroundColor: getNewsColorByType(item.news_type)}]}>
                 <Text style={styles.newsType} numberOfLines={1}>
-                  {item.news_type}
+                  {capitalizeFirstLetter(item.news_type, true)}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -184,8 +185,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   newsType: {
-    fontSize: 12,
-    color: '#333',
+    fontSize: 14,
+    color: '#ffffff',
     textTransform: 'capitalize',
   },
 });

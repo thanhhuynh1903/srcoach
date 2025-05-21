@@ -10,6 +10,7 @@ interface LoginState {
   resendStatus: any;
   status: any;
   message: string;
+  data: any | null;
   login: (email: string, password: string) => Promise<void>;
   clearstatus: () => Promise<void>;
   clear: () => void;
@@ -100,6 +101,7 @@ export const useLoginStore = create<LoginState>((set, get) => ({
         set({
           status: response?.data?.status,
           message: response?.data?.message,
+          data: response?.data?.data,
         });
         return;
       }
