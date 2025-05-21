@@ -65,6 +65,7 @@ import WhatsNewScreen from '../screens/SettingsScreens/SettingsAboutScreens/What
 import UpdateScheduleScreen from '../screens/ScheduleScreens/UpdateScheduleScreen';
 import NewsDetailScreen from '../screens/NewsScreens/NewsDetailScreen';
 import CMSMessageViewMap from '../screens/ChatsScreens/ChatsMessage/CMSMessageViewMap';
+import RiskAnalysisConfirmScreen from '../screens/RiskAnalysisScreens/RiskAnalysisConfirmScreen';
 
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
@@ -116,6 +117,9 @@ export const stackScreens = [
     name: 'ExerciseRecordsFullMapScreen',
     component: ExerciseRecordsFullMapScreen,
   },
+
+  //Risk Analysis Screens
+  {name: "RiskAnalysisConfirmScreen", component: RiskAnalysisConfirmScreen},
 
   // Community Screens
   {name: 'CommunityNewsDetailScreen', component: CommunityNewsDetailScreen},

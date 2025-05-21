@@ -102,6 +102,7 @@ interface AiRiskState {
   fetchHealthAlerts: () => Promise<void>;
   deleteHealthAlert: (alertId: string) => Promise<boolean>;
   fetchHealthAlertDetail: (id: string) => Promise<void>;
+  checkLimit: () => boolean;
   clearAssessment: () => void;
   clearError: () => void;
   clearMessage: () => void;
@@ -373,6 +374,23 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
     }
   },
 
+  checkLimit: async () => {
+    set({ isLoading: true });
+    try {
+      const response = await api.fetchData('/ai/check-limit');
+      if (response?.status === 'success') {
+        set({ isLoading: false });
+        return response.data;
+      } else {
+        set({ isLoading: false });
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Error checking limit:', error);
+      set({ isLoading: false });
+      return false;
+    }
+  },
 
   clearAssessment: () => set({ assessment: null }),
   clearError: () => set({ error: null }),

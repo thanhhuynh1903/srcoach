@@ -87,6 +87,13 @@ export default function NewsDetailScreen() {
     }
   };
 
+  const processContentWithHashtags = (content: string) => {
+    return content.replace(
+      /#(\w+)/g,
+      '<span style="color: #1E90FF;">#$1</span>',
+    );
+  };
+
   if (!newsDetail && !loading) {
     return (
       <View style={styles.container}>
@@ -186,8 +193,13 @@ export default function NewsDetailScreen() {
           <View style={styles.contentContainer}>
             <RenderHtml
               contentWidth={width - 32}
-              source={{html: newsDetail.content}}
+              source={{html: processContentWithHashtags(newsDetail.content)}}
               baseStyle={styles.htmlBaseStyle}
+              tagsStyles={{
+                span: {
+                  color: '#333',
+                },
+              }}
             />
           </View>
         </ScrollView>
