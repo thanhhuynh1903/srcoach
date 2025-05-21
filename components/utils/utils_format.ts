@@ -1,8 +1,14 @@
-export const capitalizeFirstLetter = (str: string) => {
+export const capitalizeFirstLetter = (str: string, force = false) => {
   if (!str) {
     return '';
   }
-  return str.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+  const result = str
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+  if (force) {
+    return result[0].toUpperCase() + result.slice(1).toLowerCase();
+  }
+  return result;
 };
 
 export const formatDate = (dateString: string) => {
@@ -37,27 +43,27 @@ export const formatTimeAgo = (dateString: string) => {
 export function formatTimestampAgo(dateString: string) {
   const date = new Date(dateString);
   const now = new Date();
-  
+
   // Get time components
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const time = `${hours}:${minutes}`;
-  
+
   // Get date components
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
-  
+
   // Calculate differences
   const diffInMs = now - date;
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-  
+
   // Check if it's today
   const isToday = now.toDateString() === date.toDateString();
   if (isToday) {
     return time;
   }
-  
+
   // Check if it was yesterday
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -65,13 +71,20 @@ export function formatTimestampAgo(dateString: string) {
   if (isYesterday) {
     return `Yesterday at ${time}`;
   }
-  
+
   // Check if it was within the last week (but more than 1 day ago)
   const isWithinLastWeek = diffInDays > 1 && diffInDays < 7;
   if (isWithinLastWeek) {
     return `${diffInDays}d ago at ${time}`;
   }
-  
+
   // For anything older than a week
   return `${day}/${month}/${year} ${time}`;
 }
+
+export const stripHtml = (html: string) => {
+  return html
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};

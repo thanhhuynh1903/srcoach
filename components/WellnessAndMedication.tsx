@@ -1,7 +1,6 @@
 import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import imageexpert from '../components/assets/2runner.png';
 import { useNavigation } from '@react-navigation/native';
 
 const WellnessAndMedication = () => {
@@ -19,39 +18,6 @@ const WellnessAndMedication = () => {
 
   return (
     <View style={styles.container}>
-      {/* Wellness AI Chatbot */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Wellness Expert Contact</Text>
-          <TouchableOpacity>
-            <Icon name="help-circle" size={20} color="#64748B" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.chatbotCard}>
-          <View style={styles.basicBadge}>
-            <Text style={styles.basicText}>BASIC</Text>
-          </View>
-
-          <View style={styles.chatbotContent}>
-            <View style={{width: '48%'}}>
-              <Text style={styles.totalNumber}>
-                1,922 <Text style={styles.totalLabel}> Total</Text>
-              </Text>
-
-              <Text style={styles.chatbotDescription}>
-                Good Schedule{'\n'}Good heart rate{'\n'}Search Expert to contact
-              </Text>
-            </View>
-
-            <Image source={imageexpert} style={styles.robotImage} />
-          </View>
-
-          <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('Chat')}>
-            <Icon name="chatbubbles-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
 
       {/* Medication Management */}
       <View style={styles.section}>

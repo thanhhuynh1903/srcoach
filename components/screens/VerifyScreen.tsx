@@ -10,110 +10,110 @@ import {
   Pressable,
   SafeAreaView,
   StatusBar,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import BackButton from '../BackButton';
 import { useRegisterStore } from '../utils/useRegisterStore';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import CommonDialog from '../commons/CommonDialog';
 
 interface VerifyParam {
   emailLabel: string;
 }
 
 const VerifyScreen = ({ navigation }: { navigation: any }) => {
-  const [code, setCode] = useState(['0', '0', '0', '0', '0', '0']);
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogContent, setDialogContent] = useState('');
+  const [inputStatus, setInputStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const { verifyStatus, message, verifyCode, ResendCode, clear } = useRegisterStore();
   const inputRefs = useRef<any | null[]>([]);
   const navigate = useNavigation();
   const route = useRoute();
   const { emailLabel } = route.params as VerifyParam;
 
-  // Initialize refs array
   useEffect(() => {
-    if (Array.isArray(inputRefs.current)) {
-      inputRefs.current = inputRefs.current.slice(0, 6);
-    }
-    // Reset verification status on mount
+    inputRefs.current = inputRefs.current.slice(0, 6);
     clear();
   }, []);
 
-  // Handle input change: update code and auto-focus next input
+  useEffect(() => {
+    if (verifyStatus === 'success') {
+      setInputStatus('success');
+      setDialogTitle('Success');
+      setDialogContent('Verification successful!');
+      setDialogVisible(true);
+    } else if (verifyStatus === 'error') {
+      setInputStatus('error');
+      setDialogTitle('Error');
+      setDialogContent(message);
+      setDialogVisible(true);
+    }
+  }, [verifyStatus]);
+
   const handleCodeChange = (text: string, index: number) => {
+    if (inputStatus !== 'idle') {
+      setInputStatus('idle');
+    }
+
     const newCode = [...code];
     newCode[index] = text;
     setCode(newCode);
-  
-    // Tự động chuyển focus khi có giá trị hợp lệ (kể cả số 0)
+
     if (text.length === 1 && index < 5) {
       inputRefs.current[index + 1].focus();
     }
   };
-  
+
   const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace') {
-      const newCode = [...code];
-      
-      if (newCode[index] === '' || newCode[index] === '0') {
-        newCode[index] = '';
-        setCode(newCode);
-        
-        if (index > 0) {
-          inputRefs.current[index - 1].focus();
-        }
-      }
+    if (e.nativeEvent.key === 'Backspace' && code[index] === '' && index > 0) {
+      inputRefs.current[index - 1].focus();
     }
   };
-  
 
-  // Handle verify: call verifyCode and set loading status
   const handleVerify = async () => {
     setIsLoading(true);
     try {
       await verifyCode(emailLabel, code.join(''));
-    } catch (error) {
-      console.log('Error verifying code:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  // Monitor verifyStatus changes to handle success or error
-  useEffect(() => {
-    console.log('Register verify status:', verifyStatus);
-    if (verifyStatus === 'success') {
-      Alert.alert('Success', 'Verification successful!');
-      navigate.navigate('LoginScreen' as never);
-      // Optionally, clear after navigating if needed:
-      // clear();
-    } else if (verifyStatus === 'error') {
-      Alert.alert(message);
-    }
-  }, [verifyStatus]);
-
-  // Handle resend code
   const handleResendCode = async () => {
     setIsLoading(true);
     try {
       await ResendCode(emailLabel);
-    } catch (error) {
-      console.log('Error resending code:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
+  };
+
+  const getInputStyle = (index: number) => {
+    if (inputStatus === 'success') {
+      return styles.successInput;
+    }
+    if (inputStatus === 'error') {
+      return styles.errorInput;
+    }
+    if (isLoading) {
+      return styles.loadingInput;
+    }
+    return styles.codeInput;
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={26} />
         </TouchableOpacity>
       </View>
 
-      {/* Main content */}
       <View style={styles.content}>
         <Text style={styles.title}>Enter your code</Text>
         <Text style={styles.subtitle}>
@@ -121,19 +121,19 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
           <Text style={{ color: '#666', fontWeight: 'bold' }}>{emailLabel}</Text>
         </Text>
 
-        {/* Verification code inputs */}
         <View style={[styles.codeContainer, { marginBottom: message ? 25 : 25 }]}>
           {[0, 1, 2, 3, 4, 5].map((index) => (
             <TextInput
               key={index}
               ref={(ref) => (inputRefs.current[index] = ref)}
-              style={styles.codeInput}
+              style={getInputStyle(index)}
               value={code[index]}
               onChangeText={(text) => handleCodeChange(text, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="number-pad"
               maxLength={1}
               selectTextOnFocus
+              editable={!isLoading}
             />
           ))}
         </View>
@@ -143,7 +143,7 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
             <Text style={{ color: 'red' }}>{message}</Text>
           </View>
         )}
-        {/* Verify button */}
+
         <TouchableOpacity
           style={styles.verifyButton}
           onPress={handleVerify}
@@ -153,7 +153,6 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Resend code link */}
         <Pressable
           onPress={handleResendCode}
           style={{
@@ -169,6 +168,30 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
             <Text style={styles.resendText}>Send code again</Text>
           )}
         </Pressable>
+
+        <CommonDialog
+          visible={dialogVisible}
+          onClose={() => {
+            setDialogVisible(false);
+            if (verifyStatus === 'success') {
+              navigate.navigate('LoginScreen' as never);
+            }
+          }}
+          title={dialogTitle}
+          content={<Text>{dialogContent}</Text>}
+          actionButtons={[
+            {
+              label: 'OK',
+              variant: 'contained',
+              handler: () => {
+                setDialogVisible(false);
+                if (verifyStatus === 'success') {
+                  navigate.navigate('LoginScreen' as never);
+                }
+              },
+            },
+          ]}
+        />
       </View>
     </SafeAreaView>
   );
@@ -221,6 +244,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
     color: '#1a1a1a',
+  },
+  successInput: {
+    width: 56,
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+    borderRadius: 12,
+    fontSize: 24,
+    fontWeight: '500',
+    textAlign: 'center',
+    color: '#FFFFFF',
+    backgroundColor: '#4CAF50',
+  },
+  errorInput: {
+    width: 56,
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#F44336',
+    borderRadius: 12,
+    fontSize: 24,
+    fontWeight: '500',
+    textAlign: 'center',
+    color: '#FFFFFF',
+    backgroundColor: '#F44336',
+  },
+  loadingInput: {
+    width: 56,
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#0a2463',
+    borderRadius: 12,
+    fontSize: 24,
+    fontWeight: '500',
+    textAlign: 'center',
+    color: '#FFFFFF',
+    backgroundColor: '#0a2463',
   },
   verifyButton: {
     backgroundColor: '#0a2463',

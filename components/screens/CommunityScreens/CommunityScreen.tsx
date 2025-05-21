@@ -17,11 +17,17 @@ import {useNavigation} from '@react-navigation/native';
 import {usePostStore} from '../../utils/usePostStore';
 import {useLoginStore} from '../../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
-import {formatTimeAgo} from '../../utils/utils_format';
+import {
+  capitalizeFirstLetter,
+  formatTimeAgo,
+  stripHtml,
+} from '../../utils/utils_format';
 import {CommonAvatar} from '../../commons/CommonAvatar';
 import {SaveDraftButton} from './SaveDraftButton';
 import SkeletonPostList from './SkeletonPostList';
 import {getAllNews} from '../../utils/useNewsAPI';
+import {getNewsColorByType} from '../../contants/newsConst';
+import CommunityNewsList from './CommunityNewsList';
 // Interface cho User
 interface User {
   id: string;
@@ -86,26 +92,19 @@ const CommunityScreen = () => {
   const [pageIndex, setPageIndex] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMorePosts, setHasMorePosts] = useState(true);
-  const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(() =>
+    Math.floor(Math.random() * PLACEHOLDER_TEXTS.length)
+  );
   const PAGE_SIZE = 10;
   const loadingRef = useRef(false);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [newsLoading, setNewsLoading] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
-    setNewsLoading(true);
+  const loadInitialNews = () => {
     getAllNews().then(data => {
-      if (mounted) {
-        setNews(Array.isArray(data) ? data : []);
-        setNewsLoading(false);
-      }
+      setNews(Array.isArray(data) ? data : []);
+      setNewsLoading(false);
     });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  };
+
   const loadInitialPosts = async () => {
     if (loadingRef.current) return;
     try {
@@ -188,19 +187,14 @@ const CommunityScreen = () => {
   };
 
   useEffect(() => {
-    loadInitialPosts();
     clearCurrent();
+    loadInitialNews();
+    loadInitialPosts();
   }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPlaceholderIndex(prev => (prev + 1) % PLACEHOLDER_TEXTS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [fadeAnim]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setCurrentPlaceholderIndex(Math.floor(Math.random() * PLACEHOLDER_TEXTS.length));
     loadInitialPosts().finally(() => setRefreshing(false));
   }, []);
 
@@ -223,26 +217,12 @@ const CommunityScreen = () => {
           onPress={() =>
             navigation.navigate('CommunityCreatePostScreen' as never)
           }>
-          <Animated.Text style={[styles.placeholderText, {opacity: fadeAnim}]}>
+          <Animated.Text style={[styles.placeholderText]}>
             {PLACEHOLDER_TEXTS[currentPlaceholderIndex]}
           </Animated.Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.sectionTitle}>Official News</Text>
-      {newsLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={theme.colors.primaryDark} />
-          <Text style={styles.loadingText}>Loading news...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={news}
-          renderItem={renderNewsItem}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={item => item.id}
-        />
-      )}
+      <CommunityNewsList />
       <Text style={styles.sectionTitle}>Community Posts</Text>
     </View>
   );
@@ -267,74 +247,6 @@ const CommunityScreen = () => {
       </View>
     );
   };
-
-  const renderNewsItem = ({item}: {item: NewsItem}) => (
-    <TouchableOpacity
-      style={styles.newsItem}
-      activeOpacity={0.85}
-      onPress={() => {
-        navigation.navigate('NewsDetailScreen', {
-          id: item.id,
-          newsItem: item,
-        });
-      }}>
-      {/* News Image */}
-      <View style={styles.newsImageContainer}>
-        {item.image_url ? (
-          <Image source={{uri: item.image_url}} style={styles.newsImage} />
-        ) : (
-          <View style={[styles.newsImage, styles.newsImagePlaceholder]}>
-            <Icon name="newspaper-outline" size={36} color="#A0AEC0" />
-          </View>
-        )}
-        {/* Overlay badge for "Official" */}
-        <View style={styles.newsBadge}>
-          <Icon name="star" size={14} color="#FFD700" />
-          <Text style={styles.newsBadgeText}>Official</Text>
-        </View>
-      </View>
-      {/* News Content */}
-      <View style={styles.newsContent}>
-        <Text style={styles.newsTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.newsDescription} numberOfLines={3}>
-          {item.content?.length > 100
-            ? `${item.content.substring(0, 100)}...`
-            : item.content}
-        </Text>
-        <View style={styles.newsFooter}>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <Icon
-              name="calendar-outline"
-              size={14}
-              color="#A0AEC0"
-              style={{marginRight: 4}}
-            />
-            <Text style={styles.newsTime}>
-              {new Date(item.created_at).toLocaleDateString()}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.readMoreButton}
-            onPress={() => {
-              navigation.navigate('NewsDetailScreen', {
-                id: item.id,
-                newsItem: item,
-              });
-            }}>
-            <Text style={styles.readMoreText}>Read more</Text>
-            <Icon
-              name="chevron-forward"
-              size={14}
-              color={theme.colors.primaryDark}
-              style={{marginLeft: 2}}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
 
   const renderPostItem = ({item}: {item: Post}) => (
     <TouchableOpacity
@@ -759,18 +671,21 @@ const styles = StyleSheet.create({
     color: '#000',
     marginHorizontal: 16,
   },
-  newsItem: {
-    width: 200,
+  newsList: {
+    paddingHorizontal: 16,
     marginRight: 16,
+  },
+  newsItem: {
+    width: 240,
     backgroundColor: '#FFF',
     borderRadius: 10,
     padding: 12,
+    marginRight: 16,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
-    marginHorizontal: 16,
   },
   newsImageContainer: {
     position: 'relative',
@@ -780,7 +695,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: theme.colors.primaryDark,
     borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
@@ -789,24 +704,11 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   newsBadgeText: {
-    color: '#FFD700',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '700',
     marginLeft: 3,
     letterSpacing: 0.5,
-  },
-  newsItem: {
-    width: 220,
-    marginRight: 16,
-    backgroundColor: '#FFF',
-    borderRadius: 14,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-    marginHorizontal: 8,
   },
   newsImage: {
     width: '100%',
@@ -827,7 +729,7 @@ const styles = StyleSheet.create({
   },
   newsDescription: {
     color: '#475569',
-    fontSize: 14,
+    fontSize: 12,
     marginBottom: 10,
   },
   newsFooter: {
@@ -835,7 +737,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  newsTime: {color: '#A0AEC0', fontSize: 12},
+  newsTime: {color: '#6a6a6a', fontSize: 12},
   readMoreButton: {
     flexDirection: 'row',
     alignItems: 'center',

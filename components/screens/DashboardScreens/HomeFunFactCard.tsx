@@ -69,6 +69,13 @@ const HomeFunFactCard: React.FC<HomeFunFactCardProps> = ({ style }) => {
           </TouchableOpacity>
         )}
       </Animated.View>
+      <TouchableOpacity 
+        style={styles.nextButton}
+        onPress={refreshFunFact}
+        activeOpacity={0.7}
+      >
+        <Icon name="arrow-forward" size={20} color={theme.colors.primary} />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -85,9 +92,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
     minHeight: 130,
+    borderLeftColor: theme.colors.primary,
+    borderLeftWidth: 5,
   },
   header: {
     flexDirection: 'row',
@@ -121,6 +128,12 @@ const styles = StyleSheet.create({
     color: theme.colors.primaryDark,
     marginRight: 4,
     fontWeight: '500',
+  },
+  nextButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    padding: 8,
   },
 });
 
