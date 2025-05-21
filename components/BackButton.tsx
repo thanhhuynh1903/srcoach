@@ -4,12 +4,25 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from './contants/theme';
 
-const BackButton = ({size = 26}: {size?: number}) => {
+interface BackButtonProps {
+  size?: number;
+  onBtnPress?: () => void;
+}
+
+const BackButton = ({size = 26, onBtnPress}: BackButtonProps) => {
   const navigation = useNavigation();
+
+  const handlePress = () => {
+    if (onBtnPress) {
+      onBtnPress();
+    } else {
+      navigation.goBack();
+    }
+  };
 
   return (
     <Pressable 
-      onPress={() => navigation.goBack()} 
+      onPress={handlePress} 
       style={({pressed}) => [
         styles.button,
         {
@@ -35,7 +48,6 @@ const styles = StyleSheet.create({
     padding: 5,
     borderRadius: theme.radius.md,
     backgroundColor: "rgba(0,0,0,0.07)",
-
   },
 });
 

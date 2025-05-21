@@ -15,7 +15,7 @@ import {PieChart} from 'react-native-gifted-charts';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 import CommonDialog from '../commons/CommonDialog';
-import { set } from 'date-fns';
+import {set} from 'date-fns';
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
 const getSeverityColor = (severity: any) => {
   switch (severity?.toLowerCase()) {
@@ -90,9 +90,16 @@ const RiskWarningScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <BackButton size={24} />
-          </TouchableOpacity>
+          <BackButton
+            size={24}
+            onBtnPress={() => {
+              console.log('Back button pressed');
+              navigation.navigate('HomeTabs', {
+                screen: 'Risk',
+                params: {screen: 'HomeMain'},
+              });
+            }}
+          />
           <Text style={styles.headerTitle}>Risk Analysis</Text>
         </View>
         <View style={styles.errorContainer}>
@@ -132,36 +139,6 @@ const RiskWarningScreen = () => {
     );
   }
 
-  const handleSaveResult = async () => {
-    if (!activityData || !assessment) return;
-
-    try {
-      console.log('assessment', assessment);
-
-      const updatedActivityData = {
-        ...activityData,
-        heart_rate_danger: assessment.heart_rate_danger,
-      };
-      console.log('Updated activity data:', updatedActivityData);
-
-      const success = await saveFullAiResult(updatedActivityData);
-      console.log('saveFullAiResult response:', success);
-
-      if (success) {
-        await fetchHealthAlerts();
-        setShowLogoutDialog(true);
-      } else {
-        Alert.alert('Error', 'Unable to save report. Please try again later.', [
-          {text: 'OK', onPress: () => navigation.goBack()},
-        ]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An error occurred while saving the report.', [
-        {text: 'OK'},
-      ]);
-    }
-  };
-
   // Lấy màu dựa trên mức độ nghiêm trọng
   const severityColor = getSeverityColor(assessment.severity);
 
@@ -177,7 +154,6 @@ const RiskWarningScreen = () => {
     },
   ];
   const Confirm = [
-
     {
       label: 'OK',
       color: '#1E3A8A',
@@ -285,7 +261,7 @@ const RiskWarningScreen = () => {
             <Text style={styles.dangerValue}>
               <Icon name="fitness" size={24} color="#FF5252" />
               <Text>{assessment.heart_rate_danger}</Text>
-              <Text style={styles.dangerUnit}>{" "}BPM</Text>
+              <Text style={styles.dangerUnit}> BPM</Text>
             </Text>
             <Text style={styles.dangerDescription}>
               Your heart rate reached a potentially dangerous level during this
@@ -302,8 +278,10 @@ const RiskWarningScreen = () => {
             <View style={styles.activityStat}>
               <Icon name="walk-outline" size={16} color="#64748B" />
               <Text style={styles.activityStatText}>
-                
-                {activityData?.distance?.toFixed(2) || assessment?.distance?.toFixed(2) || '0'} km
+                {activityData?.distance?.toFixed(2) ||
+                  assessment?.distance?.toFixed(2) ||
+                  '0'}{' '}
+                km
               </Text>
             </View>
             <View style={styles.activityStat}>
@@ -399,13 +377,6 @@ const RiskWarningScreen = () => {
         {/* Action Buttons */}
         {activityData && (
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={() => {
-                handleSaveResult();
-              }}>
-              <Text style={styles.saveButtonText}>Save report</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => {

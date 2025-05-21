@@ -226,6 +226,9 @@ const RiskWarningListScreen = () => {
           )
         }>
         <Text style={styles.riskTitle} numberOfLines={2}>
+          {item.AIHealthAlertType.type_name} Result:
+        </Text>
+        <Text style={styles.riskDescription} numberOfLines={2}>
           {item.alert_message}
         </Text>
 
@@ -696,7 +699,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
   },
   activityTag: {
     flexDirection: 'row',
@@ -728,6 +730,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
     lineHeight: 22,
+  },
+  riskDescription: {
+    color: '#000000b7',
     marginBottom: 12,
   },
   metricsGrid: {

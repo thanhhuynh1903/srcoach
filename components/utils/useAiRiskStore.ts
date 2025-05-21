@@ -176,6 +176,7 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
       
       if (response?.result?.status === 'success') {
         set({
+          error: '',
           assessment: {
             score: response.result.data.score,
             severity: response.result.data.severity,
