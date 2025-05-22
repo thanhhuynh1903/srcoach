@@ -64,7 +64,6 @@ const RiskWarningScreen = () => {
     evaluateActivityHealth,
     fetchHealthAlertDetail,
     clearAssessment,
-    saveFullAiResult,
     fetchHealthAlerts,
     message,
   } = useAiRiskStore();
@@ -131,36 +130,6 @@ const RiskWarningScreen = () => {
       </SafeAreaView>
     );
   }
-
-  const handleSaveResult = async () => {
-    if (!activityData || !assessment) return;
-
-    try {
-      console.log('assessment', assessment);
-
-      const updatedActivityData = {
-        ...activityData,
-        heart_rate_danger: assessment.heart_rate_danger,
-      };
-      console.log('Updated activity data:', updatedActivityData);
-
-      const success = await saveFullAiResult(updatedActivityData);
-      console.log('saveFullAiResult response:', success);
-
-      if (success) {
-        await fetchHealthAlerts();
-        setShowLogoutDialog(true);
-      } else {
-        Alert.alert('Error', 'Unable to save report. Please try again later.', [
-          {text: 'OK', onPress: () => navigation.goBack()},
-        ]);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An error occurred while saving the report.', [
-        {text: 'OK'},
-      ]);
-    }
-  };
 
   // Lấy màu dựa trên mức độ nghiêm trọng
   const severityColor = getSeverityColor(assessment.severity);
@@ -400,13 +369,6 @@ const RiskWarningScreen = () => {
         {activityData && (
           <View style={styles.actions}>
             <TouchableOpacity
-              style={styles.saveButton}
-              onPress={() => {
-                handleSaveResult();
-              }}>
-              <Text style={styles.saveButtonText}>Save report</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={styles.deleteButton}
               onPress={() => {
                 navigation.navigate('HomeTabs', {
@@ -421,20 +383,6 @@ const RiskWarningScreen = () => {
           </View>
         )}
       </ScrollView>
-      <CommonDialog
-        visible={showLogoutDialog}
-        onClose={() => setShowLogoutDialog(false)}
-        title="Save report"
-        content={
-          <View>
-            <Text style={{color: '#666', fontSize: 16}}>
-              This form risk report is saved successfully!!
-            </Text>
-          </View>
-        }
-        actionButtons={Confirm}
-        width="85%"
-      />
     </SafeAreaView>
   );
 };

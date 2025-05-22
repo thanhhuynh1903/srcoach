@@ -219,7 +219,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
 
   const canEditSession = (session: TrainingSession, view: boolean | null) => {
     if (view) return false;
-    if (session.status === 'MISSED' || session.status === 'COMPLETED') return false;
+    if (session.status === 'MISSED' || session.status === 'COMPLETED' || session.status === 'INCOMING' || session.status === 'ONGOING') return false;
     return true; // Cho phép input mọi thời gian, kể cả quá khứ
   };
   const getTimeError = (inputTime: string, day: string) => {
@@ -232,7 +232,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       const [year, month, date] = day.split('-').map(Number);
       const [hours, minutes] = inputTime.split(':').map(Number);
       const inputVN = new Date(Date.UTC(year, month - 1, date, hours, minutes));
-      inputVN.setHours(inputVN.getHours()); // Chuyển sang GMT+7
+      inputVN.setHours(inputVN.getHours());
 
       const diffMs = inputVN.getTime() - vnNow.getTime();
 
@@ -240,7 +240,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
         return 'Do not enter past times in Vietnam time';
       }
       if (diffMs < 3 * 60 * 60 * 1000) {
-        // Nếu thời gian chạy chỉ còn dưới 3 tiếng thì báo lỗi
         return 'You must create a run at least 3 hours before the start time (Vietnam time)';
       }
       return null;
