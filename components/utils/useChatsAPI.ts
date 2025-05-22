@@ -216,6 +216,8 @@ export const respondToSession = async (userId: string, accept: boolean) => {
 
 export const listSessions = async (status: string | null) => {
   const response = await api.get(`/chats/sessions?status=${status}`);
+  console.log('response', response.data);
+  
   if (!response.data.status) ToastUtil.error('Error', response.data.message);
   return response.data;
 };
