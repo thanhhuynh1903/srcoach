@@ -124,8 +124,8 @@ export interface RestingHeartRateRecord {
 
 export const handleSyncButtonPress = async () => {
   let syncMethod = await AsyncStorage.getItem('syncMethod');
-  if (!syncMethod) {
-    ToastUtil.show('A sync method must be selected first.');
+  if (!syncMethod || syncMethod === 'none') {
+    ToastUtil.error('A sync method must be selected first.');
     return {
       type: 'SYNC_METHOD_MISSING',
       message: 'A sync method must be selected first.',
@@ -658,7 +658,7 @@ export const fetchSleepRecords = async (
       id: record.record_id,
       startTime: record.start_time,
       endTime: record.end_time,
-      stage: record.stage,
+      stages: record.stages,
       dataOrigin: record.data_origin,
       sleepScore: record.sleep_score,
       avgHeartRate: record.avg_heart_rate,

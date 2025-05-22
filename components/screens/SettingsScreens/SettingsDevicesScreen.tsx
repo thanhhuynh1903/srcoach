@@ -14,12 +14,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
-import {
-  initialize,
-  requestPermission,
-  readRecords,
-  revokeAllPermissions,
-} from 'react-native-health-connect';
+import {initialize, requestPermission} from 'react-native-health-connect';
 import {Image} from 'react-native';
 import logo_health_connect from '../../assets/logo_health_connect.png';
 import logo_samsung_health from '../../assets/logo_samsung_health.png';
@@ -27,11 +22,7 @@ import {theme} from '../../contants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {formatDistanceToNow} from 'date-fns';
 import CommonDialog from '../../commons/CommonDialog';
-import {
-  handleSyncButtonPress,
-  initializeHealthConnect,
-  startSyncData,
-} from '../../utils/utils_healthconnect';
+import {handleSyncButtonPress} from '../../utils/utils_healthconnect';
 
 const HEALTH_CONNECT_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata';
@@ -193,7 +184,6 @@ const SettingsDevicesScreen = () => {
     if (syncMethod === 'healthconnect') {
       // Turning off - revoke permissions
       try {
-        await revokeAllPermissions();
         setHealthConnectError(null);
         await AsyncStorage.setItem('syncMethod', 'none');
         setSyncMethod('none');

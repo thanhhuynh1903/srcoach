@@ -258,8 +258,8 @@ const menuItems = [
     screen: 'DraftScreen',
   },
   {
-    title: 'Connect Accounts',
-    subtitle: 'Manage your connect account',
+    title: 'Manage Health Sync',
+    subtitle: 'Manage your data sync methods',
     icon: 'construct-outline',
     screen: 'SettingsDevicesScreen',
   },
@@ -348,8 +348,9 @@ const styles = StyleSheet.create({
   nextLevelText: {fontSize: 13, color: '#4A6FA5', fontWeight: '500'},
   statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     width: '100%',
+    paddingHorizontal: 5,
     marginTop: 20,
   },
   statItem: {

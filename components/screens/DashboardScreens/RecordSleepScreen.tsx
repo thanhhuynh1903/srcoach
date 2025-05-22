@@ -10,17 +10,34 @@ import {
   Animated,
   Platform,
   Modal,
-  ActivityIndicator,
 } from 'react-native';
-import {PieChart} from 'react-native-gifted-charts';
-import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
+import {PieChart, BarChart} from 'react-native-gifted-charts';
+import ContentLoader, {Rect} from 'react-content-loader/native';
 import BackButton from '../../BackButton';
-import {parseISO, format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, addDays, addWeeks, addMonths, addYears, subDays, subWeeks, subMonths, subYears} from 'date-fns';
+import {
+  parseISO,
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  addDays,
+  addWeeks,
+  addMonths,
+  addYears,
+  subDays,
+  subWeeks,
+  subMonths,
+  subYears,
+  differenceInMinutes,
+} from 'date-fns';
 import Icon from '@react-native-vector-icons/ionicons';
-import {fetchSleepRecords, initializeHealthConnect} from '../../utils/utils_healthconnect';
+import {fetchSleepRecords} from '../../utils/utils_healthconnect';
 import {useFocusEffect} from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ChevronDown, ChevronUp } from 'react-native-feather';
+import {ChevronDown, ChevronUp} from 'react-native-feather';
 
 const {width} = Dimensions.get('window');
 const CHART_WIDTH = width - 32;
@@ -37,11 +54,18 @@ const SleepType = {
   AWAKE_IN_BED: 7,
 } as const;
 
+interface SleepStage {
+  stage: number;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+}
+
 interface SleepRecord {
   id: string;
   startTime: string;
   endTime: string;
-  stage: number;
+  stages: SleepStage[];
   dataOrigin: string;
   sleepScore?: number;
   avgHeartRate?: number;
@@ -72,6 +96,7 @@ interface ProcessedSleepData {
     light: number;
     rem: number;
     awake: number;
+    unknown: number;
   };
 }
 
@@ -81,18 +106,10 @@ const SleepScreen = () => {
   const [activeView, setActiveView] = useState<'day' | 'week' | 'month' | 'year'>('day');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sleepRecords, setSleepRecords] = useState<SleepRecord[]>([]);
-  const [selectedPoint, setSelectedPoint] = useState<any>(null);
-  const [showPointDetails, setShowPointDetails] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerMode, setPickerMode] = useState<'date' | 'month' | 'year'>('date');
-  const pointDetailsPosition = useRef(new Animated.Value(0)).current;
   const spinValue = useRef(new Animated.Value(0)).current;
-  const [expandedSections, setExpandedSections] = useState({
-    stages: false,
-    metrics: false,
-    weekly: false,
-    insights: false,
-  });
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   const spinAnimation = spinValue.interpolate({
     inputRange: [0, 1],
@@ -107,25 +124,12 @@ const SleepScreen = () => {
         toValue: 1,
         duration: 1000,
         useNativeDriver: true,
-      })
+      }),
     ).start();
     readSleepData();
   };
 
-  const groupRecordsById = (records: SleepRecord[]) => {
-    const grouped: {[key: string]: SleepRecord[]} = {};
-    
-    records.forEach(record => {
-      if (!grouped[record.id]) {
-        grouped[record.id] = [];
-      }
-      grouped[record.id].push(record);
-    });
-    
-    return grouped;
-  };
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
+  const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -133,116 +137,78 @@ const SleepScreen = () => {
   };
 
   const processSleepData = (records: SleepRecord[]): ProcessedSleepData[] => {
-    const groupedRecords = groupRecordsById(records);
-    const results: ProcessedSleepData[] = [];
-
-    for (const id in groupedRecords) {
-      const sessions = groupedRecords[id];
-      let deep = 0, light = 0, rem = 0, awake = 0;
-      let totalDuration = 0;
-      let earliestStart = new Date(sessions[0].startTime);
-      let latestEnd = new Date(sessions[0].endTime);
-
-      // Calculate average metrics across all sessions
-      let totalHeartRate = 0;
-      let totalBreathing = 0;
-      let totalSpO2 = 0;
-      let validMetricsCount = 0;
-
-      sessions.forEach(record => {
-        const start = new Date(record.startTime);
-        const end = new Date(record.endTime);
-        const duration = (end.getTime() - start.getTime()) / (1000 * 60);
-
-        if (start < earliestStart) earliestStart = start;
-        if (end > latestEnd) latestEnd = end;
-
-        switch(record.stage) {
-          case SleepType.DEEP:
-            deep += duration;
+    return records.map(record => {
+      let deep = 0, light = 0, rem = 0, awake = 0, unknown = 0;
+      
+      record.stages.forEach(stage => {
+        const duration = stage.duration_minutes;
+        switch (stage.stage) {
+          case SleepType.DEEP: 
+            deep += duration; 
             break;
-          case SleepType.LIGHT:
-            light += duration;
+          case SleepType.LIGHT: 
+            light += duration; 
             break;
-          case SleepType.REM:
-            rem += duration;
+          case SleepType.REM: 
+            rem += duration; 
             break;
           case SleepType.AWAKE:
-          case SleepType.AWAKE_IN_BED:
-            awake += duration;
+          case SleepType.AWAKE_IN_BED: 
+            awake += duration; 
             break;
-          case SleepType.SLEEPING:
-            light += duration;
+          case SleepType.SLEEPING: 
+            light += duration; 
             break;
+          default: 
+            unknown += duration;
         }
-
-        // Aggregate metrics if available
-        if (record.avgHeartRate) {
-          totalHeartRate += record.avgHeartRate;
-          totalBreathing += record.avgBreathing || 0;
-          totalSpO2 += record.avgSpO2 || 0;
-          validMetricsCount++;
-        }
-
-        totalDuration += duration;
       });
 
+      const totalDuration = deep + light + rem + awake + unknown;
       const hours = Math.floor(totalDuration / 60);
       const minutes = Math.round(totalDuration % 60);
       const durationText = `${hours}h ${minutes}m`;
 
-      const formatTime = (date: Date) => {
-        return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-      };
-
-      const timeRangeText = `${formatTime(earliestStart)} - ${formatTime(latestEnd)}`;
+      const formatTime = (date: Date) => format(date, 'h:mm a');
+      const start = new Date(record.startTime);
+      const end = new Date(record.endTime);
+      const timeRangeText = `${formatTime(start)} - ${formatTime(end)}`;
 
       const deepSleepRatio = totalDuration > 0 ? deep / totalDuration : 0;
       const totalSleepHours = totalDuration / 60;
 
-      // Calculate average metrics
-      const avgHeartRate = validMetricsCount > 0 ? Math.round(totalHeartRate / validMetricsCount) : 60 + Math.round(Math.random() * 10);
-      const avgBreathing = validMetricsCount > 0 ? Math.round(totalBreathing / validMetricsCount) : 12 + Math.round(Math.random() * 4);
-      const avgSpO2 = validMetricsCount > 0 ? Math.round(totalSpO2 / validMetricsCount) : 95 + Math.round(Math.random() * 3);
+      const sleepScore = record.sleepScore ? parseFloat(record.sleepScore.toFixed(2)) : 
+        calculateSleepScore(totalSleepHours, deepSleepRatio);
 
-      // Use sleepScore from API if available, otherwise calculate it
-      const sleepScore = sessions[0].sleepScore || calculateSleepScore(totalSleepHours, deepSleepRatio);
-
-      results.push({
-        id,
-        sessions,
+      return {
+        id: record.id,
+        sessions: [record],
         pieData: [
           {value: deep, color: '#6C5CE7', text: Math.round(deep).toString(), legend: 'Deep Sleep'},
           {value: light, color: '#A29BFE', text: Math.round(light).toString(), legend: 'Light Sleep'},
           {value: rem, color: '#6C5CE7', text: Math.round(rem).toString(), legend: 'REM'},
           {value: awake, color: '#E9E5FF', text: Math.round(awake).toString(), legend: 'Awake'},
+          {value: unknown, color: '#494949', text: Math.round(unknown).toString(), legend: 'Unknown'},
         ],
         metrics: {
           score: sleepScore,
-          heartRate: avgHeartRate,
-          breathing: avgBreathing,
-          bloodOxygen: avgSpO2,
+          heartRate: Math.round(record.avgHeartRate || 60 + Math.random() * 10),
+          breathing: Math.round(record.avgBreathing || 12 + Math.random() * 4),
+          bloodOxygen: Math.round(record.avgSpO2 || 95 + Math.random() * 3),
         },
         duration: durationText,
         quality: getSleepQuality(totalSleepHours, deepSleepRatio),
         timeRange: timeRangeText,
-        stages: {
-          deep,
-          light,
-          rem,
-          awake
-        }
-      });
-    }
-
-    return results;
+        stages: {deep, light, rem, awake, unknown},
+      };
+    });
   };
 
   const calculateSleepScore = (totalHours: number, deepSleepRatio: number): number | string => {
     if (totalHours <= 0) return '--';
     const hoursScore = Math.min(100, Math.max(0, (totalHours / 8) * 50));
     const deepSleepScore = Math.min(50, deepSleepRatio * 100);
-    return Math.round(hoursScore + deepSleepScore);
+    return parseFloat((hoursScore + deepSleepScore).toFixed(2));
   };
 
   const getSleepQuality = (totalHours: number, deepSleepRatio: number): string => {
@@ -254,15 +220,12 @@ const SleepScreen = () => {
   };
 
   const filterRecordsByPeriod = (records: SleepRecord[], view: 'day' | 'week' | 'month' | 'year', date: Date) => {
-    let startDate: Date;
-    let endDate: Date;
+    let startDate: Date, endDate: Date;
 
     switch (view) {
       case 'day':
-        startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
+        startDate = new Date(date.setHours(0, 0, 0, 0));
+        endDate = new Date(date.setHours(23, 59, 59, 999));
         break;
       case 'week':
         startDate = startOfWeek(date);
@@ -277,10 +240,8 @@ const SleepScreen = () => {
         endDate = endOfYear(date);
         break;
       default:
-        startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(date);
-        endDate.setHours(23, 59, 59, 999);
+        startDate = new Date(date.setHours(0, 0, 0, 0));
+        endDate = new Date(date.setHours(23, 59, 59, 999));
     }
 
     return records.filter(record => {
@@ -292,16 +253,12 @@ const SleepScreen = () => {
   const readSleepData = async () => {
     try {
       setIsLoading(true);
+      let startDate: Date, endDate: Date;
 
-      let startDate: Date;
-      let endDate: Date;
-
-      switch(activeView) {
+      switch (activeView) {
         case 'day':
-          startDate = new Date(currentDate);
-          startDate.setHours(0, 0, 0, 0);
-          endDate = new Date(currentDate);
-          endDate.setHours(23, 59, 59, 999);
+          startDate = new Date(currentDate.setHours(0, 0, 0, 0));
+          endDate = new Date(currentDate.setHours(23, 59, 59, 999));
           break;
         case 'week':
           startDate = startOfWeek(currentDate);
@@ -317,10 +274,7 @@ const SleepScreen = () => {
           break;
       }
 
-      const sleepData = await fetchSleepRecords(
-        startDate.toISOString(),
-        endDate.toISOString()
-      );
+      const sleepData = await fetchSleepRecords(startDate.toISOString(), endDate.toISOString());
       setSleepRecords(sleepData);
     } catch (error) {
       console.log('Error reading sleep data:', error);
@@ -335,85 +289,71 @@ const SleepScreen = () => {
     setShowDatePicker(false);
     if (selectedDate) {
       let newDate = selectedDate;
-      
-      if (activeView === 'week') {
-        newDate = startOfWeek(selectedDate);
-      } else if (activeView === 'month') {
-        newDate = startOfMonth(selectedDate);
-      } else if (activeView === 'year') {
-        newDate = startOfYear(selectedDate);
-      }
-      
+      if (activeView === 'week') newDate = startOfWeek(selectedDate);
+      else if (activeView === 'month') newDate = startOfMonth(selectedDate);
+      else if (activeView === 'year') newDate = startOfYear(selectedDate);
       setCurrentDate(newDate);
     }
   };
 
   const showPicker = () => {
     if (Platform.OS === 'android') {
-      if (activeView === 'month') {
-        setPickerMode('month');
-      } else if (activeView === 'year') {
-        setPickerMode('year');
-      } else {
-        setPickerMode('date');
-      }
+      setPickerMode(activeView === 'month' ? 'month' : activeView === 'year' ? 'year' : 'date');
     }
     setShowDatePicker(true);
   };
 
-  const handleViewChange = (view: 'day' | 'week' | 'month' | 'year') => {
-    setActiveView(view);
-  };
+  const handleViewChange = (view: 'day' | 'week' | 'month' | 'year') => setActiveView(view);
 
   const changeDate = (direction: 'prev' | 'next') => {
-    let newDate = new Date(currentDate);
-    
-    switch(activeView) {
-      case 'day':
-        newDate = direction === 'prev' ? subDays(newDate, 1) : addDays(newDate, 1);
-        break;
-      case 'week':
-        newDate = direction === 'prev' ? subWeeks(newDate, 1) : addWeeks(newDate, 1);
-        break;
-      case 'month':
-        newDate = direction === 'prev' ? subMonths(newDate, 1) : addMonths(newDate, 1);
-        break;
-      case 'year':
-        newDate = direction === 'prev' ? subYears(newDate, 1) : addYears(newDate, 1);
-        break;
-    }
-    
-    setCurrentDate(newDate);
+    const ops = {prev: [subDays, subWeeks, subMonths, subYears], next: [addDays, addWeeks, addMonths, addYears]};
+    const viewIndex = ['day', 'week', 'month', 'year'].indexOf(activeView);
+    setCurrentDate(ops[direction][viewIndex](currentDate, 1));
   };
 
   const formatDate = (date: Date, view: 'day' | 'week' | 'month' | 'year') => {
-    switch(view) {
+    switch (view) {
       case 'day':
-        return format(date, 'EEEE, MMMM do, yyyy');
+        return format(date, 'MMM dd, yyyy');
       case 'week':
         return `${format(startOfWeek(date), 'MMM d')} - ${format(endOfWeek(date), 'MMM d, yyyy')}`;
       case 'month':
         return format(date, 'MMMM yyyy');
       case 'year':
         return format(date, 'yyyy');
+      default:
+        return format(date, 'MMM dd, yyyy');
     }
   };
 
-  const viewLabels = {
-    day: 'Day',
-    week: 'Week',
-    month: 'Month',
-    year: 'Year'
+  const getTotalSleepTime = (records: SleepRecord[]) => {
+    const totalMinutes = records.reduce((sum, record) => {
+      return sum + differenceInMinutes(new Date(record.endTime), new Date(record.startTime));
+    }, 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = Math.round(totalMinutes % 60);
+    return `${hours}h ${minutes}m`;
+  };
+
+  const getBarChartData = () => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days.map((day, i) => {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() - date.getDay() + i);
+      const dayRecords = filterRecordsByPeriod(sleepRecords, 'day', date);
+      const totalMinutes = dayRecords.reduce((sum, record) => {
+        return sum + differenceInMinutes(new Date(record.endTime), new Date(record.startTime));
+      }, 0);
+      return {value: totalMinutes / 60, label: day, frontColor: i % 2 === 0 ? PRIMARY_COLOR : '#A29BFE'};
+    });
   };
 
   useFocusEffect(useCallback(() => { readSleepData(); }, [currentDate, activeView]));
 
   const filteredRecords = filterRecordsByPeriod(sleepRecords, activeView, currentDate);
   const sleepDataGroups = processSleepData(filteredRecords);
-  const chartData = Array(7).fill(0).map((_, i) => ({
-    day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i],
-    hours: Math.random() * 2 + 5
-  }));
+  const barData = getBarChartData();
+  const totalSleepTime = getTotalSleepTime(filteredRecords);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -431,11 +371,13 @@ const SleepScreen = () => {
 
       <View style={styles.viewToggleContainer}>
         {(['day', 'week', 'month', 'year'] as const).map(view => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={view}
             style={[styles.viewToggleButton, activeView === view && styles.activeToggle]}
             onPress={() => handleViewChange(view)}>
-            <Text style={[styles.viewToggleText, activeView === view && styles.activeToggleText]}>{viewLabels[view]}</Text>
+            <Text style={[styles.viewToggleText, activeView === view && styles.activeToggleText]}>
+              {view.charAt(0).toUpperCase() + view.slice(1)}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -446,6 +388,7 @@ const SleepScreen = () => {
         </TouchableOpacity>
         <TouchableOpacity onPress={showPicker}>
           <Text style={styles.currentDateText}>{formatDate(currentDate, activeView)}</Text>
+          <Text style={styles.totalSleepText}>Total: {totalSleepTime}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => changeDate('next')}>
           <Icon name="chevron-forward" size={20} color={PRIMARY_COLOR} />
@@ -454,10 +397,12 @@ const SleepScreen = () => {
 
       {isLoading ? (
         <View style={styles.content}>
-          <ContentLoader speed={1} width="100%" height={100} viewBox="0 0 380 100" backgroundColor="#f3f3f3" foregroundColor="#ecebeb">
+          <ContentLoader speed={1} width="100%" height={100} viewBox="0 0 380 100"
+            backgroundColor="#f3f3f3" foregroundColor="#ecebeb">
             <Rect x="0" y="0" rx="16" ry="16" width="100%" height="100" />
           </ContentLoader>
-          <ContentLoader speed={1} width="100%" height={250} viewBox="0 0 380 250" backgroundColor="#f3f3f3" foregroundColor="#ecebeb" style={styles.chartContainer}>
+          <ContentLoader speed={1} width="100%" height={250} viewBox="0 0 380 250"
+            backgroundColor="#f3f3f3" foregroundColor="#ecebeb" style={styles.chartContainer}>
             <Rect x="0" y="0" rx="4" ry="4" width="120" height="24" />
             <Rect x="0" y="34" rx="4" ry="4" width="180" height="16" />
             <Rect x="0" y="70" rx="8" ry="8" width="100%" height="180" />
@@ -479,18 +424,15 @@ const SleepScreen = () => {
               <Text style={styles.sessionQuality}>{group.quality} sleep quality</Text>
 
               <TouchableOpacity 
-                style={styles.sectionHeader}
-                onPress={() => toggleSection('stages')}
-              >
+                style={styles.sectionHeader} 
+                onPress={() => toggleSection(`stages-${group.id}`)}>
                 <Text style={styles.sectionTitle}>Sleep Stages</Text>
-                {expandedSections.stages ? (
-                  <ChevronUp width={20} height={20} color={PRIMARY_COLOR} />
-                ) : (
-                  <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />
-                )}
+                {expandedSections[`stages-${group.id}`] ? 
+                  <ChevronUp width={20} height={20} color={PRIMARY_COLOR} /> : 
+                  <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />}
               </TouchableOpacity>
-              
-              {expandedSections.stages && (
+
+              {expandedSections[`stages-${group.id}`] && (
                 <>
                   <View style={styles.chartContainer}>
                     <PieChart
@@ -508,59 +450,37 @@ const SleepScreen = () => {
                   </View>
 
                   <View style={styles.stagesLegend}>
-                    <View style={styles.legendRow}>
-                      <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, {backgroundColor: '#6C5CE7'}]} />
-                        <Text style={styles.legendLabel}>Deep Sleep</Text>
-                        <Text style={styles.legendValue}>{Math.round(group.stages.deep / 60)}h {Math.round(group.stages.deep % 60)}m</Text>
+                    {Object.entries(group.stages).map(([key, value]) => (
+                      <View key={key} style={styles.legendItem}>
+                        <View style={[styles.legendDot, {backgroundColor: 
+                          key === 'deep' || key === 'rem' ? '#6C5CE7' : 
+                          key === 'light' ? '#A29BFE' : '#E9E5FF'}]} />
+                        <Text style={styles.legendLabel}>{key.charAt(0).toUpperCase() + key.slice(1)} Sleep</Text>
+                        <Text style={styles.legendValue}>
+                          {Math.round(value / 60)}h {Math.round(value % 60)}m
+                        </Text>
                       </View>
-
-                      <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, {backgroundColor: '#A29BFE'}]} />
-                        <Text style={styles.legendLabel}>Light Sleep</Text>
-                        <Text style={styles.legendValue}>{Math.round(group.stages.light / 60)}h {Math.round(group.stages.light % 60)}m</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.legendRow}>
-                      <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, {backgroundColor: '#6C5CE7'}]} />
-                        <Text style={styles.legendLabel}>REM</Text>
-                        <Text style={styles.legendValue}>{Math.round(group.stages.rem / 60)}h {Math.round(group.stages.rem % 60)}m</Text>
-                      </View>
-
-                      <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, {backgroundColor: '#E9E5FF'}]} />
-                        <Text style={styles.legendLabel}>Awake</Text>
-                        <Text style={styles.legendValue}>{Math.round(group.stages.awake / 60)}h {Math.round(group.stages.awake % 60)}m</Text>
-                      </View>
-                    </View>
+                    ))}
                   </View>
                 </>
               )}
 
               <TouchableOpacity 
-                style={styles.sectionHeader}
-                onPress={() => toggleSection('metrics')}
-              >
+                style={styles.sectionHeader} 
+                onPress={() => toggleSection(`metrics-${group.id}`)}>
                 <Text style={styles.sectionTitle}>Health Metrics</Text>
-                {expandedSections.metrics ? (
-                  <ChevronUp width={20} height={20} color={PRIMARY_COLOR} />
-                ) : (
-                  <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />
-                )}
+                {expandedSections[`metrics-${group.id}`] ? 
+                  <ChevronUp width={20} height={20} color={PRIMARY_COLOR} /> : 
+                  <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />}
               </TouchableOpacity>
-              
-              {expandedSections.metrics && (
+
+              {expandedSections[`metrics-${group.id}`] && (
                 <View style={styles.metricsContainer}>
                   <View style={styles.metricRow}>
                     <View style={styles.metricItem}>
                       <Text style={styles.metricLabel}>Sleep Score</Text>
-                      <Text style={[styles.metricValue, {color: PRIMARY_COLOR}]}>
-                        {group.metrics.score}
-                      </Text>
+                      <Text style={[styles.metricValue, {color: PRIMARY_COLOR}]}>{group.metrics.score}</Text>
                     </View>
-
                     <View style={styles.metricItem}>
                       <Text style={styles.metricLabel}>Heart Rate</Text>
                       <Text style={[styles.metricValue, {color: '#FF4D4F'}]}>
@@ -568,7 +488,6 @@ const SleepScreen = () => {
                       </Text>
                     </View>
                   </View>
-
                   <View style={styles.metricRow}>
                     <View style={styles.metricItem}>
                       <Text style={styles.metricLabel}>Breathing</Text>
@@ -576,7 +495,6 @@ const SleepScreen = () => {
                         {group.metrics.breathing}<Text style={styles.metricUnit}>br/min</Text>
                       </Text>
                     </View>
-
                     <View style={styles.metricItem}>
                       <Text style={styles.metricLabel}>Blood Oxygen</Text>
                       <Text style={[styles.metricValue, {color: '#3B82F6'}]}>
@@ -590,40 +508,29 @@ const SleepScreen = () => {
           ))}
 
           <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('weekly')}
-          >
-            <Text style={styles.sectionTitle}>
-              {activeView === 'day' ? 'This Week' : 
-              activeView === 'week' ? 'Weekly Overview' :
-              activeView === 'month' ? 'Monthly Overview' : 'Yearly Overview'}
-            </Text>
-            {expandedSections.weekly ? (
-              <ChevronUp width={20} height={20} color={PRIMARY_COLOR} />
-            ) : (
-              <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />
-            )}
+            style={styles.sectionHeader} 
+            onPress={() => toggleSection('overview')}>
+            <Text style={styles.sectionTitle}>Weekly Overview</Text>
+            {expandedSections['overview'] ? 
+              <ChevronUp width={20} height={20} color={PRIMARY_COLOR} /> : 
+              <ChevronDown width={20} height={20} color={PRIMARY_COLOR} />}
           </TouchableOpacity>
-          
-          {expandedSections.weekly && (
-            <View style={styles.weeklyChart}>
-              {chartData.map((item, index) => (
-                <View key={index} style={styles.weeklyBarContainer}>
-                  <View
-                    style={[
-                      styles.weeklyBar,
-                      {
-                        height: `${(item.hours / 10) * 100}%`,
-                        backgroundColor:
-                          index === 2 || index === 4 || index === 6
-                            ? PRIMARY_COLOR
-                            : '#A29BFE',
-                      },
-                    ]}
-                  />
-                  <Text style={styles.weeklyBarLabel}>{item.day}</Text>
-                </View>
-              ))}
+
+          {expandedSections['overview'] && (
+            <View style={styles.chartContainer}>
+              <BarChart
+                data={barData}
+                barWidth={22}
+                spacing={24}
+                roundedTop
+                xAxisLabelTextStyle={{color: '#64748B', fontSize: 12}}
+                yAxisTextStyle={{color: '#64748B'}}
+                yAxisSuffix="h"
+                noOfSections={5}
+                maxValue={10}
+                height={200}
+                initialSpacing={10}
+              />
             </View>
           )}
 
@@ -632,27 +539,13 @@ const SleepScreen = () => {
             <View style={styles.infoCard}>
               <Text style={styles.infoTitle}>Why is Sleep Important?</Text>
               <Text style={styles.infoText}>
-                Quality sleep is essential for physical health, mental clarity, and emotional well-being. 
-                Adults typically need 7-9 hours of sleep per night for optimal health.
+                Quality sleep is essential for physical health, mental clarity, and emotional well-being. Adults typically need 7-9 hours of sleep per night for optimal health.
               </Text>
             </View>
             <View style={styles.infoCard}>
               <Text style={styles.infoTitle}>Sleep Stages</Text>
               <Text style={styles.infoText}>
-                • Deep Sleep: Restores physical energy{"\n"}
-                • Light Sleep: Prepares body for deep sleep{"\n"}
-                • REM Sleep: Important for memory and learning{"\n"}
-                • Awake: Brief awakenings are normal
-              </Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>Tips for Better Sleep</Text>
-              <Text style={styles.infoText}>
-                • Maintain a consistent sleep schedule{"\n"}
-                • Create a restful environment{"\n"}
-                • Limit screen time before bed{"\n"}
-                • Avoid caffeine and large meals before bedtime{"\n"}
-                • Exercise regularly
+                • Deep Sleep: Restores physical energy{'\n'}• Light Sleep: Prepares body for deep sleep{'\n'}• REM Sleep: Important for memory and learning{'\n'}• Awake: Brief awakenings are normal
               </Text>
             </View>
           </View>
@@ -685,7 +578,8 @@ const styles = StyleSheet.create({
   viewToggleText: {fontSize: 14, color: '#64748B'},
   activeToggleText: {color: '#FFFFFF', fontWeight: '600'},
   dateNavigation: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16},
-  currentDateText: {fontSize: 16, fontWeight: '500'},
+  currentDateText: {fontSize: 16, fontWeight: '500', textAlign: 'center'},
+  totalSleepText: {fontSize: 14, color: '#64748B', textAlign: 'center'},
   sessionContainer: {backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2},
   sessionHeader: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   sessionTitle: {fontSize: 18, fontWeight: '600'},
@@ -698,10 +592,9 @@ const styles = StyleSheet.create({
   centerLabel: {alignItems: 'center', justifyContent: 'center'},
   centerLabelText: {fontSize: 14, color: '#000000'},
   stagesLegend: {marginTop: 8},
-  legendRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
-  legendItem: {flexDirection: 'column', alignItems: 'flex-start', width: '45%'},
-  legendDot: {width: 10, height: 10, borderRadius: 5, marginBottom: 4},
-  legendLabel: {fontSize: 14, color: '#64748B'},
+  legendItem: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
+  legendDot: {width: 10, height: 10, borderRadius: 5, marginRight: 8},
+  legendLabel: {fontSize: 14, color: '#64748B', marginRight: 8},
   legendValue: {fontSize: 14, fontWeight: '500', color: '#000000'},
   metricsContainer: {marginBottom: 16},
   metricRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
@@ -709,10 +602,6 @@ const styles = StyleSheet.create({
   metricLabel: {fontSize: 14, color: '#64748B', marginBottom: 4},
   metricValue: {fontSize: 24, fontWeight: '600'},
   metricUnit: {fontSize: 14, fontWeight: '400', color: '#64748B'},
-  weeklyChart: {height: 120, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24},
-  weeklyBarContainer: {flex: 1, height: '100%', justifyContent: 'flex-end', paddingHorizontal: 4, alignItems: 'center'},
-  weeklyBar: {width: '100%', borderRadius: 4},
-  weeklyBarLabel: {fontSize: 12, color: '#64748B', marginTop: 4},
   infoContainer: {marginBottom: 24, backgroundColor: '#fff', padding: 16, borderRadius: 16},
   infoCard: {backgroundColor: '#F9FAFB', borderRadius: 8, padding: 16, marginBottom: 16},
   infoTitle: {fontSize: 16, fontWeight: '600', color: '#6C5CE7', marginBottom: 8},

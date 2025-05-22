@@ -12,7 +12,7 @@ import {theme} from '../../contants/theme';
 import {wp} from '../../helpers/common';
 import {PRIMARY_COLOR as STEP_PRIMARY_COLOR} from './RecordStepsScreen';
 import {PRIMARY_COLOR as CALORIES_PRIMARY_COLOR} from './RecordCaloriesScreen';
-import { PRIMARY_COLOR as HEART_RATE_PRIMARY_COLOR } from './RecordHeartRateScreen';
+import {PRIMARY_COLOR as HEART_RATE_PRIMARY_COLOR} from './RecordHeartRateScreen';
 import {LineChart} from 'react-native-chart-kit';
 
 interface SummaryData {
@@ -277,14 +277,27 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
               </View>
               <View
                 style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
-                <Text style={[styles.compactMetricValue, {color: CALORIES_PRIMARY_COLOR}]}>
+                <Text
+                  style={[
+                    styles.compactMetricValue,
+                    {color: CALORIES_PRIMARY_COLOR},
+                  ]}>
                   {summaryData?.activeCalories.value.toFixed(0) || '--'} cal
                 </Text>
                 <View style={styles.compactPercentageRow}>
                   <View
-                    style={[styles.compactChip, {backgroundColor: `${CALORIES_PRIMARY_COLOR}10`}]}>
-                    <Text style={[styles.compactChipText, {color: CALORIES_PRIMARY_COLOR}]}>
-                      {summaryData?.activeCalories.percentage.toFixed(0) || '--'}%
+                    style={[
+                      styles.compactChip,
+                      {backgroundColor: `${CALORIES_PRIMARY_COLOR}10`},
+                    ]}>
+                    <Text
+                      style={[
+                        styles.compactChipText,
+                        {color: CALORIES_PRIMARY_COLOR},
+                      ]}>
+                      {summaryData?.activeCalories.percentage.toFixed(0) ||
+                        '--'}
+                      %
                     </Text>
                   </View>
                 </View>
@@ -314,7 +327,9 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
               </View>
               <Text style={[styles.compactMetricValue, {color: '#3B82F6'}]}>
                 {summaryData?.running?.totalTime
-                  ? `${Math.floor(summaryData.running?.totalTime / 60)}h ${Math.floor(summaryData.running?.totalTime % 60)}m`
+                  ? `${Math.floor(
+                      summaryData.running?.totalTime / 60,
+                    )}h ${Math.floor(summaryData.running?.totalTime % 60)}m`
                   : '--'}
               </Text>
               <Text style={styles.compactMetricLabel}>Running Time</Text>
@@ -340,7 +355,15 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
       ) : (
         <TouchableWithoutFeedback
           onPress={() => navigation.navigate('HeartRateScreen')}>
-          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+          <View
+            style={[
+              styles.healthMetricCard,
+              {
+                height: CARD_HEIGHT,
+                borderLeftColor: HEART_RATE_PRIMARY_COLOR,
+                borderLeftWidth: 5,
+              },
+            ]}>
             <View style={styles.healthMetricHeader}>
               <Icon name="heart" size={20} color={HEART_RATE_PRIMARY_COLOR} />
               <TouchableOpacity
@@ -355,7 +378,11 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
             </View>
             <View style={styles.healthMetricContent}>
               <View style={styles.healthMetricText}>
-                <Text style={[styles.healthMetricValue, {color: HEART_RATE_PRIMARY_COLOR}]}>
+                <Text
+                  style={[
+                    styles.healthMetricValue,
+                    {color: HEART_RATE_PRIMARY_COLOR},
+                  ]}>
                   {summaryData?.heartRate.value.toFixed(0) || '--'} bpm
                 </Text>
                 <Text style={styles.healthMetricLabel}>Heart Rate</Text>
@@ -376,7 +403,15 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
       ) : (
         <TouchableWithoutFeedback
           onPress={() => navigation.navigate('SPo2Screen')}>
-          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+          <View
+            style={[
+              styles.healthMetricCard,
+              {
+                height: CARD_HEIGHT,
+                borderLeftColor: '#10B981',
+                borderLeftWidth: 5,
+              },
+            ]}>
             <View style={styles.healthMetricHeader}>
               <Icon name="water" size={20} color="#10B981" />
               <TouchableOpacity
@@ -412,7 +447,15 @@ const HomeHealthData: React.FC<HomeHealthDataProps> = ({
       ) : (
         <TouchableWithoutFeedback
           onPress={() => navigation.navigate('SleepScreen')}>
-          <View style={[styles.healthMetricCard, {height: CARD_HEIGHT}]}>
+          <View
+             style={[
+              styles.healthMetricCard,
+              {
+                height: CARD_HEIGHT,
+                borderLeftColor: "#6366F1",
+                borderLeftWidth: 5,
+              },
+            ]}>
             <View style={styles.healthMetricHeader}>
               <Icon name="moon" size={20} color="#6366F1" />
               <TouchableOpacity
