@@ -64,7 +64,6 @@ const RiskWarningScreen = () => {
     evaluateActivityHealth,
     fetchHealthAlertDetail,
     clearAssessment,
-    saveFullAiResult,
     fetchHealthAlerts,
     message,
   } = useAiRiskStore();
@@ -392,20 +391,6 @@ const RiskWarningScreen = () => {
           </View>
         )}
       </ScrollView>
-      <CommonDialog
-        visible={showLogoutDialog}
-        onClose={() => setShowLogoutDialog(false)}
-        title="Save report"
-        content={
-          <View>
-            <Text style={{color: '#666', fontSize: 16}}>
-              This form risk report is saved successfully!!
-            </Text>
-          </View>
-        }
-        actionButtons={Confirm}
-        width="85%"
-      />
     </SafeAreaView>
   );
 };

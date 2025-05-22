@@ -253,7 +253,9 @@ const EnhancedScheduleCard = ({
       {/* Card Title and Description */}
       <View style={styles.titleContainer}>
         <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
+        {description && (
+          <Text style={styles.cardDescription}>{description}</Text>
+        )}
       </View>
       <View style={styles.totalsContainer}>
         {/* Steps */}
