@@ -9,9 +9,11 @@ import {
   ViewStyle,
   TextStyle,
   TouchableWithoutFeedback,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { theme } from '../contants/theme';
+import {theme} from '../contants/theme';
 
 interface ActionButton {
   label: string;
@@ -33,6 +35,7 @@ interface CommonDialogProps {
   contentStyle?: ViewStyle;
   buttonContainerStyle?: ViewStyle;
   closeOnBackdropPress?: boolean;
+  disableOutsideClick?: boolean;
 }
 
 const CommonDialog: React.FC<CommonDialogProps> = ({
@@ -47,9 +50,10 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
   contentStyle = {},
   buttonContainerStyle = {},
   closeOnBackdropPress = true,
+  disableOutsideClick = true, // Default to true to prevent accidental clicks
 }) => {
   const handleBackdropPress = () => {
-    if (closeOnBackdropPress) {
+    if (!disableOutsideClick && closeOnBackdropPress) {
       onClose();
     }
   };
@@ -59,74 +63,73 @@ const CommonDialog: React.FC<CommonDialogProps> = ({
       visible={visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={onClose}
-    >
-      <TouchableWithoutFeedback onPress={handleBackdropPress}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.dialogContainer, { width, height }]}>
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={[styles.title, titleStyle]}>{title}</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#ffffff" />
+      onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={[styles.dialogContainer, {width, maxHeight: '70%'}]}>
+          <View style={styles.header}>
+            <Text style={[styles.title, titleStyle]}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={[styles.content, contentStyle]}
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            scrollEventThrottle={16}
+            bounces={false}>
+            {content}
+          </ScrollView>
+
+          {actionButtons.length > 0 && (
+            <View style={[styles.buttonContainer, buttonContainerStyle]}>
+              {actionButtons.map((button, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={button.handler}
+                  style={[
+                    styles.button,
+                    button.variant === 'outlined' && styles.outlinedButton,
+                    button.variant === 'contained' && styles.containedButton,
+                    button.variant === 'contained' && {
+                      backgroundColor: button.color || theme.colors.primaryDark,
+                    },
+                    button.variant === 'outlined' && {
+                      borderColor: button.color || theme.colors.primaryDark,
+                    },
+                  ]}>
+                  {button.iconName && (
+                    <Ionicons
+                      name={button.iconName}
+                      size={16}
+                      color={
+                        button.variant === 'contained'
+                          ? 'white'
+                          : button.color || theme.colors.primaryDark
+                      }
+                      style={styles.buttonIcon}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      (button.variant === 'outlined' ||
+                        button.variant === 'contained') && {
+                        color: button.color || theme.colors.primaryDark,
+                      },
+                      button.variant === 'contained' && {color: 'white'},
+                      button.iconName && {marginLeft: 6},
+                    ]}>
+                    {button.label}
+                  </Text>
                 </TouchableOpacity>
-              </View>
-
-              {/* Content */}
-              <View style={[styles.content, contentStyle]}>{content}</View>
-
-              {/* Action Buttons */}
-              {actionButtons.length > 0 && (
-                <View style={[styles.buttonContainer, buttonContainerStyle]}>
-                  {actionButtons.map((button, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      onPress={button.handler}
-                      style={[
-                        styles.button,
-                        button.variant === 'outlined' && styles.outlinedButton,
-                        button.variant === 'contained' && styles.containedButton,
-                        button.variant === 'contained' && {
-                          backgroundColor: button.color || theme.colors.primaryDark,
-                        },
-                        button.variant === 'outlined' && {
-                          borderColor: button.color || theme.colors.primaryDark,
-                        },
-                      ]}
-                    >
-                      {button.iconName && (
-                        <Ionicons
-                          name={button.iconName}
-                          size={16}
-                          color={
-                            button.variant === 'contained'
-                              ? 'white'
-                              : button.color || theme.colors.primaryDark
-                          }
-                          style={styles.buttonIcon}
-                        />
-                      )}
-                      <Text
-                        style={[
-                          styles.buttonText,
-                          (button.variant === 'outlined' || button.variant === 'contained') && {
-                            color: button.color || theme.colors.primaryDark,
-                          },
-                          button.variant === 'contained' && { color: 'white' },
-                          button.iconName && { marginLeft: 6 },
-                        ]}
-                      >
-                        {button.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+              ))}
             </View>
-          </TouchableWithoutFeedback>
+          )}
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };
@@ -143,12 +146,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     overflow: 'hidden',
-    maxHeight: Dimensions.get('window').height * 0.8,
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    maxHeight: Platform.select({
+      ios: undefined,
+      android: Dimensions.get('window').height * 0.7,
+    }),
   },
   header: {
     flexDirection: 'row',
@@ -173,6 +182,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     fontSize: 14,
+    flexGrow: 1,
   },
   buttonContainer: {
     flexDirection: 'row',

@@ -19,7 +19,7 @@ import {
   fetchDetailRecords,
   ExerciseSession,
 } from '../../utils/utils_healthconnect';
-import {getNameFromExerciseType} from '../../contants/exerciseType';
+import {getNameFromExerciseType, isExerciseRunning} from '../../contants/exerciseType';
 import {format, parseISO} from 'date-fns';
 import {theme} from '../../contants/theme';
 import {useLoginStore} from '../../utils/useLoginStore';
@@ -202,7 +202,7 @@ const ExerciseRecordsDetailScreen = () => {
                 <Text style={styles.metricValue}>
                   {session?.avg_pace
                     ? `${Math.floor(session.avg_pace)}:${Math.round(
-                        (session.avg_pace - Math.floor(session.avg_pace)) * 60,
+                        (session.avg_pace - Math.floor(session.avg_pace)) * 60
                       )
                         .toString()
                         .padStart(2, '0')} min/km`
@@ -248,7 +248,7 @@ const ExerciseRecordsDetailScreen = () => {
                         height={150}
                         width={wp(70)}
                         spacing={60}
-                        color="#DC2626" // Red color for heart rate
+                        color="#DC2626"
                         thickness={3}
                         curved
                         areaChart
@@ -259,8 +259,8 @@ const ExerciseRecordsDetailScreen = () => {
                         endSpacing={20}
                         yAxisLabelWidth={40}
                         xAxisLabelTextStyle={{width: 60}}
-                        startFillColor="#FECACA" // Light red
-                        endFillColor="#FEE2E2" // Very light red
+                        startFillColor="#FECACA"
+                        endFillColor="#FEE2E2"
                         adjustToWidth
                       />
                     </View>
@@ -370,8 +370,15 @@ const ExerciseRecordsDetailScreen = () => {
             </View>
 
             <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() =>
+              style={[
+                styles.primaryButton,
+                !isExerciseRunning(session?.exercise_type) && styles.disabledButton,
+              ]}
+              onPress={() => {
+                if (!isExerciseRunning(session?.exercise_type)) {
+                  Alert.alert('Not a Running Session', 'Risk analysis is only available for running activities');
+                  return;
+                }
                 navigate.navigate('RiskAnalysisConfirmScreen', {
                   userActivity: {
                     age: age,
@@ -389,10 +396,16 @@ const ExerciseRecordsDetailScreen = () => {
                       session?.exercise_type || 0,
                     )}`,
                   },
-                })
-              }>
-              <Icon name="logo-ionitron" size={20} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>Risk Analysis</Text>
+                });
+              }}
+              disabled={!isExerciseRunning(session?.exercise_type)}>
+              <Icon name="analytics" size={20} color={'#FFFFFF'} />
+              <Text style={[
+                styles.primaryButtonText,
+                !isExerciseRunning(session?.exercise_type) && styles.disabledButtonText
+              ]}>
+                {isExerciseRunning(session?.exercise_type) ? 'Risk Analysis' : 'Cannot check AI for non-running sessions'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -541,19 +554,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    backgroundColor: '#FFEBEE',
-    borderRadius: 8,
-    gap: 8,
-  },
-  errorText: {
-    color: '#D32F2F',
-    fontSize: 14,
-  },
   noDataText: {
     color: '#64748B',
     fontSize: 14,
@@ -570,10 +570,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 8,
   },
+  disabledButton: {
+    backgroundColor: '#f3a600',
+  },
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  disabledButtonText: {
+    color: '#ffffff',
   },
   secondaryButton: {
     backgroundColor: '#FFFFFF',
