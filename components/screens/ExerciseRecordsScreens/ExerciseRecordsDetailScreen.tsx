@@ -61,7 +61,7 @@ const ExerciseRecordsDetailScreen = () => {
     try {
       const res = await listSessions(null);
       if (res.status && Array.isArray(res.data)) {
-        setChatSessions(res.data);
+        setChatSessions(res.data.filter((s: any ) => s.status === "ACCEPTED"));
       } else {
         setChatSessions([]);
       }

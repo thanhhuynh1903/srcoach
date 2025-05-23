@@ -219,8 +219,33 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
 
   const canEditSession = (session: TrainingSession, view: boolean | null) => {
     if (view) return false;
-    if (session.status === 'MISSED' || session.status === 'COMPLETED' || session.status === 'INCOMING' || session.status === 'ONGOING') return false;
-    return true; // Cho phép input mọi thời gian, kể cả quá khứ
+    if (
+      session.status === 'MISSED' ||
+      session.status === 'COMPLETED' ||
+      session.status === 'INCOMING' ||
+      session.status === 'ONGOING'
+    ) return false;
+
+    try {
+      // Lấy giờ Việt Nam hiện tại (UTC+7)
+      const now = new Date();
+      const vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+
+      // Parse thời gian bắt đầu từ ISO string
+      const startDate = new Date(session.start_time);
+
+      // Tính khoảng cách thời gian (tính cả chênh lệch ngày)
+      const timeDiff = startDate.getTime() - vnNow.getTime();
+
+      // Chặn chỉnh sửa nếu còn dưới 30 phút
+      if (timeDiff < 35 * 60 * 1000) {
+        return false;
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
   };
   const getTimeError = (inputTime: string, day: string) => {
     try {
@@ -239,8 +264,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       if (diffMs < 0) {
         return 'Do not enter past times in Vietnam time';
       }
-      if (diffMs < 3 * 60 * 60 * 1000) {
-        return 'You must create a run at least 3 hours before the start time (Vietnam time)';
+      if (diffMs < 35 * 60 * 1000) {
+        return 'You must create a run at least 35 minutes before the start time (Vietnam time)';
       }
       return null;
     } catch {
@@ -557,7 +582,14 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                             ]}
                             value={extractTime(session.start_time)}
                             onChangeText={value => {
-                              const cleanedValue = value.replace(/[^0-9:]/g, '');
+                              let cleanedValue = value
+                                .replace(/[^0-9]/g, '')
+                                .slice(0, 4);
+
+                              if (cleanedValue.length > 2) {
+                                cleanedValue = cleanedValue.slice(0, 2) + ':' + cleanedValue.slice(2);
+                              }
+
                               updateSession(dayIndex, sessionIndex, 'start_time', cleanedValue);
 
                               // Kiểm tra lỗi thời gian
