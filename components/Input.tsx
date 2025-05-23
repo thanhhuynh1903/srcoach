@@ -237,6 +237,7 @@ const styles = StyleSheet.create({
   picker: {
     flex: 1,
     height: '100%',
+    color: '#000'
   },
   icon: {
     marginRight: 8,

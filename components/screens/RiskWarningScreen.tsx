@@ -16,6 +16,7 @@ import {useRoute, useNavigation} from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 import CommonDialog from '../commons/CommonDialog';
 import {set} from 'date-fns';
+import { isExerciseRunning } from '../contants/exerciseType';
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
 const getSeverityColor = (severity: any) => {
   switch (severity?.toLowerCase()) {
@@ -64,7 +65,6 @@ const RiskWarningScreen = () => {
     evaluateActivityHealth,
     fetchHealthAlertDetail,
     clearAssessment,
-    fetchHealthAlerts,
     message,
   } = useAiRiskStore();
 
@@ -80,11 +80,9 @@ const RiskWarningScreen = () => {
       console.error('Không có dữ liệu hoạt động hoặc ID cảnh báo');
     }
 
-    // Xóa dữ liệu đánh giá khi rời khỏi màn hình
     return () => clearAssessment();
   }, []);
 
-  // Xử lý khi có lỗi
   if (error) {
     return (
       <SafeAreaView style={styles.container}>

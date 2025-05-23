@@ -77,6 +77,13 @@ export function getNameFromExerciseType(num: ExerciseType): string {
   return 'Unknown Exercise';
 }
 
+export function isExerciseRunning(num: ExerciseType): boolean {
+  if (num === ExerciseType.WALKING || num === ExerciseType.RUNNING || num === ExerciseType.RUNNING_TREADMILL) {
+    return true;
+  }
+  return false;
+}
+
 export function getIconFromExerciseType(num: ExerciseType) {
   switch (num) {
     case ExerciseType.BADMINTON:
