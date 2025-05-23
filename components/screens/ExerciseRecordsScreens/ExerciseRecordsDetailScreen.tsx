@@ -404,28 +404,26 @@ const ExerciseRecordsDetailScreen = () => {
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() =>
-                navigate.navigate('RiskWarningScreen', {
-                  params: {
-                    userActivity: {
-                      age: age,
-                      gender: profile.gender,
-                      heart_rate_min: session.heart_rate?.min || 0,
-                      heart_rate_max: session.heart_rate?.max || 0,
-                      heart_rate_avg: session.heart_rate?.avg || 0,
-                      avg_pace: session.avg_pace || 0,
-                      calories: session.total_calories || 0,
-                      distance: session.total_distance
-                        ? session.total_distance / 1000
-                        : 0,
-                      steps: session.total_steps || 0,
-                      activity_name: `${getNameFromExerciseType(
-                        session?.exercise_type || 0,
-                      )}`,
-                    },
+                navigate.navigate('RiskAnalysisConfirmScreen', {
+                  userActivity: {
+                    age: age,
+                    gender: profile.gender,
+                    heart_rate_min: session.heart_rate?.min || 0,
+                    heart_rate_max: session.heart_rate?.max || 0,
+                    heart_rate_avg: session.heart_rate?.avg || 0,
+                    avg_pace: session.avg_pace || 0,
+                    calories: session.total_calories || 0,
+                    distance: session.total_distance
+                      ? session.total_distance / 1000
+                      : 0,
+                    steps: session.total_steps || 0,
+                    activity_name: `${getNameFromExerciseType(
+                      session?.exercise_type || 0,
+                    )}`,
                   },
                 })
               }>
-              <Icon name="document-text-outline" size={20} color="#FFFFFF" />
+              <Icon name="logo-ionitron" size={20} color="#FFFFFF" />
               <Text style={styles.primaryButtonText}>Risk Analysis</Text>
             </TouchableOpacity>
 
@@ -596,6 +594,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
+    marginLeft: 8,
   },
   heartRateStats: {
     flexDirection: 'row',
@@ -666,7 +665,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     marginBottom: 8,
     gap: 8,
   },
@@ -683,7 +682,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     marginBottom: 16,
     gap: 8,
   },

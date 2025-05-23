@@ -23,6 +23,7 @@ import {usePostStore} from '../utils/usePostStore';
 import {useLoginStore} from '../utils/useLoginStore';
 import {theme} from '../contants/theme';
 import {SaveDraftButton} from './CommunityScreens/SaveDraftButton';
+import { formatTimeAgo } from '../utils/utils_format';
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -156,20 +157,6 @@ const OtherProfileScreen = ({route}) => {
       return () => {};
     }, [onRefresh]),
   );
-
-  const formatTimeAgo = (dateString: string) => {
-    const now = new Date();
-    const postDate = new Date(dateString);
-    const diffMs = now.getTime() - postDate.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 0) return `${diffDays}d ago`;
-    if (diffHours > 0) return `${diffHours}h ago`;
-    if (diffMins > 0) return `${diffMins}m ago`;
-    return 'Just now';
-  };
 
   const formatFirstLetter = (str: string) => {
     if (!str) return '';
@@ -534,7 +521,7 @@ const OtherProfileScreen = ({route}) => {
                         <Icon
                           name={post.is_upvoted ? 'heart' : 'heart-outline'}
                           size={20}
-                          color={post.is_upvoted ? '#4285F4' : '#64748B'}
+                          color={post.is_upvoted ? theme.colors.primaryDark : '#64748B'}
                         />
                       </TouchableOpacity>
                       <Text style={styles.engagementText}>
@@ -704,7 +691,7 @@ const styles = StyleSheet.create({
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.colors.primaryDark,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -759,7 +746,7 @@ const styles = StyleSheet.create({
   levelValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3B82F6',
+    color: theme.colors.primaryDark,
   },
   levelProgressContainer: {
     marginBottom: 8,
@@ -773,7 +760,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.colors.primaryDark,
     borderRadius: 4,
   },
   levelText: {
@@ -782,7 +769,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   pointsHighlight: {
-    color: '#3B82F6',
+    color: theme.colors.primaryDark,
     fontWeight: '700',
   },
   nextLevelText: {
@@ -790,7 +777,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   nextLevelHighlight: {
-    color: '#3B82F6',
+    color: theme.colors.primaryDark,
     fontWeight: '600',
   },
   statsRow: {

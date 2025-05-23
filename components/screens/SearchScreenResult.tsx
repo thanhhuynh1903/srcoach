@@ -240,10 +240,10 @@ const SearchResultsScreen = ({}) => {
       onPress={() =>
         navigate.navigate('OtherProfileScreen', {postId: user.id})
       }>
-      <CommonAvatar uri={user.image?.url} size={56} />
+      <CommonAvatar uri={user.image?.url} mode={user?.roles[0]} size={40} />
       <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.username}</Text>
-        <Text style={styles.userDetail}>@{user.name}</Text>
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userDetail}>@{user.username}</Text>
         {user.bio && <Text style={styles.userBio}>{user.bio}</Text>}
       </View>
     </TouchableOpacity>
@@ -256,7 +256,7 @@ const SearchResultsScreen = ({}) => {
       onPress={() =>
         navigate.navigate('OtherProfileScreen', {postId: expert.id})
       }>
-      <CommonAvatar uri={expert.image?.url} size={56} />
+      <CommonAvatar uri={expert.image?.url} mode={expert?.roles[0]} size={40} />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{expert.name}</Text>
         <Text style={styles.userDetail}>@{expert.username}</Text>

@@ -19,7 +19,10 @@ import HomeHealthData from './HomeHealthData';
 import HomeFunFactCard from './HomeFunFactCard';
 
 // Utils
-import {fetchSummaryRecord, handleSyncButtonPress} from '../../utils/utils_healthconnect';
+import {
+  fetchSummaryRecord,
+  handleSyncButtonPress,
+} from '../../utils/utils_healthconnect';
 import useAuthStore from '../../utils/useAuthStore';
 import {useLoginStore} from '../../utils/useLoginStore';
 import ToastUtil from '../../utils/utils_toast';
@@ -89,7 +92,7 @@ const METRIC_INFO = {
     title: 'Running Time',
     content:
       'Running time is the total time you have spent running. It can help you track your fitness goals and improve your overall health.',
-  }
+  },
 };
 
 const HomeScreen = () => {
@@ -122,14 +125,17 @@ const HomeScreen = () => {
       const result = await handleSyncButtonPress();
 
       if (result?.type === 'SYNC_METHOD_MISSING') {
-        setSyncMethodError(true);
+        setSyncMethodError(true); //error involving missing SYNC_METHOD
       } else if (result?.type.includes('HEALTHCONNECT')) {
-        setHealthConnectError(true);
+        setHealthConnectError(true); //error involving HEALTHCONNECT
+      } else {
+        setSyncMethodError(false);
+        setHealthConnectError(false);
       }
+
       let summary = await fetchSummaryRecord();
       setSummaryData(summary.summaries);
       setHealthScore(summary.healthScore);
-
     } catch (error: any) {
       ToastUtil.error(
         'Sync failed',
