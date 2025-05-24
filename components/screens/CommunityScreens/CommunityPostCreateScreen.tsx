@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -16,11 +16,12 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { usePostStore } from '../../utils/usePostStore';
-import { useNavigation } from '@react-navigation/native';
-import type { ExerciseRecord } from './RecordSelectionModal';
+import {launchImageLibrary} from 'react-native-image-picker';
+import {usePostStore} from '../../utils/usePostStore';
+import {useNavigation} from '@react-navigation/native';
+import type {ExerciseRecord} from './RecordSelectionModal';
 import RecordSelectionButton from './RecordSelectionButton';
+import image_placeholder from '../../assets/Posts/image_placeholder.jpg';
 
 interface CommunityPostCreateScreenProps {
   onPost?: (postData: PostData) => void;
@@ -39,7 +40,7 @@ const MAX_IMAGES = 8;
 const MAX_TAGS = 10;
 
 const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
-  onPost
+  onPost,
 }) => {
   const navigation = useNavigation();
   const [title, setTitle] = useState('');
@@ -50,13 +51,14 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   const [tagCount, setTagCount] = useState(0);
   const [tagError, setTagError] = useState('');
 
-  const { createPost, isLoading, status, message, getAll, getMyPosts } = usePostStore();
+  const {createPost, isLoading, status, message, getAll, getMyPosts} =
+    usePostStore();
 
   // Theo dõi số lượng tags
   useEffect(() => {
     const tagArray = tags.split(',').filter(tag => tag.trim() !== '');
     setTagCount(tagArray.length);
-    
+
     if (tagArray.length > MAX_TAGS) {
       setTagError(`Maximum ${MAX_TAGS} tags allowed`);
     } else {
@@ -78,18 +80,24 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
       quality: 0.8,
     };
 
-    launchImageLibrary(options, (response) => {
+    launchImageLibrary(options, response => {
       if (response.didCancel) {
         console.log('User cancelled image picker');
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
-        Alert.alert('Error', response.errorMessage || 'An error occurred while selecting a photo.');
+        Alert.alert(
+          'Error',
+          response.errorMessage || 'An error occurred while selecting a photo.',
+        );
       } else if (response.assets && response.assets.length > 0) {
         // Thêm ảnh mới vào danh sách nếu chưa vượt quá giới hạn
         if (selectedImages.length < MAX_IMAGES) {
           setSelectedImages([...selectedImages, response.assets[0]]);
         } else {
-          Alert.alert('Photo Limit', `You can only add up to ${MAX_IMAGES} photos`);
+          Alert.alert(
+            'Photo Limit',
+            `You can only add up to ${MAX_IMAGES} photos`,
+          );
         }
       }
     });
@@ -107,7 +115,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
   const handleTagsChange = (text: string) => {
     setTags(text);
-    
+
     // Kiểm tra số lượng tags ngay khi người dùng nhập
     const tagArray = text.split(',').filter(tag => tag.trim() !== '');
     if (tagArray.length > MAX_TAGS) {
@@ -131,7 +139,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
     }
 
     try {
-      console.log("Selected exercise record:", runRecord);
+      console.log('Selected exercise record:', runRecord);
       // Nếu có onPost callback (từ props), sử dụng nó
       if (onPost) {
         const postData: PostData = {
@@ -153,30 +161,35 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
         exerciseSessionRecordId: runRecord ? runRecord?.id : null,
         images: selectedImages || [],
       });
-      
+
       console.log('status', usePostStore.getState().status);
       // Thành công, quay lại màn hình trước đó
       Alert.alert('Success', 'Created post successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        {text: 'OK', onPress: () => navigation.goBack()},
       ]);
       await getAll();
       await getMyPosts();
     } catch (error: any) {
       console.error('Error creating post:', error);
-      Alert.alert('Error', error.message || 'Cannot create post. Please try again later.');
+      Alert.alert(
+        'Error',
+        error.message || 'Cannot create post. Please try again later.',
+      );
     }
   };
 
-  const isPostButtonEnabled = title.trim() !== '' && content.trim() !== '' && !tagError;
+  const isPostButtonEnabled =
+    title.trim() !== '' && content.trim() !== '' && !tagError;
 
   // Hiển thị ảnh mẫu nếu không có ảnh được chọn
-  const displayImages = selectedImages.length > 0 
-    ? selectedImages.map(img => ({ uri: img.uri })) 
-    : [
-        { uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png' },
-        { uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png' },
-        { uri: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1.6.3_%20Community%20Post%20Create-po31zKLlrza30Xc8pRZrVOL3SOH9Ve.png' }
-      ];
+  const displayImages =
+    selectedImages.length > 0
+      ? selectedImages.map(img => ({uri: img.uri}))
+      : [
+          {uri: Image.resolveAssetSource(image_placeholder).uri},
+          {uri: Image.resolveAssetSource(image_placeholder).uri},
+          {uri: Image.resolveAssetSource(image_placeholder).uri},
+        ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -193,8 +206,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidView}
-      >
+        style={styles.keyboardAvoidView}>
         <ScrollView style={styles.scrollView}>
           {/* Title */}
           <View style={styles.formGroup}>
@@ -234,43 +246,47 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
             <Text style={styles.noteText}>
               Note: First picture will be displayed on the post
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
-              <TouchableOpacity 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.imagesContainer}>
+              <TouchableOpacity
                 style={[
-                  styles.addImageButton, 
-                  selectedImages.length >= MAX_IMAGES && styles.disabledButton
-                ]} 
+                  styles.addImageButton,
+                  selectedImages.length >= MAX_IMAGES && styles.disabledButton,
+                ]}
                 onPress={handleAddImage}
-                disabled={selectedImages.length >= MAX_IMAGES}
-              >
-                <Icon name="add" size={24} color={selectedImages.length >= MAX_IMAGES ? "#ccc" : "#999"} />
-                <Text style={[
-                  styles.addImageText,
-                  selectedImages.length >= MAX_IMAGES && {color: "#ccc"}
-                ]}>
+                disabled={selectedImages.length >= MAX_IMAGES}>
+                <Icon
+                  name="add"
+                  size={24}
+                  color={selectedImages.length >= MAX_IMAGES ? '#ccc' : '#999'}
+                />
+                <Text
+                  style={[
+                    styles.addImageText,
+                    selectedImages.length >= MAX_IMAGES && {color: '#ccc'},
+                  ]}>
                   Add
                 </Text>
               </TouchableOpacity>
 
-              {selectedImages.length > 0 ? (
-                selectedImages.map((image, index) => (
-                  <View key={index} style={styles.imageContainer}>
-                    <Image source={{ uri: image.uri }} style={styles.image} />
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => handleRemoveImage(index)}
-                    >
-                      <Icon name="close-circle" size={22} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              ) : (
-                displayImages.map((image, index) => (
-                  <View key={index} style={styles.imageContainer}>
-                    <Image source={{ uri: image.uri }} style={styles.image} />
-                  </View>
-                ))
-              )}
+              {selectedImages.length > 0
+                ? selectedImages.map((image, index) => (
+                    <View key={index} style={styles.imageContainer}>
+                      <Image source={{uri: image.uri}} style={styles.image} />
+                      <TouchableOpacity
+                        style={styles.removeImageButton}
+                        onPress={() => handleRemoveImage(index)}>
+                        <Icon name="close-circle" size={22} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))
+                : displayImages.map((image, index) => (
+                    <View key={index} style={styles.imageContainer}>
+                      <Image source={{uri: image.uri}} style={styles.image} />
+                    </View>
+                  ))}
             </ScrollView>
           </View>
 
@@ -278,10 +294,11 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
           <View style={styles.formGroup}>
             <View style={styles.labelContainer}>
               <Text style={styles.label}>Tags</Text>
-              <Text style={[
-                styles.countIndicator,
-                tagCount > MAX_TAGS && styles.errorCount
-              ]}>
+              <Text
+                style={[
+                  styles.countIndicator,
+                  tagCount > MAX_TAGS && styles.errorCount,
+                ]}>
                 {tagCount}/{MAX_TAGS}
               </Text>
             </View>
@@ -320,11 +337,10 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
         <TouchableOpacity
           style={[
             styles.postButton,
-            (!isPostButtonEnabled || isLoading) && styles.postButtonDisabled
+            (!isPostButtonEnabled || isLoading) && styles.postButtonDisabled,
           ]}
           onPress={handlePost}
-          disabled={!isPostButtonEnabled || isLoading}
-        >
+          disabled={!isPostButtonEnabled || isLoading}>
           {isLoading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
@@ -337,15 +353,30 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 56, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#000' },
-  headerRight: { width: 40 },
-  keyboardAvoidView: { flex: 1 },
-  scrollView: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
-  formGroup: { marginBottom: 20 },
-  label: { fontSize: 16, fontWeight: '500', color: '#000', marginBottom: 8 },
+  container: {flex: 1, backgroundColor: '#fff'},
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    height: 56,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {fontSize: 18, fontWeight: '600', color: '#000'},
+  headerRight: {width: 40},
+  keyboardAvoidView: {flex: 1},
+  scrollView: {flex: 1, paddingHorizontal: 16, paddingTop: 16},
+  formGroup: {marginBottom: 20},
+  label: {fontSize: 16, fontWeight: '500', color: '#000', marginBottom: 8},
   labelContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -360,41 +391,98 @@ const styles = StyleSheet.create({
     color: '#d32f2f',
     fontWeight: '500',
   },
-  selectInput: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 50, paddingHorizontal: 16, backgroundColor: '#f5f5f5', borderRadius: 8 },
-  textInput: { height: 50, paddingHorizontal: 16, backgroundColor: '#f5f5f5', borderRadius: 8, fontSize: 16, color: '#333' },
+  selectInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+  },
+  textInput: {
+    height: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    fontSize: 16,
+    color: '#333',
+  },
   inputError: {
     borderWidth: 1,
     borderColor: '#d32f2f',
   },
-  textArea: { minHeight: 150, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, backgroundColor: '#f5f5f5', borderRadius: 8, fontSize: 16, color: '#333' },
-  inputText: { fontSize: 16, color: '#333' },
-  placeholderText: { fontSize: 16, color: '#999' },
-  imagesContainer: { flexDirection: 'row', marginBottom: 8 },
-  addImageButton: { width: 80, height: 80, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  textArea: {
+    minHeight: 150,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    fontSize: 16,
+    color: '#333',
+  },
+  inputText: {fontSize: 16, color: '#333'},
+  placeholderText: {fontSize: 16, color: '#999'},
+  imagesContainer: {flexDirection: 'row', marginBottom: 8},
+  addImageButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   disabledButton: {
     backgroundColor: '#f0f0f0',
     opacity: 0.7,
   },
-  addImageText: { fontSize: 14, color: '#999', marginTop: 4 },
-  imageContainer: { position: 'relative', marginRight: 12 },
-  image: { width: 80, height: 80, borderRadius: 8 },
-  removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12 },
-  runRecordButton: { flexDirection: 'row', alignItems: 'center', height: 50, paddingHorizontal: 16, backgroundColor: '#f5f5f5', borderRadius: 8, marginBottom: 20 },
-  runRecordText: { fontSize: 16, color: '#666', marginLeft: 12 },
-  chevronIcon: { marginLeft: 'auto' },
-  bottomSpacer: { height: 40 },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fff' },
-  postButton: { height: 50, borderRadius: 8, backgroundColor: '#002366', alignItems: 'center', justifyContent: 'center' },
-  postButtonDisabled: { backgroundColor: '#002366', opacity: 0.6 },
-  postButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
-  errorContainer: { 
-    padding: 12, 
-    backgroundColor: '#ffebee', 
-    borderRadius: 8, 
-    marginBottom: 20 
+  addImageText: {fontSize: 14, color: '#999', marginTop: 4},
+  imageContainer: {position: 'relative', marginRight: 12},
+  image: {width: 80, height: 80, borderRadius: 8},
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 12,
   },
-  errorText: { 
-    color: '#d32f2f', 
+  runRecordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  runRecordText: {fontSize: 16, color: '#666', marginLeft: 12},
+  chevronIcon: {marginLeft: 'auto'},
+  bottomSpacer: {height: 40},
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    backgroundColor: '#fff',
+  },
+  postButton: {
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#002366',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postButtonDisabled: {backgroundColor: '#002366', opacity: 0.6},
+  postButtonText: {fontSize: 16, fontWeight: '600', color: '#fff'},
+  errorContainer: {
+    padding: 12,
+    backgroundColor: '#ffebee',
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#d32f2f',
     fontSize: 14,
     marginTop: 4,
     marginLeft: 4,

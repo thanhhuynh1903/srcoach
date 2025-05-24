@@ -73,9 +73,10 @@ const CommunityNewsList = () => {
         {item.image_url ? (
           <Image source={{uri: item.image_url}} style={styles.newsImage} />
         ) : (
-          <View style={[styles.newsImage, styles.newsImagePlaceholder]}>
-            <Icon name="newspaper-outline" size={36} color="#A0AEC0" />
-          </View>
+          <Image
+            source={require('../../assets/Community/newspaper.jpg')}
+            style={[styles.newsImage, styles.newsImagePlaceholder]}
+          />
         )}
         <View
           style={[
