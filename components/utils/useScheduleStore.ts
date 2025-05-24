@@ -241,6 +241,25 @@ const useScheduleStore = create<ScheduleState>()(
 
         return null
       },
+      declineExpertSchedule: async (scheduleId: string) => {
+        set({isLoading: true, error: null, message: null});
+        try {
+          const response = await api.postData(
+            `/schedules/decline/${scheduleId}`,
+          );
+          if (response?.status === 'success') {
+            ToastUtil.success('Success', response?.message);
+            return response.data;
+          }
+          return response;
+        } catch (error: any) {
+          const serverMessage =
+            error.response?.data?.message || 'Unknown error';
+          ToastUtil.error('Error', serverMessage);
+        }
+
+        return null
+      },
       clear() {
         set({
           isLoading: false,

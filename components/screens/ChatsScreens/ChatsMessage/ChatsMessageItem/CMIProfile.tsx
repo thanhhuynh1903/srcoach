@@ -62,240 +62,179 @@ export const CMIProfile = ({
     <Text style={styles.requiredIndicator}> *</Text>
   );
 
-  if (message.content.is_filled === false) {
+  const renderFormField = (label: string, value: string, isRequired: boolean, isEditable: boolean, renderInput: () => React.ReactNode) => {
     return (
-      <View style={styles.centeredContainer}>
-        <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>
-            {isMe
-              ? 'Waiting for runner to fill profile'
+      <View style={styles.inputGroup}>
+        <Text style={styles.inputLabel}>
+          {label}
+          {isRequired && renderRequiredIndicator()}
+        </Text>
+        {isEditable ? (
+          renderInput()
+        ) : (
+          <View style={styles.filledInput}>
+            <Text style={styles.filledInputText}>{value}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.centeredContainer}>
+      <View style={[
+        styles.formContainer,
+        message.content.is_filled && styles.filledFormContainer
+      ]}>
+        <Text style={styles.formTitle}>
+          {isMe
+            ? message.content.is_filled 
+              ? "Runner's Profile" 
+              : 'Waiting for runner to fill profile'
+            : message.content.is_filled
+              ? 'Your Profile'
               : 'Please fill your profile information'}
-          </Text>
+        </Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Height (cm)
-              {!isMe && renderRequiredIndicator()}
+        {renderFormField(
+          'Height (cm)',
+          message.content.height ? `${message.content.height} cm` : '',
+          !message.content.is_filled && !isMe,
+          !message.content.is_filled && !isMe,
+          () => (
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              placeholder="Enter height in cm"
+              value={height}
+              onChangeText={setHeight}
+            />
+          )
+        )}
+
+        {renderFormField(
+          'Weight (kg)',
+          message.content.weight ? `${message.content.weight} kg` : '',
+          !message.content.is_filled && !isMe,
+          !message.content.is_filled && !isMe,
+          () => (
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              placeholder="Enter weight in kg"
+              value={weight}
+              onChangeText={setWeight}
+            />
+          )
+        )}
+
+        {renderFormField(
+          'Running Type',
+          message.content.type ? message.content.type.replace(/_/g, ' ') : '',
+          !message.content.is_filled && !isMe,
+          !message.content.is_filled && !isMe,
+          () => (
+            <TouchableOpacity
+              style={styles.typePickerTrigger}
+              onPress={() => setShowTypePicker(true)}>
+              <Text style={styles.typePickerText}>
+                {type.replace(/_/g, ' ')}
+              </Text>
+              <Icon
+                name="chevron-down"
+                size={16}
+                color={theme.colors.primaryDark}
+              />
+            </TouchableOpacity>
+          )
+        )}
+
+        {renderFormField(
+          'Health Issues (optional)',
+          message.content.issues || 'None',
+          false,
+          !message.content.is_filled && !isMe,
+          () => (
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              multiline
+              placeholder="Any health concerns?"
+              value={issues}
+              onChangeText={setIssues}
+            />
+          )
+        )}
+
+        {!message.content.is_filled && !isMe && (
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={!height || !weight || !type}>
+            <Text style={styles.submitButtonText}>Submit Profile</Text>
+          </TouchableOpacity>
+        )}
+
+        {message.content.is_filled && (
+          <View style={styles.footer}>
+            <Text style={styles.timeText}>
+              {formatTimestampAgo(message.created_at)}
             </Text>
-            {isMe ? (
-              <View style={styles.loadingInput}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.primaryDark}
-                />
-              </View>
-            ) : (
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="Enter height in cm"
-                value={height}
-                onChangeText={setHeight}
+            {isMe && (
+              <Icon
+                name={message.read_at ? 'checkmark-done' : 'checkmark'}
+                size={14}
+                color={
+                  message.read_at
+                    ? theme.colors.primaryDark
+                    : 'rgba(255,255,255,0.5)'
+                }
+                style={styles.icon}
               />
             )}
           </View>
+        )}
+      </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Weight (kg)
-              {!isMe && renderRequiredIndicator()}
-            </Text>
-            {isMe ? (
-              <View style={styles.loadingInput}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.primaryDark}
-                />
-              </View>
-            ) : (
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                placeholder="Enter weight in kg"
-                value={weight}
-                onChangeText={setWeight}
-              />
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>
-              Running Type
-              {!isMe && renderRequiredIndicator()}
-            </Text>
-            {isMe ? (
-              <View style={styles.loadingInput}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.primaryDark}
-                />
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.typePickerTrigger}
-                onPress={() => setShowTypePicker(true)}>
-                <Text style={styles.typePickerText}>
-                  {type.replace(/_/g, ' ')}
-                </Text>
+      <Modal
+        visible={showTypePicker}
+        transparent={true}
+        animationType="slide">
+        <View style={styles.pickerModalContainer}>
+          <View style={styles.pickerModal}>
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={() => setShowTypePicker(false)}>
                 <Icon
-                  name="chevron-down"
-                  size={16}
+                  name="close"
+                  size={24}
                   color={theme.colors.primaryDark}
                 />
               </TouchableOpacity>
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Health Issues (optional)</Text>
-            {isMe ? (
-              <View style={styles.loadingInput}>
-                <ActivityIndicator
-                  size="small"
-                  color={theme.colors.primaryDark}
-                />
-              </View>
-            ) : (
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                multiline
-                placeholder="Any health concerns?"
-                value={issues}
-                onChangeText={setIssues}
+              <Text style={styles.pickerTitle}>Select Running Type</Text>
+              <TouchableOpacity onPress={() => setShowTypePicker(false)}>
+                <Text style={styles.pickerDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <Picker
+              selectedValue={type}
+              onValueChange={itemValue => setType(itemValue)}
+              style={styles.picker}>
+              <Picker.Item label="Walking" value="WALKING" />
+              <Picker.Item label="Light Run" value="LIGHT_RUN" />
+              <Picker.Item label="Jogging" value="JOGGING" />
+              <Picker.Item label="Running" value="RUNNING" />
+              <Picker.Item
+                label="Interval Training"
+                value="INTERVAL_TRAINING"
               />
-            )}
+              <Picker.Item label="Trail Running" value="TRAIL_RUNNING" />
+              <Picker.Item label="Long Distance" value="LONG_DISTANCE" />
+              <Picker.Item label="Half Marathon" value="HALF_MARATHON" />
+              <Picker.Item label="Marathon" value="MARATHON" />
+              <Picker.Item label="Others" value="OTHERS" />
+            </Picker>
           </View>
-
-          {!isMe && (
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleSubmit}
-              disabled={!height || !weight || !type}>
-              <Text style={styles.submitButtonText}>Submit Profile</Text>
-            </TouchableOpacity>
-          )}
         </View>
-
-        <Modal
-          visible={showTypePicker}
-          transparent={true}
-          animationType="slide">
-          <View style={styles.pickerModalContainer}>
-            <View style={styles.pickerModal}>
-              <View style={styles.pickerHeader}>
-                <TouchableOpacity onPress={() => setShowTypePicker(false)}>
-                  <Icon
-                    name="close"
-                    size={24}
-                    color={theme.colors.primaryDark}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.pickerTitle}>Select Running Type</Text>
-                <TouchableOpacity onPress={() => setShowTypePicker(false)}>
-                  <Text style={styles.pickerDoneText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <Picker
-                selectedValue={type}
-                onValueChange={itemValue => setType(itemValue)}
-                style={styles.picker}>
-                <Picker.Item label="Walking" value="WALKING" />
-                <Picker.Item label="Light Run" value="LIGHT_RUN" />
-                <Picker.Item label="Jogging" value="JOGGING" />
-                <Picker.Item label="Running" value="RUNNING" />
-                <Picker.Item
-                  label="Interval Training"
-                  value="INTERVAL_TRAINING"
-                />
-                <Picker.Item label="Trail Running" value="TRAIL_RUNNING" />
-                <Picker.Item label="Long Distance" value="LONG_DISTANCE" />
-                <Picker.Item label="Half Marathon" value="HALF_MARATHON" />
-                <Picker.Item label="Marathon" value="MARATHON" />
-                <Picker.Item label="Others" value="OTHERS" />
-              </Picker>
-            </View>
-          </View>
-        </Modal>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.filledContainer}>
-      <View
-        style={[
-          styles.filledBubble,
-          isMe && styles.filledBubbleMe,
-        ]}>
-        <View style={styles.filledHeader}>
-          <View style={[styles.profileIcon, isMe && styles.profileIconMe]}>
-            <Icon
-              name="person"
-              size={16}
-              color={isMe ? theme.colors.primaryDark : '#fff'}
-            />
-          </View>
-          <Text style={[styles.filledTitle, isMe && styles.filledTitleMe]}>
-            {!isMe ? 'Your Profile' : `Runner's Profile`}
-          </Text>
-        </View>
-        
-        <View style={styles.detailsContainer}>
-          {message.content.height && (
-            <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Height</Text>
-              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
-                {message.content.height} cm
-              </Text>
-            </View>
-          )}
-          
-          {message.content.weight && (
-            <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Weight</Text>
-              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
-                {message.content.weight} kg
-              </Text>
-            </View>
-          )}
-          
-          {message.content.type && (
-            <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Activity</Text>
-              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
-                {message.content.type.replace(/_/g, ' ')}
-              </Text>
-            </View>
-          )}
-          
-          {message.content.issues && (
-            <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, isMe && styles.detailLabelMe]}>Health Notes</Text>
-              <Text style={[styles.detailValue, isMe && styles.detailValueMe]}>
-                {message.content.issues}
-              </Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.footer}>
-          <Text style={[styles.timeText, isMe && styles.timeTextMe]}>
-            {formatTimestampAgo(message.created_at)}
-          </Text>
-          {isMe && (
-            <Icon
-              name={message.read_at ? 'checkmark-done' : 'checkmark'}
-              size={14}
-              color={
-                message.read_at
-                  ? theme.colors.primaryDark
-                  : 'rgba(255,255,255,0.5)'
-              }
-              style={styles.icon}
-            />
-          )}
-        </View>
-      </View>
+      </Modal>
     </View>
   );
 };
@@ -305,34 +244,37 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 20,
-    paddingHorizontal: 20,
+    marginVertical: 12,
+    paddingHorizontal: 16,
   },
   formContainer: {
     width: '100%',
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
+  filledFormContainer: {
+    padding: 12,
+  },
   formTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.primaryDark,
-    marginBottom: 20,
+    marginBottom: 12,
     textAlign: 'center',
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 12,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginBottom: 5,
+    marginBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -340,35 +282,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    padding: 10,
+    fontSize: 14,
+  },
+  filledInput: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 8,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+  },
+  filledInputText: {
+    fontSize: 14,
+    color: '#333',
   },
   multilineInput: {
-    minHeight: 80,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
   typePickerTrigger: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   typePickerText: {
-    fontSize: 16,
+    fontSize: 14,
   },
   submitButton: {
     backgroundColor: theme.colors.primaryDark,
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   loadingInput: {
@@ -415,76 +368,6 @@ const styles = StyleSheet.create({
   picker: {
     marginTop: 10,
   },
-  filledContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 12,
-    alignItems: 'flex-end',
-  },
-  filledBubble: {
-    width: '75%',
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#ffffff',
-  },
-  filledBubbleMe: {
-    backgroundColor: theme.colors.primaryDark,
-  },
-  filledHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  profileIcon: {
-    backgroundColor: theme.colors.primaryDark,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  profileIconMe: {
-    backgroundColor: '#fff',
-  },
-  filledTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  filledTitleMe: {
-    color: '#fff',
-  },
-  detailsContainer: {
-    marginLeft: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-    flex: 1,
-  },
-  detailLabelMe: {
-    color: 'rgba(255,255,255,0.7)',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
-  },
-  detailValueMe: {
-    color: '#fff',
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -492,11 +375,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999',
-  },
-  timeTextMe: {
-    color: 'rgba(255,255,255,0.7)',
   },
   icon: {
     marginLeft: 4,

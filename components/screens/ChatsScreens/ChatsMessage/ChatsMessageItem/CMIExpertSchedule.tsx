@@ -16,6 +16,7 @@ interface CMIExpertScheduleProps {
     created_at: string;
     read_at?: string;
     archived?: boolean;
+    status?: 'PENDING' | 'INCOMING' | 'ONGOING' | 'CANCELLED';
     sender: {
       id: string;
       name: string;
@@ -67,54 +68,52 @@ export const CMIExpertSchedule = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isArchived, setIsArchived] = useState(message?.archived || false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
-  const {acceptExpertSchedule} = useScheduleStore();
+  const {acceptExpertSchedule, declineExpertSchedule} = useScheduleStore();
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isExpired, setIsExpired] = useState<boolean>(false);
 
-  // Calculate time left until expiration (30 minutes from creation)
+  const status = message.content.schedule?.status || 'PENDING';
+  const isActive = status === 'INCOMING' || status === 'ONGOING';
+  const isCancelled = status === 'CANCELLED';
+
   useEffect(() => {
     const calculateTimeLeft = () => {
       const createdAt = new Date(message.content.schedule.created_at).getTime();
       const now = new Date().getTime();
-      const expirationTime = createdAt + 30 * 60 * 1000; // 30 minutes in milliseconds
+      const expirationTime = createdAt + 30 * 60 * 1000;
       const remaining = expirationTime - now;
 
       if (remaining <= 0) {
         setIsExpired(true);
         return 0;
       }
-
       return remaining;
     };
 
-    // Initial calculation
     const initialTimeLeft = calculateTimeLeft();
     setTimeLeft(initialTimeLeft);
 
-    // Set up interval for countdown if not expired
     if (initialTimeLeft > 0) {
       const timer = setInterval(() => {
         const newTimeLeft = calculateTimeLeft();
         setTimeLeft(newTimeLeft);
-        
         if (newTimeLeft <= 0) {
           clearInterval(timer);
           setIsExpired(true);
         }
       }, 1000);
-
       return () => clearInterval(timer);
     }
   }, [message.content.schedule.created_at]);
 
   const formatTime = (milliseconds: number) => {
     if (milliseconds <= 0) return '00:00';
-    
     const totalSeconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
   };
 
   const handleArchive = async () => {
@@ -123,9 +122,7 @@ export const CMIExpertSchedule = ({
     if (response.status) {
       setIsArchived(true);
       setShowConfirmDialog(false);
-      if (onUpdateMessage) {
-        onUpdateMessage(message.id, {archived: true});
-      }
+      onUpdateMessage?.(message.id, {archived: true});
     }
   };
 
@@ -138,6 +135,42 @@ export const CMIExpertSchedule = ({
   const toggleDaySelection = (index: number) => {
     setSelectedDayIndex(selectedDayIndex === index ? null : index);
   };
+
+  const formatDayName = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {weekday: 'short'});
+  };
+
+  const formatDayNumber = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.getDate();
+  };
+
+  const formatTimeRange = (start: string, end: string) => {
+    const startTime = new Date(start);
+    const endTime = new Date(end);
+    return `${startTime.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })} - ${endTime.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+  };
+
+  // Calculate totals
+  const totals = message.content.schedule.ScheduleDay.reduce(
+    (acc, day) => {
+      day.ScheduleDetail?.forEach(detail => {
+        acc.steps += detail.goal_steps || 0;
+        acc.distance += detail.goal_distance || 0;
+        acc.calories += detail.goal_calories || 0;
+        acc.time += detail.estimated_time || 0;
+      });
+      return acc;
+    },
+    {steps: 0, distance: 0, calories: 0, time: 0},
+  );
 
   if (isArchived || !message.content) {
     return (
@@ -164,73 +197,27 @@ export const CMIExpertSchedule = ({
     );
   }
 
-  // Calculate totals
-  const totalSteps = message.content.schedule.ScheduleDay.reduce(
-    (sum, day) =>
-      sum +
-      (day.ScheduleDetail?.reduce(
-        (daySum, detail) => daySum + (detail.goal_steps || 0),
-        0,
-      ) || 0),
-    0,
-  );
-
-  const totalDistance = message.content.schedule.ScheduleDay.reduce(
-    (sum, day) =>
-      sum +
-      (day.ScheduleDetail?.reduce(
-        (daySum, detail) => daySum + (detail.goal_distance || 0),
-        0,
-      ) || 0),
-    0,
-  );
-
-  const totalCalories = message.content.schedule.ScheduleDay.reduce(
-    (sum, day) =>
-      sum +
-      (day.ScheduleDetail?.reduce(
-        (daySum, detail) => daySum + (detail.goal_calories || 0),
-        0,
-      ) || 0),
-    0,
-  );
-
-  const totalTime = message.content.schedule.ScheduleDay.reduce(
-    (sum, day) =>
-      sum +
-      (day.ScheduleDetail?.reduce(
-        (daySum, detail) => daySum + (detail.estimated_time || 0),
-        0,
-      ) || 0),
-    0,
-  );
-
-  const formatDayName = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {weekday: 'short'});
-  };
-
-  const formatDayNumber = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.getDate();
-  };
-
-  const formatTimeRange = (start: string, end: string) => {
-    const startTime = new Date(start);
-    const endTime = new Date(end);
-    return `${startTime.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })} - ${endTime.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-  };
-
-  // Determine bubble style based on expiration
+  // Determine bubble style based on status
   const bubbleStyle = [
     styles.container,
-    isExpired ? styles.expiredBubble : styles.centeredBubble,
+    isCancelled
+      ? styles.cancelledBubble
+      : isActive
+      ? styles.activeBubble
+      : isExpired
+      ? styles.expiredBubble
+      : styles.centeredBubble,
+  ];
+
+  // Determine text color based on status
+  const textStyle = [
+    isCancelled
+      ? styles.cancelledText
+      : isActive
+      ? styles.activeText
+      : isExpired
+      ? styles.expiredText
+      : styles.defaultText,
   ];
 
   return (
@@ -242,73 +229,139 @@ export const CMIExpertSchedule = ({
         <View style={bubbleStyle}>
           <View style={styles.avatarRow}>
             <CommonAvatar
+              style={{marginRight: 10}}
               size={24}
               uri={message.sender.image?.url}
-              mode={
-                message.sender.roles.includes('EXPERT') ? 'expert' : 'runner'
-              }
             />
             {isMe ? (
-              <Text style={styles.myText}>You</Text>
+              <Text style={textStyle}>You </Text>
             ) : (
-              <Text style={styles.senderName}>{message.sender.name}</Text>
+              <Text style={[textStyle, styles.senderName]}>
+                {message.sender.name}{' '}
+              </Text>
             )}
-            <Text style={styles.headerText}>
+            <Text style={textStyle}>
               {isMe ? 'have' : 'has'} sent a Training Schedule
             </Text>
           </View>
 
-          <Text style={[styles.scheduleTitle, isExpired && styles.expiredText]}>
+          <Text style={[styles.scheduleTitle, textStyle]}>
             {message.content.schedule.title}
           </Text>
 
           {message.content.schedule.description && (
-            <Text style={[styles.scheduleDescription, isExpired && styles.expiredText]}>
+            <Text style={[styles.scheduleDescription, textStyle]}>
               {message.content.schedule.description}
             </Text>
           )}
 
           {/* Totals Summary */}
           <View style={styles.totalsContainer}>
-            {totalSteps > 0 && (
+            {totals.steps > 0 && (
               <View style={styles.totalItem}>
-                <Icon name="walk" size={16} color={isExpired ? '#ffcdd2' : theme.colors.primaryDark} />
-                <Text style={[styles.totalText, isExpired && styles.expiredText]}>
-                  {totalSteps.toLocaleString()} steps
+                <Icon
+                  name="walk"
+                  size={16}
+                  color={
+                    isCancelled
+                      ? '#d60015'
+                      : isActive
+                      ? '#00880b'
+                      : isExpired
+                      ? '#d60015'
+                      : theme.colors.primaryDark
+                  }
+                />
+                <Text style={[styles.totalText, textStyle]}>
+                  {totals.steps.toLocaleString()} steps
                 </Text>
               </View>
             )}
-            {totalDistance > 0 && (
+            {totals.distance > 0 && (
               <View style={styles.totalItem}>
-                <Icon name="map" size={16} color={isExpired ? '#ffcdd2' : theme.colors.primaryDark} />
-                <Text style={[styles.totalText, isExpired && styles.expiredText]}>
-                  {totalDistance} km
+                <Icon
+                  name="map"
+                  size={16}
+                  color={
+                    isCancelled
+                      ? '#d60015'
+                      : isActive
+                      ? '#00880b'
+                      : isExpired
+                      ? '#d60015'
+                      : theme.colors.primaryDark
+                  }
+                />
+                <Text style={[styles.totalText, textStyle]}>
+                  {totals.distance} km
                 </Text>
               </View>
             )}
-            {totalCalories > 0 && (
+            {totals.calories > 0 && (
               <View style={styles.totalItem}>
-                <Icon name="flame" size={16} color={isExpired ? '#ffcdd2' : theme.colors.primaryDark} />
-                <Text style={[styles.totalText, isExpired && styles.expiredText]}>
-                  {totalCalories} cal
+                <Icon
+                  name="flame"
+                  size={16}
+                  color={
+                    isCancelled
+                      ? '#d60015'
+                      : isActive
+                      ? '#00880b'
+                      : isExpired
+                      ? '#d60015'
+                      : theme.colors.primaryDark
+                  }
+                />
+                <Text style={[styles.totalText, textStyle]}>
+                  {totals.calories} cal
                 </Text>
               </View>
             )}
-            {totalTime > 0 && (
+            {totals.time > 0 && (
               <View style={styles.totalItem}>
-                <Icon name="time" size={16} color={isExpired ? '#ffcdd2' : theme.colors.primaryDark} />
-                <Text style={[styles.totalText, isExpired && styles.expiredText]}>
-                  {Math.floor(totalTime / 60)}h {totalTime % 60}m
+                <Icon
+                  name="time"
+                  size={16}
+                  color={
+                    isCancelled
+                      ? '#d60015'
+                      : isActive
+                      ? '#00880b'
+                      : isExpired
+                      ? '#d60015'
+                      : theme.colors.primaryDark
+                  }
+                />
+                <Text style={[styles.totalText, textStyle]}>
+                  {Math.floor(totals.time / 60)}h {totals.time % 60}m
                 </Text>
               </View>
             )}
           </View>
 
-          {/* Expiration Message */}
+          {/* Status Message */}
           {isExpired ? (
-            <View style={styles.expirationMessage}>
+            <View style={styles.statusMessage}>
               <Icon name="alert-circle" size={16} color="#d32f2f" />
-              <Text style={styles.expirationText}>This schedule has expired</Text>
+              <Text style={styles.expirationText}>
+                This schedule has expired
+              </Text>
+            </View>
+          ) : isActive ? (
+            <View style={styles.statusMessage}>
+              <Icon name="checkmark-circle" size={16} color="#388e3c" />
+              <Text style={styles.activeStatusText}>
+                {isMe
+                  ? 'User has accepted this schedule'
+                  : 'You have accepted this schedule'}
+              </Text>
+            </View>
+          ) : isCancelled ? (
+            <View style={styles.statusMessage}>
+              <Icon name="close-circle" size={16} color="#d32f2f" />
+              <Text style={styles.cancelledStatusText}>
+                This schedule has been cancelled
+              </Text>
             </View>
           ) : (
             !isMe && (
@@ -330,20 +383,34 @@ export const CMIExpertSchedule = ({
                   styles.dayCircle,
                   selectedDayIndex === index && styles.dayCircleSelected,
                   item.is_rest_day && styles.restDayCircle,
-                  isExpired && styles.expiredDayCircle,
+                  (isExpired || isCancelled) && styles.expiredDayCircle,
+                  (isActive) && styles.activeDayCircle,
                 ]}
-                onPress={() => !isExpired && toggleDaySelection(index)}>
-                <Text style={[styles.dayName, isExpired && styles.expiredText]}>
+                onPress={() =>
+                  !isExpired &&
+                  !isCancelled &&
+                  !isActive &&
+                  toggleDaySelection(index)
+                }>
+                <Text style={[styles.dayName, textStyle]}>
                   {formatDayName(item.day)}
                 </Text>
-                <Text style={[styles.dayNumber, isExpired && styles.expiredText]}>
+                <Text style={[styles.dayNumber, textStyle]}>
                   {formatDayNumber(item.day)}
                 </Text>
                 {item.is_rest_day && (
                   <Icon
                     name="bed"
                     size={12}
-                    color={isExpired ? '#ffcdd2' : '#666'}
+                    color={
+                      isCancelled
+                        ? '#d60015'
+                        : isActive
+                        ? '#00880b'
+                        : isExpired
+                        ? '#d60015'
+                        : '#666'
+                    }
                     style={styles.restIcon}
                   />
                 )}
@@ -356,49 +423,101 @@ export const CMIExpertSchedule = ({
             <View style={styles.dayDetailsContainer}>
               {message.content.schedule.ScheduleDay[selectedDayIndex]
                 .is_rest_day ? (
-                <Text style={[styles.restDayText, isExpired && styles.expiredText]}>
-                  Rest Day
-                </Text>
+                <Text style={[styles.restDayText, textStyle]}>Rest Day</Text>
               ) : (
                 message.content.schedule.ScheduleDay[
                   selectedDayIndex
                 ].ScheduleDetail.map(detail => (
-                  <View key={detail.id} style={[styles.sessionContainer, isExpired && styles.expiredSessionContainer]}>
-                    <Text style={[styles.sessionTitle, isExpired && styles.expiredText]}>
+                  <View
+                    key={detail.id}
+                    style={[
+                      styles.sessionContainer,
+                      (isExpired || isCancelled) &&
+                        styles.expiredSessionContainer,
+                    ]}>
+                    <Text style={[styles.sessionTitle, textStyle]}>
                       {detail.description}
                     </Text>
-                    <Text style={[styles.sessionTime, isExpired && styles.expiredText]}>
+                    <Text style={[styles.sessionTime, textStyle]}>
                       {formatTimeRange(detail.start_time, detail.end_time)}
                     </Text>
                     <View style={styles.sessionGoals}>
                       {detail.goal_steps && (
                         <View style={styles.goalItem}>
-                          <Icon name="walk" size={14} color={isExpired ? '#ffcdd2' : '#666'} />
-                          <Text style={[styles.goalText, isExpired && styles.expiredText]}>
+                          <Icon
+                            name="walk"
+                            size={14}
+                            color={
+                              isCancelled
+                                ? '#d60015'
+                                : isActive
+                                ? '#00880b'
+                                : isExpired
+                                ? '#d60015'
+                                : '#666'
+                            }
+                          />
+                          <Text style={[styles.goalText, textStyle]}>
                             {detail.goal_steps.toLocaleString()} steps
                           </Text>
                         </View>
                       )}
                       {detail.goal_distance && (
                         <View style={styles.goalItem}>
-                          <Icon name="map" size={14} color={isExpired ? '#ffcdd2' : '#666'} />
-                          <Text style={[styles.goalText, isExpired && styles.expiredText]}>
+                          <Icon
+                            name="map"
+                            size={14}
+                            color={
+                              isCancelled
+                                ? '#d60015'
+                                : isActive
+                                ? '#00880b'
+                                : isExpired
+                                ? '#d60015'
+                                : '#666'
+                            }
+                          />
+                          <Text style={[styles.goalText, textStyle]}>
                             {detail.goal_distance} km
                           </Text>
                         </View>
                       )}
                       {detail.goal_calories && (
                         <View style={styles.goalItem}>
-                          <Icon name="flame" size={14} color={isExpired ? '#ffcdd2' : '#666'} />
-                          <Text style={[styles.goalText, isExpired && styles.expiredText]}>
+                          <Icon
+                            name="flame"
+                            size={14}
+                            color={
+                              isCancelled
+                                ? '#d60015'
+                                : isActive
+                                ? '#00880b'
+                                : isExpired
+                                ? '#d60015'
+                                : '#666'
+                            }
+                          />
+                          <Text style={[styles.goalText, textStyle]}>
                             {detail.goal_calories} cal
                           </Text>
                         </View>
                       )}
                       {detail.estimated_time && (
                         <View style={styles.goalItem}>
-                          <Icon name="time" size={14} color={isExpired ? '#ffcdd2' : '#666'} />
-                          <Text style={[styles.goalText, isExpired && styles.expiredText]}>
+                          <Icon
+                            name="time"
+                            size={14}
+                            color={
+                              isCancelled
+                                ? '#d60015'
+                                : isActive
+                                ? '#00880b'
+                                : isExpired
+                                ? '#d60015'
+                                : '#666'
+                            }
+                          />
+                          <Text style={[styles.goalText, textStyle]}>
                             {Math.floor(detail.estimated_time / 60)}h{' '}
                             {detail.estimated_time % 60}m
                           </Text>
@@ -411,15 +530,25 @@ export const CMIExpertSchedule = ({
             </View>
           )}
 
-          {/* Action Buttons */}
-          {isExpired ? (
-            <View style={styles.expiredMessageContainer}>
-              <Icon name="alert-circle" size={20} color="#d32f2f" />
-              <Text style={styles.expiredMessageText}>
-                This schedule has expired
-              </Text>
+          {/* Action Buttons - Only show for PENDING status and not expired */}
+          {status === 'PENDING' && !isExpired && !isMe && (
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={() =>
+                  acceptExpertSchedule(message.content.schedule.id)
+                }>
+                <Text style={styles.buttonText}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.rejectButton} onPress={() =>
+                  declineExpertSchedule(message.content.schedule.id)
+                }>
+                <Text style={styles.buttonText}>Decline</Text>
+              </TouchableOpacity>
             </View>
-          ) : profile.id === message.sender.id ? (
+          )}
+
+          {status === 'PENDING' && isMe && !isExpired && (
             <View style={styles.waitingContainer}>
               <Text style={styles.waitingText}>
                 Waiting for user to accept...
@@ -428,28 +557,25 @@ export const CMIExpertSchedule = ({
                 Expires in: {formatTime(timeLeft)}
               </Text>
             </View>
-          ) : (
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={() => acceptExpertSchedule(message.content.schedule.id)}>
-                <Text style={styles.buttonText}>Accept</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.rejectButton}>
-                <Text style={styles.buttonText}>Deny</Text>
-              </TouchableOpacity>
-            </View>
           )}
 
           <View style={styles.footer}>
-            <Text style={[styles.timeText, isExpired && styles.expiredText]}>
+            <Text style={[styles.timeText, textStyle]}>
               {formatTimestampAgo(message.created_at)}
             </Text>
             {message.read_at && (
               <Icon
                 name="checkmark-done"
                 size={14}
-                color={isExpired ? '#ffcdd2' : theme.colors.primaryDark}
+                color={
+                  isCancelled
+                    ? '#d60015'
+                    : isActive
+                    ? '#00880b'
+                    : isExpired
+                    ? '#d60015'
+                    : theme.colors.primaryDark
+                }
                 style={styles.icon}
               />
             )}
@@ -524,9 +650,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
   },
+  activeBubble: {
+    backgroundColor: '#daffdd',
+    borderColor: '#388e3c',
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 16,
+  },
   expiredBubble: {
     backgroundColor: '#ffebee',
     borderColor: '#ef9a9a',
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 16,
+  },
+  cancelledBubble: {
+    backgroundColor: '#ffebee',
+    borderColor: '#d32f2f',
     borderWidth: 2,
     borderRadius: 16,
     padding: 16,
@@ -543,32 +683,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  myText: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: '#01579b',
-  },
   senderName: {
     marginLeft: 6,
     fontSize: 16,
     fontWeight: '700',
+  },
+  defaultText: {
     color: '#01579b',
   },
-  headerText: {
-    fontSize: 14,
-    marginLeft: 5,
-    color: '#01579b',
+  activeText: {
+    color: '#1b5e20',
+  },
+  expiredText: {
+    color: '#d32f2f',
+  },
+  cancelledText: {
+    color: '#d32f2f',
   },
   scheduleTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#01579b',
     marginTop: 8,
     marginBottom: 4,
   },
   scheduleDescription: {
     fontSize: 14,
-    color: '#01579b',
     marginBottom: 12,
     lineHeight: 20,
   },
@@ -595,7 +734,6 @@ const styles = StyleSheet.create({
   },
   totalText: {
     fontSize: 12,
-    color: '#01579b',
     marginLeft: 4,
   },
   daysContainer: {
@@ -615,21 +753,22 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#0288d1',
   },
+  activeDayCircle: {
+    backgroundColor: '#c8e6c9',
+  },
   expiredDayCircle: {
-    backgroundColor: '#ffcdd2',
+    backgroundColor: '#ffced3',
   },
   restDayCircle: {
     backgroundColor: '#e0e0e0',
   },
   dayName: {
     fontSize: 10,
-    color: '#01579b',
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
   dayNumber: {
     fontSize: 16,
-    color: '#01579b',
     fontWeight: 'bold',
   },
   restIcon: {
@@ -641,7 +780,6 @@ const styles = StyleSheet.create({
   },
   restDayText: {
     fontStyle: 'italic',
-    color: '#757575',
     textAlign: 'center',
     padding: 8,
   },
@@ -657,12 +795,10 @@ const styles = StyleSheet.create({
   sessionTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#01579b',
     marginBottom: 4,
   },
   sessionTime: {
     fontSize: 12,
-    color: '#0288d1',
     marginBottom: 8,
   },
   sessionGoals: {
@@ -677,7 +813,6 @@ const styles = StyleSheet.create({
   },
   goalText: {
     fontSize: 12,
-    color: '#0288d1',
     marginLeft: 4,
   },
   actionButtons: {
@@ -712,39 +847,27 @@ const styles = StyleSheet.create({
     color: '#757575',
     textAlign: 'center',
   },
+  statusMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  activeStatusText: {
+    color: '#388e3c',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  cancelledStatusText: {
+    color: '#d32f2f',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
   expirationCountdown: {
     textAlign: 'center',
     color: '#d32f2f',
     fontWeight: 'bold',
     marginTop: 4,
-  },
-  expirationMessage: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  expirationText: {
-    color: '#d32f2f',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  expiredMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    padding: 8,
-    backgroundColor: '#ffebee',
-    borderRadius: 8,
-  },
-  expiredMessageText: {
-    color: '#d32f2f',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  expiredText: {
-    color: '#d32f2f',
   },
   footer: {
     flexDirection: 'row',
@@ -753,7 +876,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 12,
-    color: '#666',
   },
   icon: {
     marginLeft: 4,

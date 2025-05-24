@@ -16,12 +16,11 @@ import {
   useRoute,
   useFocusEffect,
 } from '@react-navigation/native';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   searchUsers,
   searchExperts,
   searchRunners,
-  searchAllMessages,
-  getSessionInfo,
 } from '../../../utils/useChatsAPI';
 import ToastUtil from '../../../utils/utils_toast';
 import BackButton from '../../../BackButton';
@@ -97,9 +96,6 @@ export default function ChatsSearchScreen() {
           case 'experts':
             response = await searchExperts(searchTerm);
             break;
-          case 'messages':
-            response = await searchAllMessages(searchTerm);
-            break;
         }
 
         if (response?.status && response.data) {
@@ -134,7 +130,6 @@ export default function ChatsSearchScreen() {
   };
 
   const handleUserPress = useCallback(async (item: UserItem) => {
-
     if (item.status === 'ACCEPTED') {
       return navigation.navigate('ChatsMessageScreen', {userId: item.id});
     }
@@ -179,45 +174,62 @@ export default function ChatsSearchScreen() {
     );
   };
 
+  const renderExpertChip = () => (
+    <View style={styles.expertChip}>
+      <Ionicons name="trophy" size={14} color="white" style={styles.chipIcon} />
+      <Text style={styles.chipText}>Expert</Text>
+    </View>
+  );
+
   const renderUserItem = ({item}: {item: UserItem}) => (
-    <TouchableOpacity
-      style={[styles.itemContainer, {backgroundColor: '#FFFFFF'}]}
-      onPress={() => handleUserPress(item)}>
-      <View style={styles.userInfoContainer}>
-        <CommonAvatar
-          mode={getUserMode(item.roles)}
-          uri={item.image?.url}
-          size={40}
-        />
-        <View style={styles.userDetails}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name}>{item.name}</Text>
-            {renderStatusChip(item.status)}
-          </View>
-          <Text style={styles.username}>@{item.username}</Text>
-          <View style={styles.userStats}>
-            <View style={styles.statItem}>
-              <Ionicons name="trophy" size={16} color="#FFD700" />
-              <Text style={styles.statText}>{item.points}</Text>
+    <LinearGradient
+      colors={item.roles?.includes('expert') ? ['#FFFFFF', '#FFF9C4'] : ['#FFFFFF', '#FFFFFF']}
+      start={{x: 0, y: 0}}
+      end={{x: 1, y: 0}}
+      style={styles.itemContainer}>
+      <TouchableOpacity
+        style={styles.itemTouchable}
+        onPress={() => handleUserPress(item)}>
+        <View style={styles.userInfoContainer}>
+          <CommonAvatar
+            mode={getUserMode(item.roles)}
+            uri={item.image?.url}
+            size={40}
+          />
+          <View style={styles.userDetails}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{item.name}</Text>
+              {item.roles?.includes('expert') && renderExpertChip()}
+              {renderStatusChip(item.status)}
             </View>
-            <View style={styles.statItem}>
-              <Ionicons name="medal" size={16} color="#FFD700" />
-              <Text style={styles.statText}>
-                {item.user_level === null
-                  ? 'Newbie'
-                  : `${capitalizeFirstLetter(item.user_level as any)}`}
-              </Text>
+            <Text style={styles.username}>@{item.username}</Text>
+            <View style={styles.userStats}>
+              <View style={styles.statItem}>
+                <Ionicons name="trophy" size={16} color="#FFD700" />
+                <Text style={styles.statText}>{item.points}</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Ionicons name="medal" size={16} color="#FFD700" />
+                <Text style={styles.statText}>
+                  {item.user_level === null
+                    ? 'Newbie'
+                    : `${capitalizeFirstLetter(item.user_level as any)}`}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
-      <Ionicons name="chatbubble" size={24} color={theme.colors.primaryDark} />
-    </TouchableOpacity>
+        <Ionicons 
+          name="chatbubble-outline" 
+          size={24} 
+          color={theme.colors.primaryDark} 
+        />
+      </TouchableOpacity>
+    </LinearGradient>
   );
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.headerContainer}>
         <View style={[styles.header, {backgroundColor: '#FFFFFF'}]}>
           <BackButton size={24} />
@@ -253,7 +265,7 @@ export default function ChatsSearchScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tabsContainer}>
-            {(['all', 'runners', 'experts', 'messages'] as SearchTab[]).map(
+            {(['all', 'runners', 'experts'] as SearchTab[]).map(
               tab => (
                 <TouchableOpacity
                   key={tab}
@@ -308,7 +320,7 @@ export default function ChatsSearchScreen() {
                   <Text style={styles.emptyText}>
                     {searchQuery
                       ? 'No results found'
-                      : 'Search for users or messages'}
+                      : 'Search for runners or experts'}
                   </Text>
                 </View>
               ) : null
@@ -384,19 +396,20 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   itemContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
+    borderRadius: 8,
     marginHorizontal: 8,
     marginVertical: 4,
-    borderRadius: 8,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    backgroundColor: '#FFFFFF',
+  },
+  itemTouchable: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
   },
   userInfoContainer: {
     flexDirection: 'row',
@@ -460,6 +473,15 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 12,
     marginLeft: 4,
+  },
+  expertChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 4,
+    backgroundColor: '#FFC107',
   },
   chipIcon: {
     marginRight: 4,
