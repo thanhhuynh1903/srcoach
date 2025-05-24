@@ -87,10 +87,11 @@ export default function ChatsMessageScreen() {
       typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
     });
 
-    socket.on('newMessage', (message: MessageItem) => {
+    socket.on('newMessage', async (message: MessageItem) => {
       setMessages(prev => [...prev, message]);
       shouldScrollToEnd.current = true;
       setIsTyping(false);
+      await markSessionMessagesAsRead(userId);
     });
 
     socket.on('updateMessage', (message: any) => {

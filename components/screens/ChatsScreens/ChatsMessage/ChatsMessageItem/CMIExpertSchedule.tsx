@@ -360,7 +360,11 @@ export const CMIExpertSchedule = ({
             <View style={styles.statusMessage}>
               <Icon name="close-circle" size={16} color="#d32f2f" />
               <Text style={styles.cancelledStatusText}>
-                This schedule has been cancelled
+                {
+                  isMe
+                    ? 'User has cancelled this schedule'
+                    : 'You have cancelled this schedule'
+                }
               </Text>
             </View>
           ) : (
@@ -855,18 +859,15 @@ const styles = StyleSheet.create({
   },
   activeStatusText: {
     color: '#388e3c',
-    fontWeight: 'bold',
     marginLeft: 8,
   },
   cancelledStatusText: {
     color: '#d32f2f',
-    fontWeight: 'bold',
     marginLeft: 8,
   },
   expirationCountdown: {
     textAlign: 'center',
     color: '#d32f2f',
-    fontWeight: 'bold',
     marginTop: 4,
   },
   footer: {

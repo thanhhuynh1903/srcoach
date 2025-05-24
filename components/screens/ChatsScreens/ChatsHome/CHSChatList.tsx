@@ -105,6 +105,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
         return {text: 'Expert recommendation sent', icon: 'ribbon'};
       case 'IMAGE':
         return {text: 'Image attached', icon: 'image'};
+      case 'EXPERT_SCHEDULE':
+        return {text: 'Schedule shared', icon: 'calendar'};
       default:
         return {text: 'New message', icon: null};
     }
