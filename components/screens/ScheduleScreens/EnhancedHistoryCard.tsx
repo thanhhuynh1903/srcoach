@@ -60,7 +60,21 @@ const EnhancedHistoryCard = ({
   const { deleteSchedule, clear } = useScheduleStore()
   const [modalVisible, setModalVisible] = useState(false)
   const [expandAnimation] = useState(new Animated.Value(0))
+  const calculateTotals = (schedules: DaySchedule[]) => {
+    let totalSteps = 0
+    let totalDistance = 0
+    let totalCalories = 0
 
+    schedules.forEach(day => {
+      day.ScheduleDetail.forEach(workout => {
+        totalSteps += workout.goal_steps || 0
+        totalDistance += workout.goal_distance || 0
+        totalCalories += workout.goal_calories || 0
+      })
+    })
+
+    return { totalSteps, totalDistance, totalCalories }
+  }
   // Sort days ascending
   const sortedDays = [...ScheduleDay].sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
 
@@ -186,26 +200,16 @@ const EnhancedHistoryCard = ({
   }
 
   const getMonthFromStartDate = () => {
-    const months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ]
-    if (startDate && typeof startDate === "string") {
-      const date = new Date(startDate)
-      return months[date.getMonth()]
-    }
-    return "Current month"
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  if (startDate && !isNaN(Date.parse(startDate))) {
+    const date = new Date(startDate);
+    return months[date.getMonth()];
   }
+  return "Current month";
+};
 
   const getStatusColor = () => {
     switch (status) {
@@ -245,6 +249,12 @@ const EnhancedHistoryCard = ({
           <Icon name="calendar-outline" size={14} color="#64748B" style={styles.headerIcon} />
           <Text style={styles.startedText}>Started {startDate}</Text>
         </View>
+         <View style={styles.headerRight}>
+          <View
+            style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
+            <Text style={styles.statusText}>{status}</Text>
+          </View>
+        </View>
         {/* <View style={styles.headerRight}>
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{status}</Text>
@@ -262,9 +272,38 @@ const EnhancedHistoryCard = ({
       {/* Card Title and Description */}
       <View style={styles.titleContainer}>
         <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
+        {description &&
+          <Text style={styles.cardDescription}>{description}</Text>
+        }
       </View>
+      <View style={styles.totalsContainer}>
+        {/* Steps */}
+        <View style={styles.totalItem}>
+          <Icon name="footsteps-outline" size={20} color="#3B82F6" />
+          <Text style={styles.totalValue}>
+            {calculateTotals(ScheduleDay).totalSteps.toLocaleString()}
+          </Text>
+          <Text style={styles.totalLabel}>Total Steps</Text>
+        </View>
 
+        {/* Distance */}
+        <View style={styles.totalItem}>
+          <Icon name="map-outline" size={20} color="#3B82F6" />
+          <Text style={styles.totalValue}>
+            {calculateTotals(ScheduleDay).totalDistance.toFixed(1)} km
+          </Text>
+          <Text style={styles.totalLabel}>Total Distance</Text>
+        </View>
+
+        {/* Calories */}
+        <View style={styles.totalItem}>
+          <Icon name="flame-outline" size={20} color="#F97316" />
+          <Text style={styles.totalValue}>
+            {calculateTotals(ScheduleDay).totalCalories.toLocaleString()}
+          </Text>
+          <Text style={styles.totalLabel}>Total Calories</Text>
+        </View>
+      </View>
       {/* Calendar Days */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysContainer}>
         {dayNumbers.map((dayNum, idx) => {
@@ -559,6 +598,29 @@ const styles = StyleSheet.create({
   titleContainer: {
     marginBottom: 16,
   },
+  totalsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop:8,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  totalItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  totalValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 8,
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 4,
+  },
+
   cardTitle: {
     fontSize: 22,
     fontWeight: "700",
@@ -661,7 +723,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   timeText: {
-     fontSize: 14,
+    fontSize: 14,
     color: '#64748B',
     marginLeft: 6,
     fontWeight: '500',

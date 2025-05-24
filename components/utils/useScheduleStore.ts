@@ -76,7 +76,8 @@ const useScheduleStore = create<ScheduleState>()(
         set({isLoading: true, error: null});
         try {
           const response = await api.fetchData(`/schedules/self/current`);
-
+          console.log('response', response);
+          
           set({schedules: response?.data, isLoading: false});
         } catch (error) {
           console.error(

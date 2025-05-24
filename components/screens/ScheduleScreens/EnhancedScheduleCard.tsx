@@ -199,6 +199,8 @@ const EnhancedScheduleCard = ({
         return '#3B82F6'; // Blue
       case 'ONGOING':
         return '#6366F1'; // Indigo
+      case 'PENDING':
+        return '#FF9F00';
       case 'MISSED':
         return '#EF4444'; // Red
       default:
