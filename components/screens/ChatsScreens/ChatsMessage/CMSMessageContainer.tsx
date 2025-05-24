@@ -9,6 +9,7 @@ import {CMIImage} from './ChatsMessageItem/CMIImage';
 import {MessageItem} from './ChatsMessageScreen';
 import {useNavigation} from '@react-navigation/native';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
+import { CMIExpertSchedule } from './ChatsMessageItem/CMIExpertSchedule';
 
 type CMSMessageContainerProps = {
   otherUser: any;
@@ -146,6 +147,8 @@ export const CMSMessageContainer = React.memo(
             return <CMIExpertRecommendation {...commonProps} onUpdateMessage={onUpdateMessage} />;
           case 'IMAGE':
             return <CMIImage {...commonProps} />;
+          case 'EXPERT_SCHEDULE':
+            return <CMIExpertSchedule {...commonProps} onUpdateMessage={onUpdateMessage} />;
           default:
             return <CMINormal {...commonProps} />;
         }

@@ -2,6 +2,7 @@ import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import axios from 'axios';
 import useApiStore from './zustandfetchAPI';
+import ToastUtil from './utils_toast';
 
 // Định nghĩa các interfaces
 export interface TrainingSession {
@@ -49,6 +50,9 @@ interface ScheduleState {
   fetchDetail: (scheduleId: string) => Promise<Schedule | null>;
   fetchHistorySchedule: () => Promise<void>;
   createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
+  createExpertSchedule: (
+    scheduleData: Partial<Schedule>,
+  ) => Promise<Schedule | null>;
   updateSchedule: (
     id: string,
     schedule: Partial<Schedule>,
@@ -76,6 +80,7 @@ const useScheduleStore = create<ScheduleState>()(
         set({isLoading: true, error: null});
         try {
           const response = await api.fetchData(`/schedules/self/current`);
+          console.log('Runner response', response);
 
           set({schedules: response?.data, isLoading: false});
         } catch (error) {
@@ -96,14 +101,10 @@ const useScheduleStore = create<ScheduleState>()(
           const response = await api.fetchDataDetail(
             `/schedules/expert/current-created`,
           );
-          console.log('response', response);
+          console.log('Expert response', response);
 
           set({ExpertSchedule: response?.data, isLoading: false});
         } catch (error) {
-          console.error(
-            'Error getting personal training schedule list:',
-            error,
-          );
           set({
             error:
               'Unable to get personal training schedule list. Please try again later..',
@@ -191,6 +192,54 @@ const useScheduleStore = create<ScheduleState>()(
           });
           return null;
         }
+      },
+      createExpertSchedule: async (scheduleData: any) => {
+        set({isLoading: true, error: null, message: null});
+
+        try {
+          const response: any = await api.postData(
+            `/schedules/expert/create-for-runner`,
+            scheduleData,
+          );
+
+          ToastUtil.success('Schedule created', response?.message);
+          set({
+            error: null,
+            message: response?.message,
+            isLoading: false,
+          });
+
+          return response;
+        } catch (error: any) {
+          const serverMessage =
+            error.response?.data?.message || 'Unknown error';
+          ToastUtil.error('Error', serverMessage);
+          set({
+            error: serverMessage,
+            message: serverMessage,
+            isLoading: false,
+          });
+          return null;
+        }
+      },
+      acceptExpertSchedule: async (scheduleId: string) => {
+        set({isLoading: true, error: null, message: null});
+        try {
+          const response = await api.postData(
+            `/schedules/accept/${scheduleId}`,
+          );
+          if (response?.status === 'success') {
+            ToastUtil.success('Success', response?.message);
+            return response.data;
+          }
+          return response;
+        } catch (error: any) {
+          const serverMessage =
+            error.response?.data?.message || 'Unknown error';
+          ToastUtil.error('Error', serverMessage);
+        }
+
+        return null
       },
       clear() {
         set({
