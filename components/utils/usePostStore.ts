@@ -106,6 +106,7 @@ interface PostState {
     pageIndex?: number;
   }) => Promise<void>;
   getUserByPostId: (postId: string) => Promise<User | null>;
+  getUserByUserId: (userId: string) => Promise<User | null>;
   clearUserByPost: () => void;
   userSearchResults: User[];
   expertSearchResults: User[];
@@ -777,6 +778,43 @@ export const usePostStore = create<PostState>((set, get) => ({
         `/posts/${postId}/user`,
       );
       console.log('response', response);
+
+      if (response && response?.status === true && response.data) {
+        set({
+          userByPost: response.data,
+          userLoading: false,
+          userError: null,
+        });
+        return response.data;
+      } else {
+        const errorMessage =
+          response?.message || 'Không thể lấy thông tin người dùng';
+        set({
+          userByPost: null,
+          userLoading: false,
+          userError: errorMessage,
+        });
+        return null;
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.message || 'Đã xảy ra lỗi khi lấy thông tin người dùng';
+      set({
+        userByPost: null,
+        userLoading: false,
+        userError: errorMessage,
+      });
+      return null;
+    }
+  },
+
+  getUserByUserId: async (userId: string) => {
+    set({userLoading: true, userError: null});
+
+    try {
+      const response = await api.fetchData<ApiResponse<User>>(
+        `/posts/user/${userId}`,
+      );
 
       if (response && response?.status === true && response.data) {
         set({

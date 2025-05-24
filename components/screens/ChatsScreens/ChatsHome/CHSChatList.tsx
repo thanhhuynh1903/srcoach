@@ -11,6 +11,7 @@ import {theme} from '../../../contants/theme';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {capitalizeFirstLetter} from '../../../utils/utils_format';
 import {useLoginStore} from '../../../utils/useLoginStore';
+import {useNavigation} from '@react-navigation/native';
 
 interface ChatListItemProps {
   session: {
@@ -78,6 +79,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
   onAccept,
   onDeny,
 }) => {
+  const navigation = useNavigation();
   const getStatusColor = () => {
     switch (session.status) {
       case 'ACCEPTED':
@@ -129,11 +131,18 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
       ]}>
       <TouchableOpacity style={styles.chatItem} onPress={onPress}>
         <View style={styles.avatarContainer}>
-          <CommonAvatar
-            mode={getUserRole()}
-            size={40}
-            uri={session.other_user.image?.url}
-          />
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('UserProfileScreen', {
+                userId: session.other_user.id,
+              })
+            }>
+            <CommonAvatar
+              mode={getUserRole()}
+              size={40}
+              uri={session.other_user.image?.url}
+            />
+          </TouchableOpacity>
           {session.unread_count > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>{session.unread_count}</Text>
@@ -142,9 +151,16 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
         </View>
         <View style={styles.chatContent}>
           <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {session.other_user.name}
-            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate('UserProfileScreen', {
+                  userId: session.other_user.id,
+                })
+              }>
+              <Text style={styles.userName} numberOfLines={1}>
+                {session.other_user.name}
+              </Text>
+            </TouchableOpacity>
             <Text style={styles.username}>@{session.other_user.username}</Text>
           </View>
           <View style={styles.userStats}>

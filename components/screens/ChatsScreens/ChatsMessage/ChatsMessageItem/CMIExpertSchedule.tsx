@@ -340,13 +340,17 @@ export const CMIExpertSchedule = ({
           </View>
 
           {/* Status Message */}
-          {isExpired ? (
+          {status === 'PENDING' && isExpired ? (
             <View style={styles.statusMessage}>
               <Icon name="alert-circle" size={16} color="#d32f2f" />
               <Text style={styles.expirationText}>
                 This schedule has expired
               </Text>
             </View>
+          ) : status === 'PENDING' && !isExpired && !isMe ? (
+            <Text style={styles.expirationCountdown}>
+              Expires in: {formatTime(timeLeft)}
+            </Text>
           ) : isActive ? (
             <View style={styles.statusMessage}>
               <Icon name="checkmark-circle" size={16} color="#388e3c" />
@@ -360,20 +364,12 @@ export const CMIExpertSchedule = ({
             <View style={styles.statusMessage}>
               <Icon name="close-circle" size={16} color="#d32f2f" />
               <Text style={styles.cancelledStatusText}>
-                {
-                  isMe
-                    ? 'User has cancelled this schedule'
-                    : 'You have cancelled this schedule'
-                }
+                {isMe
+                  ? 'User has cancelled this schedule'
+                  : 'You have cancelled this schedule'}
               </Text>
             </View>
-          ) : (
-            !isMe && (
-              <Text style={styles.expirationCountdown}>
-                Expires in: {formatTime(timeLeft)}
-              </Text>
-            )
-          )}
+          ) : null}
 
           {/* Day Selection */}
           <FlatList
@@ -388,7 +384,7 @@ export const CMIExpertSchedule = ({
                   selectedDayIndex === index && styles.dayCircleSelected,
                   item.is_rest_day && styles.restDayCircle,
                   (isExpired || isCancelled) && styles.expiredDayCircle,
-                  (isActive) && styles.activeDayCircle,
+                  isActive && styles.activeDayCircle,
                 ]}
                 onPress={() =>
                   !isExpired &&
@@ -544,7 +540,9 @@ export const CMIExpertSchedule = ({
                 }>
                 <Text style={styles.buttonText}>Accept</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.rejectButton} onPress={() =>
+              <TouchableOpacity
+                style={styles.rejectButton}
+                onPress={() =>
                   declineExpertSchedule(message.content.schedule.id)
                 }>
                 <Text style={styles.buttonText}>Decline</Text>

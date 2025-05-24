@@ -46,7 +46,7 @@ const ChatsHomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const sessionsRef = useRef<ChatSession[]>([]);
-  const [, setRender] = useState(false); // Used to force re-render
+  const [, setRender] = useState(false);
   const navigation = useNavigation();
   const socketRef = useRef<any>(null);
 
@@ -54,7 +54,7 @@ const ChatsHomeScreen = () => {
 
   const setSessions = (data: ChatSession[]) => {
     sessionsRef.current = data;
-    setRender(prev => !prev); // Force re-render
+    setRender(prev => !prev);
   };
 
   useFocusEffect(
