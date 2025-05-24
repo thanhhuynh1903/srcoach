@@ -21,7 +21,7 @@ import RiskWarningScreen from '../screens/RiskWarningScreen';
 import DeviceNotificationScreen from '../screens/SettingsScreens/DeviceNotificationScreen';
 import CaloriesScreen from '../screens/DashboardScreens/RecordCaloriesScreen';
 import VerifyScreen from '../screens/VerifyScreen';
-import GenerateScheduleScreen from '../screens/ScheduleScreens/GenerateScheduleScreen';
+import GeneralScheduleScreen from '../screens/ScheduleScreens/GeneralScheduleScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import HistoryScheduleScreen from '../screens/ScheduleScreens/HistoryCalendarScreen';
 import VerifyLoginScreen from '../screens/VerifyLoginInactiveScreen';
@@ -96,7 +96,7 @@ export const stackScreens = [
   {name: 'DeviceNotificationsScreen', component: DeviceNotificationScreen},
   {name: 'StepsScreen', component: RecordStepsScreen},
   {name: 'CaloriesScreen', component: CaloriesScreen},
-  {name: 'GenerateScheduleScreen', component: GenerateScheduleScreen},
+  {name: 'GeneralScheduleScreen', component: GeneralScheduleScreen},
   {name: 'ScheduleDetailScreen', component: ScheduleDetailScreen},
   {name: 'CalendarScreen', component: CalendarScreen},
   {name: 'ScheduleHistoryScreen', component: HistoryScheduleScreen},

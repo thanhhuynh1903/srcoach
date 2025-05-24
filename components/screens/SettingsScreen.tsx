@@ -249,7 +249,7 @@ const menuItems = [
     title: 'Schedules',
     subtitle: 'View your schedule information',
     icon: 'calendar-outline',
-    screen: 'GenerateScheduleScreen',
+    screen: 'GeneralScheduleScreen',
   },
   {
     title: 'Draft',

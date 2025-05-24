@@ -18,7 +18,7 @@ import BackButton from '../../BackButton';
 import useScheduleStore from '../../utils/useScheduleStore';
 import CommonDialog from '../../commons/CommonDialog';
 import {theme} from '../../contants/theme';
-const GenerateScheduleScreen = () => {
+const GeneralScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
   const navigation = useNavigation();
   const {
@@ -88,6 +88,11 @@ const GenerateScheduleScreen = () => {
           schedule =>
             schedule.schedule_type !== 'EXPERT' ||
             schedule.user_id === schedule.expert_id,
+        );
+      case 'Pending':
+        return safeSchedules.filter(
+          schedule =>
+            schedule.status === "PENDING"
         );
       default: // "All"
         return safeSchedules;
@@ -572,4 +577,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GenerateScheduleScreen;
+export default GeneralScheduleScreen;

@@ -292,7 +292,7 @@ class NotificationService {
         navigation.navigate('CommunityPostDetailScreen', {postId: data.postId});
         break;
       case 'schedule':
-        navigation.navigate('GenerateScheduleScreen', {
+        navigation.navigate('GeneralScheduleScreen', {
           scheduleId: data?.scheduleId,
         });
         break;
