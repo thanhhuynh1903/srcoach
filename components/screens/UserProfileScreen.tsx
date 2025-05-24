@@ -153,16 +153,17 @@ const PostsLoader = () => (
 export default function UserProfileScreen({route}: any) {
   const {userId} = route.params;
   const navigation = useNavigation();
-  const {userByPost, userLoading, userError, getUserByUserId, likePost} =
-    usePostStore();
+  const {userByPost, userError, getUserByUserId, likePost} = usePostStore();
   const {profile} = useLoginStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadUserData = useCallback(async () => {
+    setIsLoading(true);
     try {
       const data = await getUserByUserId(userId);
       if (data) {
@@ -173,6 +174,8 @@ export default function UserProfileScreen({route}: any) {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    } finally {
+      setIsLoading(false);
     }
   }, [userId, getUserByUserId]);
 
@@ -281,9 +284,7 @@ export default function UserProfileScreen({route}: any) {
           <BackButton size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {userData?.user?.username
-            ? `@${userData.user.username}`
-            : 'User Profile'}
+          {(isLoading || !userData?.user?.username) ? 'User Profile' : `${userData.user.username}`}
         </Text>
       </View>
 
@@ -303,7 +304,7 @@ export default function UserProfileScreen({route}: any) {
               colors={['#1E3A8A']}
             />
           }>
-          {userLoading && !userData ? (
+          {isLoading ? (
             <>
               <ProfileLoader />
               <PostsLoader />
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },

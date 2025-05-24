@@ -16,7 +16,7 @@ interface CMIExpertScheduleProps {
     created_at: string;
     read_at?: string;
     archived?: boolean;
-    status?: 'PENDING' | 'INCOMING' | 'ONGOING' | 'CANCELLED';
+    status?: 'PENDING' | 'INCOMING' | 'ONGOING' | 'CANCELED';
     sender: {
       id: string;
       name: string;
@@ -74,7 +74,7 @@ export const CMIExpertSchedule = ({
 
   const status = message.content.schedule?.status || 'PENDING';
   const isActive = status === 'INCOMING' || status === 'ONGOING';
-  const isCancelled = status === 'CANCELLED';
+  const isCancelled = status === 'CANCELED';
 
   useEffect(() => {
     const calculateTimeLeft = () => {

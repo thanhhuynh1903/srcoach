@@ -41,7 +41,7 @@ import {ChevronDown, ChevronUp} from 'react-native-feather';
 
 const {width} = Dimensions.get('window');
 const CHART_WIDTH = width - 32;
-const PRIMARY_COLOR = '#6C5CE7';
+export const PRIMARY_COLOR = '#6C5CE7';
 
 const SleepType = {
   UNKNOWN: 0,

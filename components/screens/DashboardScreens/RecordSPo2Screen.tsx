@@ -22,8 +22,8 @@ import {useFocusEffect} from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 const {width} = Dimensions.get('window');
-const CHART_WIDTH = width - 40; // Adjusted for better padding
-const PRIMARY_COLOR = '#10B981';
+const CHART_WIDTH = width - 40;
+export const PRIMARY_COLOR = '#10B981';
 
 interface ChartPointDetail {
   time: string;
