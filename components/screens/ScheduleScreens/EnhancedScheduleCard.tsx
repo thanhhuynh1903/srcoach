@@ -18,7 +18,8 @@ import WorkoutComparison from './Comparison';
 import useScheduleStore from '../../utils/useScheduleStore';
 import { theme } from '../../contants/theme';
 import Toast from 'react-native-toast-message';
-
+import { useLoginStore } from '../../utils/useLoginStore';
+import PendingTimer from '../../PendingTimer';
 interface Workout {
   time: string;
   name: string;
@@ -73,7 +74,7 @@ const EnhancedScheduleCard = ({
   const { deleteSchedule, message, clear } = useScheduleStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [expandAnimation] = useState(new Animated.Value(0));
-
+  const { profile } = useLoginStore();
   const handleMorePress = () => {
     setModalVisible(true);
   };
@@ -228,7 +229,10 @@ const EnhancedScheduleCard = ({
   return (
     <View style={styles.card}>
       {/* Card Header */}
+      <PendingTimer startDate={startDate} status={status} />
+
       <View style={styles.cardHeader}>
+
         <View style={styles.headerLeft}>
           <Icon
             name="calendar-outline"
@@ -243,12 +247,25 @@ const EnhancedScheduleCard = ({
             style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{status}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleMorePress}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icon name="ellipsis-vertical" size={18} color="#64748B" />
-          </TouchableOpacity>
+
+          {status === "PENDING" ? (
+
+
+            <TouchableOpacity
+              style={styles.deleteButton}
+            >
+              <Icon name="trash-outline" size={16} color="#EF4444" />
+            </TouchableOpacity>
+
+          ) : (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleMorePress}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Icon name="ellipsis-vertical" size={18} color="#64748B" />
+            </TouchableOpacity>
+          )
+          }
         </View>
       </View>
 
@@ -323,7 +340,6 @@ const EnhancedScheduleCard = ({
           );
         })}
       </View>
-
       {/* Workout Details for Selected Day - Animated */}
       <Animated.View
         style={[
@@ -563,7 +579,7 @@ const EnhancedScheduleCard = ({
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHandle} />
-            {!isExpertChoice ? (
+            {expert_id && expert_id === profile.id ? (
               <>
                 <TouchableOpacity
                   style={styles.modalOption}
@@ -826,6 +842,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+
   },
   workoutStatusBadge: {
     paddingHorizontal: 8,

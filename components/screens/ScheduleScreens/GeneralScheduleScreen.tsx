@@ -79,7 +79,7 @@ const GeneralScheduleScreen = () => {
       case "Expert's Choice":
         return safeSchedules.filter(
           schedule =>
-            schedule.schedule_type === 'EXPERT' &&
+            schedule.schedule_type === 'EXPERT' && schedule.status !== "CANCELED" &&
             schedule.user_id !== schedule.expert_id,
         );
       case 'My Schedules':
@@ -94,7 +94,9 @@ const GeneralScheduleScreen = () => {
             schedule.status === "PENDING"
         );
       default: // "All"
-        return safeSchedules;
+        return safeSchedules.filter(
+          schedule => schedule.status !== "CANCELED"
+        );
     }
   }, [combinedSchedules, activeTab]);
 
@@ -114,7 +116,7 @@ const GeneralScheduleScreen = () => {
       sortedDays.length > 0 ? new Date(sortedDays[0].day) : new Date();
 
     // Định dạng ngày bắt đầu
-    const formattedStartDate = startDate.toLocaleDateString('vi-VN', {
+    const formattedStartDate = startDate.toLocaleDateString('US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -130,13 +132,13 @@ const GeneralScheduleScreen = () => {
           const endTime = new Date(detail.end_time);
 
           // Định dạng thời gian
-          const formattedStartTime = startTime.toLocaleTimeString('vi-VN', {
+          const formattedStartTime = startTime.toLocaleTimeString('US', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
           });
 
-          const formattedEndTime = endTime.toLocaleTimeString('vi-VN', {
+          const formattedEndTime = endTime.toLocaleTimeString('US', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false,
@@ -164,9 +166,7 @@ const GeneralScheduleScreen = () => {
       startDate: formattedStartDate,
       days: days,
       daySchedules: daySchedules,
-      isExpertChoice:
-        schedule.schedule_type === 'EXPERT' &&
-        schedule.user_id !== schedule.expert_id,
+      isExpertChoice: schedule.schedule_type === 'EXPERT',
       status: schedule.status,
       user_id: schedule.user_id,
       expert_id: schedule.expert_id,
