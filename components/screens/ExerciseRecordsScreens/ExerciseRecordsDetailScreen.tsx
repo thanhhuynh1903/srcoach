@@ -5,28 +5,26 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Modal,
   FlatList,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { LineChart } from 'react-native-gifted-charts';
+import ContentLoader, {Rect as ERRect, Circle} from 'react-content-loader/native';
 import BackButton from '../../BackButton';
 import ScreenWrapper from '../../ScreenWrapper';
 import { hp, wp } from '../../helpers/common';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import Geolocation from '@react-native-community/geolocation';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import {
-  fetchDetailRecords,
-  ExerciseSession,
-} from '../../utils/utils_healthconnect';
-import { getNameFromExerciseType , isExerciseRunning} from '../../contants/exerciseType';
+import { fetchDetailRecords, ExerciseSession } from '../../utils/utils_healthconnect';
+import { getNameFromExerciseType, isExerciseRunning } from '../../contants/exerciseType';
 import { format, parseISO } from 'date-fns';
-import { theme } from '../../contants/theme';
 import { useLoginStore } from '../../utils/useLoginStore';
 import ToastUtil from '../../utils/utils_toast';
 import { listSessions, sendExerciseRecordMessage } from '../../utils/useChatsAPI';
+
 const ExerciseRecordsDetailScreen = () => {
   const route = useRoute();
   const { id } = route.params as { id: string };
@@ -34,12 +32,15 @@ const ExerciseRecordsDetailScreen = () => {
   const [session, setSession] = useState<ExerciseSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [mapRef, setMapRef] = useState<MapView | null>(null);
-  const currentYear = new Date().getFullYear();
-  const birthYear = new Date(profile?.birth_date).getFullYear();
-  const age = currentYear - birthYear;
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [chatSessions, setChatSessions] = useState<any[]>([]);
   const [loadingChats, setLoadingChats] = useState(false);
+  const navigation = useNavigation();
+
+  const currentYear = new Date().getFullYear();
+  const birthYear = new Date(profile?.birth_date).getFullYear();
+  const age = currentYear - birthYear;
+
   const loadSession = async () => {
     try {
       setLoading(true);
@@ -55,26 +56,22 @@ const ExerciseRecordsDetailScreen = () => {
   useEffect(() => {
     loadSession();
   }, [id]);
+
   const handleShareSession = async () => {
     setShareModalVisible(true);
     setLoadingChats(true);
     try {
       const res = await listSessions(null);
-      if (res.status && Array.isArray(res.data)) {
-        setChatSessions(res.data.filter((s: any ) => s.status === "ACCEPTED"));
-      } else {
-        setChatSessions([]);
-      }
+      setChatSessions(res.status && Array.isArray(res.data) 
+        ? res.data.filter((s: any) => s.status === "ACCEPTED") 
+        : []);
     } catch {
       setChatSessions([]);
     }
     setLoadingChats(false);
   };
 
-  // Function to share session to a chat box
   const handleSendToChat = async (sessionId: string) => {
-    console.log('sessionId', sessionId);
-    
     try {
       await sendExerciseRecordMessage(sessionId, id);
       ToastUtil.success('Shared to chat successfully!');
@@ -83,22 +80,17 @@ const ExerciseRecordsDetailScreen = () => {
       ToastUtil.error('Failed to share session');
     }
   };
+
   const calculateDuration = () => {
     if (!session?.start_time || !session?.end_time) return 'N/A';
-
     const minutes = session.duration_minutes || 0;
     const remainingSeconds = Math.round((minutes - Math.floor(minutes)) * 60);
-
     return `${Math.floor(minutes)} min ${remainingSeconds} sec`;
   };
 
   const prepareHeartRateData = () => {
-    if (
-      !session?.heart_rate?.records ||
-      session.heart_rate.records.length === 0
-    )
-      return [];
-
+    if (!session?.heart_rate?.records?.length) return [];
+    
     const sortedRecords = [...session.heart_rate.records].sort(
       (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime(),
     );
@@ -114,19 +106,17 @@ const ExerciseRecordsDetailScreen = () => {
   };
 
   const routeCoordinates = useMemo(() => {
-    return (
-      session?.routes?.map(route => ({
-        latitude: route.latitude,
-        longitude: route.longitude,
-      })) || []
-    );
+    return session?.routes?.map(route => ({
+      latitude: route.latitude,
+      longitude: route.longitude,
+    })) || [];
   }, [session?.routes]);
 
   const startCoordinate = routeCoordinates[0];
   const endCoordinate = routeCoordinates[routeCoordinates.length - 1];
 
   const getMapRegion = () => {
-    if (routeCoordinates.length === 0) {
+    if (!routeCoordinates.length) {
       return {
         latitude: 37.78825,
         longitude: -122.4324,
@@ -138,18 +128,13 @@ const ExerciseRecordsDetailScreen = () => {
     const latitudes = routeCoordinates.map(p => p.latitude);
     const longitudes = routeCoordinates.map(p => p.longitude);
 
-    const minLat = Math.min(...latitudes);
-    const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
-
     const paddingFactor = 1.5;
-    const latDelta = (maxLat - minLat) * paddingFactor + 0.01;
-    const lngDelta = (maxLng - minLng) * paddingFactor + 0.01;
+    const latDelta = (Math.max(...latitudes) - Math.min(...latitudes)) * paddingFactor + 0.01;
+    const lngDelta = (Math.max(...longitudes) - Math.min(...longitudes)) * paddingFactor + 0.01;
 
     return {
-      latitude: (minLat + maxLat) / 2,
-      longitude: (minLng + maxLng) / 2,
+      latitude: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+      longitude: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
       latitudeDelta: latDelta,
       longitudeDelta: lngDelta,
     };
@@ -158,10 +143,9 @@ const ExerciseRecordsDetailScreen = () => {
   const handleCurrentLocation = () => {
     Geolocation.getCurrentPosition(
       position => {
-        const { latitude, longitude } = position.coords;
         mapRef?.animateToRegion({
-          latitude,
-          longitude,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         });
@@ -171,7 +155,27 @@ const ExerciseRecordsDetailScreen = () => {
     );
   };
 
-  const navigate = useNavigation();
+  const LoadingSkeleton = () => (
+    <ContentLoader 
+      speed={1.5}
+      width={wp(100)}
+      height={hp(80)}
+      viewBox={`0 0 ${wp(100)} ${hp(80)}`}
+      backgroundColor="#f3f3f3"
+      foregroundColor="#ecebeb"
+    >
+      <Rect x="16" y="20" rx="4" ry="4" width="60%" height="30" />
+      <Rect x="16" y="60" rx="4" ry="4" width="40%" height="20" />
+      
+      <Rect x="16" y="110" rx="8" ry="8" width="43%" height="100" />
+      <Rect x="59%" y="110" rx="8" ry="8" width="43%" height="100" />
+      <Rect x="16" y="230" rx="8" ry="8" width="43%" height="100" />
+      <Rect x="59%" y="230" rx="8" ry="8" width="43%" height="100" />
+      
+      <Rect x="16" y="360" rx="8" ry="8" width="100%" height="150" />
+      <Rect x="16" y="530" rx="8" ry="8" width="100%" height="250" />
+    </ContentLoader>
+  );
 
   return (
     <ScreenWrapper bg={'#f9fafb'}>
@@ -184,11 +188,7 @@ const ExerciseRecordsDetailScreen = () => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
-          <ActivityIndicator
-            size="large"
-            color="#1E3A8A"
-            style={styles.loadingIndicator}
-          />
+          <LoadingSkeleton />
         ) : (
           <>
             <Text style={styles.title}>
@@ -200,15 +200,12 @@ const ExerciseRecordsDetailScreen = () => {
               </Text>
             )}
 
-            {/* Key Metrics Grid */}
             <View style={styles.metricsGrid}>
               <View style={styles.metricCard}>
                 <Icon name="walk-sharp" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Distance</Text>
                 <Text style={styles.metricValue}>
-                  {session?.total_distance
-                    ? (session.total_distance / 1000).toFixed(2) + ' km'
-                    : 'N/A'}
+                  {session?.total_distance ? `${(session.total_distance / 1000).toFixed(2)} km` : 'N/A'}
                 </Text>
               </View>
 
@@ -222,9 +219,7 @@ const ExerciseRecordsDetailScreen = () => {
                 <Icon name="flame-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Calories</Text>
                 <Text style={styles.metricValue}>
-                  {session?.total_calories
-                    ? session.total_calories.toFixed(2) + ' cal'
-                    : 'N/A'}
+                  {session?.total_calories ? `${session.total_calories.toFixed(2)} cal` : 'N/A'}
                 </Text>
               </View>
 
@@ -232,18 +227,13 @@ const ExerciseRecordsDetailScreen = () => {
                 <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
                 <Text style={styles.metricLabel}>Avg. Pace</Text>
                 <Text style={styles.metricValue}>
-                  {session?.avg_pace
-                    ? `${Math.floor(session.avg_pace)}:${Math.round(
-                      (session.avg_pace - Math.floor(session.avg_pace)) * 60
-                    )
-                      .toString()
-                      .padStart(2, '0')} min/km`
-                    : 'N/A'}
+                  {session?.avg_pace ? `${Math.floor(session.avg_pace)}:${Math.round(
+                    (session.avg_pace - Math.floor(session.avg_pace)) * 60
+                  ).toString().padStart(2, '0')} min/km` : 'N/A'}
                 </Text>
               </View>
             </View>
 
-            {/* Heart Rate Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Icon name="heart" size={20} color="#DC2626" />
@@ -255,21 +245,15 @@ const ExerciseRecordsDetailScreen = () => {
                   <View style={styles.heartRateStats}>
                     <View>
                       <Text style={styles.heartRateLabel}>Min</Text>
-                      <Text style={styles.heartRateValue}>
-                        {session.heart_rate.min} BPM
-                      </Text>
+                      <Text style={styles.heartRateValue}>{session.heart_rate.min} BPM</Text>
                     </View>
                     <View>
                       <Text style={styles.heartRateLabel}>Average</Text>
-                      <Text style={styles.heartRateValue}>
-                        {session.heart_rate.avg} BPM
-                      </Text>
+                      <Text style={styles.heartRateValue}>{session.heart_rate.avg} BPM</Text>
                     </View>
                     <View>
                       <Text style={styles.heartRateLabel}>Max</Text>
-                      <Text style={styles.heartRateValue}>
-                        {session.heart_rate.max} BPM
-                      </Text>
+                      <Text style={styles.heartRateValue}>{session.heart_rate.max} BPM</Text>
                     </View>
                   </View>
 
@@ -299,35 +283,24 @@ const ExerciseRecordsDetailScreen = () => {
                   )}
                 </>
               ) : (
-                <Text style={styles.noDataText}>
-                  No heart rate data available
-                </Text>
+                <Text style={styles.noDataText}>No heart rate data available</Text>
               )}
             </View>
 
-            {/* Route Map Section */}
             <View style={styles.section}>
-              <View
-                style={[
-                  styles.sectionHeader,
-                  { justifyContent: 'space-between' },
-                ]}>
+              <View style={[styles.sectionHeader, { justifyContent: 'space-between' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Icon name="location-outline" size={20} color="#1E3A8A" />
                   <Text style={styles.sectionTitle}>Route Map</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() =>
-                    navigate.navigate('ExerciseRecordsFullMapScreen', {
+                    navigation.navigate('ExerciseRecordsFullMapScreen', {
                       routes: session?.routes || [],
                       exercise_type: session?.exercise_type,
-                      distance: session?.total_distance
-                        ? (session.total_distance / 1000).toFixed(2) + ' km'
-                        : 'N/A',
+                      distance: session?.total_distance ? `${(session.total_distance / 1000).toFixed(2)} km` : 'N/A',
                       duration: calculateDuration(),
-                      steps: session?.total_steps
-                        ? session.total_steps.toLocaleString()
-                        : 'N/A',
+                      steps: session?.total_steps ? session.total_steps.toLocaleString() : 'N/A',
                     })
                   }
                   style={styles.fullScreenButton}>
@@ -381,9 +354,7 @@ const ExerciseRecordsDetailScreen = () => {
                   <View>
                     <Text style={styles.mapStatLabel}>Distance</Text>
                     <Text style={styles.mapStatValue}>
-                      {session?.total_distance
-                        ? (session.total_distance / 1000).toFixed(2) + ' km'
-                        : 'N/A'}
+                      {session?.total_distance ? `${(session.total_distance / 1000).toFixed(2)} km` : 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -392,9 +363,7 @@ const ExerciseRecordsDetailScreen = () => {
                   <View>
                     <Text style={styles.mapStatLabel}>Steps</Text>
                     <Text style={styles.mapStatValue}>
-                      {session?.total_steps
-                        ? session.total_steps.toLocaleString()
-                        : 'N/A'}
+                      {session?.total_steps ? session.total_steps.toLocaleString() : 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -411,7 +380,7 @@ const ExerciseRecordsDetailScreen = () => {
                   Alert.alert('Not a Running Session', 'Risk analysis is only available for running activities');
                   return;
                 }
-                navigate.navigate('RiskAnalysisConfirmScreen', {
+                navigation.navigate('RiskAnalysisConfirmScreen', {
                   userActivity: {
                     age: age,
                     gender: profile.gender,
@@ -420,13 +389,9 @@ const ExerciseRecordsDetailScreen = () => {
                     heart_rate_avg: session.heart_rate?.avg || 0,
                     avg_pace: session.avg_pace || 0,
                     calories: session.total_calories || 0,
-                    distance: session.total_distance
-                      ? session.total_distance / 1000
-                      : 0,
+                    distance: session.total_distance ? session.total_distance / 1000 : 0,
                     steps: session.total_steps || 0,
-                    activity_name: `${getNameFromExerciseType(
-                      session?.exercise_type || 0,
-                    )}`,
+                    activity_name: getNameFromExerciseType(session?.exercise_type || 0),
                   },
                 });
               }}
@@ -436,7 +401,7 @@ const ExerciseRecordsDetailScreen = () => {
                 styles.primaryButtonText,
                 !isExerciseRunning(session?.exercise_type) && styles.disabledButtonText
               ]}>
-                {isExerciseRunning(session?.exercise_type) ? 'Risk Analysis' : 'Cannot check AI for non-running sessions'}
+                {isExerciseRunning(session?.exercise_type) ? 'Risk Analysis' : 'Cannot run risk analysis for this exercise type'}
               </Text>
             </TouchableOpacity>
 
@@ -449,6 +414,7 @@ const ExerciseRecordsDetailScreen = () => {
           </>
         )}
       </ScrollView>
+
       <Modal
         visible={shareModalVisible}
         animationType="slide"
@@ -465,8 +431,17 @@ const ExerciseRecordsDetailScreen = () => {
             </View>
             {loadingChats ? (
               <View style={modalStyles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1E3A8A" />
-                <Text style={modalStyles.loadingText}>Loading...</Text>
+                <ContentLoader 
+                  speed={1.5}
+                  width={wp(80)}
+                  height={hp(20)}
+                  viewBox={`0 0 ${wp(80)} ${hp(20)}`}
+                  backgroundColor="#f3f3f3"
+                  foregroundColor="#ecebeb"
+                >
+                  <Rect x="0" y="20" rx="4" ry="4" width="100%" height="60" />
+                  <Rect x="0" y="100" rx="4" ry="4" width="100%" height="60" />
+                </ContentLoader>
               </View>
             ) : (
               <FlatList
@@ -474,7 +449,10 @@ const ExerciseRecordsDetailScreen = () => {
                 keyExtractor={item => item.id}
                 contentContainerStyle={modalStyles.listContent}
                 renderItem={({ item }) => (
-                  <TouchableOpacity style={modalStyles.chatCard}  onPress={() => handleSendToChat(item.id)}>
+                  <TouchableOpacity 
+                    style={modalStyles.chatCard}  
+                    onPress={() => handleSendToChat(item.id)}
+                  >
                     <View style={modalStyles.avatarContainer}>
                       <View style={modalStyles.avatarCircle}>
                         <Icon name="person" size={28} color="#fff" />
@@ -495,10 +473,7 @@ const ExerciseRecordsDetailScreen = () => {
                         {item.last_message?.content?.text || 'No messages yet'}
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      style={modalStyles.arrowBtn}
-                     
-                    >
+                    <TouchableOpacity style={modalStyles.arrowBtn}>
                       <Icon name="chevron-forward" size={22} color="#64748B" />
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -517,10 +492,13 @@ const ExerciseRecordsDetailScreen = () => {
           </View>
         </View>
       </Modal>
-
     </ScreenWrapper>
   );
 };
+
+const Rect = ({ x, y, rx, ry, width, height }: any) => (
+  <ERRect x={x} y={y} rx={rx} ry={ry} width={width} height={height} />
+);
 
 const styles = StyleSheet.create({
   header: {
@@ -549,9 +527,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 8,
-  },
-  loadingIndicator: {
-    marginTop: 40,
   },
   title: {
     fontSize: 24,
@@ -727,8 +702,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 });
+
 const modalStyles = StyleSheet.create({
-    chatCard: {
+  chatCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
@@ -801,8 +777,6 @@ const modalStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // Modal container styles
   overlay: {
     flex: 1,
     backgroundColor: "rgba(15, 23, 42, 0.7)",
@@ -836,23 +810,10 @@ const modalStyles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
-  closeIconButton: {
-    padding: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  // List styles
   listContent: {
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-
-  // Loading state
   loadingContainer: {
     padding: 40,
     alignItems: "center",
@@ -864,8 +825,6 @@ const modalStyles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "500",
   },
-
-  // Empty state
   emptyContainer: {
     padding: 40,
     alignItems: "center",
@@ -878,8 +837,6 @@ const modalStyles = StyleSheet.create({
     color: "#0F172A",
     textAlign: "center",
   },
-
-  // Close button
   closeBtn: {
     marginVertical: 20,
     marginHorizontal: 20,

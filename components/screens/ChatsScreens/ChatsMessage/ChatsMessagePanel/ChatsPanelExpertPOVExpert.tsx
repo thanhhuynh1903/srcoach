@@ -14,6 +14,7 @@ interface ChatsPanelExpertPOVExpertProps {
   visible: boolean;
   onClose: () => void;
   sessionId: string;
+  otherUser: any;
   onSendSuccess: () => void;
 }
 
@@ -21,6 +22,7 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
   visible,
   onClose,
   sessionId,
+  otherUser,
   onSendSuccess,
 }) => {
   const [showExercisePanel, setShowExercisePanel] = useState(false);
@@ -110,7 +112,7 @@ const ChatsPanelExpertPOVExpert: React.FC<ChatsPanelExpertPOVExpertProps> = ({
       <ChatsPanelExpertTrainingPlan
         visible={showTrainingPlanPanel}
         onClose={() => setShowTrainingPlanPanel(false)}
-        sessionId={sessionId}
+        otherUser={otherUser}
         onSendSuccess={onSendSuccess}
       />
       <ChatsPanelProfileConfirm

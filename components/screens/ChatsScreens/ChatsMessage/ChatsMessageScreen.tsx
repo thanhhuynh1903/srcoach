@@ -77,17 +77,6 @@ export default function ChatsMessageScreen() {
   const socketRef = useRef<any>(null);
   const shouldScrollToEnd = useRef(false);
 
-  const getPanelComponent = useCallback(() => {
-    const isExpertSession =
-      otherUser?.roles?.includes('expert') ||
-      profile?.roles?.includes('expert');
-    return !isExpertSession
-      ? ChatsPanelRunner
-      : profile?.roles?.includes('expert')
-      ? ChatsPanelExpertPOVExpert
-      : ChatsPanelExpertPOVRunner;
-  }, [otherUser, profile]);
-
   const setupSocketListeners = useCallback(() => {
     if (!sessionId || !socketRef.current) return;
 
@@ -98,11 +87,22 @@ export default function ChatsMessageScreen() {
       typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
     });
 
-    socket.on('newMessage', (message: MessageItem) => {
+    socket.on('newMessage', async (message: MessageItem) => {
       setMessages(prev => [...prev, message]);
       shouldScrollToEnd.current = true;
       setIsTyping(false);
+      await markSessionMessagesAsRead(userId);
     });
+
+    socket.on('updateMessage', (message: any) => {
+      console.log(message)
+      setMessages(prev => {
+        const updatedMessages = prev.map(msg =>
+          msg.id === message.id ? {...msg, content: message.content} : msg,
+        );
+        return updatedMessages;
+      });
+    })
 
     socket.on('messageArchived', (prop: any) => {
       setMessages(prev => {
@@ -130,6 +130,7 @@ export default function ChatsMessageScreen() {
       socket.off('messageArchived');
       socket.off('messageProfileFilled');
       socket.off('chatExpertArchived');
+      socket.off('updateMessage');
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
   }, [sessionId]);
@@ -283,7 +284,9 @@ export default function ChatsMessageScreen() {
     }
   };
 
-  const PanelComponent = getPanelComponent();
+  const isExpertSession =
+    otherUser?.roles?.includes('expert') || profile?.roles?.includes('expert');
+  const isCurrentUserExpert = profile?.roles?.includes('expert');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -385,11 +388,29 @@ export default function ChatsMessageScreen() {
         showTyping={isTyping}
       />
 
-      <PanelComponent
-        visible={panelVisible}
-        onClose={() => setPanelVisible(false)}
-        sessionId={sessionId}
-      />
+      {!isExpertSession ? (
+        <ChatsPanelRunner
+          visible={panelVisible}
+          onClose={() => setPanelVisible(false)}
+          sessionId={sessionId}
+          onSendSuccess={() => {}}
+        />
+      ) : isCurrentUserExpert ? (
+        <ChatsPanelExpertPOVExpert
+          visible={panelVisible}
+          onClose={() => setPanelVisible(false)}
+          sessionId={sessionId}
+          otherUser={otherUser}
+          onSendSuccess={() => {}}
+        />
+      ) : (
+        <ChatsPanelExpertPOVRunner
+          visible={panelVisible}
+          onClose={() => setPanelVisible(false)}
+          sessionId={sessionId}
+          onSendSuccess={() => {}}
+        />
+      )}
 
       <CMSSidePanelInfo
         visible={infoPanelVisible}

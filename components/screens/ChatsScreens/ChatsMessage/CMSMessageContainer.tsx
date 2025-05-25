@@ -9,6 +9,7 @@ import {CMIImage} from './ChatsMessageItem/CMIImage';
 import {MessageItem} from './ChatsMessageScreen';
 import {useNavigation} from '@react-navigation/native';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
+import { CMIExpertSchedule } from './ChatsMessageItem/CMIExpertSchedule';
 
 type CMSMessageContainerProps = {
   otherUser: any;
@@ -132,22 +133,23 @@ export const CMSMessageContainer = React.memo(
           key: getMessageKey(item),
           message: item,
           isMe,
-          ref: (ref: View) => (messageRefs.current[item.id] = ref)
         };
 
         switch (item.message_type) {
           case 'PROFILE':
-            return <CMIProfile {...commonProps} onProfileSubmit={onProfileSubmit} />;
+            return <CMIProfile {...commonProps} key={item.id} onProfileSubmit={onProfileSubmit} />;
           case 'EXERCISE_RECORD':
-            return <CMIExerciseRecord {...commonProps} onViewMap={() => navigation.navigate('CMSMessageViewMap', {
+            return <CMIExerciseRecord {...commonProps} key={item.id} onViewMap={() => navigation.navigate('CMSMessageViewMap', {
               id: item.content?.exercise_session_record_id,
             })} />;
           case 'EXPERT_RECOMMENDATION':
-            return <CMIExpertRecommendation {...commonProps} onUpdateMessage={onUpdateMessage} />;
+            return <CMIExpertRecommendation {...commonProps} key={item.id} onUpdateMessage={onUpdateMessage} />;
           case 'IMAGE':
-            return <CMIImage {...commonProps} />;
+            return <CMIImage {...commonProps} key={item.id} />;
+          case 'EXPERT_SCHEDULE':
+            return <CMIExpertSchedule {...commonProps} key={item.id} onUpdateMessage={onUpdateMessage} />;
           default:
-            return <CMINormal {...commonProps} />;
+            return <CMINormal {...commonProps} key={item.id} />;
         }
       },
       [profileId, showContent, onExerciseRecordPress, sessionId, onUpdateMessage],

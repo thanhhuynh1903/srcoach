@@ -21,7 +21,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 const {width} = Dimensions.get('window');
 const CHART_WIDTH = width - 32;
-const PRIMARY_COLOR = '#10B981';
+export const PRIMARY_COLOR = '#0e9100';
 
 const RecordDistanceScreen = () => {
   const [isLoading, setIsLoading] = useState(true);

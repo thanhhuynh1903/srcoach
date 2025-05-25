@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Pressable,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {CommonAvatar} from '../../../../commons/CommonAvatar';

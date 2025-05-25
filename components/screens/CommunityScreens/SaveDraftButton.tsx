@@ -1,4 +1,3 @@
-// components/SaveDraftButton.tsx
 import React, { useState } from 'react';
 import { TouchableOpacity, ActivityIndicator } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';

@@ -26,6 +26,7 @@ const GeneralScheduleScreen = () => {
     ExpertSchedule,
     isLoading,
     error,
+    
     fetchSelfSchedules,
     fetchExpertSchedule,
   } = useScheduleStore();

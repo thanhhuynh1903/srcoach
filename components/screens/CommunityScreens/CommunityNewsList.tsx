@@ -1,12 +1,19 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, FlatList, TouchableOpacity, Image} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../contants/theme';
 import {useNavigation} from '@react-navigation/native';
 import {getAllNews} from '../../utils/useNewsAPI';
 import {getNewsColorByType} from '../../contants/newsConst';
 import {stripHtml, capitalizeFirstLetter} from '../../utils/utils_format';
-import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
+import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
 
 interface NewsItem {
   id: string;
@@ -19,14 +26,13 @@ interface NewsItem {
 
 const NewsItemLoader = () => (
   <View style={styles.newsItem}>
-    <ContentLoader 
+    <ContentLoader
       speed={1}
       width={240}
       height={200}
       viewBox="0 0 240 200"
       backgroundColor="#f3f3f3"
-      foregroundColor="#ecebeb"
-    >
+      foregroundColor="#ecebeb">
       <Rect x="0" y="0" rx="10" ry="10" width="216" height="100" />
       <Rect x="0" y="115" rx="4" ry="4" width="180" height="15" />
       <Rect x="0" y="140" rx="4" ry="4" width="216" height="10" />
@@ -60,7 +66,13 @@ const CommunityNewsList = () => {
 
   const renderNewsItem = ({item}: {item: NewsItem}) => (
     <TouchableOpacity
-      style={styles.newsItem}
+      style={[
+        styles.newsItem,
+        {
+          borderTopWidth: 7,
+          borderTopColor: getNewsColorByType(item?.news_type || 'Unknown'),
+        },
+      ]}
       activeOpacity={0.85}
       onPress={() => {
         navigation.navigate('NewsDetailScreen', {
@@ -73,9 +85,10 @@ const CommunityNewsList = () => {
         {item.image_url ? (
           <Image source={{uri: item.image_url}} style={styles.newsImage} />
         ) : (
-          <View style={[styles.newsImage, styles.newsImagePlaceholder]}>
-            <Icon name="newspaper-outline" size={36} color="#A0AEC0" />
-          </View>
+          <Image
+            source={require('../../assets/Community/newspaper.jpg')}
+            style={[styles.newsImage, styles.newsImagePlaceholder]}
+          />
         )}
         <View
           style={[
@@ -139,11 +152,11 @@ const CommunityNewsList = () => {
       {loading ? (
         <FlatList
           style={styles.newsList}
-          data={[1, 2, 3]} // Dummy data for loading
+          data={[1, 2, 3]}
           renderItem={() => <NewsItemLoader />}
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.toString()}
+          keyExtractor={item => item.toString()}
         />
       ) : (
         <FlatList
@@ -162,7 +175,7 @@ const CommunityNewsList = () => {
 const styles = StyleSheet.create({
   sectionTitle: {
     marginVertical: 16,
-    marginBottom: 5,
+    marginBottom: 15,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#000',
@@ -178,11 +191,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   newsImageContainer: {
     position: 'relative',

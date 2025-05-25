@@ -1,11 +1,5 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-} from 'react-native';
+import React, {useState} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {CommonAvatar} from '../../../commons/CommonAvatar';
 import {theme} from '../../../contants/theme';
@@ -41,9 +35,9 @@ export const CMSHeader = ({
   const [showExpertInfo, setShowExpertInfo] = useState(false);
   const [animation] = useState(new Animated.Value(0));
 
-  const isChattingWithExpert = 
-    profile?.roles && 
-    !profile.roles.includes('expert') && 
+  const isChattingWithExpert =
+    profile?.roles &&
+    !profile.roles.includes('expert') &&
     otherUser?.roles?.includes('expert');
 
   React.useEffect(() => {
@@ -60,7 +54,7 @@ export const CMSHeader = ({
             duration: 1000,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     }
   }, [isChattingWithExpert]);
@@ -78,15 +72,12 @@ export const CMSHeader = ({
         </TouchableOpacity>
 
         <View style={styles.userInfo}>
-          <CommonAvatar
-            size={40}
-            uri={otherUser?.image?.url}
-            mode={otherUser?.roles?.includes('expert') ? 'expert' : 'runner'}
-          />
-
           <View style={styles.userDetails}>
             <View style={styles.userMainInfo}>
-              <Text style={styles.userName}>{otherUser?.name}</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <CommonAvatar size={20} style={{marginRight: 5}} uri={otherUser?.image?.url} />
+                <Text style={styles.userName}>{otherUser?.name}</Text>
+              </View>
               <Text style={styles.userUsername}>@{otherUser?.username}</Text>
             </View>
             <View style={styles.userStats}>
@@ -109,18 +100,23 @@ export const CMSHeader = ({
             <Icon name="search" size={20} color={theme.colors.primaryDark} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onInfoPress} style={styles.actionButton}>
-            <Icon name="information-circle" size={20} color={theme.colors.primaryDark} />
+            <Icon
+              name="information-circle"
+              size={20}
+              color={theme.colors.primaryDark}
+            />
           </TouchableOpacity>
         </View>
       </View>
 
       {isChattingWithExpert && (
-        <Animated.View style={[styles.expertBanner, { backgroundColor }]}>
-          <Text style={styles.expertBannerText}>You are chatting with an Expert</Text>
-          <TouchableOpacity 
+        <Animated.View style={[styles.expertBanner, {backgroundColor}]}>
+          <Text style={styles.expertBannerText}>
+            You are chatting with an Expert
+          </Text>
+          <TouchableOpacity
             onPress={() => setShowExpertInfo(true)}
-            style={styles.expertInfoButton}
-          >
+            style={styles.expertInfoButton}>
             <Icon name="information-circle" size={18} color="#000" />
           </TouchableOpacity>
         </Animated.View>
@@ -182,7 +178,6 @@ const styles = StyleSheet.create({
   },
   userDetails: {
     flex: 1,
-    marginLeft: 10,
   },
   userMainInfo: {
     flexDirection: 'row',
