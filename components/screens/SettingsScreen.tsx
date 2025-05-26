@@ -21,9 +21,17 @@ import {capitalizeFirstLetter} from '../utils/utils_format';
 
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
-  const {clearAll, clear, profile} = useLoginStore();
+  const {clearAll, clear, profile, fetchUserProfile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserProfile();
+    }, []),
+  );
+
+  useEffect(() => {}, [profile]);
 
   async function handleLogout() {
     await NotificationService.unregisterDevice();
@@ -124,7 +132,9 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
             </View>
 
             <View style={styles.statsGrid}>
-              <TouchableOpacity style={styles.statItem} onPress={() => navigation.navigate("UserPointsHistoryScreen")}>
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => navigation.navigate('UserPointsHistoryScreen')}>
                 <View style={styles.statIconContainer}>
                   <Icon name="trophy" size={23} color="#2C3E50" />
                 </View>
