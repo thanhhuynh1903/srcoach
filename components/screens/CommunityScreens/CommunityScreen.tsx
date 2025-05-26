@@ -245,9 +245,11 @@ const CommunityScreen = () => {
               : navigation.navigate('OtherProfileScreen', {postId: item?.id})
           }>
           <View style={styles.postHeader}>
-            <Image
-              source={{uri: item?.user?.image?.url || undefined}}
-              style={styles.avatar}
+            <CommonAvatar
+              mode={item.user?.roles?.includes('expert') ? 'expert' : 'runner'}
+              style={{marginRight: 8}}
+              size={40}
+              uri={item?.user?.image?.url}
             />
             <View>
               <Text style={styles.name}>{item.user.username}</Text>

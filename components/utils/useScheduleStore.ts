@@ -87,6 +87,7 @@ const useScheduleStore = create<ScheduleState>()(
           console.log('response', response);
 
           set({schedules: response?.data, isLoading: false});
+          return response?.data || [];
         } catch (error) {
           console.error(
             'Error getting personal training schedule list:',
