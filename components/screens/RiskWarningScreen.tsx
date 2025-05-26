@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../BackButton';
-import {PieChart} from 'react-native-gifted-charts';
-import {useRoute, useNavigation} from '@react-navigation/native';
+import { PieChart } from 'react-native-gifted-charts';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
 import CommonDialog from '../commons/CommonDialog';
-import {set} from 'date-fns';
+import { set } from 'date-fns';
 import { isExerciseRunning } from '../contants/exerciseType';
 // Hàm chuyển đổi màu dựa trên mức độ nghiêm trọng
 const getSeverityColor = (severity: any) => {
@@ -93,7 +93,7 @@ const RiskWarningScreen = () => {
               console.log('Back button pressed');
               navigation.navigate('HomeTabs', {
                 screen: 'Risk',
-                params: {screen: 'HomeMain'},
+                params: { screen: 'HomeMain' },
               });
             }}
           />
@@ -222,7 +222,7 @@ const RiskWarningScreen = () => {
         <Text style={styles.headerTitle}>Risk Analysis</Text>
       </View>
 
-      <ScrollView style={{flex: 1, backgroundColor: '#f9fafb'}}>
+      <ScrollView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
         {/* Risk Score */}
         <View style={styles.riskScoreContainer}>
           <View style={styles.riskScore}>
@@ -241,7 +241,7 @@ const RiskWarningScreen = () => {
               }}
             />
           </View>
-          <Text style={[styles.riskLevel, {color: severityColor}]}>
+          <Text style={[styles.riskLevel, { color: severityColor }]}>
             {assessment.severity === 'Normal'
               ? 'Low risk'
               : `Risk ${assessment.severity}`}
@@ -252,8 +252,8 @@ const RiskWarningScreen = () => {
         {assessment.heart_rate_danger && (
           <View style={styles.dangerWarningContainer}>
             <View style={styles.dangerHeader}>
-              <Icon name="warning-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.dangerTitle}>Heart Rate Danger Warning</Text>
+              <Icon name="warning-outline" size={24} color="#92400E" />
+              <Text style={styles.dangerTitle}>Dangerous heart rate zone</Text>
             </View>
             <Text style={styles.dangerValue}>
               <Icon name="fitness" size={24} color="#FF5252" />
@@ -299,7 +299,7 @@ const RiskWarningScreen = () => {
                 {metric.value}
                 <Text style={styles.metricUnit}>{metric.unit}</Text>
               </Text>
-              <Text style={[styles.metricStatus, {color: metric.color}]}>
+              <Text style={[styles.metricStatus, { color: metric.color }]}>
                 {metric.status}
               </Text>
             </View>
@@ -310,7 +310,7 @@ const RiskWarningScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Risk factors</Text>
           <View
-            style={{backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12}}>
+            style={{ backgroundColor: '#FFFFFF', padding: 16, borderRadius: 12 }}>
             {assessment.risk_factors.map((factor, index) => (
               <View key={index} style={styles.riskFactor}>
                 <View style={styles.riskFactorHeader}>
@@ -318,21 +318,62 @@ const RiskWarningScreen = () => {
                   <Text
                     style={[
                       styles.riskFactorStatus,
-                      {color: getSeverityColor(factor.level)},
+                      { color: getSeverityColor(factor.level) },
                     ]}>
                     {factor.level}
                   </Text>
                 </View>
-                <View style={styles.progressBar}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${getLevelProgress(factor.level) * 100}%`,
-                        backgroundColor: getSeverityColor(factor.level),
-                      },
-                    ]}
-                  />
+                <View style={styles.progressBarGroup}>
+                  <View style={styles.progressBarSegmentContainer}>
+                    {/* Low */}
+                    <View
+                      style={[
+                        styles.progressBarBlock,
+                        {
+                          width: '34%',
+                          backgroundColor:
+                            ['low', 'normal', 'moderate', 'high'].includes(factor.level.toLowerCase())
+                              ? '#22C55E'
+                              : '#E5E7EB',
+                          borderTopLeftRadius: 5,
+                          borderBottomLeftRadius: 5,
+                        },
+                      ]}
+                    />
+                    {/* Moderate */}
+                    <View
+                      style={[
+                        styles.progressBarBlock,
+                        {
+                          width: '33%',
+                          backgroundColor:
+                            ['moderate', 'high'].includes(factor.level.toLowerCase())
+                              ? '#F97316'
+                              : '#E5E7EB',
+                        },
+                      ]}
+                    />
+                    {/* High */}
+                    <View
+                      style={[
+                        styles.progressBarBlock,
+                        {
+                          width: '33%',
+                          backgroundColor:
+                            factor.level.toLowerCase() === 'high'
+                              ? '#EF4444'
+                              : '#E5E7EB',
+                          borderTopRightRadius: 5,
+                          borderBottomRightRadius: 5,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <View style={styles.progressBarLabels}>
+                    <Text style={[styles.progressBarLabel, { color: '#22C55E', width: '33%', textAlign: 'left' }]}>Low</Text>
+                    <Text style={[styles.progressBarLabel, { color: '#F97316', width: '33%', textAlign: 'center' }]}>Moderate</Text>
+                    <Text style={[styles.progressBarLabel, { color: '#EF4444', width: '33%', textAlign: 'right' }]}>High</Text>
+                  </View>
                 </View>
                 <Text style={styles.riskFactorDescription}>
                   {factor.description}
@@ -359,8 +400,8 @@ const RiskWarningScreen = () => {
                     index % 3 === 0
                       ? 'speedometer-outline'
                       : index % 3 === 1
-                      ? 'heart-outline'
-                      : 'walk-outline'
+                        ? 'heart-outline'
+                        : 'walk-outline'
                   }
                   size={24}
                   color="#3B82F6"
@@ -379,7 +420,7 @@ const RiskWarningScreen = () => {
               onPress={() => {
                 navigation.navigate('HomeTabs', {
                   screen: 'Risk',
-                  params: {screen: 'HomeMain'},
+                  params: { screen: 'HomeMain' },
                 });
               }}>
               <Text style={styles.deleteButtonText}>
@@ -402,40 +443,37 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
-    backgroundColor: '#FECACA', // Nền đỏ nhạt
+    backgroundColor: '#FEF3C7', // Màu vàng nhạt
     borderLeftWidth: 4,
-    borderLeftColor: '#EF4444', // Viền đỏ đậm
+    borderLeftColor: '#D97706', // Màu vàng đậm
     borderRadius: 12,
   },
   dangerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#FCD34D', // Màu vàng cam
     padding: 8,
     borderRadius: 8,
   },
   dangerTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#92400E', // Màu nâu vàng
     marginLeft: 8,
   },
   dangerValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#B91C1C', // Đỏ đậm
+    color: '#B45309', // Màu vàng đậm
     marginBottom: 8,
-  },
-  dangerUnit: {
-    fontSize: 16,
-    fontWeight: '400',
   },
   dangerDescription: {
     fontSize: 14,
-    color: '#7F1D1D', // Đỏ tối
+    color: '#B45309', // Màu vàng đậm
     lineHeight: 20,
   },
+
 
   header: {
     flexDirection: 'row',
@@ -512,7 +550,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -552,7 +590,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -585,7 +623,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -634,16 +672,40 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '500',
   },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 2,
-    marginBottom: 8,
+  progressBarGroup: {
+    marginVertical: 8,
   },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
+  progressBarSegmentContainer: {
+    flexDirection: 'row',
+    height: 10,
+    marginBottom: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 5,
+    overflow: 'hidden',
   },
+  progressBarBlock: {
+    height: 10,
+  },
+  progressBarLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  progressBarLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  progressIndicator: {
+    position: 'absolute',
+    top: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
+    zIndex: 2,
+  },
+
   riskFactorDescription: {
     fontSize: 14,
     color: '#64748B',

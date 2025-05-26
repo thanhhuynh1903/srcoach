@@ -557,7 +557,7 @@ const EnhancedScheduleCard = ({
             <View style={styles.modalHandle} />
 
             {/* Alarm Setting */}
-            {status !== "PENDING" && (
+            {status !== "PENDING" && status !== "MISSED" && status !== "COMPLETED" && (
               <>
                 <View style={styles.modalAlarmSection}>
                   <View style={styles.modalAlarmHeader}>
