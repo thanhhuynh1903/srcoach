@@ -154,6 +154,7 @@ const useUserPointsStore = create<UserPointsState>((set) => ({
           historyMeta: response.data.meta,
           isLoading: false,
         });
+        return response.data
       } else {
         set({
           error: response?.message || 'Failed to fetch points history',
