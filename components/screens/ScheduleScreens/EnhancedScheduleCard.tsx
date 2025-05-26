@@ -71,6 +71,7 @@ const EnhancedScheduleCard = ({
   const [modalVisible, setModalVisible] = useState(false)
   const [expandAnimation] = useState(new Animated.Value(0))
   const { profile } = useLoginStore()
+  
   const handleMorePress = () => {
     setModalVisible(true)
   }
@@ -357,7 +358,6 @@ const EnhancedScheduleCard = ({
           )
         })}
       </View>
-      {/* Workout Details for Selected Day - Animated */}
       <Animated.View style={[styles.workoutDetailsWrapper, { maxHeight, opacity: expandAnimation }]}>
         {selectedDaySchedule && selectedDaySchedule.workouts.length > 0 && (
           <View style={styles.workoutDetailsContainer}>
@@ -366,7 +366,6 @@ const EnhancedScheduleCard = ({
             </Text>
             {selectedDaySchedule.workouts?.map((workout, index) => (
               <View key={index} style={styles.workoutItem}>
-                {/* Time and Status */}
                 <View style={styles.timeContainer}>
                   <View style={styles.timeChildContainer}>
                     <Icon name="time-outline" size={16} color="#64748B" />
@@ -391,80 +390,11 @@ const EnhancedScheduleCard = ({
                   </View>
                 </View>
 
-                {/* Session Name */}
                 <View style={styles.sessionNameContainer}>
                   <Text style={styles.sessionName}>{workout.name}</Text>
                 </View>
 
-                {/* Enhanced Heart Rate Target Section */}
-                {(workout.minbpm || workout.maxbpm) && (
-                  <View
-                    style={[
-                      styles.heartRateContainer,
-                      {
-                        borderLeftColor: getHeartRateColor(workout.minbpm, workout.maxbpm),
-                      },
-                    ]}
-                  >
-                    <View style={styles.heartRateHeader}>
-                      <View
-                        style={[
-                          styles.heartRateIconContainer,
-                          {
-                            backgroundColor: `${getHeartRateColor(workout.minbpm, workout.maxbpm)}20`,
-                          },
-                        ]}
-                      >
-                        <Icon name="heart" size={16} color={getHeartRateColor(workout.minbpm, workout.maxbpm)} />
-                      </View>
-                      <Text style={styles.heartRateTitle}>Heart Rate Target</Text>
-                    </View>
-
-                    {/* Improved BPM Range Display */}
-                    <View style={styles.bpmCardContainer}>
-                      <View
-                        style={[
-                          styles.bpmCard,
-                          styles.minBpmCard,
-                          {
-                            borderColor: getHeartRateColor(workout.minbpm, workout.maxbpm),
-                          },
-                        ]}
-                      >
-                        <Text style={styles.bpmValue}>{workout.minbpm || 100}</Text>
-                        <Text style={styles.bpmLabel}>Min BPM</Text>
-                      </View>
-
-                      <View style={styles.bpmConnector}>
-                        <View
-                          style={[
-                            styles.bpmConnectorLine,
-                            {
-                              backgroundColor: getHeartRateColor(workout.minbpm, workout.maxbpm),
-                            },
-                          ]}
-                        />
-                      </View>
-
-                      <View
-                        style={[
-                          styles.bpmCard,
-                          styles.maxBpmCard,
-                          {
-                            borderColor: getHeartRateColor(workout.minbpm, workout.maxbpm),
-                          },
-                        ]}
-                      >
-                        <Text style={styles.bpmValue}>{workout.maxbpm || 180}</Text>
-                        <Text style={styles.bpmLabel}>Max BPM</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                {/* Stats */}
                 <View style={styles.statsContainer}>
-                  {/* Steps */}
                   <View style={styles.statItem}>
                     <View style={styles.statIconContainer}>
                       <Icon name="footsteps-outline" size={20} color="#3B82F6" />
@@ -499,7 +429,6 @@ const EnhancedScheduleCard = ({
         )}
       </Animated.View>
 
-      {/* Card Footer */}
       <View style={styles.cardFooter}>
         <View style={styles.footerTags}>
           {isExpertChoice ? (
@@ -545,7 +474,6 @@ const EnhancedScheduleCard = ({
           </TouchableOpacity>
         </View>
       )}
-      {/* Action Modal */}
       <Modal
         animationType="slide"
         transparent={true}
