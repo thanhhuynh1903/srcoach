@@ -165,6 +165,7 @@ const RiskWarningScreen = () => {
       f.name.toLowerCase().includes('Heart Rate') &&
       !f.name.toLowerCase().includes('Low'),
   );
+  console.log('Heart Risk Factor:', assessment.risk_factors);
 
   const lowestHeartRiskFactor = assessment.risk_factors.find(
     f =>
@@ -175,6 +176,7 @@ const RiskWarningScreen = () => {
   const paceRiskFactor = assessment.risk_factors.find(f =>
     f.name.toLowerCase().includes('pace'),
   );
+  console.log('Pace Risk Factor:', paceRiskFactor);
 
   const metrics = [
     {
@@ -183,7 +185,7 @@ const RiskWarningScreen = () => {
         ? activityData.heart_rate_max
         : assessment.heart_rate_max,
       unit: ' BPM',
-      status: heartRiskFactor ? heartRiskFactor.level : 'Normal',
+      status: 'Heart rate Max',
       color: heartRiskFactor
         ? getSeverityColor(heartRiskFactor.level)
         : '#22C55E',
@@ -194,7 +196,7 @@ const RiskWarningScreen = () => {
         ? activityData.heart_rate_min
         : assessment.heart_rate_min,
       unit: ' BPM',
-      status: lowestHeartRiskFactor ? lowestHeartRiskFactor.level : 'Normal',
+      status: "Hear rate Min",
       color: lowestHeartRiskFactor
         ? getSeverityColor(lowestHeartRiskFactor.level)
         : '#22C55E',
@@ -205,7 +207,7 @@ const RiskWarningScreen = () => {
         ? activityData.avg_pace
         : assessment.pace || '0:00',
       unit: '/km',
-      status: paceRiskFactor ? paceRiskFactor.level : 'Normal',
+      status: 'Pace',
       color: paceRiskFactor
         ? getSeverityColor(paceRiskFactor.level)
         : '#22C55E',
@@ -261,8 +263,8 @@ const RiskWarningScreen = () => {
               <Text style={styles.dangerUnit}> BPM</Text>
             </Text>
             <Text style={styles.dangerDescription}>
-              Your heart rate reached a potentially dangerous level during this
-              activity. Consider consulting with a healthcare professional.
+              Your heart rate exceeding this level is potentially dangerous during this activity.
+              Activity. Consider consulting a healthcare professional.
             </Text>
           </View>
         )}
@@ -293,6 +295,7 @@ const RiskWarningScreen = () => {
         {/* Metrics */}
         <View style={styles.metricsContainer}>
           {metrics.map((metric, index) => (
+            console.log(`Metric ${index + 1}:`, metric),
             <View key={index} style={styles.metricItem}>
               <Icon name={metric.icon as any} size={24} color={metric.color} />
               <Text style={styles.metricValue}>
