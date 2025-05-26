@@ -10,6 +10,7 @@ import { theme } from "../../contants/theme"
 import Toast from "react-native-toast-message"
 import { useLoginStore } from "../../utils/useLoginStore"
 import PendingTimer from "../../PendingTimer"
+import CommonDialog from "../../commons/CommonDialog"
 interface Workout {
   time: string
   name: string
@@ -60,10 +61,13 @@ const EnhancedScheduleCard = ({
   expertname,
 }: ScheduleCardProps) => {
   const navigation = useNavigation()
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
+
   const [selectedDay, setSelectedDay] = useState(initialSelectedDay)
   const [alarmEnabled, setAlarmEnabled] = useState(initialAlarmEnabled)
   const [expanded, setExpanded] = useState(false)
   const { deleteSchedule, deleteScheduleExpert, message, clear, acceptExpertSchedule, declineExpertSchedule } = useScheduleStore()
+  const { schedules: selfSchedules } = useScheduleStore();
   const [modalVisible, setModalVisible] = useState(false)
   const [expandAnimation] = useState(new Animated.Value(0))
   const { profile } = useLoginStore()
@@ -86,9 +90,26 @@ const EnhancedScheduleCard = ({
 
     return { totalSteps, totalDistance, totalCalories }
   }
+  const hasSelfChoice = selfSchedules?.some(sch => sch.schedule_type !== 'EXPERT');
+
   const handleAccept = async () => {
-    await acceptExpertSchedule(id)
-  }
+    // Nếu là runner, đang accept lịch expert, và đã có self's choice thì show dialog cảnh báo
+    if (
+      isExpertChoice &&
+      expert_id !== profile.id &&
+      status === "PENDING" &&
+      hasSelfChoice
+    ) {
+      setShowAcceptDialog(true);
+      return;
+    }
+    await acceptExpertSchedule(id);
+  };
+
+  const confirmAccept = async () => {
+    setShowAcceptDialog(false);
+    await acceptExpertSchedule(id);
+  };
 
   const handleDecline = async () => {
     await declineExpertSchedule(id)
@@ -129,7 +150,7 @@ const EnhancedScheduleCard = ({
         async onPress() {
           try {
             console.log("Deleting expert schedule with ID:", id);
-            
+
             const success = await deleteScheduleExpert(id);
             if (success) {
               await clear();
@@ -261,7 +282,7 @@ const EnhancedScheduleCard = ({
             <Text style={styles.statusText}>{status}</Text>
           </View>
 
-          {status === "PENDING" && isOwner && profile.role === "expert" ? (
+          {status === "PENDING" && isOwner ? (
             <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteExpert}>
               <Icon name="trash-outline" size={16} color="#EF4444" />
             </TouchableOpacity>
@@ -567,8 +588,6 @@ const EnhancedScheduleCard = ({
                 <View style={styles.modalDivider} />
 
                 {isExpertChoice ? (
-                  console.log("Expert choice, showing delete option"),
-                  
                   <TouchableOpacity style={styles.modalOption} onPress={handleDeleteExpert}>
                     <Icon name="trash-outline" size={24} color="#EF4444" />
                     <Text style={[styles.modalOptionText, { color: "#EF4444" }]}>Delete</Text>
@@ -603,6 +622,30 @@ const EnhancedScheduleCard = ({
           </View>
         </TouchableOpacity>
       </Modal>
+      <CommonDialog
+        visible={showAcceptDialog}
+        onClose={() => setShowAcceptDialog(false)}
+        title="Accept Expert's Schedule"
+        content={
+          <Text>
+            If you accept this schedule, your current schedule will be deleted even if the schedule still has active days.
+          </Text>
+        }
+        actionButtons={[
+          {
+            label: "Cancel",
+            variant: "outlined",
+            handler: () => setShowAcceptDialog(false),
+          },
+          {
+            label: "Accept",
+            variant: "contained",
+            color: "#22C55E",
+            handler: confirmAccept,
+            iconName: "checkmark-circle-outline",
+          },
+        ]}
+      />
     </View>
   )
 }

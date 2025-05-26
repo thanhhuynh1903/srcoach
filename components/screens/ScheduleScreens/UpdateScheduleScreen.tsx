@@ -46,10 +46,12 @@ const UpdateScheduleScreen = () => {
   const [validDates, setValidDates] = useState<{ [key: string]: any }>({});
   const {
     updateSchedule,
+    updateScheduleExpert,
     schedules,
     isLoading,
     message,
     fetchSelfSchedules,
+    fetchExpertSchedule,
     fetchDetail,
   } = useScheduleStore();
   const [isCreating, setIsCreating] = useState(false);
@@ -74,10 +76,9 @@ const UpdateScheduleScreen = () => {
 
       const validDays = dailyGoals?.filter(
         (day: DailySchedule) =>
-          !day.details.some(session => session.status === 'MISSED'),
+          !day.details.some(session => session.status === 'MISSED' || session.status === 'CANCELED' || session.status === 'COMPLETED'),
       );
 
-      // Kiểm tra nếu không còn ngày nào hợp lệ
       if (validDays.length === 0) {
         Alert.alert(
           'Cannot Update',
@@ -99,7 +100,17 @@ const UpdateScheduleScreen = () => {
         days: cleanedDays,
       };
 
-      const result = await updateSchedule(scheduleId, formData);
+      // Lấy dữ liệu chi tiết lịch để kiểm tra loại lịch
+      const scheduleData = await fetchDetail(scheduleId);
+
+      let result;
+      if (scheduleData?.schedule_type === 'EXPERT') {
+        // Nếu là lịch expert tạo cho runner
+        result = await updateScheduleExpert(scheduleId, formData);
+      } else {
+        // Nếu là lịch cá nhân
+        result = await updateSchedule(scheduleId, formData);
+      }
 
       if (result === 'success') {
         Toast.show({
@@ -107,7 +118,11 @@ const UpdateScheduleScreen = () => {
           text1: 'Success',
           text2: 'Schedule updated successfully',
         });
-        await fetchSelfSchedules();
+        if (scheduleData?.schedule_type === 'EXPERT') {
+          await fetchExpertSchedule();
+        } else {
+          await fetchSelfSchedules();
+        }
         navigate.goBack();
       } else {
         Toast.show({

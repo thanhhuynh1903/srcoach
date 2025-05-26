@@ -58,6 +58,10 @@ interface ScheduleState {
     id: string,
     schedule: Partial<Schedule>,
   ) => Promise<string | null>;
+  updateScheduleExpert: (
+    id: string,
+    schedule: Partial<Schedule>,
+  ) => Promise<string | null>;
   deleteSchedule: (id: string) => Promise<boolean>;
   deleteScheduleExpert: (id: string) => Promise<boolean>;
   acceptExpertSchedule: (scheduleId: string) => Promise<Schedule | null>;
@@ -302,6 +306,24 @@ const useScheduleStore = create<ScheduleState>()(
           set({isLoading: true});
           const response = await api.putData(
             `/schedules/self/${scheduleId}`,
+            data,
+          );
+          const updateSchedule = response?.status;
+          console.log('Kết quả cập nhật lịch tập:', updateSchedule);
+
+          return updateSchedule;
+        } catch (error) {
+          console.log('Error while updating schedule:', error);
+          return null;
+        } finally {
+          set({isLoading: false});
+        }
+      },
+      updateScheduleExpert: async (scheduleId, data) => {
+        try {
+          set({isLoading: true});
+          const response = await api.putData(
+            `/schedules/expert/${scheduleId}`,
             data,
           );
           const updateSchedule = response?.status;

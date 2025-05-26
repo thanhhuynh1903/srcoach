@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo,useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import BackButton from '../../BackButton';
 import useScheduleStore from '../../utils/useScheduleStore';
 import CommonDialog from '../../commons/CommonDialog';
 import { theme } from '../../contants/theme';
+import { useLoginStore } from '../../utils/useLoginStore';
 const GeneralScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
   const navigation = useNavigation();
@@ -45,17 +46,31 @@ const GeneralScheduleScreen = () => {
         : [];
     return [...safeSchedules, ...safeExpert];
   }, [schedules, ExpertSchedule]);
+  const { profile } = useLoginStore();
 
   const hasActiveSchedule = useMemo(() => {
-  // Duyệt qua tất cả schedules (có thể là mảng hoặc 1 object)
-  const allSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : [];
-  // Kiểm tra điều kiện chặn
-  return allSchedules.some(
-    schedule =>
-      schedule?.schedule_type !== 'EXPERT' && // Self's choice
-      schedule?.expert?.name // Có expert.name tồn tại
-  );
-}, [schedules]);
+    const allSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : [];
+
+    // Nếu user có role runner: chặn nếu có bất kỳ lịch nào từ expert
+    if (profile?.roles?.includes('runner')) {
+      const hasExpertSchedule = allSchedules.some(
+        schedule =>
+          schedule?.schedule_type === 'EXPERT' &&
+          schedule?.expert_id !== schedule?.user_id // lịch này là do expert tạo cho runner
+      );
+      if (hasExpertSchedule) return true;
+    }
+
+    // Nếu user có role expert: chặn nếu có lịch self's choice
+    if (profile?.roles?.includes('expert')) {
+      const hasSelfChoice = allSchedules.some(
+        schedule => schedule?.schedule_type !== 'EXPERT'
+      );
+      if (hasSelfChoice) return true;
+    }
+
+    return false;
+  }, [schedules, profile]);
 
   const handleBlockAddSchedule = () => {
     !hasActiveSchedule
@@ -73,8 +88,12 @@ const GeneralScheduleScreen = () => {
   };
 
   const loadData = async () => {
-    await fetchSelfSchedules();
-    await fetchExpertSchedule();
+    if (profile?.roles?.includes('expert')) {
+      await fetchSelfSchedules();
+      await fetchExpertSchedule();
+    } else {
+      await fetchSelfSchedules();
+    }
   };
 
   useEffect(() => {
@@ -120,7 +139,7 @@ const GeneralScheduleScreen = () => {
     }
   }, [combinedSchedules, activeTab]);
 
-  const formatScheduleData = schedule => {
+  const formatScheduleData = (schedule: any) => {
     if (!schedule || !schedule.ScheduleDay) return null;
 
     // Sắp xếp các ngày theo thứ tự tăng dần
