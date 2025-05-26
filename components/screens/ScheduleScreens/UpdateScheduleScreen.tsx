@@ -387,7 +387,7 @@ const UpdateScheduleScreen = () => {
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Schedules - Edit Schedule</Text>
+        <Text style={styles.headerTitle}>Schedules</Text>
       </View>
 
       <ScrollView style={styles.scrollView}>

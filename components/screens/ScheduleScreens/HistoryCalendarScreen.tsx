@@ -33,10 +33,14 @@ const HistoryCalendarScreen = () => {
   const [showStats, setShowStats] = useState(true)
   const [showFilters, setShowFilters] = useState(true)
   const navigation = useNavigation()
-  const { historySchedule, isLoading, error, fetchHistorySchedule } = useScheduleStore()
+  const { historySchedule, isLoading, error, fetchHistorySchedule, fetchHistoryScheduleExpert } = useScheduleStore()
 
   useEffect(() => {
-    fetchHistorySchedule()
+    const loadData = async () => {
+      await fetchHistorySchedule()
+      await fetchHistoryScheduleExpert()
+    }
+    loadData();
   }, [])
 
   const filteredSchedules = useMemo(() => {
@@ -173,15 +177,15 @@ const HistoryCalendarScreen = () => {
               endDate={
                 schedule.updated_at
                   ? new Date(schedule.updated_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
                   : "Present"
               }
               status={schedule.status}
-              isExpertChoice={schedule.schedule_type === "EXPERT"}
-              userName={schedule.User?.name}
+              isExpertChoice={schedule?.schedule_type === "EXPERT"}
+              userName={schedule.user?.name}
               ScheduleDay={schedule.ScheduleDay}
             />
           ))

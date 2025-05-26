@@ -24,7 +24,6 @@ const WorkoutComparison = ({ workouts }: WorkoutComparisonProps) => {
   const stepsAnim = new Animated.Value(0)
   const distanceAnim = new Animated.Value(0)
   const caloriesAnim = new Animated.Value(0)
-   console.log("workouts", workouts);
    
   // Calculate max values
   const maxValues = {
