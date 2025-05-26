@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useEffect, useMemo} from 'react';
+import { useState, useEffect, useMemo,useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,15 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import EnhancedScheduleCard from './EnhancedScheduleCard';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import BackButton from '../../BackButton';
 import useScheduleStore from '../../utils/useScheduleStore';
 import CommonDialog from '../../commons/CommonDialog';
-import {theme} from '../../contants/theme';
+import { theme } from '../../contants/theme';
 const GeneralScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All');
   const navigation = useNavigation();
@@ -26,47 +27,65 @@ const GeneralScheduleScreen = () => {
     ExpertSchedule,
     isLoading,
     error,
-    
     fetchSelfSchedules,
     fetchExpertSchedule,
   } = useScheduleStore();
   const [showInfoDialog, setShowInfoDialog] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const combinedSchedules = useMemo(() => {
     const safeSchedules = Array.isArray(schedules)
       ? schedules
       : schedules
-      ? [schedules]
-      : [];
+        ? [schedules]
+        : [];
     const safeExpert = Array.isArray(ExpertSchedule)
       ? ExpertSchedule
       : ExpertSchedule
-      ? [ExpertSchedule]
-      : [];
+        ? [ExpertSchedule]
+        : [];
     return [...safeSchedules, ...safeExpert];
   }, [schedules, ExpertSchedule]);
+
   const hasActiveSchedule = useMemo(() => {
-    return [schedules]?.some(
-      schedule =>
-        schedule?.status === 'COMPLETED' ||
-        schedule?.status === 'PENDING' ||
-        schedule?.status === 'INCOMING' ||
-        schedule?.status === 'ONGOING',
-    );
-  }, [schedules]);
+  // Duyệt qua tất cả schedules (có thể là mảng hoặc 1 object)
+  const allSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : [];
+  // Kiểm tra điều kiện chặn
+  return allSchedules.some(
+    schedule =>
+      schedule?.schedule_type !== 'EXPERT' && // Self's choice
+      schedule?.expert?.name // Có expert.name tồn tại
+  );
+}, [schedules]);
 
   const handleBlockAddSchedule = () => {
     !hasActiveSchedule
       ? navigation.navigate('AddScheduleScreen' as never)
       : setShowInfoDialog(true);
   };
+  const formatTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC',
+    });
+  };
+
+  const loadData = async () => {
+    await fetchSelfSchedules();
+    await fetchExpertSchedule();
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      await fetchSelfSchedules();
-      await fetchExpertSchedule();
-    };
     loadData();
   }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [fetchSelfSchedules, fetchExpertSchedule]);
 
   // Logic lọc dựa trên tab đang chọn
   const filteredSchedules = useMemo(() => {
@@ -128,22 +147,10 @@ const GeneralScheduleScreen = () => {
       const date = new Date(day.day);
       return {
         day: date.getDate(),
-        workouts: day.ScheduleDetail.map(detail => {
-          const startTime = new Date(detail.start_time);
-          const endTime = new Date(detail.end_time);
-
+        workouts: day?.ScheduleDetail?.map(detail => {
           // Định dạng thời gian
-          const formattedStartTime = startTime.toLocaleTimeString('US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          });
-
-          const formattedEndTime = endTime.toLocaleTimeString('US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          });
+          const formattedStartTime = formatTime(detail.start_time);
+          const formattedEndTime = formatTime(detail.end_time);
 
           return {
             time: `${formattedStartTime} - ${formattedEndTime}`,
@@ -170,8 +177,9 @@ const GeneralScheduleScreen = () => {
       isExpertChoice: schedule.schedule_type === 'EXPERT',
       status: schedule.status,
       user_id: schedule.user_id,
+      runnername: schedule?.user?.name,
       expert_id: schedule.expert_id,
-      userName: schedule.User?.name,
+      expert_name: schedule?.expert?.name,
     };
   };
 
@@ -276,7 +284,11 @@ const GeneralScheduleScreen = () => {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContainer}>
+          contentContainerStyle={styles.filtersContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
           {['All', "Expert's Choice", 'My Schedules', 'Pending'].map(tab => (
             <TouchableOpacity
               key={tab}
@@ -317,8 +329,9 @@ const GeneralScheduleScreen = () => {
                   daySchedules={formattedSchedule.daySchedules}
                   status={formattedSchedule.status}
                   user_id={formattedSchedule.user_id}
+                  runnername={formattedSchedule.runnername}
                   expert_id={formattedSchedule.expert_id}
-                  userName={formattedSchedule.userName}
+                  expertname={formattedSchedule.expert_name}
                 />
               );
             })}
@@ -332,8 +345,8 @@ const GeneralScheduleScreen = () => {
               {activeTab === 'All'
                 ? 'You do not have any training schedule yet.'
                 : activeTab === "Expert's Choice"
-                ? 'No workout schedule from the expert'
-                : 'You have not created any workout schedule yet.'}
+                  ? 'No workout schedule from the expert'
+                  : 'You have not created any workout schedule yet.'}
             </Text>
           </View>
         )}
@@ -465,7 +478,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
@@ -495,7 +508,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
@@ -515,7 +528,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     shadowColor: '#0F2B5B',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
@@ -559,7 +572,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     shadowColor: '#0F2B5B',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,

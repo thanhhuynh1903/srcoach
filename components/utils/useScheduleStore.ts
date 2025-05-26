@@ -49,6 +49,7 @@ interface ScheduleState {
   fetchExpertSchedule: () => Promise<void>;
   fetchDetail: (scheduleId: string) => Promise<Schedule | null>;
   fetchHistorySchedule: () => Promise<void>;
+  fetchHistoryScheduleExpert: () => Promise<void>;
   createSchedule: (scheduleData: Partial<Schedule>) => Promise<Schedule | null>;
   createExpertSchedule: (
     scheduleData: Partial<Schedule>,
@@ -58,6 +59,9 @@ interface ScheduleState {
     schedule: Partial<Schedule>,
   ) => Promise<string | null>;
   deleteSchedule: (id: string) => Promise<boolean>;
+  deleteScheduleExpert: (id: string) => Promise<boolean>;
+  acceptExpertSchedule: (scheduleId: string) => Promise<Schedule | null>;
+  declineExpertSchedule: (scheduleId: string) => Promise<Schedule | null>;
   setCurrentSchedule: (schedule: Schedule | null) => void;
   resetCurrentSchedule: () => void;
   toggleAlarm: (scheduleId: string) => Promise<void>;
@@ -81,7 +85,7 @@ const useScheduleStore = create<ScheduleState>()(
         try {
           const response = await api.fetchData(`/schedules/self/current`);
           console.log('response', response);
-          
+
           set({schedules: response?.data, isLoading: false});
           return response?.data || [];
         } catch (error) {
@@ -139,13 +143,33 @@ const useScheduleStore = create<ScheduleState>()(
         set({isLoading: true, error: null});
         try {
           const response = await api.fetchData(`/schedules/self/history-full`);
-
-          set({historySchedule: response?.data, isLoading: false});
+          set({
+            historySchedule: response?.data || [],
+            isLoading: false,
+          });
         } catch (error) {
-          console.error('Error getting personal history schedule list:', error);
           set({
             error:
               'Unable to get personal history schedule list. Please try again later..',
+            isLoading: false,
+          });
+        }
+      },
+
+      fetchHistoryScheduleExpert: async () => {
+        set({isLoading: true, error: null});
+        try {
+          const response = await api.fetchData(
+            `/schedules/expert/history-created`,
+          );
+          set({
+            historySchedule: response?.data || [],
+            isLoading: false,
+          });
+        } catch (error) {
+          set({
+            error:
+              'Unable to get expert history schedule list. Please try again later..',
             isLoading: false,
           });
         }
@@ -230,6 +254,8 @@ const useScheduleStore = create<ScheduleState>()(
             `/schedules/accept/${scheduleId}`,
           );
           if (response?.status === 'success') {
+            await get().fetchSelfSchedules();
+            await get().fetchExpertSchedule();
             ToastUtil.success('Success', response?.message);
             return response.data;
           }
@@ -240,7 +266,7 @@ const useScheduleStore = create<ScheduleState>()(
           ToastUtil.error('Error', serverMessage);
         }
 
-        return null
+        return null;
       },
       declineExpertSchedule: async (scheduleId: string) => {
         set({isLoading: true, error: null, message: null});
@@ -249,6 +275,8 @@ const useScheduleStore = create<ScheduleState>()(
             `/schedules/decline/${scheduleId}`,
           );
           if (response?.status === 'success') {
+            await get().fetchSelfSchedules();
+            await get().fetchExpertSchedule();
             ToastUtil.success('Success', response?.message);
             return response.data;
           }
@@ -259,7 +287,7 @@ const useScheduleStore = create<ScheduleState>()(
           ToastUtil.error('Error', serverMessage);
         }
 
-        return null
+        return null;
       },
       clear() {
         set({
@@ -298,6 +326,35 @@ const useScheduleStore = create<ScheduleState>()(
           if (response?.status === 'success') {
             // Sau khi xóa thành công, gọi lại fetchSelfSchedules để đồng bộ dữ liệu mới nhất từ backend
             await get().fetchSelfSchedules();
+            set({
+              message: response?.message,
+              isLoading: false,
+            });
+            return true;
+          }
+          set({
+            message: response?.message || 'Delete failed.',
+            isLoading: false,
+          });
+          return false;
+        } catch (error) {
+          console.error('Error while deleting workout schedule:', error);
+          set({
+            error: 'Unable to delete workout schedule. Please try again later.',
+            isLoading: false,
+          });
+          return false;
+        }
+      },
+      deleteScheduleExpert: async id => {
+        set({isLoading: true, error: null, message: null});
+        try {
+          const response = await api.deleteData(`/schedules/expert/${id}`);
+          console.log('Kết quả xóa lịch tập:', response?.message);
+
+          if (response?.status === 'success') {
+            await get().fetchSelfSchedules();
+            await get().fetchExpertSchedule();
             set({
               message: response?.message,
               isLoading: false,
