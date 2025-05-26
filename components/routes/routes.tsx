@@ -66,7 +66,8 @@ import UpdateScheduleScreen from '../screens/ScheduleScreens/UpdateScheduleScree
 import NewsDetailScreen from '../screens/NewsScreens/NewsDetailScreen';
 import CMSMessageViewMap from '../screens/ChatsScreens/ChatsMessage/CMSMessageViewMap';
 import RiskAnalysisConfirmScreen from '../screens/RiskAnalysisScreens/RiskAnalysisConfirmScreen';
-import UserProfileScreen from '../screens/UserProfileScreen';
+import UserProfileScreen from '../screens/OtherScreens/UserProfileScreen';
+import UserPointsHistoryScreen from '../screens/OtherScreens/UserPointsHistoryScreen';
 
 // import AuthLoadingScreen from '../screens/AuthLoadingScreen/AuthLoadingScreen';
 // Configuration for Stack Navigator
@@ -169,10 +170,14 @@ export const stackScreens = [
     component: UserCertificatesExpertScreen,
   },
 
-  //Profile screen
+  //Other screens
   {
     name: 'UserProfileScreen',
     component: UserProfileScreen
+  },
+  {
+    name: "UserPointsHistoryScreen",
+    component: UserPointsHistoryScreen
   }
 ];
 

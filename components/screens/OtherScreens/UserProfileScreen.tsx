@@ -17,13 +17,13 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ContentLoader, {Rect, Circle} from 'react-content-loader/native';
-import BackButton from '../BackButton';
+import BackButton from '../../BackButton';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import {usePostStore} from '../utils/usePostStore';
-import {useLoginStore} from '../utils/useLoginStore';
-import {theme} from '../contants/theme';
-import {SaveDraftButton} from './CommunityScreens/SaveDraftButton';
-import {formatTimeAgo} from '../utils/utils_format';
+import {usePostStore} from '../../utils/usePostStore';
+import {useLoginStore} from '../../utils/useLoginStore';
+import {theme} from '../../contants/theme';
+import {SaveDraftButton} from '../CommunityScreens/SaveDraftButton';
+import {formatTimeAgo} from '../../utils/utils_format';
 
 interface Post {
   id: string;
