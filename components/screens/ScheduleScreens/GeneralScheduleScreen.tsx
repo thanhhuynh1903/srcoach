@@ -50,24 +50,26 @@ const GeneralScheduleScreen = () => {
 
   const hasActiveSchedule = useMemo(() => {
     const allSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : [];
-
-    // Nếu user có role runner: chặn nếu có bất kỳ lịch nào từ expert
     if (profile?.roles?.includes('runner')) {
       const hasExpertSchedule = allSchedules.some(
-        schedule =>
-          schedule?.schedule_type === 'EXPERT' &&
-          schedule?.expert_id !== schedule?.user_id // lịch này là do expert tạo cho runner
+        schedule => schedule?.schedule_type === 'EXPERT'
       );
-      if (hasExpertSchedule) return true;
+      const hasSelfChoice = allSchedules.some(
+        schedule => schedule?.schedule_type === 'USER'
+      );
+      if (hasExpertSchedule || hasSelfChoice) return true;
     }
 
-    // Nếu user có role expert: chặn nếu có lịch self's choice
+    // Nếu là expert, chỉ chặn khi đã có lịch USER (tức là lịch cá nhân)
     if (profile?.roles?.includes('expert')) {
       const hasSelfChoice = allSchedules.some(
-        schedule => schedule?.schedule_type !== 'EXPERT'
+        schedule =>
+          schedule?.schedule_type === 'USER' &&
+          schedule?.user_id === profile?.id // chỉ tính lịch cá nhân của chính expert
       );
       if (hasSelfChoice) return true;
     }
+
 
     return false;
   }, [schedules, profile]);

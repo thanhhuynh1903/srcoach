@@ -250,7 +250,7 @@ const EnhancedScheduleCard = ({
         return "#64748B" // Gray
     }
   }
-  const isOwner = expert_id === profile.id
+  const isOwner = expert_id === profile?.id
   // Get heart rate zone color
   const getHeartRateColor = (minbpm?: number, maxbpm?: number) => {
     if (!minbpm || !maxbpm) return "#3B82F6"
@@ -457,7 +457,7 @@ const EnhancedScheduleCard = ({
           )}
         </View>
       </View>
-      {expert_id !== profile.id && status === "PENDING" && (
+      {expert_id !== profile?.id && status === "PENDING" && (
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity style={styles.acceptButton} onPress={handleAccept} activeOpacity={0.8}>
             <View style={styles.buttonIconContainer}>
