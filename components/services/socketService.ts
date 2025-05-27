@@ -34,6 +34,11 @@ class SocketService {
       ...options,
     };
 
+    if (url.startsWith('http')) {
+      defaultOptions.secure = true
+      defaultOptions.rejectUnauthorized = true
+    }
+
     this.socket = io(url, defaultOptions);
 
     this.socket.on('connect', () => {
