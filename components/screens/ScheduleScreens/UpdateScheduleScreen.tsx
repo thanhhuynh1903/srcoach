@@ -76,13 +76,14 @@ const UpdateScheduleScreen = () => {
 
       const validDays = dailyGoals?.filter(
         (day: DailySchedule) =>
-          !day.details.some(session => session.status === 'MISSED' || session.status === 'CANCELED' || session.status === 'COMPLETED'),
+          !day.details.some(session => session.status === 'MISSED' || session.status === 'CANCELED' || session.status === 'COMPLETED' ||
+            session.status === 'ONGOING' ||
+            session.status === 'INCOMING'),
       );
-
       if (validDays.length === 0) {
         Alert.alert(
           'Cannot Update',
-          'All selected days contain missed sessions that cannot be updated',
+          'Some days contain sessions that are ongoing, incoming, completed, or missed. You cannot update these days.',
           [{ text: 'OK' }],
         );
         setIsCreating(false);
@@ -327,17 +328,29 @@ const UpdateScheduleScreen = () => {
       if (dayDate < today) {
         if (initialGoals && initialGoals.length > 0) {
           initialGoals.forEach(day => {
-            // Kiểm tra xem ngày này có bất kỳ buổi tập nào bị missed không
-            const hasMissedSession = day.details.some(
-              detail => detail.status === 'MISSED',
+            const dateStr = day.day;
+            const hasOngoingSession = day.details.some(
+              detail => detail.status === 'ONGOING'
+            );
+            const hasBlockedSession = day.details.some(
+              detail =>
+                detail.status === 'MISSED' ||
+                detail.status === 'COMPLETED'
             );
 
-            if (hasMissedSession) {
-              const dateStr = day.day;
+            if (hasOngoingSession) {
               markedDates[dateStr] = {
                 ...markedDates[dateStr],
                 selected: true,
-                selectedColor: '#EF4444',
+                selectedColor: '#4E71FF',
+                disabled: true,
+                disableTouchEvent: true,
+              };
+            } else if (hasBlockedSession) {
+              markedDates[dateStr] = {
+                ...markedDates[dateStr],
+                selected: true,
+                selectedColor: day.details.status.include('MISSED') ? '#EF4444' : '#F59E0B', 
                 disabled: true,
                 disableTouchEvent: true,
               };
@@ -347,7 +360,7 @@ const UpdateScheduleScreen = () => {
           markedDates[dateStr] = {
             ...markedDates[dateStr],
             selected: true,
-            selectedColor: '#64748B', // Màu xám cho ngày quá khứ
+            selectedColor: '#64748B',
             disabled: true,
             disableTouchEvent: true,
           };
