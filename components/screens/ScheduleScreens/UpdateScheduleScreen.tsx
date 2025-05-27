@@ -350,7 +350,7 @@ const UpdateScheduleScreen = () => {
               markedDates[dateStr] = {
                 ...markedDates[dateStr],
                 selected: true,
-                selectedColor: day.details.status.include('MISSED') ? '#EF4444' : '#F59E0B', 
+                selectedColor: day?.details?.status?.include('MISSED') ? '#EF4444' : '#F59E0B', 
                 disabled: true,
                 disableTouchEvent: true,
               };
