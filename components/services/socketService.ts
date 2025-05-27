@@ -34,7 +34,7 @@ class SocketService {
       ...options,
     };
 
-    if (url.startsWith('http')) {
+    if (url.startsWith('https')) {
       defaultOptions.secure = true
       defaultOptions.rejectUnauthorized = true
     }
