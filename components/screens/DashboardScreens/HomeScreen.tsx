@@ -210,7 +210,6 @@ const HomeScreen = () => {
         <HomeFunFactCard />
         <CommunityNewsList />
         <HomeExpertContactCard />
-        <WellnessAndMedication navigation={navigation} />
       </ScrollView>
 
       <CommonDialog

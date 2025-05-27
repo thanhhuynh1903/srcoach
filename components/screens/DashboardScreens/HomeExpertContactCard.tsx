@@ -9,7 +9,7 @@ export default function HomeExpertContactCard() {
 
   return (
     <View style={styles.container}>
-
+<Text style={styles.sectionTitle}>Contact Experts</Text>
       <View style={styles.card}>
         <View style={styles.premiumBadge}>
           <Text style={styles.badgeText}>GET ADVICES FROM EXPERTS</Text>
@@ -47,6 +47,12 @@ const styles = StyleSheet.create({
     marginTop: 25,
     marginBottom: 24,
     paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    marginBottom: 15,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
   },
   header: {
     flexDirection: 'row',
