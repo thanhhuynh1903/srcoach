@@ -260,19 +260,10 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     }
   };
   const canAddSession = (sessions: TrainingSession[]) => {
-    if (!sessions || sessions.length === 0) return true;
-    // Lấy session cuối cùng
-    const lastSession = sessions[sessions.length - 1];
-    const now = new Date();
-    const vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-    const lastEnd = new Date(lastSession.end_time);
+  if (!sessions || sessions.length === 0) return true;
 
-    // Chỉ cho phép thêm nếu còn ít nhất 30 phút trước khi session cuối bắt đầu
-    if (lastEnd.getTime() - vnNow.getTime() < 30 * 60 * 1000) {
-      return false;
-    }
-    return true;
-  };
+  return true;
+};
   const getTimeError = (inputTime: string, day: string) => {
     try {
       // Lấy giờ hiện tại ở Việt Nam

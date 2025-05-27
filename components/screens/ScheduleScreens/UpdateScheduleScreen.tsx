@@ -80,16 +80,7 @@ const UpdateScheduleScreen = () => {
             session.status === 'ONGOING' ||
             session.status === 'INCOMING'),
       );
-      if (validDays.length === 0) {
-        Alert.alert(
-          'Cannot Update',
-          'Some days contain sessions that are ongoing, incoming, completed, or missed. You cannot update these days.',
-          [{ text: 'OK' }],
-        );
-        setIsCreating(false);
-        return;
-      }
-
+      
       const cleanedDays = validDays?.map((day: DailySchedule) => ({
         ...day,
         details: day.details.map(({ status, ...rest }) => rest), // Bỏ trường status
