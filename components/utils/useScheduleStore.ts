@@ -68,6 +68,7 @@ interface ScheduleState {
   declineExpertSchedule: (scheduleId: string) => Promise<Schedule | null>;
   setCurrentSchedule: (schedule: Schedule | null) => void;
   resetCurrentSchedule: () => void;
+  clearExpertSchedule: () => void;
   toggleAlarm: (scheduleId: string) => Promise<void>;
   clear: () => void;
 }
@@ -407,7 +408,7 @@ const useScheduleStore = create<ScheduleState>()(
       resetCurrentSchedule: () => {
         set({currentSchedule: null});
       },
-
+      clearExpertSchedule: () => set({ExpertSchedule: [], schedules: []}),
       // Bật/tắt báo thức cho lịch tập
       toggleAlarm: async scheduleId => {
         try {

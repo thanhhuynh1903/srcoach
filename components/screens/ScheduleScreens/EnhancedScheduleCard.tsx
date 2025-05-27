@@ -484,7 +484,7 @@ const EnhancedScheduleCard = ({
             <View style={styles.modalHandle} />
 
             {/* Alarm Setting */}
-            {status !== "PENDING" && status !== "MISSED" && status !== "COMPLETED" && (
+            {status !== "PENDING" && status !== "MISSED" && status !== "COMPLETED" && expert_id !== profile?.id && (
               <>
                 <View style={styles.modalAlarmSection}>
                   <View style={styles.modalAlarmHeader}>
