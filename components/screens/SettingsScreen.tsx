@@ -262,7 +262,7 @@ const menuItems = [
     screen: 'GeneralScheduleScreen',
   },
   {
-    title: 'Draft',
+    title: 'Bookmarks',
     subtitle: 'View your saving posts',
     icon: 'document-outline',
     screen: 'DraftScreen',
