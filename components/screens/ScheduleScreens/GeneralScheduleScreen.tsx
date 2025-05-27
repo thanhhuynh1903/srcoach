@@ -168,6 +168,7 @@ const GeneralScheduleScreen = () => {
       const date = new Date(day.day);
       return {
         day: date.getDate(),
+        fullDate: day.day,
         workouts: day?.ScheduleDetail?.map(detail => {
           // Định dạng thời gian
           const formattedStartTime = formatTime(detail.start_time);

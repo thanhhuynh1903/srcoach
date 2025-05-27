@@ -23,7 +23,8 @@ interface Workout {
 }
 
 interface DaySchedule {
-  day: number
+  day: number,
+  fullDate?: string,
   workouts: Workout[]
 }
 
@@ -71,7 +72,7 @@ const EnhancedScheduleCard = ({
   const [modalVisible, setModalVisible] = useState(false)
   const [expandAnimation] = useState(new Animated.Value(0))
   const { profile } = useLoginStore()
-  
+
   const handleMorePress = () => {
     setModalVisible(true)
   }
@@ -197,7 +198,7 @@ const EnhancedScheduleCard = ({
       }
     }
   }
- 
+
   const toggleExpanded = (forceExpand = null) => {
     const newExpandedState = forceExpand !== null ? forceExpand : !expanded
     setExpanded(newExpandedState)
@@ -225,7 +226,17 @@ const EnhancedScheduleCard = ({
       "November",
       "December",
     ]
+    const selectedDaySchedule = daySchedules.find((schedule) => schedule.day === selectedDay);
+    if (selectedDaySchedule && selectedDaySchedule.fullDate) {
+      const date = new Date(selectedDaySchedule.fullDate);
+      return months[date.getMonth()];
+    }
 
+    // Fallback về startDate nếu không có
+    if (startDate && typeof startDate === "string") {
+      const date = new Date(startDate);
+      return months[date.getMonth()];
+    }
     if (startDate && typeof startDate === "string") {
       const date = new Date()
       return months[date.getMonth()]
