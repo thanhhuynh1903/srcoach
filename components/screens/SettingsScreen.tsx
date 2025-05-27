@@ -25,11 +25,11 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchUserProfile();
-    }, []),
-  );
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     fetchUserProfile();
+  //   }, []),
+  // );
 
   useEffect(() => {}, [profile]);
 
