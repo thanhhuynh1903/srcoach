@@ -82,7 +82,7 @@ const AddScheduleScreen = () => {
         Toast.show({
           type: 'error',
           text1: 'Error',
-          text2: result?.message || 'Failed to create schedule',
+          text2: result?.message || 'Failed to create schedule because of validation error',
         });
       }
     } catch (err) {

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Alert,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import { format } from 'date-fns';
@@ -81,26 +82,38 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       goal_maxbpms: 120,
     },
   };
-
+  const getSessionTimeGapError = (start: string, end: string) => {
+    try {
+      const startDate = new Date(start);
+      const endDate = new Date(end);
+      const diffMs = endDate.getTime() - startDate.getTime();
+      const diffMin = diffMs / (60 * 1000);
+      if (diffMin < 5) return 'The end time must be at least 5 minutes from the start time.';
+      if (diffMin > 240) return 'The end time must not be more than 4 hours from the start time.';
+      return null;
+    } catch {
+      return null;
+    }
+  };
   // Hàm kiểm tra và sửa lỗi dữ liệu trước khi gửi đi
   const getDistanceError = (value: number | null) => {
     if (value == null) return null; // Không lỗi nếu không có mục tiêu
-    if (value < 1.0) return 'Khoảng cách phải ít nhất 1.0 km từ 25km';
-    if (value > 25) return 'Khoảng cách phải ít nhất 1.0 km từ 25km';
+    if (value < 1.0) return 'Distance must be at least 1.0 km from 25km';
+    if (value > 25) return 'Distance must be at least 1.0 km from 25km';
     return null;
   };
 
   const getCaloriesError = (value: number | null) => {
     if (value == null) return null;
-    if (value < 10) return 'Calo phải ít nhất 10 và tối đa 2000';
-    if (value > 2000) return 'Calo phải ít nhất 10 và tối đa 2000';
+    if (value < 10) return 'Calories should be at least 10 and maximum 2000';
+    if (value > 2000) return 'Calories should be at least 10 and maximum 2000';
     return null;
   };
 
   const getStepsError = (value: number | null) => {
     if (value == null) return null;
-    if (value < 1500) return 'Bước chân phải ít nhất 1500 và tối đa 35000';
-    if (value > 35000) return 'Bước chân phải ít nhất 1500 tối đa 35000';
+    if (value < 1500) return 'Steps must be at least 1500 and maximum 35000';
+    if (value > 35000) return 'Steps must be at least 1500 maximum 35000';
     return null;
   };
 
@@ -168,7 +181,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
             // Thêm ngày mới với buổi sáng mặc định
             const now = new Date();
             const currentHour = now.getHours();
-            const currentMiniute = now.getMinutes();
 
             let sessionTemplate = defaultSessions.morning;
             if (currentHour >= 17) {
@@ -238,14 +250,28 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       const timeDiff = startDate.getTime() - vnNow.getTime();
 
       // Chặn chỉnh sửa nếu còn dưới 30 phút
-      if (timeDiff < 35 * 60 * 1000) {
-        return false;
+      if (timeDiff < 30 * 60 * 1000) {
+        return true;
       }
 
       return true;
     } catch {
       return false;
     }
+  };
+  const canAddSession = (sessions: TrainingSession[]) => {
+    if (!sessions || sessions.length === 0) return true;
+    // Lấy session cuối cùng
+    const lastSession = sessions[sessions.length - 1];
+    const now = new Date();
+    const vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const lastEnd = new Date(lastSession.end_time);
+
+    // Chỉ cho phép thêm nếu còn ít nhất 30 phút trước khi session cuối bắt đầu
+    if (lastEnd.getTime() - vnNow.getTime() < 30 * 60 * 1000) {
+      return false;
+    }
+    return true;
   };
   const getTimeError = (inputTime: string, day: string) => {
     try {
@@ -264,8 +290,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       if (diffMs < 0) {
         return 'Do not enter past times in Vietnam time';
       }
-      if (diffMs < 35 * 60 * 1000) {
-        return 'You must create a run at least 35 minutes before the start time (Vietnam time)';
+      if (diffMs < 30 * 60 * 1000) {
+        return 'You must create a run at least 30 minutes before the start time (Vietnam time)';
       }
       return null;
     } catch {
@@ -395,6 +421,19 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
         .padStart(2, '0')}:${cleanMinutes.toString().padStart(2, '0')}:00.000Z`;
 
       session[field] = timeString;
+      const start = field === 'start_time' ? timeString : session.start_time;
+      const end = field === 'end_time' ? timeString : session.end_time;
+      const gapError = getSessionTimeGapError(start, end);
+
+      const sessionKey = `${dayIndex}-${sessionIndex}`;
+      setValidationErrors(prev => ({
+        ...prev,
+        [sessionKey]: {
+          ...prev[sessionKey],
+          time_gap: gapError ?? '',
+        },
+      }));
+
     } else if (
       field === 'goal_steps' ||
       field === 'goal_calories' ||
@@ -639,7 +678,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                           />
                         </View>
                       </View>
-
+                      {sessionErrors.time_gap && (
+                        <Text style={styles.errorTime}>{sessionErrors.time_gap}</Text>
+                      )}
                       {/* Mục tiêu */}
                       <Text style={styles.goalsTitle}>Training objectives</Text>
 
@@ -814,62 +855,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         </Text>
                       )}
 
-                      {/* Heart Rate BPM Range */}
-                      <View style={styles.goalRow}>
-                        <View style={styles.goalIconContainer}>
-                          <Icon name="heart" size={16} color="#0F2B5B" />
-                        </View>
-                        <Text style={styles.goalLabel}>Min Heart Rate</Text>
-                        <View style={styles.goalInputWrapper}>
-                          <TextInput
-                            style={styles.goalInput}
-                            value={session.goal_minbpms?.toString() || ''}
-                            onChangeText={value => {
-                              if (/^\d*$/.test(value)) {
-                                updateSession(
-                                  dayIndex,
-                                  sessionIndex,
-                                  'goal_minbpms',
-                                  value === '' ? null : Number.parseInt(value),
-                                );
-                              }
-                            }}
-                            editable={canEditSession(session, view)}
-                            keyboardType="numeric"
-                            maxLength={3}
-                          />
-                          <Text style={styles.goalUnit}>bpm</Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.goalRow}>
-                        <View style={styles.goalIconContainer}>
-                          <Icon name="heart-half" size={16} color="#0F2B5B" />
-                        </View>
-                        <Text style={styles.goalLabel}>Max Heart Rate</Text>
-                        <View style={styles.goalInputWrapper}>
-                          <TextInput
-                            style={styles.goalInput}
-                            value={session.goal_maxbpms?.toString() || ''}
-                            onChangeText={value => {
-                              if (/^\d*$/.test(value)) {
-                                updateSession(
-                                  dayIndex,
-                                  sessionIndex,
-                                  'goal_maxbpms',
-                                  value === '' ? null : Number.parseInt(value),
-                                );
-                              }
-                            }}
-                            editable={canEditSession(session, view)}
-                            keyboardType="numeric"
-                            maxLength={3}
-                          />
-                          <Text style={styles.goalUnit}>bpm</Text>
-                        </View>
-                      </View>
-
-                      {!hasMissedSession && day.details.every(s => canEditSession(s, view)) && !view && (
+                      {!hasMissedSession && !view && canAddSession(day.details) && (
                         <>
                           <View style={styles.divider} />
                           <TouchableOpacity

@@ -197,7 +197,7 @@ const EnhancedScheduleCard = ({
       }
     }
   }
-  const checkingIsDeleted = () => { }
+ 
   const toggleExpanded = (forceExpand = null) => {
     const newExpandedState = forceExpand !== null ? forceExpand : !expanded
     setExpanded(newExpandedState)
@@ -424,7 +424,6 @@ const EnhancedScheduleCard = ({
               </View>
             ))}
 
-            <WorkoutComparison workouts={selectedDaySchedule.workouts} />
           </View>
         )}
       </Animated.View>
