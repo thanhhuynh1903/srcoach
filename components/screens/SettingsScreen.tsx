@@ -18,13 +18,13 @@ import CommonDialog from '../commons/CommonDialog';
 import {CommonAvatar} from '../commons/CommonAvatar';
 import NotificationService from '../services/NotificationService';
 import {capitalizeFirstLetter} from '../utils/utils_format';
-
+import useScheduleStore from '../utils/useScheduleStore';
 const SettingsScreen = ({navigation}: {navigation: any}) => {
   const {clearToken} = useAuthStore();
   const {clearAll, clear, profile, fetchUserProfile} = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
-
+  const {clearExpertSchedule} = useScheduleStore();
   // useFocusEffect(
   //   useCallback(() => {
   //     fetchUserProfile();
@@ -45,12 +45,13 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         await GoogleSignin.signOut();
       }
       await auth().signOut();
-    }
+    } 
+    await clearExpertSchedule();
     await AsyncStorage.removeItem('authToken');
     await clear();
     await clearToken();
     await clearAll();
-
+   
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
