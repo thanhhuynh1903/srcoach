@@ -82,6 +82,7 @@ const GeneralScheduleScreen = () => {
       title: schedule.title,
       description: schedule.description,
       created_at: schedule.created_at,
+      updated_at: schedule.updated_at,
       startDate,
       days: sortedDays.map(day => new Date(day.day).getDate()),
       daySchedules: sortedDays.map(day => ({
@@ -100,6 +101,7 @@ const GeneralScheduleScreen = () => {
           id: detail.id,
           minbpm: detail.goal_minbpms || 0,
           maxbpm: detail.goal_maxbpms || 0,
+          updated_at: detail.updated_at,
         })) || [],
       })),
       isExpertChoice: schedule.schedule_type === 'EXPERT',

@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,11 @@ import {
   Easing,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import useScheduleStore from '../../utils/useScheduleStore';
-import {theme} from '../../contants/theme';
+import { theme } from '../../contants/theme';
 import Toast from 'react-native-toast-message';
-import {useLoginStore} from '../../utils/useLoginStore';
+import { useLoginStore } from '../../utils/useLoginStore';
 import PendingTimer from '../../PendingTimer';
 import CommonDialog from '../../commons/CommonDialog';
 import { CommonAvatar } from '../../commons/CommonAvatar';
@@ -33,6 +33,7 @@ interface Workout {
   actual_steps?: number;
   actual_distance?: number;
   actual_calories?: number;
+  updated_at?: string;
 }
 
 interface DaySchedule {
@@ -58,6 +59,7 @@ interface ScheduleCardProps {
   expertname: string;
   expertavatar: string
   created_at?: string;
+  updated_at?: string;
 }
 
 const EnhancedScheduleCard = ({
@@ -73,6 +75,7 @@ const EnhancedScheduleCard = ({
   status,
   user_id,
   created_at,
+  updated_at,
   runnername,
   expert_id,
   expertname,
@@ -95,8 +98,8 @@ const EnhancedScheduleCard = ({
     acceptExpertSchedule,
     declineExpertSchedule,
   } = useScheduleStore();
-  const {schedules: selfSchedules} = useScheduleStore();
-  const {profile} = useLoginStore();
+  const { schedules: selfSchedules } = useScheduleStore();
+  const { profile } = useLoginStore();
 
   const hasSelfChoice = selfSchedules?.some(
     sch => sch.schedule_type !== 'EXPERT',
@@ -160,29 +163,29 @@ const EnhancedScheduleCard = ({
         : deleteScheduleExpert(id));
       if (success) {
         await clear();
-        Toast.show({type: 'success', text1: `Schedule deleted successfully`});
+        Toast.show({ type: 'success', text1: `Schedule deleted successfully` });
       }
     } catch {
-      Toast.show({type: 'error', text1: `Failed to delete schedule`});
+      Toast.show({ type: 'error', text1: `Failed to delete schedule` });
     } finally {
       setShowDeleteDialog(null);
     }
   };
 
   const handleEdit = () => {
-    navigation.navigate('UpdateScheduleScreen', {scheduleId: id});
+    navigation.navigate('UpdateScheduleScreen', { scheduleId: id });
     setModalVisible(false);
   };
 
   const handleViewDetail = () => {
-    navigation.navigate('UpdateScheduleScreen', {scheduleId: id, view: true});
+    navigation.navigate('UpdateScheduleScreen', { scheduleId: id, view: true });
     setModalVisible(false);
   };
 
   const handleContact = () => {
     setModalVisible(false);
     // Placeholder for contact functionality
-    Toast.show({type: 'info', text1: 'Contact feature under maintenance'});
+    Toast.show({ type: 'info', text1: 'Contact feature under maintenance' });
   };
 
   const selectedDaySchedule = daySchedules.find(
@@ -208,30 +211,28 @@ const EnhancedScheduleCard = ({
     const date = selectedDaySchedule?.fullDate
       ? new Date(selectedDaySchedule.fullDate)
       : startDate && typeof startDate === 'string'
-      ? new Date(startDate)
-      : new Date();
-    return date.toLocaleString('en-US', {month: 'long'});
+        ? new Date(startDate)
+        : new Date();
+    return date.toLocaleString('en-US', { month: 'long' });
   };
 
   const formatStartDate = (dateString: string) => {
     return dateString && typeof dateString === 'string'
       ? new Date(dateString).toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric',
-        })
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
       : 'Unknown date';
   };
-
-  const getStatusColor = (isWorkout = false) =>
-    ({
-      COMPLETED: '#22C55E',
-      UPCOMING: '#3B82F6',
-      ONGOING: '#6366F1',
-      PENDING: '#FF9F00',
-      INCOMING: isWorkout ? '#64748B' : '#3B82F6',
-      MISSED: '#EF4444',
-    }[status] || '#64748B');
+const getStatusColor = (statusValue: string) => ({
+  COMPLETED: '#22C55E',
+  UPCOMING: '#3B82F6',
+  ONGOING: '#6366F1',
+  PENDING: '#FF9F00',
+  INCOMING: '#64748B',
+  MISSED: '#EF4444',
+}[statusValue] || '#64748B');
 
   const maxHeight = expandAnimation.interpolate({
     inputRange: [0, 1],
@@ -250,12 +251,12 @@ const EnhancedScheduleCard = ({
             style={styles.headerIcon}
           />
           <Text style={styles.startedText}>
-            Started in {formatStartDate(created_at)}
+            Created on {formatStartDate(created_at)}
           </Text>
         </View>
         <View style={styles.headerRight}>
           <View
-            style={[styles.statusBadge, {backgroundColor: getStatusColor()}]}>
+            style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{status}</Text>
           </View>
           {status === 'PENDING' && isOwner ? (
@@ -357,15 +358,22 @@ const EnhancedScheduleCard = ({
       <Animated.View
         style={[
           styles.workoutDetailsWrapper,
-          {maxHeight, opacity: expandAnimation},
+          { maxHeight, opacity: expandAnimation },
         ]}>
-        {selectedDaySchedule?.workouts.length > 0 && (
+        {selectedDaySchedule?.workouts?.length > 0 && (
           <View style={styles.workoutDetailsContainer}>
             <Text style={styles.workoutDetailsTitle}>
               Workouts for {getMonthFromStartDate()} {selectedDay}
             </Text>
-            {selectedDaySchedule.workouts.map((workout, index) => (
+            {selectedDaySchedule?.workouts?.map((workout, index) => (
               <View key={index} style={styles.workoutItem}>
+                <View>
+                  {isExpertChoice && workout.updated_at && (
+                    <Text style={styles.editedText}>
+                      Edit on {new Date(workout.updated_at).toLocaleDateString('en-GB')} at {new Date(workout.updated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  )}
+                </View>
                 <View style={styles.timeContainer}>
                   <View style={styles.timeChildContainer}>
                     <Icon name="time-outline" size={16} color="#64748B" />
@@ -374,7 +382,7 @@ const EnhancedScheduleCard = ({
                   <View
                     style={[
                       styles.workoutStatusBadge,
-                      {backgroundColor: getStatusColor(true)},
+                      { backgroundColor: getStatusColor(workout.status) },
                     ]}>
                     <Text style={styles.workoutStatusText}>
                       {workout.status}
@@ -528,7 +536,7 @@ const EnhancedScheduleCard = ({
                       <Switch
                         value={alarmEnabled}
                         onValueChange={setAlarmEnabled}
-                        trackColor={{false: '#E2E8F0', true: '#3B82F6'}}
+                        trackColor={{ false: '#E2E8F0', true: '#3B82F6' }}
                         thumbColor="#fff"
                         ios_backgroundColor="#E2E8F0"
                       />
@@ -556,7 +564,7 @@ const EnhancedScheduleCard = ({
                     handleDelete(isExpertChoice ? 'expert' : 'self')
                   }>
                   <Icon name="trash-outline" size={24} color="#EF4444" />
-                  <Text style={[styles.modalOptionText, {color: '#EF4444'}]}>
+                  <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>
                     Delete
                   </Text>
                 </TouchableOpacity>
@@ -676,7 +684,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
@@ -691,11 +699,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerIcon: {marginRight: 4},
+  headerIcon: { marginRight: 4 },
   startedText: {
     fontSize: 13,
     color: '#64748B',
     fontWeight: '500',
+  },
+  editedText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
   },
   headerRight: {
     flexDirection: 'row',
@@ -706,7 +719,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     borderRadius: 20,
   },
-  titleContainer: {marginBottom: 16},
+  titleContainer: { marginBottom: 16 },
   cardTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -738,11 +751,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E40AF',
     borderColor: '#1E40AF',
     shadowColor: '#1E40AF',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
-    transform: [{scale: 1.05}],
+    transform: [{ scale: 1.05 }],
   },
   missedDayCircle: {
     backgroundColor: '#FEE2E2',
@@ -757,10 +770,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
   },
-  selectedDayText: {color: '#FFF'},
-  missedText: {color: '#EF4444'},
-  completedText: {color: '#22C55E'},
-  workoutDetailsWrapper: {overflow: 'hidden'},
+  selectedDayText: { color: '#FFF' },
+  missedText: { color: '#EF4444' },
+  completedText: { color: '#22C55E' },
+  workoutDetailsWrapper: { overflow: 'hidden' },
   workoutDetailsContainer: {
     marginBottom: 16,
     backgroundColor: '#F8FAFC',
@@ -779,7 +792,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 1,
@@ -804,7 +817,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontWeight: '500',
   },
-  sessionNameContainer: {marginBottom: 12},
+  sessionNameContainer: { marginBottom: 12 },
   sessionName: {
     fontSize: 17,
     fontWeight: '600',
@@ -918,7 +931,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#5409DA',
   },
-  tagIcon: {marginRight: 4},
+  tagIcon: { marginRight: 4 },
   tagText: {
     fontSize: 13,
     color: '#052658',
@@ -1018,7 +1031,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
@@ -1031,7 +1044,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
     shadowColor: '#EF4444',
   },
-  buttonIcon: {marginRight: 8},
+  buttonIcon: { marginRight: 8 },
   actionButtonText: {
     color: '#fff',
     fontSize: 16,
