@@ -249,28 +249,27 @@ const GeneralScheduleScreen = () => {
 
       {renderContent()}
 
-      <CommonDialog
-        visible={showInfoDialog}
-        onClose={() => setShowInfoDialog(false)}
-        title="Schedule Info"
-        content={
-          <View>
-            <Text style={styles.dialogText}>- Displays all your workout schedules.</Text>
-            <Text style={styles.dialogText}>
-              - Only one active schedule is allowed. Complete or adjust your current schedule before creating a new one.
-            </Text>
-          </View>
-        }
-        actionButtons={[
-          {
-            label: 'Got it',
-            variant: 'contained',
-            color: theme.colors.primaryDark,
-            handler: () => setShowInfoDialog(false),
-          },
-        ]}
-      />
-
+    <CommonDialog
+  visible={showInfoDialog}
+  onClose={() => setShowInfoDialog(false)}
+  title="Schedule Info"
+  content={
+    <View>
+      <Text style={styles.dialogText}>Track all your running workout schedules.</Text>
+      <Text style={styles.dialogText}>- Runners: Monitor goals and dates for personalized training plans.</Text>
+      <Text style={styles.dialogText}>- Experts: Manage and customize schedules for runners.</Text>
+      <Text style={styles.dialogText}>Only one active schedule are allowed for tracking. Complete or modify it before starting a new one.</Text>
+    </View>
+  }
+  actionButtons={[
+    {
+      label: 'Got it',
+      variant: 'contained',
+      color: theme.colors.primaryDark,
+      handler: () => setShowInfoDialog(false),
+    },
+  ]}
+/>
       <CommonDialog
         visible={showActiveDialog}
         onClose={() => setShowActiveDialog(false)}

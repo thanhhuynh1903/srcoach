@@ -1,7 +1,4 @@
-// HistoryCalendarScreen.tsx
-"use client"
-
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import {
   View,
   Text,
@@ -11,6 +8,7 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native"
 import Icon from "@react-native-vector-icons/ionicons"
 import { useNavigation } from "@react-navigation/native"
@@ -32,16 +30,30 @@ const HistoryCalendarScreen = () => {
   const [activeFilter, setActiveFilter] = useState("ALL")
   const [showStats, setShowStats] = useState(true)
   const [showFilters, setShowFilters] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const navigation = useNavigation()
   const { historySchedule, isLoading, error, fetchHistorySchedule, fetchHistoryScheduleExpert } = useScheduleStore()
 
-  useEffect(() => {
-    const loadData = async () => {
-      await fetchHistorySchedule()
-      await fetchHistoryScheduleExpert()
+  const loadData = useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchHistorySchedule(),
+        fetchHistoryScheduleExpert()
+      ])
+    } catch (err) {
+      console.error('Failed to load data:', err)
     }
-    loadData();
-  }, [])
+  }, [fetchHistorySchedule, fetchHistoryScheduleExpert])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await loadData()
+    setRefreshing(false)
+  }, [loadData])
 
   const filteredSchedules = useMemo(() => {
     if (!historySchedule) return []
@@ -79,31 +91,6 @@ const HistoryCalendarScreen = () => {
     })
   }, [historySchedule, activeFilter])
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading History...</Text>
-        </View>
-      </SafeAreaView>
-    )
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Icon name="alert-circle-outline" size={48} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchHistorySchedule}>
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    )
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -125,80 +112,108 @@ const HistoryCalendarScreen = () => {
         </View>
       </View>
 
-      {/* Stats Card */}
-      {showStats && (
-        <View style={styles.statsCard}>
-          <View style={styles.statsContent}>
-            <Text style={styles.statsLabel}>Total Completed</Text>
-            <View style={styles.statsValueContainer}>
-              <Text style={styles.statsValue}>{historySchedule.length}</Text>
-              <Text style={styles.statsUnit}>Programs</Text>
+      {isLoading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading History...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Icon name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          {/* Stats Card */}
+          {showStats && (
+            <View style={styles.statsCard}>
+              <View style={styles.statsContent}>
+                <Text style={styles.statsLabel}>Total Completed</Text>
+                <View style={styles.statsValueContainer}>
+                  <Text style={styles.statsValue}>{historySchedule?.length || 0}</Text>
+                  <Text style={styles.statsUnit}>Schedule{historySchedule?.length <= 1 ? "" : "s"}</Text>
+                </View>
+              </View>
+              <View style={styles.statsIconContainer}>
+                <Icon name="trophy-outline" size={32} color="#FFFFFF" />
+              </View>
             </View>
-          </View>
-          <View style={styles.statsIconContainer}>
-            <Icon name="trophy-outline" size={32} color="#FFFFFF" />
-          </View>
-        </View>
-      )}
+          )}
 
-      {/* Filter Tabs */}
-      {showFilters && (
-        <View style={styles.filtersWrapper}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersContainer}>
-            {FILTERS.map((filter) => (
-              <TouchableOpacity
-                key={filter.value}
-                style={[styles.filterTab, activeFilter === filter.value && styles.activeFilterTab]}
-                onPress={() => setActiveFilter(filter.value)}
-              >
-                <Text style={[styles.filterText, activeFilter === filter.value && styles.activeFilterText]}>
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
+          {/* Filter Tabs */}
+          {showFilters && (
+            <View style={styles.filtersWrapper}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersContainer}>
+                {FILTERS.map((filter) => (
+                  <TouchableOpacity
+                    key={filter.value}
+                    style={[styles.filterTab, activeFilter === filter.value && styles.activeFilterTab]}
+                    onPress={() => setActiveFilter(filter.value)}
+                  >
+                    <Text style={[styles.filterText, activeFilter === filter.value && styles.activeFilterText]}>
+                      {filter.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
-      {/* Content */}
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredSchedules.length > 0 ? (
-          filteredSchedules.map((schedule) => (
-            <EnhancedHistoryCard
-              key={schedule.id}
-              id={schedule.id}
-              title={schedule.title}
-              description={schedule.description}
-              startDate={new Date(schedule.created_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-              endDate={
-                schedule.updated_at
-                  ? new Date(schedule.updated_at).toLocaleDateString("en-US", {
+          {/* Content */}
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
+          >
+            {filteredSchedules.length > 0 ? (
+              filteredSchedules.map((schedule) => (
+                <EnhancedHistoryCard
+                  key={schedule.id}
+                  id={schedule.id}
+                  title={schedule.title}
+                  description={schedule.description}
+                  startDate={new Date(schedule.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
-                  })
-                  : "Present"
-              }
-              status={schedule.status}
-              isExpertChoice={schedule?.schedule_type === "EXPERT"}
-              userName={schedule.user?.name}
-              ScheduleDay={schedule.ScheduleDay}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Icon name="calendar-outline" size={64} color="#CBD5E1" />
-            <Text style={styles.emptyText}>No training history found</Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={fetchHistorySchedule}>
-              <Text style={styles.emptyButtonText}>Refresh</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+                  })}
+                  endDate={
+                    schedule.updated_at
+                      ? new Date(schedule.updated_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                      : "Present"
+                  }
+                  status={schedule.status}
+                  isExpertChoice={schedule?.schedule_type === "EXPERT"}
+                  userName={schedule.user?.name}
+                  ScheduleDay={schedule.ScheduleDay}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Icon name="calendar-outline" size={64} color="#CBD5E1" />
+                <Text style={styles.emptyText}>No training history found</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={loadData}>
+                  <Text style={styles.emptyButtonText}>Refresh</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   )
 }
