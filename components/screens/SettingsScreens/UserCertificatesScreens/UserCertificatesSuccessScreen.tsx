@@ -1,11 +1,10 @@
-import React, {useEffect, useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import {theme} from '../../../contants/theme';
@@ -14,41 +13,28 @@ import {useNavigation} from '@react-navigation/native';
 
 const UserCertificatesSuccessScreen = () => {
   const navigation = useNavigation();
-  const [secondsRemaining, setSecondsRemaining] = useState(10);
-
-  useEffect(() => {
-    if (secondsRemaining > 0) {
-      const timer = setTimeout(() => {
-        setSecondsRemaining(secondsRemaining - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      navigation.goBack();
-    }
-  }, [secondsRemaining, navigation]);
 
   const handleBack = () => {
-    navigation.navigate('HomeTabs', { screen: 'Home', params: { screen: 'HomeMain' } });
+    navigation.navigate('HomeTabs', {
+      screen: 'Home',
+      params: {screen: 'HomeMain'},
+    });
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header - No back button as requested */}
-      <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primary]}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.header}>
+      {/* Header - White background with black text */}
+      <View style={styles.header}>
         <View style={styles.headerContent}>
           <Icon
             name="checkmark-done"
             size={24}
-            color="white"
+            color="black"
             style={styles.headerIcon}
           />
           <Text style={styles.title}>Submission Complete</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Main Content */}
       <View style={styles.content}>
@@ -61,25 +47,14 @@ const UserCertificatesSuccessScreen = () => {
             Your expert application is under review. We'll notify you once
             verified.
           </Text>
-          <Text style={styles.timerText}>
-            Returning in {secondsRemaining} seconds...
-          </Text>
         </View>
       </View>
 
       {/* Footer with Button */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleBack}>
-          <LinearGradient
-            colors={[theme.colors.primaryDark, theme.colors.primary]}
-            style={styles.gradientButton}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 0}}>
-            <Text style={styles.buttonText}>Return to Dashboard</Text>
-            <Icon name="home" size={20} color="white" />
-          </LinearGradient>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.buttonText}>Return to Dashboard</Text>
+          <Icon name="home" size={20} color="white" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -96,11 +71,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    backgroundColor: 'white',
   },
   headerContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   headerIcon: {
     marginRight: 10,
@@ -108,7 +84,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: 'black',
   },
   content: {
     flex: 1,
@@ -143,12 +119,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 20,
   },
-  timerText: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    marginBottom: 10,
-  },
   footer: {
     padding: 20,
     backgroundColor: '#f8f9fa',
@@ -157,7 +127,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     borderRadius: 10,
-    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: theme.colors.primaryDark,
+    padding: 16,
   },
   gradientButton: {
     padding: 16,

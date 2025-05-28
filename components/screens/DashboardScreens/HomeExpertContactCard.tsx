@@ -9,7 +9,7 @@ export default function HomeExpertContactCard() {
 
   return (
     <View style={styles.container}>
-<Text style={styles.sectionTitle}>Contact Experts</Text>
+      <Text style={styles.sectionTitle}>Contact Experts</Text>
       <View style={styles.card}>
         <View style={styles.premiumBadge}>
           <Text style={styles.badgeText}>GET ADVICES FROM EXPERTS</Text>
@@ -27,7 +27,7 @@ export default function HomeExpertContactCard() {
               Connect with certified experts
             </Text>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.contactButton}
               onPress={() => navigation.navigate('Chat')}>
               <Text style={styles.buttonText}>Contact Now</Text>

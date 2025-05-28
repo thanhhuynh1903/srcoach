@@ -23,6 +23,8 @@ import {
 } from '../../../utils/useUserCertificatesAPI';
 import ToastUtil from '../../../utils/utils_toast';
 import CommonDialog from '../../../commons/CommonDialog';
+import BackButton from '../../../BackButton';
+import { capitalizeFirstLetter } from '../../../utils/utils_format';
 
 type CertificateForm = {
   certificate_type: CertificateType;
@@ -37,11 +39,11 @@ type ImageForm = {
 
 const documentInfo: Record<CertificateType, {title: string; content: string}> = {
   CITIZEN_DOCUMENT_FRONT: {
-    title: 'Citizen Document (Front)',
+    title: 'Citizen ID (Front)',
     content: 'This is the front side of your government-issued identification document. It typically includes your photo, full name, document number, and issue/expiry dates. Acceptable documents include national ID cards, driver\'s licenses, or other official identification. Ensure the image is clear and all details are readable. The document must be valid and not expired.'
   },
   CITIZEN_DOCUMENT_BACK: {
-    title: 'Citizen Document (Back)',
+    title: 'Citizen ID (Back)',
     content: 'This is the back side of your government-issued identification document. It often contains additional security features, barcodes, or other verification elements. Make sure to capture the entire document and avoid glare or shadows that might obscure important details. Both front and back sides are required for identity verification purposes.'
   },
   RUNNING_CERTIFICATION: {
@@ -173,7 +175,7 @@ const UserCertificatesSubmitScreen = () => {
   };
 
   const openHelpLink = () => {
-    Linking.openURL('https://yourdomain.com/help/certificates');
+    Linking.openURL('https://smartrunningcoach.com/help/certificates');
   };
 
   const pickImage = async (
@@ -310,12 +312,6 @@ const UserCertificatesSubmitScreen = () => {
             <Text style={styles.uploadText}>Upload {formatTypeName(type)}</Text>
           </TouchableOpacity>
         )}
-        <TextInput
-          style={styles.imageDescriptionInput}
-          placeholder={`Description for ${formatTypeName(type)}`}
-          value={forms[type][0].description}
-          onChangeText={text => handleChangeText(type, 0, text)}
-        />
       </View>
     );
   };
@@ -326,19 +322,23 @@ const UserCertificatesSubmitScreen = () => {
   ) => {
     const isSingle = maxLinks === 1;
     const canAddMore = forms[type].length < maxLinks;
+    const isRequired = type === 'CITIZEN_DOCUMENT_FRONT' || type === 'CITIZEN_DOCUMENT_BACK';
 
     if (type === 'CITIZEN_DOCUMENT_FRONT' || type === 'CITIZEN_DOCUMENT_BACK') {
       return (
         <View key={type} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{formatTypeName(type)}</Text>
+            <Text style={styles.sectionTitle}>
+              {capitalizeFirstLetter(formatTypeName(type), true)}
+              {isRequired && <Text style={styles.requiredAsterisk}> *</Text>}
+            </Text>
             <TouchableOpacity
               onPress={() => showInfoDialog(type)}
               style={styles.infoButton}>
               <Icon
                 name="information-circle"
                 size={20}
-                color={theme.colors.primary}
+                color="black"
               />
             </TouchableOpacity>
           </View>
@@ -350,42 +350,47 @@ const UserCertificatesSubmitScreen = () => {
     return (
       <View key={type} style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{formatTypeName(type)}</Text>
+          <Text style={styles.sectionTitle}>
+            {capitalizeFirstLetter(formatTypeName(type), true)}
+            {isRequired && <Text style={styles.requiredAsterisk}> *</Text>}
+          </Text>
           <TouchableOpacity
             onPress={() => showInfoDialog(type)}
             style={styles.infoButton}>
             <Icon
               name="information-circle"
               size={20}
-              color={theme.colors.primary}
+              color="black"
             />
           </TouchableOpacity>
         </View>
 
         {forms[type].map((form, index) => (
           <View key={`${type}-${index}`} style={styles.inputContainer}>
-            {type === 'NOTE' ? (
-              <View style={styles.noteContainer}>
+            {(type !== 'CITIZEN_DOCUMENT_FRONT' && type !== 'CITIZEN_DOCUMENT_BACK') && (
+              type === 'NOTE' ? (
+                <View style={styles.noteContainer}>
+                  <TextInput
+                    style={styles.noteInput}
+                    placeholder="Enter your note here..."
+                    value={form.description}
+                    onChangeText={(text) => handleChangeText(type, index, text)}
+                    multiline
+                    maxLength={2000}
+                  />
+                  <Text style={styles.charCounter}>
+                    {form.description.length}/2000
+                  </Text>
+                </View>
+              ) : (
                 <TextInput
-                  style={styles.noteInput}
-                  placeholder="Enter your note here..."
+                  style={styles.input}
+                  placeholder="Enter document URL"
                   value={form.description}
-                  onChangeText={text => handleChangeText(type, index, text)}
-                  multiline
-                  maxLength={2000}
+                  onChangeText={(text) => handleChangeText(type, index, text)}
+                  keyboardType="url"
                 />
-                <Text style={styles.charCounter}>
-                  {form.description.length}/2000
-                </Text>
-              </View>
-            ) : (
-              <TextInput
-                style={styles.input}
-                placeholder="Enter document URL"
-                value={form.description}
-                onChangeText={text => handleChangeText(type, index, text)}
-                keyboardType="url"
-              />
+              )
             )}
 
             {!isSingle && forms[type].length > 1 && (
@@ -429,27 +434,20 @@ const UserCertificatesSubmitScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient
-        colors={[theme.colors.primaryDark, theme.colors.primaryDark]}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
+      <View
         style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
+        <BackButton />
 
         <View style={styles.headerContent}>
           <Icon
             name="cloud-upload"
             size={24}
-            color="white"
+            color="black"
             style={styles.headerIcon}
           />
           <Text style={styles.title}>Submit Certificates</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.subtitle}>
@@ -555,11 +553,12 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     marginRight: 10,
+    marginLeft: 12,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: 'white',
+    color: 'black',
   },
   scrollContent: {
     padding: 20,
@@ -589,6 +588,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+  },
+  requiredAsterisk: {
+    color: 'red',
+    fontSize: 16,
+    fontWeight: '600',
   },
   infoButton: {
     padding: 5,

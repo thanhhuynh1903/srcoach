@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,24 +8,31 @@ import {
   SafeAreaView,
   Image,
   Linking,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import { useLoginStore } from '../../../utils/useLoginStore';
-import { theme } from '../../../contants/theme';
-import { getSelfCertificates, Certificate, CertificateType, CertificateStatus } from '../../../utils/useUserCertificatesAPI';
+import {useLoginStore} from '../../../utils/useLoginStore';
+import {theme} from '../../../contants/theme';
+import {
+  getSelfCertificates,
+  Certificate,
+  CertificateType,
+  CertificateStatus,
+} from '../../../utils/useUserCertificatesAPI';
 import Toast from 'react-native-toast-message';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import BackButton from '../../../BackButton';
 import CommonDialog from '../../../commons/CommonDialog';
 
 export default function UserCertificatesExpertScreen() {
   const navigation = useNavigation();
-  const { profile } = useLoginStore();
+  const {profile} = useLoginStore();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showResubmitDialog, setShowResubmitDialog] = useState(false);
-  const [groupedCertificates, setGroupedCertificates] = useState<Record<string, Certificate[]>>({});
+  const [groupedCertificates, setGroupedCertificates] = useState<
+    Record<string, Certificate[]>
+  >({});
 
   const isExpert = profile?.roles?.includes('expert');
 
@@ -35,7 +42,7 @@ export default function UserCertificatesExpertScreen() {
         setIsLoading(true);
         const certs = await getSelfCertificates();
         setCertificates(certs);
-        
+
         // Group certificates by type
         const grouped = certs.reduce((acc, cert) => {
           const key = cert.certificate_type;
@@ -45,7 +52,7 @@ export default function UserCertificatesExpertScreen() {
           acc[key].push(cert);
           return acc;
         }, {} as Record<string, Certificate[]>);
-        
+
         setGroupedCertificates(grouped);
       } catch (error) {
         Toast.show({
@@ -129,9 +136,12 @@ export default function UserCertificatesExpertScreen() {
       case 'CITIZEN_DOCUMENT_FRONT':
       case 'CITIZEN_DOCUMENT_BACK':
         return (
-          <TouchableOpacity onPress={() => cert.description && Linking.openURL(cert.description)}>
+          <TouchableOpacity
+            onPress={() =>
+              cert.description && Linking.openURL(cert.description)
+            }>
             <Image
-              source={{ uri: cert.description }}
+              source={{uri: cert.description}}
               style={styles.certificateImage}
               resizeMode="contain"
             />
@@ -145,10 +155,11 @@ export default function UserCertificatesExpertScreen() {
         );
       default:
         return (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.urlContainer}
-            onPress={() => cert.description && Linking.openURL(cert.description)}
-          >
+            onPress={() =>
+              cert.description && Linking.openURL(cert.description)
+            }>
             <Icon name="link" size={16} color={theme.colors.primary} />
             <Text style={styles.urlText} numberOfLines={1}>
               {cert.description}
@@ -158,7 +169,10 @@ export default function UserCertificatesExpertScreen() {
     }
   };
 
-  const renderCertificateGroup = (type: CertificateType, certs: Certificate[]) => {
+  const renderCertificateGroup = (
+    type: CertificateType,
+    certs: Certificate[],
+  ) => {
     return (
       <View key={type} style={styles.certificateContainer}>
         <View style={styles.certificateHeader}>
@@ -167,22 +181,26 @@ export default function UserCertificatesExpertScreen() {
             size={20}
             color={theme.colors.primary}
           />
-          <Text style={styles.certificateTitle}>
-            {formatTypeName(type)}
-          </Text>
+          <Text style={styles.certificateTitle}>{formatTypeName(type)}</Text>
         </View>
 
         {certs.map((cert, index) => (
           <View key={cert.id} style={styles.certificateItem}>
             <View style={styles.certificateItemHeader}>
-              <Text style={styles.certificateItemNumber}>Document {index + 1}</Text>
+              <Text style={styles.certificateItemNumber}>
+                Document {index + 1}
+              </Text>
               <View style={styles.statusBadge}>
                 <Icon
                   name={getStatusIcon(cert.status)}
                   size={16}
                   color={getStatusColor(cert.status)}
                 />
-                <Text style={[styles.statusText, { color: getStatusColor(cert.status) }]}>
+                <Text
+                  style={[
+                    styles.statusText,
+                    {color: getStatusColor(cert.status)},
+                  ]}>
                   {cert.status.charAt(0) + cert.status.slice(1).toLowerCase()}
                 </Text>
               </View>
@@ -193,7 +211,9 @@ export default function UserCertificatesExpertScreen() {
             {cert.reject_reason && (
               <View style={styles.rejectReasonContainer}>
                 <Text style={styles.rejectReasonLabel}>Rejection Reason:</Text>
-                <Text style={styles.rejectReasonText}>{cert.reject_reason}</Text>
+                <Text style={styles.rejectReasonText}>
+                  {cert.reject_reason}
+                </Text>
               </View>
             )}
           </View>
@@ -228,21 +248,35 @@ export default function UserCertificatesExpertScreen() {
           {/* Expert Status Banner */}
           {isExpert ? (
             <View style={[styles.statusBanner, styles.expertBanner]}>
-              <Icon name="checkmark-circle" size={24} color={theme.colors.success} />
+              <Icon
+                name="checkmark-circle"
+                size={24}
+                color={theme.colors.success}
+              />
               <View style={styles.statusBannerContent}>
                 <Text style={styles.statusBannerTitle}>Verified Expert</Text>
                 <Text style={styles.statusBannerText}>
-                  Your expert status has been verified. You can now access all expert features.
+                  Your expert status has been verified. You can now access all
+                  expert features.
                 </Text>
               </View>
             </View>
           ) : (
             <View style={[styles.statusBanner, styles.notExpertBanner]}>
-              <Icon name="alert-circle" size={24} color={theme.colors.warning} />
+              <Icon
+                name="alert-circle"
+                size={24}
+                color={theme.colors.warning}
+              />
               <View style={styles.statusBannerContent}>
                 <Text style={styles.statusBannerTitle}>Not an Expert</Text>
                 <Text style={styles.statusBannerText}>
-                  You are not currently registered as an expert. Submit your documents to apply.
+                  You are not currently registered as an expert. Please wait for
+                  your expert status to be verified.
+                </Text>
+                <Text style={styles.statusBannerText}>
+                  Please note that this process may take up between 3 to 5
+                  business days.
                 </Text>
               </View>
             </View>
@@ -250,8 +284,8 @@ export default function UserCertificatesExpertScreen() {
 
           {/* Certificates */}
           {Object.keys(groupedCertificates).length > 0 ? (
-            Object.entries(groupedCertificates).map(([type, certs]) => 
-              renderCertificateGroup(type as CertificateType, certs)
+            Object.entries(groupedCertificates).map(([type, certs]) =>
+              renderCertificateGroup(type as CertificateType, certs),
             )
           ) : (
             <View style={styles.noCertificates}>
@@ -264,11 +298,12 @@ export default function UserCertificatesExpertScreen() {
 
           {/* Resubmit Button */}
           {certificates.length > 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.resubmitButton}
-              onPress={handleResubmit}
-            >
-              <Text style={styles.resubmitButtonText}>Resubmit Verification</Text>
+              onPress={handleResubmit}>
+              <Text style={styles.resubmitButtonText}>
+                Resubmit Verification
+              </Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -368,6 +403,7 @@ const styles = StyleSheet.create({
   statusBannerText: {
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 15,
   },
   certificateContainer: {
     backgroundColor: 'white',
@@ -375,7 +411,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
@@ -416,7 +452,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#ffffff',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,

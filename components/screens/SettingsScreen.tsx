@@ -265,7 +265,7 @@ const menuItems = [
   {
     title: 'Bookmarks',
     subtitle: 'View your saving posts',
-    icon: 'document-outline',
+    icon: 'bookmark-outline',
     screen: 'DraftScreen',
   },
   {
