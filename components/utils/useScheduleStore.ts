@@ -14,6 +14,9 @@ export interface TrainingSession {
   goal_calories: number;
   goal_minbpms: number;
   goal_maxbpms: number;
+  actual_steps: number;
+  actual_distance: number;
+  actual_calories: number;
 }
 
 export interface DailySchedule {

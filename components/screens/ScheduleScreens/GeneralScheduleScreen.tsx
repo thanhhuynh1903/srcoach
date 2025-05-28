@@ -1,6 +1,6 @@
-'use client';
+"use client"
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   View,
   Text,
@@ -9,384 +9,255 @@ import {
   ScrollView,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
   RefreshControl,
-} from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
-import EnhancedScheduleCard from './EnhancedScheduleCard';
-import { useNavigation } from '@react-navigation/native';
-import BackButton from '../../BackButton';
-import useScheduleStore from '../../utils/useScheduleStore';
-import CommonDialog from '../../commons/CommonDialog';
-import { theme } from '../../contants/theme';
-import { useLoginStore } from '../../utils/useLoginStore';
+} from 'react-native'
+import ContentLoader, {Rect, Circle} from 'react-content-loader/native'
+import Icon from '@react-native-vector-icons/ionicons'
+import EnhancedScheduleCard from './EnhancedScheduleCard'
+import { useNavigation } from '@react-navigation/native'
+import BackButton from '../../BackButton'
+import useScheduleStore from '../../utils/useScheduleStore'
+import CommonDialog from '../../commons/CommonDialog'
+import { theme } from '../../contants/theme'
+import { useLoginStore } from '../../utils/useLoginStore'
+
 const GeneralScheduleScreen = () => {
-  const [activeTab, setActiveTab] = useState('All');
-  const navigation = useNavigation();
-  const {
-    schedules,
-    ExpertSchedule,
-    isLoading,
-    error,
-    fetchSelfSchedules,
-    fetchExpertSchedule,
-  } = useScheduleStore();
-  const [showInfoDialog, setShowInfoDialog] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('All')
+  const [showInfoDialog, setShowInfoDialog] = useState(false)
+  const [showActiveDialog, setShowActiveDialog] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const navigation = useNavigation()
+  const { schedules, ExpertSchedule, isLoading, error, fetchSelfSchedules, fetchExpertSchedule } = useScheduleStore()
+  const { profile } = useLoginStore()
+
   const combinedSchedules = useMemo(() => {
-    const safeSchedules = Array.isArray(schedules)
-      ? schedules
-      : schedules
-        ? [schedules]
-        : [];
-    const safeExpert = Array.isArray(ExpertSchedule)
-      ? ExpertSchedule
-      : ExpertSchedule
-        ? [ExpertSchedule]
-        : [];
-    return [...safeSchedules, ...safeExpert];
-  }, [schedules, ExpertSchedule]);
-  const { profile } = useLoginStore();
+    const safeSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : []
+    const safeExpert = Array.isArray(ExpertSchedule) ? ExpertSchedule : ExpertSchedule ? [ExpertSchedule] : []
+    return [...safeSchedules, ...safeExpert]
+  }, [schedules, ExpertSchedule])
 
   const hasActiveSchedule = useMemo(() => {
-    const allSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : [];
+    const allSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : []
     if (profile?.roles?.includes('runner')) {
-      const hasExpertSchedule = allSchedules.some(
-        schedule => schedule?.schedule_type === 'EXPERT'
-      );
-      const hasSelfChoice = allSchedules.some(
-        schedule => schedule?.schedule_type === 'USER'
-      );
-      if (hasExpertSchedule || hasSelfChoice) return true;
+      return allSchedules.some(s => s.schedule_type === 'EXPERT' || s.schedule_type === 'USER')
     }
-
-    // Nếu là expert, chỉ chặn khi đã có lịch USER (tức là lịch cá nhân)
     if (profile?.roles?.includes('expert')) {
-      const hasSelfChoice = allSchedules.some(
-        schedule =>
-          schedule?.schedule_type === 'USER' &&
-          schedule?.user_id === profile?.id // chỉ tính lịch cá nhân của chính expert
-      );
-      if (hasSelfChoice) return true;
+      return allSchedules.some(s => s.schedule_type === 'USER' && s.user_id === profile.id)
     }
+    return false
+  }, [schedules, profile])
 
+  const filteredSchedules = useMemo(() => {
+    if (!combinedSchedules) return []
+    const safeSchedules = Array.isArray(combinedSchedules) ? combinedSchedules : [combinedSchedules]
+    const filters: Record<string, (s: any) => boolean> = {
+      "Expert's Choice": s => s.schedule_type === 'EXPERT' && s.status !== "CANCELED" && s.user_id !== s.expert_id,
+      'My Schedules': s => s.schedule_type !== 'EXPERT' || s.user_id === s.expert_id,
+      'Pending': s => s.status === "PENDING",
+      'All': s => s.status !== "CANCELED"
+    }
+    return safeSchedules.filter(filters[activeTab] || filters['All'])
+  }, [combinedSchedules, activeTab])
 
-    return false;
-  }, [schedules, profile]);
-
-  const handleBlockAddSchedule = () => {
-    !hasActiveSchedule
-      ? navigation.navigate('AddScheduleScreen' as never)
-      : setShowInfoDialog(true);
-  };
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('en-US', {
+  const formatTime = (isoString: string) =>
+    new Date(isoString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
       timeZone: 'UTC',
-    });
-  };
-
-  const loadData = async () => {
-    if (profile?.roles?.includes('expert')) {
-      await fetchSelfSchedules();
-      await fetchExpertSchedule();
-    } else {
-      await fetchSelfSchedules();
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  }, [fetchSelfSchedules, fetchExpertSchedule]);
-
-  // Logic lọc dựa trên tab đang chọn
-  const filteredSchedules = useMemo(() => {
-    if (!combinedSchedules) return [];
-    // Nếu combinedSchedules là object đơn, chuyển thành mảng
-    const safeSchedules = Array.isArray(combinedSchedules)
-      ? combinedSchedules
-      : [combinedSchedules];
-
-    switch (activeTab) {
-      case "Expert's Choice":
-        return safeSchedules.filter(
-          schedule =>
-            schedule.schedule_type === 'EXPERT' && schedule.status !== "CANCELED" &&
-            schedule.user_id !== schedule.expert_id,
-        );
-      case 'My Schedules':
-        return safeSchedules.filter(
-          schedule =>
-            schedule.schedule_type !== 'EXPERT' ||
-            schedule.user_id === schedule.expert_id,
-        );
-      case 'Pending':
-        return safeSchedules.filter(
-          schedule =>
-            schedule.status === "PENDING"
-        );
-      default: // "All"
-        return safeSchedules.filter(
-          schedule => schedule.status !== "CANCELED"
-        );
-    }
-  }, [combinedSchedules, activeTab]);
+    })
 
   const formatScheduleData = (schedule: any) => {
-    if (!schedule || !schedule.ScheduleDay) return null;
-
-    // Sắp xếp các ngày theo thứ tự tăng dần
+    if (!schedule?.ScheduleDay) return null
     const sortedDays = [...schedule.ScheduleDay].sort(
-      (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
-    );
-
-    // Lấy danh sách ngày để hiển thị
-    const days = sortedDays.map(day => new Date(day.day).getDate());
-
-    // Lấy ngày bắt đầu
-    const startDate =
-      sortedDays.length > 0 ? new Date(sortedDays[0].day) : new Date();
-
-    // Định dạng ngày bắt đầu
-    const formattedStartDate = startDate.toLocaleDateString('US', {
+      (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime()
+    )
+    const startDate = sortedDays[0] ? new Date(sortedDays[0].day).toLocaleDateString('en-GB', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    });
-
-    // Tạo daySchedules cho mỗi ngày
-    const daySchedules = sortedDays.map(day => {
-      const date = new Date(day.day);
-      return {
-        day: date.getDate(),
-        fullDate: day.day,
-        workouts: day?.ScheduleDetail?.map(detail => {
-          // Định dạng thời gian
-          const formattedStartTime = formatTime(detail.start_time);
-          const formattedEndTime = formatTime(detail.end_time);
-
-          return {
-            time: `${formattedStartTime} - ${formattedEndTime}`,
-            name: detail.description || 'Session',
-            steps: detail.goal_steps || 0,
-            distance: detail.goal_distance || 0,
-            calories: detail.goal_calories || 0,
-            status: detail.status,
-            id: detail.id,
-            minbpm: detail.goal_minbpms || 0,
-            maxbpm: detail.goal_maxbpms || 0,
-          };
-        }),
-      };
-    });
-
+    }) : new Date().toLocaleDateString('en-GB')
     return {
       id: schedule.id,
       title: schedule.title,
       description: schedule.description,
-      startDate: formattedStartDate,
-      days: days,
-      daySchedules: daySchedules,
+      created_at: schedule.created_at,
+      startDate,
+      days: sortedDays.map(day => new Date(day.day).getDate()),
+      daySchedules: sortedDays.map(day => ({
+        day: new Date(day.day).getDate(),
+        fullDate: day.day,
+        workouts: day.ScheduleDetail?.map(detail => ({
+          time: `${formatTime(detail.start_time)} - ${formatTime(detail.end_time)}`,
+          name: detail.description || 'Session',
+          steps: detail.goal_steps || 0,
+          distance: detail.goal_distance || 0,
+          calories: detail.goal_calories || 0,
+          actual_steps: detail.actual_steps || 0,
+          actual_distance: detail.actual_distance || 0,
+          actual_calories: detail.actual_calories || 0,
+          status: detail.status,
+          id: detail.id,
+          minbpm: detail.goal_minbpms || 0,
+          maxbpm: detail.goal_maxbpms || 0,
+        })) || [],
+      })),
       isExpertChoice: schedule.schedule_type === 'EXPERT',
       status: schedule.status,
       user_id: schedule.user_id,
       runnername: schedule?.user?.name,
       expert_id: schedule.expert_id,
-      expert_name: schedule?.expert?.name,
-    };
-  };
-
-  // Hiển thị màn hình loading
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" />
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton}>
-            <BackButton size={24} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0F2B5B" />
-          <Text style={styles.loadingText}>Loading schedules...</Text>
-        </View>
-      </SafeAreaView>
-    );
+      expertname: schedule?.expert?.name,
+      expertavatar: schedule?.expert?.image?.url || null
+    }
   }
 
-  // Hiển thị thông báo lỗi
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" />
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <BackButton size={24} />
-          </TouchableOpacity>
-        </View>
+  const loadData = async () => {
+    if (profile?.roles?.includes('expert')) {
+      await Promise.all([fetchSelfSchedules(), fetchExpertSchedule()])
+    } else {
+      await fetchSelfSchedules()
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await loadData()
+    setRefreshing(false)
+  }, [])
+
+  const handleBlockAddSchedule = () => {
+    hasActiveSchedule ? setShowActiveDialog(true) : navigation.navigate('AddScheduleScreen' as never)
+  }
+
+  const renderContent = () => {
+    if (error) {
+      return (
         <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={60} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchSelfSchedules()}>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchSelfSchedules}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    );
+      )
+    }
+
+    if (isLoading) {
+      return (
+        <View style={styles.scrollView}>
+          <ContentLoader
+            speed={2}
+            width={400}
+            height={600}
+            viewBox="0 0 400 600"
+            backgroundColor="#f3f3f3"
+            foregroundColor="#ecebeb"
+          >
+            <Rect x="0" y="0" rx="20" ry="20" width="400" height="200" />
+            <Circle cx="50" cy="230" r="18" />
+            <Circle cx="100" cy="230" r="18" />
+            <Circle cx="150" cy="230" r="18" />
+            <Rect x="0" y="260" rx="10" ry="10" width="400" height="100" />
+            <Rect x="0" y="380" rx="20" ry="20" width="400" height="200" />
+            <Circle cx="50" cy="610" r="18" />
+            <Circle cx="100" cy="610" r="18" />
+            <Circle cx="150" cy="610" r="18" />
+            <Rect x="0" y="640" rx="10" ry="10" width="400" height="100" />
+          </ContentLoader>
+        </View>
+      )
+    }
+
+    return (
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {filteredSchedules.length > 0 ? (
+          filteredSchedules.map(schedule => {
+            const formatted = formatScheduleData(schedule)
+            return formatted ? (
+              <EnhancedScheduleCard
+                key={formatted.id}
+                {...formatted}
+                selectedDay={formatted.days[0] || 0}
+                alarmEnabled={false}
+              />
+            ) : null
+          })
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Icon name="calendar-outline" size={60} color="#94A3B8" />
+            <Text style={styles.emptyText}>
+              {activeTab === 'All' ? 'No training schedules yet.' :
+                activeTab === "Expert's Choice" ? 'No expert schedules.' :
+                  'No personal schedules created.'}
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    )
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
-      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <BackButton size={24} />
           <Text style={styles.headerTitle}>Schedules</Text>
-          <TouchableOpacity
-            onPress={() => setShowInfoDialog(true)}
-            style={styles.infoButton}>
-            <Icon
-              name="information-circle-outline"
-              size={20}
-              color={theme.colors.primaryDark}
-            />
+          <TouchableOpacity style={styles.infoButton} onPress={() => setShowInfoDialog(true)}>
+            <Icon name="information-circle-outline" size={20} color={theme.colors.primaryDark} />
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('CalendarScreen' as never);
-            }}>
-            <Icon
-              name="calendar"
-              size={24}
-              color={theme.colors.primaryDark}
-              style={styles.headerIcon}
-            />
+          <TouchableOpacity onPress={() => navigation.navigate('CalendarScreen' as never)}>
+            <Icon name="calendar" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleBlockAddSchedule}>
-            <Icon
-              name="add-circle-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-              style={styles.headerIcon}
-            />
+            <Icon name="add-circle-outline" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('ScheduleHistoryScreen' as never);
-            }}>
-            <Icon
-              name="time-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-              style={styles.headerIcon}
-            />
+          <TouchableOpacity onPress={() => navigation.navigate('ScheduleHistoryScreen' as never)}>
+            <Icon name="time-outline" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Tab Navigation */}
       <View style={styles.filtersWrapper}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContainer}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
         >
           {['All', "Expert's Choice", 'My Schedules', 'Pending'].map(tab => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.activeTab]}
-              onPress={() => setActiveTab(tab)}>
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}>
-                {tab}
-              </Text>
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
-      {/* Schedule Cards */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}>
-        {Array.isArray(filteredSchedules) && filteredSchedules.length > 0 ? (
-          <>
-            {filteredSchedules?.map(schedule => {
-              const formattedSchedule = formatScheduleData(schedule);
-              if (!formattedSchedule) return null;
-              return (
-                <EnhancedScheduleCard
-                  key={formattedSchedule.id}
-                  id={formattedSchedule.id}
-                  title={formattedSchedule.title}
-                  description={formattedSchedule.description}
-                  startDate={formattedSchedule.startDate}
-                  days={formattedSchedule.days}
-                  selectedDay={formattedSchedule.days[0] || 0}
-                  alarmEnabled={false}
-                  isExpertChoice={formattedSchedule.isExpertChoice}
-                  daySchedules={formattedSchedule.daySchedules}
-                  status={formattedSchedule.status}
-                  user_id={formattedSchedule.user_id}
-                  runnername={formattedSchedule.runnername}
-                  expert_id={formattedSchedule.expert_id}
-                  expertname={formattedSchedule.expert_name}
-                />
-              );
-            })}
 
-            {/* Thông báo giới hạn lịch chạy */}
-          </>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Icon name="calendar-outline" size={60} color="#94A3B8" />
-            <Text style={styles.emptyText}>
-              {activeTab === 'All'
-                ? 'You do not have any training schedule yet.'
-                : activeTab === "Expert's Choice"
-                  ? 'No workout schedule from the expert'
-                  : 'You have not created any workout schedule yet.'}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+      {renderContent()}
+
       <CommonDialog
         visible={showInfoDialog}
         onClose={() => setShowInfoDialog(false)}
         title="Schedule Info"
         content={
           <View>
+            <Text style={styles.dialogText}>- Displays all your workout schedules.</Text>
             <Text style={styles.dialogText}>
-              - This screen displays all your workout schedules.
-            </Text>
-            <Text style={styles.dialogText}>
-              - To ensure effective training, each user is only allowed to
-              maintain one running schedule. Complete your current goals or
-              adjust your existing schedule to suit your needs. When you are
-              done, you can create a new schedule with new challenges!
+              - Only one active schedule is allowed. Complete or adjust your current schedule before creating a new one.
             </Text>
           </View>
         }
@@ -399,9 +270,24 @@ const GeneralScheduleScreen = () => {
           },
         ]}
       />
+
+      <CommonDialog
+        visible={showActiveDialog}
+        onClose={() => setShowActiveDialog(false)}
+        title="A schedule is being active"
+        content={<Text>There is already a schedule being active. Please remove them first.</Text>}
+        actionButtons={[
+          {
+            label: 'Got it',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setShowActiveDialog(false),
+          },
+        ]}
+      />
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -413,7 +299,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
@@ -427,22 +313,12 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     color: '#000',
   },
-  infoButton: {
-    marginLeft: 8,
-  },
+  infoButton: { marginLeft: 8 },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerIcon: {
-    marginLeft: 20,
-    color: theme.colors.primaryDark,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 20,
-  },
-
+  headerIcon: { marginLeft: 20 },
   filtersWrapper: {
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
@@ -452,15 +328,11 @@ const styles = StyleSheet.create({
     gap: 8,
     flexDirection: 'row',
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    position: 'relative',
+    backgroundColor: '#FFF',
   },
   tab: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginRight: 10,
     borderRadius: 20,
     backgroundColor: '#F1F5F9',
   },
@@ -478,55 +350,17 @@ const styles = StyleSheet.create({
     color: '#0F2B5B',
     fontWeight: '600',
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    top: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    zIndex: 1,
-  },
-  actionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 90,
-    height: 90,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  actionButtonText: {
-    fontSize: 13,
-    color: '#4B5563',
-    marginTop: 8,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  scrollViewContent: {
-    paddingBottom: 24,
-  },
+  scrollViewContent: { paddingBottom: 24 },
   emptyContainer: {
     padding: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     borderRadius: 16,
     marginTop: 16,
     shadowColor: '#000',
@@ -544,41 +378,12 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 16,
   },
-  createButton: {
-    backgroundColor: '#0F2B5B',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 12,
-    shadowColor: '#0F2B5B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#0F172A',
-    marginTop: 16,
-  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
   },
   errorText: {
     fontSize: 16,
@@ -600,7 +405,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: '#FFF',
     fontWeight: '600',
     fontSize: 15,
   },
@@ -610,6 +415,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 22,
   },
-});
+})
 
-export default GeneralScheduleScreen;
+export default GeneralScheduleScreen
