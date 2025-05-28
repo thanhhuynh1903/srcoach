@@ -10,15 +10,12 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import {useNavigation} from '@react-navigation/native';
 
-// Components
 import HomeHeader from '../../HomeHeader';
-import WellnessAndMedication from '../../WellnessAndMedication';
 import CommonDialog from '../../commons/CommonDialog';
 import HomeHealthScoreCard from './HomeHealthScoreCard';
 import HomeHealthData from './HomeHealthData';
 import HomeFunFactCard from './HomeFunFactCard';
 
-// Utils
 import {
   fetchSummaryRecord,
   handleSyncButtonPress,
@@ -27,10 +24,10 @@ import useAuthStore from '../../utils/useAuthStore';
 import {useLoginStore} from '../../utils/useLoginStore';
 import ToastUtil from '../../utils/utils_toast';
 
-// Constants
 import {theme} from '../../contants/theme';
 import HomeExpertContactCard from './HomeExpertContactCard';
 import CommunityNewsList from '../CommunityScreens/CommunityNewsList';
+import HomeScheduleCard from './HomeScheduleCard';
 
 type MetricInfo = {
   title: string;
@@ -113,7 +110,7 @@ const HomeScreen = () => {
   const [healthConnectError, setHealthConnectError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const showInfoDialog = (metric: keyof MetricInfoMap) => {
+  const showInfoDialog = (metric: keyof typeof METRIC_INFO) => {
     setCurrentMetricInfo(METRIC_INFO[metric]);
     setInfoDialogVisible(true);
   };
@@ -125,9 +122,9 @@ const HomeScreen = () => {
       const result = await handleSyncButtonPress();
 
       if (result?.type === 'SYNC_METHOD_MISSING') {
-        setSyncMethodError(true); //error involving missing SYNC_METHOD
+        setSyncMethodError(true);
       } else if (result?.type.includes('HEALTHCONNECT')) {
-        setHealthConnectError(true); //error involving HEALTHCONNECT
+        setHealthConnectError(true);
       } else {
         setSyncMethodError(false);
         setHealthConnectError(false);
@@ -161,18 +158,36 @@ const HomeScreen = () => {
     message: string,
     buttonText: string,
     onPress: () => void,
+    isSyncMethodError: boolean,
   ) => {
     if (!visible) return null;
 
     return (
-      <View style={styles.errorBanner}>
+      <View
+        style={[
+          styles.errorBanner,
+          {backgroundColor: isSyncMethodError ? '#008aa2' : '#EF4444'},
+        ]}>
         <View style={styles.errorBannerContent}>
           <Icon name="warning" size={20} color="#FFF" />
           <Text style={styles.errorBannerText}>{message}</Text>
         </View>
-        <TouchableOpacity onPress={onPress} style={styles.refreshButton}>
-          <Text style={styles.errorBannerButtonText}>{buttonText}</Text>
-        </TouchableOpacity>
+        <View style={styles.errorBannerActions}>
+          <TouchableOpacity onPress={onPress} style={styles.actionButton}>
+            <Text style={styles.errorBannerButtonText}>{buttonText}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              if (isSyncMethodError) {
+                setSyncMethodError(false);
+              } else {
+                setHealthConnectError(false);
+              }
+            }}
+            style={styles.closeButton}>
+            <Icon name="close" size={20} color="#FFF" />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -187,6 +202,7 @@ const HomeScreen = () => {
           'Please select a sync method in Settings',
           'Go to Settings',
           () => navigation.navigate('SettingsDevicesScreen' as never),
+          true,
         )}
 
         {renderErrorBanner(
@@ -194,7 +210,10 @@ const HomeScreen = () => {
           'Health Connect syncing failed',
           'Install Health Connect',
           () => {},
+          false,
         )}
+
+        <HomeScheduleCard navigation={navigation} />
 
         <HomeHealthScoreCard
           healthScore={healthScore}
@@ -246,7 +265,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   errorBanner: {
-    backgroundColor: '#EF4444',
     padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -266,18 +284,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  errorBannerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    marginRight: 8,
+    padding: 4,
+  },
   errorBannerButtonText: {
-    color: '#EF4444',
+    color: '#FFF',
     fontSize: 14,
     fontWeight: '500',
-    marginLeft: 8,
-    backgroundColor: '#FFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 8,
-    paddingHorizontal: 5,
+    paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  refreshButton: {
-    marginLeft: 16,
+  closeButton: {
     padding: 4,
   },
 });
