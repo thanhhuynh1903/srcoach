@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef, useMemo} from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,24 +8,27 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  TextInput,
   Modal,
   FlatList,
   Alert,
+  TextInput,
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
-import {usePostStore} from '../../utils/usePostStore';
-import {useRoute, useNavigation} from '@react-navigation/native';
-import {useLoginStore} from '../../utils/useLoginStore';
-import {useCommentStore} from '../../utils/useCommentStore';
-import ModalPoppup from '../../ModalPoppup';
-import {Dimensions} from 'react-native';
+import { usePostStore } from '../../utils/usePostStore';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { useLoginStore } from '../../utils/useLoginStore';
+import { useCommentStore } from '../../utils/useCommentStore';
+import { Dimensions } from 'react-native';
 import CommunityPostDetailMap from './CommunityPostDetailMap';
 import SkeletonPostDetail from './SkeletonPostDetail';
-import {CommonAvatar} from '../../commons/CommonAvatar';
-import {SaveDraftButton} from './SaveDraftButton';
+import { CommonAvatar } from '../../commons/CommonAvatar';
+import { SaveDraftButton } from './SaveDraftButton';
+import CommunityPostDetailCommentScreen from './CommunityPostDetailCommentScreen';
+import { theme } from '../../contants/theme';
+
+// Interface definitions
 interface User {
   id: string;
   username: string;
@@ -35,7 +38,6 @@ interface User {
   updated_at: string | null;
 }
 
-// Interface cho Post từ API
 interface Post {
   id: string;
   title: string;
@@ -59,6 +61,22 @@ interface Post {
   is_saved: boolean;
 }
 
+interface Comment {
+  id: string;
+  content: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string | null;
+  parent_comment_id: string | null;
+  User: User;
+  user: User;
+  is_upvote: boolean;
+  is_upvoted: boolean;
+  upvote_count: number;
+  is_deleted: boolean;
+  other_PostComment: Comment[];
+}
+
 const CommunityPostDetailScreen = () => {
   const {
     getDetail,
@@ -69,65 +87,247 @@ const CommunityPostDetailScreen = () => {
     getMyPosts,
     isLoading: isLoadingPost,
   } = usePostStore();
-  const [localPost, setLocalPost] = useState<Post | null>(null);
-
-  const {profile} = useLoginStore();
-  const {
-    createComment,
-    getCommentsByPostId,
-    comments,
-    isLoading: isLoadingComments,
-    deleteComment,
-    updateComment,
-    likeComment,
-  } = useCommentStore();
+  const { profile } = useLoginStore();
+  const { createComment, updateComment, comments, getCommentsByPostId } = useCommentStore();
   const navigation = useNavigation();
   const route = useRoute();
   const id = route.params?.id;
-  const [showModal, setShowModal] = useState(false);
-
-  // State cho modal
+  const [localPost, setLocalPost] = useState<Post | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [zoomModalVisible, setZoomModalVisible] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [selectedCommentId, setSelectedCommentId] = useState(null);
-
   const [isEditingComment, setIsEditingComment] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingParentCommentId, setEditingParentCommentId] = useState<
-    string | null
-  >(null);
+  const [editingParentCommentId, setEditingParentCommentId] = useState<string | null>(null);
+  const [commentCount, setCommentCount] = useState(0);
 
-  const [zoomModalVisible, setZoomModalVisible] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-  const isLoading = isLoadingPost || isLoadingComments;
-
-  // Lấy currentUserId từ profile
   const currentUserId = useMemo(() => profile?.id, [profile]);
-
-  // Tham chiếu đến input để focus
-  const inputRef = useRef(null);
-  console.log('currentpost', currentPost);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (id) {
-      // Tải thông tin bài viết
       getDetail(id);
-      console.log('id', id);
-
-      // Tải bình luận
       getCommentsByPostId(id);
     } else {
       console.error('No post ID provided');
     }
   }, [id]);
 
-  const handleEditComment = async (commentId: string) => {
+  useEffect(() => {
+    if (currentPost) {
+      setLocalPost(currentPost);
+      setCommentCount(currentPost.comment_count || 0);
+    }
+  }, [currentPost]);
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffMs = now.getTime() - postDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    else if (diffHours > 0) return `${diffHours}h ago`;
+    else if (diffMins > 0) return `${diffMins}m ago`;
+    else return 'Just now';
+  };
+
+  const handleMorePress = () => {
+    setModalVisible(true);
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const postId = currentPost?.id;
+              setModalVisible(false);
+              const success = await deletePost(postId ?? '');
+              if (success) {
+                Alert.alert('Success', 'Post deleted successfully', [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                ]);
+              } else {
+                Alert.alert('Error', 'Failed to delete post');
+              }
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'An error occurred while deleting the post');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleUpdate = () => {
+    setModalVisible(false);
+    navigation.navigate('CommunityUpdatePostScreen', { postId: currentPost.id });
+  };
+
+  const handleLikePost = async (postId: string, isLike: boolean) => {
+    if (!profile) {
+      Alert.alert('Success', 'Please login to like this post');
+      return;
+    }
+
+    try {
+      const updatedPost = {
+        ...currentPost,
+        is_upvoted: isLike,
+        upvote_count: isLike
+          ? currentPost.upvote_count + 1
+          : Math.max(0, currentPost.upvote_count - 1),
+      };
+
+      usePostStore.setState({ currentPost: updatedPost });
+      usePostStore.setState((state) => ({
+        myPosts: state.myPosts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                is_upvoted: isLike,
+                upvote_count: isLike
+                  ? post.upvote_count + 1
+                  : Math.max(0, post.upvote_count - 1),
+              }
+            : post
+        ),
+      }));
+
+      await likePost(postId, isLike);
+    } catch (error) {
+      usePostStore.setState({ currentPost });
+      usePostStore.setState((state) => ({
+        myPosts: state.myPosts,
+      }));
+    }
+  };
+
+  const handleSendComment = async () => {
+    if (!commentText.trim()) return;
+
+    try {
+      setIsSubmittingComment(true);
+
+      if (isEditingComment && editingCommentId) {
+        const updatedComments = updateCommentInTree(comments, editingCommentId, commentText);
+        useCommentStore.setState({ comments: updatedComments });
+
+        const result = await updateComment(editingCommentId, commentText);
+        if (result) {
+          setIsEditingComment(false);
+          setEditingCommentId(null);
+          setCommentText('');
+          Alert.alert('Success', 'Comment updated successfully');
+        } else {
+          await getCommentsByPostId(id);
+          Alert.alert('Error', 'Failed to update comment');
+        }
+      } else {
+        const newComment: Comment = {
+          id: `temp-${Date.now()}`,
+          content: commentText,
+          user_id: currentUserId || '',
+          created_at: new Date().toISOString(),
+          updated_at: null,
+          parent_comment_id: replyingTo || null,
+          User: profile,
+          user: profile,
+          is_upvote: false,
+          is_upvoted: false,
+          upvote_count: 0,
+          is_deleted: false,
+          other_PostComment: [],
+        };
+
+        let updatedComments: Comment[];
+        if (replyingTo) {
+          updatedComments = addReplyToComment(comments, replyingTo, newComment);
+        } else {
+          updatedComments = [newComment, ...comments];
+        }
+
+        useCommentStore.setState({ comments: updatedComments });
+        setCommentCount(FilterComment(updatedComments));
+
+        const result = await createComment(id, commentText, replyingTo ?? '');
+        if (result) {
+          setCommentText('');
+          setReplyingTo(null);
+          setEditingParentCommentId(null);
+        } else {
+          await getCommentsByPostId(id);
+          Alert.alert('Error', 'Failed to post comment');
+        }
+      }
+    } catch (error) {
+      console.error('Error with comment:', error);
+      await getCommentsByPostId(id);
+      Alert.alert('Error', 'An error occurred while processing your comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const updateCommentInTree = (comments: Comment[], commentId: string, newContent: string): Comment[] => {
+    return comments.map((comment) => {
+      if (comment.id === commentId) {
+        return {
+          ...comment,
+          content: newContent,
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (comment.other_PostComment?.length) {
+        return {
+          ...comment,
+          other_PostComment: updateCommentInTree(comment.other_PostComment, commentId, newContent),
+        };
+      }
+      return comment;
+    });
+  };
+
+  const addReplyToComment = (comments: Comment[], parentId: string, newComment: Comment): Comment[] => {
+    return comments.map((comment) => {
+      if (comment.id === parentId) {
+        return {
+          ...comment,
+          other_PostComment: [newComment, ...(comment.other_PostComment || [])],
+        };
+      }
+      if (comment.other_PostComment?.length) {
+        return {
+          ...comment,
+          other_PostComment: addReplyToComment(comment.other_PostComment, parentId, newComment),
+        };
+      }
+      return comment;
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingComment(false);
+    setEditingCommentId(null);
     setCommentText('');
-    // Tìm comment cần edit trong danh sách comments
-    const findComment = (comments: any[], targetId: string): any => {
+  };
+
+  const handleEditComment = (commentId: string) => {
+    const findComment = (comments: Comment[], targetId: string): Comment | null => {
       for (const comment of comments) {
         if (comment.id === targetId) return comment;
         if (comment.other_PostComment?.length) {
@@ -139,402 +339,59 @@ const CommunityPostDetailScreen = () => {
     };
 
     const commentToEdit = findComment(comments, commentId);
-
     if (commentToEdit) {
-      // Thiết lập trạng thái chỉnh sửa
       setIsEditingComment(true);
       setEditingCommentId(commentId);
-      setEditingParentCommentId(commentToEdit.parent_comment_id || null); // Capture parent ID
+      setEditingParentCommentId(commentToEdit.parent_comment_id || null);
       setCommentText(commentToEdit.content);
-
-      // Focus vào input
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
+      inputRef.current?.focus();
     }
   };
 
-  const handleLikeComment = async (
-    commentId: string,
-    isCurrentlyLiked: boolean,
-  ) => {
-    if (!profile) {
-      Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bình luận', [
-        {text: 'Đóng', style: 'cancel'},
-      ]);
-      return;
-    }
-
-    try {
-      // Trạng thái mới là ngược lại với trạng thái hiện tại
-      const newLikeState = !isCurrentlyLiked;
-
-      // Optimistic update - cập nhật UI ngay lập tức
-      const updateCommentInTree = comments => {
-        return comments.map(comment => {
-          if (comment.id === commentId) {
-            // Cập nhật cả is_upvote và is_upvoted để đảm bảo nhất quán
-            const newUpvoteCount = newLikeState
-              ? (comment.upvote_count || 0) + 1
-              : Math.max(0, (comment.upvote_count || 0) - 1);
-
-            return {
-              ...comment,
-              is_upvote: newLikeState,
-              is_upvoted: newLikeState,
-              upvote_count: newUpvoteCount,
-            };
-          }
-
-          // Đệ quy cập nhật các comment con
-          if (
-            comment.other_PostComment &&
-            comment.other_PostComment.length > 0
-          ) {
-            return {
-              ...comment,
-              other_PostComment: updateCommentInTree(comment.other_PostComment),
-            };
-          }
-
-          return comment;
-        });
-      };
-
-      // Cập nhật state comments trong store với optimistic update
-      const updatedComments = updateCommentInTree([...comments]);
-      useCommentStore.setState({comments: updatedComments});
-
-      // Gọi API để like/unlike bình luận - truyền trạng thái mới
-      const success = await likeComment(commentId, newLikeState);
-
-      if (!success) {
-        // Nếu API thất bại, khôi phục lại danh sách comments ban đầu
-        await getCommentsByPostId(id);
-        Alert.alert('Error', 'Cannot like comment. Please try again later.');
-      }
-    } catch (error) {
-      console.error('Error liking comment:', error);
-      // Khôi phục lại danh sách comments ban đầu nếu có lỗi
-      await getCommentsByPostId(id);
-      Alert.alert('Error', 'Cannot like comment. Please try again later.');
-    }
-  };
-
-  // Hàm xử lý gửi bình luận
-  const handleSendComment = async () => {
-    if (!commentText.trim()) return;
-
-    try {
-      setIsSubmittingComment(true);
-
-      // Nếu đang edit comment
-      if (isEditingComment && editingCommentId) {
-        const result = await updateComment(editingCommentId, commentText);
-
-        if (result) {
-          // Reset trạng thái edit
-          setIsEditingComment(false);
-          setEditingCommentId(null);
-          setCommentText('');
-
-          // Cập nhật lại danh sách bình luận
-          await getCommentsByPostId(id);
-          // Cập nhật lại thông tin bài viết
-          await getDetail(id);
-          await getAll();
-          await getMyPosts();
-          Alert.alert('Success', 'Comment updated successfully');
-        } else {
-          Alert.alert('Error', 'Failed to update comment');
-        }
-      } else {
-        // Nếu đang tạo comment mới hoặc reply
-        const result = await createComment(id, commentText, replyingTo ?? '');
-
-        if (result) {
-          // Reset input và trạng thái reply
-          setCommentText('');
-          setReplyingTo(null);
-          setEditingParentCommentId(null); // Clear parent ID
-
-          // Cập nhật lại danh sách bình luận
-          await getCommentsByPostId(id);
-          // Cập nhật lại thông tin bài viết
-          await getDetail(id);
-          await getAll();
-          await getMyPosts();
-        } else {
-          Alert.alert('Error', 'Failed to post comment');
-        }
-      }
-    } catch (error) {
-      console.error('Error with comment:', error);
-      Alert.alert('Error', 'An error occurred while processing your comment');
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  // Hàm hủy chỉnh sửa comment
-  const handleCancelEdit = () => {
-    setIsEditingComment(false);
-    setEditingCommentId(null);
-    setCommentText('');
-  };
-
-  // Hàm xử lý khi nhấn Reply trên một bình luận
   const handleReplyComment = (commentId: string) => {
     setReplyingTo(commentId);
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    inputRef.current?.focus();
   };
 
-  const formatTimeAgo = dateString => {
-    const now = new Date();
-    const postDate = new Date(dateString);
-    const diffMs = now.getTime() - postDate.getTime();
-
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 0) {
-      return `${diffDays}d ago`;
-    } else if (diffHours > 0) {
-      return `${diffHours}h ago`;
-    } else if (diffMins > 0) {
-      return `${diffMins}m ago`;
-    } else {
-      return 'Just now';
-    }
-  };
-
-  // Xử lý khi nhấn nút "More"
-  const handleMorePress = () => {
-    setModalVisible(true);
-  };
-
-  // Xử lý xóa bài viết
-  const handleDelete = async () => {
-    Alert.alert(
-      'Delete Post',
-      'Are you sure you want to delete this post?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const postId = currentPost?.id;
-              console.log('Deleting post with id:', postId);
-
-              setModalVisible(false);
-
-              // Gọi API xóa bài viết
-              const success = await deletePost(postId ?? '');
-
-              if (success) {
-                // Thông báo thành công và quay lại màn hình trước
-                Alert.alert('Success', 'Post deleted successfully', [
-                  {text: 'OK', onPress: () => navigation.goBack()},
-                ]);
-              } else {
-                // Nếu xóa thất bại
-                Alert.alert('Error', 'Failed to delete post');
-              }
-            } catch (error) {
-              console.error('Error deleting post:', error);
-              Alert.alert('Error', 'An error occurred while deleting the post');
-            }
-          },
-        },
-      ],
-      {cancelable: true},
-    );
-  };
-
-  // Xử lý cập nhật bài viết
-  const handleUpdate = () => {
-    setModalVisible(false);
-    navigation.navigate('CommunityUpdatePostScreen', {postId: currentPost.id});
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    try {
-      const success = await deleteComment(commentId);
-
-      if (success) {
-        // Cập nhật lại thông tin bài viết để lấy số lượng bình luận mới
-        await getCommentsByPostId(id);
-        await getAll();
-        await getMyPosts();
-        Alert.alert('Success', 'Comment deleted successfully');
-      } else {
-        Alert.alert('Error', 'Failed to delete comment');
+  const markCommentAsDeleted = (comments: Comment[], commentId: string): Comment[] => {
+    return comments.map((comment) => {
+      if (comment.id === commentId) {
+        return { ...comment, is_deleted: true };
       }
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      Alert.alert('Error', 'An error occurred while deleting the comment');
-    }
+      if (comment.other_PostComment?.length) {
+        return {
+          ...comment,
+          other_PostComment: markCommentAsDeleted(comment.other_PostComment, commentId),
+        };
+      }
+      return comment;
+    });
   };
 
-  // Trong CommunityPostDetailScreen
-  const renderComment = (comment: any) => {
-    return (
-      <TouchableOpacity
-        key={comment.id}
-        style={styles.commentContainer}
-        onPress={() => {
-          // Chỉ cho phép chỉnh sửa/xóa comment của chính user
-          if (comment.user_id === currentUserId) {
-            setSelectedCommentId(comment.id);
-            setShowModal(true);
-          }
-        }}>
-        <CommonAvatar mode={null} size={36} uri={comment.User?.image?.url} />
-        <View style={styles.commentContent}>
-          <View style={styles.commentHeader}>
-            <Text style={styles.commentUserName}>
-              {comment.User?.username || comment.user?.username}
-            </Text>
-            <Text style={styles.commentTime}>
-              {formatTimeAgo(comment.created_at)}
-              {comment.updated_at &&
-                new Date(comment.updated_at) > new Date(comment.created_at) &&
-                ' (edited)'}
-            </Text>
-          </View>
-          <Text style={styles.commentText}>{comment.content}</Text>
-          <View style={styles.commentActions}>
-            <View style={styles.commentVotes}>
-              <TouchableOpacity
-                onPress={() => handleLikeComment(comment.id, comment.is_upvote)}
-                style={styles.likeButton}>
-                <Icon
-                  name={
-                    comment.is_upvote || comment.is_upvoted
-                      ? 'heart'
-                      : 'heart-outline'
-                  }
-                  size={16}
-                  color={
-                    comment.is_upvote || comment.is_upvoted ? '#4285F4' : '#666'
-                  }
-                />
-                <Text
-                  style={[
-                    styles.commentVoteCount,
-                    (comment.is_upvote || comment.is_upvoted) &&
-                      styles.commentVoteCountActive,
-                  ]}>
-                  {comment.upvote_count || 0}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {!comment.parent_comment_id && (
-              <TouchableOpacity onPress={() => handleReplyComment(comment.id)}>
-                <Text style={styles.replyButton}>Reply</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Render các bình luận con (nếu có) */}
-          {comment.other_PostComment &&
-            comment.other_PostComment.length > 0 && (
-              <View style={styles.repliesContainer}>
-                {comment.other_PostComment
-                  .filter((childComment: any) => !childComment.is_deleted)
-                  .map((childComment: any) => renderComment(childComment))}
-              </View>
-            )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const FilterComment = (comments: any[]): number => {
+  const FilterComment = (comments: Comment[]): number => {
     return comments.reduce((total, comment) => {
-      // Nếu comment chính không bị xóa, tăng 1
       let count = !comment?.is_deleted ? 1 : 0;
-      // Nếu có other_PostComment, cộng thêm số comment không bị xóa
       if (Array.isArray(comment.other_PostComment)) {
-        count += comment.other_PostComment.filter(
-          (c: any) => !c?.is_deleted,
-        ).length;
+        count += comment.other_PostComment.filter((c) => !c?.is_deleted).length;
       }
       return total + count;
     }, 0);
   };
 
-  useEffect(() => {
-    if (currentPost) {
-      setLocalPost(currentPost);
-    }
-  }, [currentPost]);
-
-  const handleLikePost = async (postId: string, isLike: boolean) => {
-    if (!profile) {
-      Alert.alert('Success', 'Please login to like this post');
-      return;
-    }
-
-    try {
-      // Optimistic update for current post
-      const updatedPost = {
-        ...currentPost,
-        is_upvoted: isLike,
-        upvote_count: isLike
-          ? currentPost.upvote_count + 1
-          : Math.max(0, currentPost.upvote_count - 1),
-      };
-
-      // Update current post in store
-      usePostStore.setState({currentPost: updatedPost});
-
-      // Update myPosts in store
-      usePostStore.setState(state => ({
-        myPosts: state.myPosts.map(post =>
-          post.id === postId
-            ? {
-                ...post,
-                is_upvoted: isLike,
-                upvote_count: isLike
-                  ? post.upvote_count + 1
-                  : Math.max(0, post.upvote_count - 1),
-              }
-            : post,
-        ),
-      }));
-
-      await likePost(postId, isLike);
-    } catch (error) {
-      // Rollback both updates on error
-      usePostStore.setState({currentPost});
-      usePostStore.setState(state => ({
-        myPosts: state.myPosts, // restore original myPosts
-      }));
-    }
-  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
-      {/* Header with back button */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <BackButton size={24} />
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {isLoadingPost ? (
         <SkeletonPostDetail />
       ) : (
         <>
-          <ScrollView style={styles.scrollView}>
-            {/* User info section */}
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
             <View style={styles.userInfoContainer}>
               <TouchableOpacity
                 onPress={() =>
@@ -543,21 +400,14 @@ const CommunityPostDetailScreen = () => {
                     : navigation.navigate('OtherProfileScreen', {
                         postId: currentPost?.id,
                       })
-                }>
+                }
+              >
                 <View style={styles.userInfo}>
-                  <CommonAvatar
-                    mode={null}
-                    size={40}
-                    uri={localPost?.user?.image?.url}
-                  />
+                  <CommonAvatar mode={null} size={40} uri={localPost?.user?.image?.url} />
                   <View style={styles.userTextInfo}>
-                    <Text style={styles.userName}>
-                      {localPost?.user?.username}
-                    </Text>
+                    <Text style={styles.userName}>{localPost?.user?.username}</Text>
                     <View style={styles.postMetaInfo}>
-                      <Text style={styles.postTime}>
-                        {formatTimeAgo(localPost?.created_at)}
-                      </Text>
+                      <Text style={styles.postTime}>{formatTimeAgo(localPost?.created_at)}</Text>
                     </View>
                   </View>
                 </View>
@@ -566,60 +416,54 @@ const CommunityPostDetailScreen = () => {
                 <SaveDraftButton
                   postId={localPost?.id}
                   isSaved={localPost?.is_saved}
-                  onSave={newSavedState => {
-                    // Update local post state
-                    setLocalPost(prev => ({
+                  onSave={(newSavedState) => {
+                    setLocalPost((prev) => ({
                       ...prev,
                       is_saved: newSavedState,
                     }));
-
-                    usePostStore.setState(state => ({
-                      posts: state.posts.map(post =>
+                    usePostStore.setState((state) => ({
+                      posts: state.posts.map((post) =>
                         post.id === localPost.id
-                          ? {...post, is_saved: newSavedState}
-                          : post,
+                          ? { ...post, is_saved: newSavedState }
+                          : post
                       ),
                     }));
                   }}
                 />
               ) : (
-                <TouchableOpacity
-                  style={styles.moreButton}
-                  onPress={handleMorePress}>
+                <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
                   <Icon name="ellipsis-horizontal" size={20} color="#000" />
                 </TouchableOpacity>
               )}
             </View>
-            {/* Post content */}
+
             <View style={styles.postContent}>
               <Text style={styles.postTitle}>{localPost?.title}</Text>
               <Text style={styles.postDescription}>{localPost?.content}</Text>
 
-              {/* Run photo */}
               {localPost?.images && localPost?.images.length > 0 && (
                 <>
                   {localPost.images.length > 2 ? (
-                    <View style={{marginBottom: 16}}>
-                      {/* First image shown larger */}
+                    <View style={{ marginBottom: 16 }}>
                       <TouchableOpacity
                         onPress={() => {
                           setSelectedImageIndex(0);
                           setZoomModalVisible(true);
                         }}
-                        style={{marginBottom: 8}}>
+                        style={{ marginBottom: 8 }}
+                      >
                         <Image
-                          source={{uri: localPost.images[0]}}
-                          style={[styles.runPhoto, {height: 180}]} // Slightly smaller than full runPhoto
+                          source={{ uri: localPost.images[0] }}
+                          style={[styles.runPhoto, { height: 180 }]}
                           resizeMode="cover"
                         />
                       </TouchableOpacity>
-
-                      {/* Remaining images in horizontal scroll */}
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         scrollEnabled={false}
-                        contentContainerStyle={{paddingHorizontal: 2}}>
+                        contentContainerStyle={{ paddingHorizontal: 2 }}
+                      >
                         {localPost.images.slice(1).map((imageUri, index) => (
                           <TouchableOpacity
                             key={index + 1}
@@ -627,14 +471,13 @@ const CommunityPostDetailScreen = () => {
                               setSelectedImageIndex(index + 1);
                               setZoomModalVisible(true);
                             }}
-                            style={{marginRight: 8}}>
+                            style={{ marginRight: 8 }}
+                          >
                             <Image
-                              source={{uri: imageUri}}
+                              source={{ uri: imageUri }}
                               style={styles.postImagev2}
                               resizeMode="cover"
                             />
-
-                            {/* Show count on last visible image if there are many */}
                             {localPost.images.length > 3 && index === 2 && (
                               <View
                                 style={{
@@ -647,13 +490,15 @@ const CommunityPostDetailScreen = () => {
                                   justifyContent: 'center',
                                   alignItems: 'center',
                                   borderRadius: 8,
-                                }}>
+                                }}
+                              >
                                 <Text
                                   style={{
                                     color: 'white',
                                     fontSize: 18,
                                     fontWeight: 'bold',
-                                  }}>
+                                  }}
+                                >
                                   +{localPost.images.length - 4}
                                 </Text>
                               </View>
@@ -663,22 +508,23 @@ const CommunityPostDetailScreen = () => {
                       </ScrollView>
                     </View>
                   ) : localPost.images.length === 2 ? (
-                    // For exactly 2 images, show them side by side
                     <View
                       style={{
                         flexDirection: 'row',
                         marginBottom: 16,
                         height: 180,
                         gap: 8,
-                      }}>
+                      }}
+                    >
                       <TouchableOpacity
-                        style={{flex: 1}}
+                        style={{ flex: 1 }}
                         onPress={() => {
                           setSelectedImageIndex(0);
                           setZoomModalVisible(true);
-                        }}>
+                        }}
+                      >
                         <Image
-                          source={{uri: localPost.images[0]}}
+                          source={{ uri: localPost.images[0] }}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -688,13 +534,14 @@ const CommunityPostDetailScreen = () => {
                         />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={{flex: 1}}
+                        style={{ flex: 1 }}
                         onPress={() => {
                           setSelectedImageIndex(1);
                           setZoomModalVisible(true);
-                        }}>
+                        }}
+                      >
                         <Image
-                          source={{uri: localPost.images[1]}}
+                          source={{ uri: localPost.images[1] }}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -705,15 +552,15 @@ const CommunityPostDetailScreen = () => {
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    // For a single image
                     <TouchableOpacity
                       onPress={() => {
                         setSelectedImageIndex(0);
                         setZoomModalVisible(true);
                       }}
-                      style={{marginBottom: 16}}>
+                      style={{ marginBottom: 16 }}
+                    >
                       <Image
-                        source={{uri: localPost.images[0]}}
+                        source={{ uri: localPost.images[0] }}
                         style={styles.runPhoto}
                         resizeMode="cover"
                       />
@@ -723,88 +570,61 @@ const CommunityPostDetailScreen = () => {
               )}
 
               <CommunityPostDetailMap
-                exerciseSessionRecordId={
-                  currentPost?.exercise_session_record_id
-                }
+                exerciseSessionRecordId={currentPost?.exercise_session_record_id}
               />
 
-              {currentPost &&
-                currentPost.tags &&
-                currentPost.tags.length > 0 && (
-                  <View style={styles.tagsContainer}>
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: 'bold',
-                        marginRight: 5,
-                      }}>
-                      Tags :{' '}
-                    </Text>
-                    {currentPost.tags.map((tag, index) => (
-                      <View key={index} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
+              {currentPost && currentPost.tags && currentPost.tags.length > 0 && (
+                <View style={styles.tagsContainer}>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                      marginRight: 5,
+                    }}
+                  >
+                    Tags :{' '}
+                  </Text>
+                  {currentPost.tags.map((tag, index) => (
+                    <View key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
 
-              {/* Post engagement */}
               <View style={styles.engagementContainer}>
                 <View style={styles.engagementLeft}>
                   <TouchableOpacity
                     style={styles.voteButton}
-                    onPress={() =>
-                      handleLikePost(localPost?.id, !localPost?.is_upvoted)
-                    }>
+                    onPress={() => handleLikePost(localPost?.id, !localPost?.is_upvoted)}
+                  >
                     <Icon
                       name={localPost?.is_upvoted ? 'heart' : 'heart-outline'}
                       size={20}
-                      color={localPost?.is_upvoted ? '#4285F4' : '#666'}
+                      color={localPost?.is_upvoted ? theme.colors.primaryDark : '#666'}
                     />
                   </TouchableOpacity>
-                  <Text style={styles.voteCount}>
-                    {localPost?.upvote_count}
-                  </Text>
-
+                  <Text style={styles.voteCount}>{localPost?.upvote_count}</Text>
                   <View style={styles.engagementMiddle}>
                     <TouchableOpacity style={styles.commentButton}>
                       <Icon name="chatbubble-outline" size={20} color="#666" />
-                      <Text style={styles.commentCount}>
-                        {FilterComment(comments)}
-                      </Text>
+                      <Text style={styles.commentCount}>{commentCount}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               </View>
             </View>
 
-            {/* Comments section */}
-            <View style={styles.commentsSection}>
-              <View style={styles.commentsSectionHeader}>
-                <Text style={styles.commentsSectionTitle}>
-                  Comments ({FilterComment(comments)})
-                </Text>
-              </View>
-
-              {/* Comments */}
-              {isLoadingComments ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#4285F4" />
-                </View>
-              ) : comments &&
-                comments.filter(item => !item.is_deleted).length > 0 ? (
-                comments
-                  .filter(comment => comment?.is_deleted === false)
-                  .map(comment => renderComment(comment))
-              ) : (
-                <Text style={styles.noCommentsText}>
-                  No comments yet. Be the first to comment!
-                </Text>
-              )}
-            </View>
+            <CommunityPostDetailCommentScreen
+              postId={id}
+              currentUserId={currentUserId}
+              profile={profile}
+              onCommentCountChange={(newCount) => setCommentCount(newCount)}
+              onEditComment={handleEditComment}
+              onReplyComment={handleReplyComment}
+            />
           </ScrollView>
 
-          {/* Input container cho bình luận */}
           <View style={styles.inputContainer}>
             <TouchableOpacity style={styles.attachButton}>
               <CommonAvatar mode={null} size={36} uri={profile?.image?.url} />
@@ -824,22 +644,16 @@ const CommunityPostDetailScreen = () => {
               onChangeText={setCommentText}
               multiline
             />
-
             {isEditingComment && (
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCancelEdit}>
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
                 <Icon name="close" size={20} color="#A1A1AA" />
               </TouchableOpacity>
             )}
-
             <TouchableOpacity
-              style={[
-                styles.sendButton,
-                commentText.trim() ? styles.activeSendButton : null,
-              ]}
+              style={[styles.sendButton, commentText.trim() ? styles.activeSendButton : null]}
               onPress={handleSendComment}
-              disabled={!commentText.trim() || isSubmittingComment}>
+              disabled={!commentText.trim() || isSubmittingComment}
+            >
               {isSubmittingComment ? (
                 <ActivityIndicator size="small" color="#4285F4" />
               ) : (
@@ -852,44 +666,36 @@ const CommunityPostDetailScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Modal hiển thị các tùy chọn */}
           <Modal
             animationType="slide"
             transparent={true}
             visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}>
+            onRequestClose={() => setModalVisible(false)}
+          >
             <TouchableOpacity
               style={styles.modalOverlay}
               activeOpacity={1}
-              onPress={() => setModalVisible(false)}>
+              onPress={() => setModalVisible(false)}
+            >
               <View style={styles.modalContainer}>
                 {currentPost && currentPost?.user?.id === currentUserId && (
                   <>
-                    <TouchableOpacity
-                      style={styles.modalOption}
-                      onPress={handleUpdate}>
+                    <TouchableOpacity style={styles.modalOption} onPress={handleUpdate}>
                       <Icon name="create-outline" size={24} color="#4285F4" />
                       <Text style={styles.modalOptionText}>Update</Text>
                     </TouchableOpacity>
-
                     <View style={styles.modalDivider} />
-
-                    <TouchableOpacity
-                      style={styles.modalOption}
-                      onPress={handleDelete}>
+                    <TouchableOpacity style={styles.modalOption} onPress={handleDelete}>
                       <Icon name="trash-outline" size={24} color="red" />
-                      <Text style={[styles.modalOptionText, {color: 'red'}]}>
-                        Delete
-                      </Text>
+                      <Text style={[styles.modalOptionText, { color: 'red' }]}>Delete</Text>
                     </TouchableOpacity>
                   </>
                 )}
-
                 <View style={styles.modalDivider} />
-
                 <TouchableOpacity
                   style={styles.modalCancelButton}
-                  onPress={() => setModalVisible(false)}>
+                  onPress={() => setModalVisible(false)}
+                >
                   <Text style={styles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
@@ -899,7 +705,8 @@ const CommunityPostDetailScreen = () => {
           <Modal
             visible={zoomModalVisible}
             transparent={true}
-            onRequestClose={() => setZoomModalVisible(false)}>
+            onRequestClose={() => setZoomModalVisible(false)}
+          >
             <View style={styles.zoomModalContainer}>
               <FlatList
                 data={localPost?.images || []}
@@ -907,37 +714,30 @@ const CommunityPostDetailScreen = () => {
                 pagingEnabled
                 initialScrollIndex={selectedImageIndex}
                 keyExtractor={(_, index) => index.toString()}
-                renderItem={({item}) => (
+                renderItem={({ item }) => (
                   <ScrollView
                     style={styles.zoomScrollView}
                     maximumZoomScale={3}
                     minimumZoomScale={1}
-                    contentContainerStyle={styles.zoomContentContainer}>
+                    contentContainerStyle={styles.zoomContentContainer}
+                  >
                     <Image
-                      source={{uri: item}}
+                      source={{ uri: item }}
                       style={styles.zoomImage}
                       resizeMode="contain"
                     />
                   </ScrollView>
                 )}
-                // Giúp FlatList scroll đúng vị trí đã chọn khi modal mở
                 onScrollToIndexFailed={() => {}}
               />
               <TouchableOpacity
                 style={styles.zoomModalCloseButton}
-                onPress={() => setZoomModalVisible(false)}>
+                onPress={() => setZoomModalVisible(false)}
+              >
                 <Icon name="close" size={30} color="white" />
               </TouchableOpacity>
             </View>
           </Modal>
-
-          <ModalPoppup
-            visible={showModal}
-            onClose={() => setShowModal(false)}
-            deleteComment={handleDeleteComment}
-            editComment={handleEditComment}
-            commentId={selectedCommentId}
-          />
         </>
       )}
     </SafeAreaView>
@@ -945,52 +745,32 @@ const CommunityPostDetailScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  cancelButton: {
-    padding: 8,
-    marginRight: 4,
-  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    height: 50,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f5f5f5',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
+    padding: 16,
+    paddingBottom: 20,
   },
   userInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginBottom: 16,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#4285F4',
   },
   userTextInfo: {
     marginLeft: 12,
@@ -1013,7 +793,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   postContent: {
-    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   postTitle: {
     fontSize: 20,
@@ -1031,27 +811,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 12,
-  },
-  mapContainer: {
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#f5f5f5',
-  },
-  mapTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-  },
-  mapTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 6,
-    color: '#000',
-  },
-  mapImage: {
-    width: '100%',
-    height: 180,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -1071,31 +830,6 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     color: '#666',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#f0f0f0',
   },
   engagementContainer: {
     flexDirection: 'row',
@@ -1131,107 +865,18 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     color: '#666',
   },
-  engagementRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionButton: {
-    padding: 4,
-    marginLeft: 16,
-  },
-  commentsSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  commentsSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  commentsSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-  },
-  sortButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sortButtonText: {
-    fontSize: 14,
-    color: '#666',
-    marginRight: 4,
-  },
-  commentContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  commentAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#4285F4',
-  },
-  commentContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  commentUserName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
-  },
-  commentTime: {
-    fontSize: 13,
-    color: '#666',
-  },
-  commentText: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#333',
-  },
-  commentActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  commentVotes: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  commentVoteCount: {
-    fontSize: 14,
-    marginHorizontal: 6,
-    color: '#666',
-  },
-  replyButton: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  repliesContainer: {
-    marginLeft: 10,
-    marginTop: 12,
-    paddingLeft: 10,
-    borderLeftWidth: 1,
-    borderLeftColor: '#e0e0e0',
-  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
+    backgroundColor: '#fff',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     gap: 12,
   },
   attachButton: {
@@ -1245,13 +890,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
+  cancelButton: {
+    padding: 8,
+    marginRight: 4,
+  },
   sendButton: {
     padding: 8,
   },
-  sendButtonDisabled: {
-    opacity: 0.5,
+  activeSendButton: {
+    backgroundColor: '#EEF2FF',
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -1285,45 +933,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#4285F4',
-  },
-  replyingToContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#f0f2f5',
-    borderRadius: 8,
-    marginBottom: 5,
-    width: '100%',
-  },
-  replyingToText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontStyle: 'italic',
-  },
-  activeSendButton: {
-    backgroundColor: '#EEF2FF',
-  },
-  noCommentsText: {
-    textAlign: 'center',
-    color: '#64748B',
-    marginVertical: 20,
-    fontStyle: 'italic',
-  },
-  likeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  commentVoteCountActive: {
-    color: '#4285F4',
-  },
-  postImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 8,
-    marginRight: 10,
   },
   postImagev2: {
     width: 113,
