@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,15 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import {Switch} from 'react-native-paper';
+import { Switch } from 'react-native-paper';
 import Icon from '@react-native-vector-icons/ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackButton from '../BackButton';
 import ScreenWrapper from '../ScreenWrapper';
 import NotificationService from '../services/NotificationService';
 import useApiStore from '../utils/zustandfetchAPI';
-import {useNavigation} from '@react-navigation/native';
-import {EventRegister} from 'react-native-event-listeners';
+import { useNavigation } from '@react-navigation/native';
+import { EventRegister } from 'react-native-event-listeners';
 interface Notification {
   unread: boolean;
   type: string;
@@ -41,6 +41,7 @@ const ManageNotification = () => {
     unread: 0,
     likes: 0,
     comments: 0,
+    schedule: 0
   });
   const navigation = useNavigation();
   const api = useApiStore(state => state);
@@ -82,10 +83,10 @@ const ManageNotification = () => {
     const handleNotificationNavigation = data => {
       switch (data.targetType) {
         case 'post':
-          navigation.navigate('CommunityPostDetailScreen', {id: data.targetId});
+          navigation.navigate('CommunityPostDetailScreen', { id: data.targetId });
           break;
         case 'schedule':
-          navigation.navigate('ScheduleDetailScreen', {
+          navigation.navigate('GeneralScheduleScreen', {
             scheduleId: data.targetId,
           });
           break;
@@ -156,11 +157,15 @@ const ManageNotification = () => {
         // Tính toán số lượng thông báo cho từng tab
         const stats = {
           all: formattedNotifications.length,
-          unread: formattedNotifications.filter(n => n.unread).length,
           likes: formattedNotifications.filter(n => n.type === 'post_like')
             .length,
           comments: formattedNotifications.filter(
             n => n.type === 'post_comment',
+          ).length,
+          schedule: formattedNotifications.filter(
+            n =>
+              n.type.startsWith('schedule_') ||
+              n.type === 'schedule_updated'
           ).length,
         };
         setNotificationStats(stats);
@@ -190,7 +195,7 @@ const ManageNotification = () => {
           });
           break;
         case 'schedule':
-          navigation.navigate('ScheduleDetailScreen', {
+          navigation.navigate('GeneralScheduleScreen', {
             scheduleId: notification.targetId,
           });
           break;
@@ -236,6 +241,12 @@ const ManageNotification = () => {
         return notifications.filter(
           notification => notification.type === 'post_comment',
         );
+      case 'schedule':
+        return notifications.filter(
+          notification =>
+            notification.type.startsWith('schedule_') ||
+            notification.type === 'schedule_updated'
+        );
       default:
         return notifications;
     }
@@ -247,14 +258,14 @@ const ManageNotification = () => {
   };
 
   const tabs = [
-    {id: 'all', label: 'All', count: notificationStats.all},
-    {id: 'likes', label: 'Likes', count: notificationStats.likes},
-    {id: 'comments', label: 'Comments', count: notificationStats.comments},
+    { id: 'all', label: 'All', count: notificationStats.all },
+    { id: 'schedule', label: 'Schedule', count: notificationStats.schedule },
+    { id: 'likes', label: 'Likes', count: notificationStats.likes },
+    { id: 'comments', label: 'Comments', count: notificationStats.comments },
   ];
 
   const filteredNotifications = getFilteredNotifications();
 
-  // Tạo biểu tượng thông báo dựa trên loại
   const getNotificationIcon = (type: any) => {
     switch (type) {
       case 'post_like':
@@ -268,7 +279,7 @@ const ManageNotification = () => {
 
   return (
     <ScreenWrapper bg={'#FFF'}>
-      <View style={{backgroundColor: '#FFF'}}>
+      <View style={{ backgroundColor: '#FFF' }}>
         <View
           style={{
             paddingHorizontal: 16,
@@ -278,7 +289,7 @@ const ManageNotification = () => {
             marginTop: 16,
           }}>
           <BackButton size={26} />
-          <Text style={{fontSize: 18, fontWeight: '600', marginLeft: 8}}>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginLeft: 8 }}>
             Notification
           </Text>
         </View>
@@ -316,7 +327,7 @@ const ManageNotification = () => {
       </View>
 
       <ScrollView
-        style={[styles.notificationList, {backgroundColor: '#F2F2F7'}]}
+        style={[styles.notificationList, { backgroundColor: '#F2F2F7' }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }>
@@ -358,7 +369,7 @@ const ManageNotification = () => {
             <Icon name="notifications-off-outline" size={50} color="#C7C7CC" />
             <Text style={styles.emptyText}>No announcements yet</Text>
             <Text style={styles.emptySubtext}>
-            We will notify you when something important happens.
+              We will notify you when something important happens.
             </Text>
           </View>
         )}

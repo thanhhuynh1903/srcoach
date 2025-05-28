@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef} from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,14 +9,14 @@ import {
   Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { useLoginStore } from './utils/useLoginStore';
 import { CommonAvatar } from './commons/CommonAvatar';
 import { startSyncData } from './utils/utils_healthconnect';
 
-const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
-  const {profile} = useLoginStore();
-  const [time, setTime] = useState({current: '', date: ''});
+const HomeHeader = ({ onSyncPress }: { onSyncPress?: () => void }) => {
+  const { profile } = useLoginStore();
+  const [time, setTime] = useState({ current: '', date: '' });
   const [searchIndex, setSearchIndex] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -30,8 +30,8 @@ const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
     'Search for runners...',
   ];
   const roles = {
-    expert: {text: 'Expert', icon: 'trophy', color: '#FFD700'},
-    runner: {text: 'Runner', icon: 'walk', color: '#00FF00'},
+    expert: { text: 'Expert', icon: 'trophy', color: '#FFD700' },
+    runner: { text: 'Runner', icon: 'walk', color: '#00FF00' },
     default: {
       text: profile?.roles[0]
         ? `${profile.roles[0][0].toUpperCase()}${profile.roles[0].slice(1)}`
@@ -44,21 +44,21 @@ const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
   const role = profile?.roles?.includes('expert')
     ? 'expert'
     : profile?.roles?.includes('runner')
-    ? 'runner'
-    : 'default';
+      ? 'runner'
+      : 'default';
 
   const handleSyncPress = async () => {
     if (isSyncing) return;
-    
+
     setIsSyncing(true);
     startSyncAnimation();
-    
+
     try {
       // Get current date and yesterday's date
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - 1);
-      
+
       await startSyncData(startDate.toISOString(), endDate.toISOString());
       if (onSyncPress) onSyncPress();
     } catch (error) {
@@ -179,11 +179,11 @@ const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
         </Text>
         <View style={styles.icons}>
           <TouchableOpacity onPress={handleSyncPress}>
-            <Animated.View style={{transform: [{rotate: spin}]}}>
-              <Icon 
-                name="sync-outline" 
-                size={24} 
-                color="#fff" 
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <Icon
+                name="sync-outline"
+                size={24}
+                color="#fff"
                 style={isSyncing ? styles.syncingIcon : null}
               />
             </Animated.View>
@@ -210,8 +210,8 @@ const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
               role === 'expert'
                 ? 'expert'
                 : role === 'runner'
-                ? 'runner'
-                : undefined
+                  ? 'runner'
+                  : undefined
             }
             uri={profile?.image?.url}
             size={45}
@@ -241,7 +241,7 @@ const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
         style={styles.search}
         onPress={() => navigation.navigate('SearchScreen' as never)}>
         <Icon name="search" size={20} color="#FFFFFF" />
-        <Animated.Text style={[styles.searchText, {opacity: fadeAnim}]}>
+        <Animated.Text style={[styles.searchText, { opacity: fadeAnim }]}>
           {searchPlaceholders[searchIndex]}
         </Animated.Text>
       </TouchableOpacity>
@@ -254,7 +254,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F2937',
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   topBar: {
     flexDirection: 'row',
