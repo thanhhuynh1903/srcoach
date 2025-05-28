@@ -195,8 +195,8 @@ const HomeHeader = ({onSyncPress}: {onSyncPress?: () => void}) => {
             <Icon name="notifications-outline" size={24} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
-            <Icon name="trophy-outline" size={24} color="#fff" />
+            onPress={() => navigation.navigate('GeneralScheduleScreen' as never)}>
+            <Icon name="calendar-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
