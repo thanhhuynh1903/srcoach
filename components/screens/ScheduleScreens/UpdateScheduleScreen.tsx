@@ -63,6 +63,7 @@ const UpdateScheduleScreen = () => {
   const [initialGoals, setInitialGoals] = useState<DailySchedule[]>([]);
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
+  const [hasGoalError, setHasGoalError] = useState(false);
   // useEffect(() => {
   //   if (message) {
   //     Alert.alert('Validation Error', message, [{text: 'OK'}]);
@@ -80,7 +81,7 @@ const UpdateScheduleScreen = () => {
             session.status === 'ONGOING' ||
             session.status === 'INCOMING'),
       );
-      
+
       const cleanedDays = validDays?.map((day: DailySchedule) => ({
         ...day,
         details: day.details.map(({ status, ...rest }) => rest), // Bỏ trường status
@@ -240,14 +241,6 @@ const UpdateScheduleScreen = () => {
     const selectedDate = new Date(dateStr);
     const today = new Date();
 
-    // Check if date is in valid range
-    if (selectedDate < today && !initialGoals.find(d => d.day === dateStr)) {
-      Alert.alert('Invalid Selection', 'Cannot select past dates', [
-        { text: 'OK' },
-      ]);
-      return;
-    }
-
     if (!validDates[dateStr]) {
       Alert.alert(
         'Invalid Selection',
@@ -341,7 +334,7 @@ const UpdateScheduleScreen = () => {
               markedDates[dateStr] = {
                 ...markedDates[dateStr],
                 selected: true,
-                selectedColor: day?.details?.status?.include('MISSED') ? '#EF4444' : '#F59E0B', 
+                selectedColor: day?.details?.status?.include('MISSED') ? '#EF4444' : '#F59E0B',
                 disabled: true,
                 disableTouchEvent: true,
               };
@@ -492,6 +485,8 @@ const UpdateScheduleScreen = () => {
           onGoalsChange={handleDailyGoalsChange}
           initialSchedules={initialGoals}
           view={view === undefined ? false : view}
+          onErrorStateChange={setHasGoalError}
+
         />
         {/* Description */}
         <Text style={styles.sectionTitle}>Description</Text>
@@ -508,11 +503,11 @@ const UpdateScheduleScreen = () => {
           <TouchableOpacity
             style={[
               styles.createButton,
-              getSelectedDatesCount() < 0 || isCreating
+              getSelectedDatesCount() < 0 || isCreating || hasGoalError
                 ? styles.disabledButton
                 : null,
             ]}
-            disabled={getSelectedDatesCount() < 0 || isCreating}
+            disabled={getSelectedDatesCount() < 0 || isCreating || hasGoalError}
             onPress={handleUpdateSchedule}>
             {isCreating ? (
               <ActivityIndicator color="#FFFFFF" />

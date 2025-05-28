@@ -37,7 +37,7 @@ const AddScheduleScreen = () => {
   const [validationError, setValidationError] = useState('');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const { createSchedule, isLoading, message, error, fetchSelfSchedules } = useScheduleStore();
-
+  const [hasGoalError, setHasGoalError] = useState(false);
   useEffect(() => {
     if (error) {
       setValidationError(error);
@@ -334,6 +334,7 @@ const AddScheduleScreen = () => {
           <DailyGoalsSection
             selectedDates={selectedDates}
             onGoalsChange={handleDailyGoalsChange}
+            onErrorStateChange={setHasGoalError}
             view={false}
           />
           <View style={styles.titleInputContainer}>
@@ -352,8 +353,8 @@ const AddScheduleScreen = () => {
             maxLength={MAX_DESCRIPTION_LENGTH}
           />
           <TouchableOpacity
-            style={[styles.createButton, !isFormValid() && styles.disabledButton]}
-            disabled={!isFormValid() || isCreating}
+            style={[styles.createButton, (!isFormValid() || hasGoalError || isCreating) && styles.disabledButton]}
+            disabled={!isFormValid() || hasGoalError || isCreating}
             onPress={handleCreateSchedule}
           >
             {isCreating ? (

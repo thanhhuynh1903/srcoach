@@ -36,11 +36,14 @@ interface DailyGoalsSectionProps {
   onGoalsChange: (schedule: DailySchedule[]) => void;
   initialSchedules?: DailySchedule[];
   view?: boolean
+  onErrorStateChange?: (hasError: boolean) => void;
+
 }
 
 const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   selectedDates,
   onGoalsChange,
+  onErrorStateChange,
   initialSchedules = [],
   view = false
 }) => {
@@ -49,6 +52,23 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, Record<string, string>>
   >({});
+  
+  const hasAnyValidationError = () => {
+    for (const sessionKey in validationErrors) {
+      if (!validationErrors.hasOwnProperty(sessionKey)) continue;
+      const sessionErrors = validationErrors[sessionKey];
+      for (const field in sessionErrors) {
+        if (sessionErrors[field]) return true;
+      }
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (onErrorStateChange) {
+      onErrorStateChange(hasAnyValidationError());
+    }
+  }, [validationErrors]);
   // Thời gian mặc định cho các buổi tập
   const defaultSessions = {
     morning: {
@@ -260,10 +280,10 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     }
   };
   const canAddSession = (sessions: TrainingSession[]) => {
-  if (!sessions || sessions.length === 0) return true;
+    if (!sessions || sessions.length === 0) return true;
 
-  return true;
-};
+    return true;
+  };
   const getTimeError = (inputTime: string, day: string) => {
     try {
       // Lấy giờ hiện tại ở Việt Nam
