@@ -8,22 +8,22 @@ import {
   StatusBar,
 } from 'react-native';
 import {Calendar} from 'react-native-calendars';
-import BackButton from '../BackButton';
-import useScheduleStore from '../utils/useScheduleStore';
+import BackButton from '../../BackButton';
+import useScheduleStore from '../../utils/useScheduleStore';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import dayjs from 'dayjs';
-import {CommonAvatar} from '../commons/CommonAvatar';
+import {CommonAvatar} from '../../commons/CommonAvatar';
 import ContentLoader from 'react-content-loader/native';
 import {Rect} from 'react-native-svg';
+import Ionicons from '@react-native-vector-icons/ionicons';
 
-export default function FullCalendarScreen() {
+export default function ScheduleFullCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState('');
-  const [currentMonth, setCurrentMonth] = useState(
-    dayjs().format('YYYY-MM-01'),
-  );
+  const [currentMonth, setCurrentMonth] = useState(dayjs().format('YYYY-MM-01'));
   const {fetchSelfSchedules, schedules, loading} = useScheduleStore();
   const [markedDates, setMarkedDates] = useState({});
   const [displayedSchedules, setDisplayedSchedules] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const navigation = useNavigation();
 
   const generateMarkedDates = useCallback(() => {
@@ -41,26 +41,17 @@ export default function FullCalendarScreen() {
       const color = colors[index % colors.length];
       schedule.ScheduleDay.forEach(day => {
         const dateStr = dayjs(day.day).format('YYYY-MM-DD');
-
         if (!newMarkedDates[dateStr]) {
           newMarkedDates[dateStr] = {
             dots: [],
             disabled: false,
           };
         }
-
         newMarkedDates[dateStr].dots.push({
           color,
           key: schedule.id,
         });
       });
-    });
-
-    Object.keys(newMarkedDates).forEach(date => {
-      if (!newMarkedDates[date].dots?.length) {
-        newMarkedDates[date].disabled = true;
-        newMarkedDates[date].disableTouchEvent = true;
-      }
     });
 
     if (selectedDate) {
@@ -87,7 +78,9 @@ export default function FullCalendarScreen() {
   };
 
   const initData = async () => {
+    setIsInitialLoading(true);
     await fetchSelfSchedules();
+    setIsInitialLoading(false);
   };
 
   useEffect(() => {
@@ -123,7 +116,7 @@ export default function FullCalendarScreen() {
     }, []),
   );
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -151,7 +144,6 @@ export default function FullCalendarScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
@@ -166,6 +158,7 @@ export default function FullCalendarScreen() {
         markedDates={markedDates}
         markingType={'multi-dot'}
         initialDate={dayjs().format('YYYY-MM-DD')}
+        hideExtraDays={true}
         theme={{
           backgroundColor: '#FFFFFF',
           calendarBackground: '#FFFFFF',
@@ -211,34 +204,44 @@ export default function FullCalendarScreen() {
       />
 
       <View style={styles.activeSchedulesContainer}>
-        <Text style={styles.activeSchedulesTitle}>Active Schedules</Text>
-
-        {displayedSchedules.map(schedule => (
-          <View key={schedule.id} style={styles.scheduleItem}>
-            <View
-              style={[styles.scheduleDot, {backgroundColor: schedule.color}]}
-            />
-            <View style={styles.scheduleInfo}>
-              <Text style={styles.scheduleName}>{schedule.name}</Text>
-              {schedule.schedule_type === 'EXPERT' && schedule.expert && (
-                <TouchableOpacity
-                  style={styles.expertInfo}
-                  onPress={() => {
-                    navigation.navigate('UserProfileScreen', {
-                      userId: schedule.expert?.id,
-                    });
-                  }}>
-                  <Text style={styles.expertLabel}>Created by</Text>
-                  <CommonAvatar uri={schedule.expert?.image?.url} size={18} />
-                  <Text style={styles.expertLabel}>
-                    {schedule.expert?.name} (@{schedule.expert?.username})
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            <Text style={styles.scheduleDays}>{schedule.days} days</Text>
+        <Text style={styles.activeSchedulesTitle}>Active Schedules ({displayedSchedules.length})</Text>
+        {displayedSchedules.length === 0 ? (
+          <View style={styles.noSchedulesContainer}>
+            <Ionicons name="calendar-outline" size={35} color="#64748B" />
+            <Text style={styles.noSchedulesText}>
+              {selectedDate
+                ? 'No schedules for this date'
+                : 'No active schedules'}
+            </Text>
           </View>
-        ))}
+        ) : (
+          displayedSchedules.map(schedule => (
+            <View key={schedule.id} style={styles.scheduleItem}>
+              <View
+                style={[styles.scheduleDot, {backgroundColor: schedule.color}]}
+              />
+              <View style={styles.scheduleInfo}>
+                <Text style={styles.scheduleName}>{schedule.name}</Text>
+                {schedule.schedule_type === 'EXPERT' && schedule.expert && (
+                  <TouchableOpacity
+                    style={styles.expertInfo}
+                    onPress={() => {
+                      navigation.navigate('UserProfileScreen', {
+                        userId: schedule.expert?.id,
+                      });
+                    }}>
+                    <Text style={styles.expertLabel}>Created by</Text>
+                    <CommonAvatar uri={schedule.expert?.image?.url} size={18} />
+                    <Text style={styles.expertLabel}>
+                      {schedule.expert?.name} (@{schedule.expert?.username})
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.scheduleDays}>{schedule.days} days</Text>
+            </View>
+          ))
+        )}
       </View>
     </SafeAreaView>
   );
@@ -313,5 +316,15 @@ const styles = StyleSheet.create({
   scheduleDays: {
     fontSize: 14,
     color: '#64748B',
+  },
+  noSchedulesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  noSchedulesText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 8,
   },
 });

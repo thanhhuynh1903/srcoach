@@ -217,7 +217,7 @@ const GeneralScheduleScreen = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => navigation.navigate('CalendarScreen' as never)}>
+          <TouchableOpacity onPress={() => navigation.navigate('ScheduleFullCalendarScreen' as never)}>
             <Icon name="calendar" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleBlockAddSchedule}>
