@@ -1,11 +1,11 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, FlatList} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {CommonAvatar} from '../../../../commons/CommonAvatar';
-import {theme} from '../../../../contants/theme';
-import {formatTimestampAgo} from '../../../../utils/utils_format';
-import {useLoginStore} from '../../../../utils/useLoginStore';
-import {archiveMessage} from '../../../../utils/useChatsAPI';
+import { CommonAvatar } from '../../../../commons/CommonAvatar';
+import { theme } from '../../../../contants/theme';
+import { formatTimestampAgo } from '../../../../utils/utils_format';
+import { useLoginStore } from '../../../../utils/useLoginStore';
+import { archiveMessage } from '../../../../utils/useChatsAPI';
 import CommonDialog from '../../../../commons/CommonDialog';
 import useScheduleStore from '../../../../utils/useScheduleStore';
 
@@ -16,7 +16,13 @@ interface CMIExpertScheduleProps {
     created_at: string;
     read_at?: string;
     archived?: boolean;
-    status?: 'PENDING' | 'INCOMING' | 'ONGOING' | 'CANCELED';
+    status?:
+      | 'PENDING'
+      | 'INCOMING'
+      | 'UPCOMING'
+      | 'ONGOING'
+      | 'COMPLETED'
+      | 'CANCELED';
     sender: {
       id: string;
       name: string;
@@ -63,17 +69,22 @@ export const CMIExpertSchedule = ({
   onRefresh,
   onUpdateMessage,
 }: CMIExpertScheduleProps) => {
-  const {profile} = useLoginStore();
+  const { profile } = useLoginStore();
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showAcceptDialog, setShowAcceptDialog] = useState(false);
   const [isArchived, setIsArchived] = useState(message?.archived || false);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
-  const {acceptExpertSchedule, declineExpertSchedule} = useScheduleStore();
+  const { acceptExpertSchedule, declineExpertSchedule } = useScheduleStore();
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isExpired, setIsExpired] = useState<boolean>(false);
 
   const status = message.content.schedule?.status || 'PENDING';
-  const isActive = status === 'INCOMING' || status === 'ONGOING';
+  const isActive =
+    status === 'INCOMING' ||
+    status === 'UPCOMING' ||
+    status === 'ONGOING' ||
+    status === 'COMPLETED';
   const isCancelled = status === 'CANCELED';
 
   useEffect(() => {
@@ -122,7 +133,7 @@ export const CMIExpertSchedule = ({
     if (response.status) {
       setIsArchived(true);
       setShowConfirmDialog(false);
-      onUpdateMessage?.(message.id, {archived: true});
+      onUpdateMessage?.(message.id, { archived: true });
     }
   };
 
@@ -133,17 +144,24 @@ export const CMIExpertSchedule = ({
   };
 
   const toggleDaySelection = (index: number) => {
-    setSelectedDayIndex(selectedDayIndex === index ? null : index);
+    if (!isExpired) {
+      setSelectedDayIndex(selectedDayIndex === index ? null : index);
+    }
   };
 
-  const formatDayName = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {weekday: 'short'});
+  const handleAccept = () => {
+    setShowAcceptDialog(false);
+    acceptExpertSchedule(message.content.schedule.id);
   };
 
-  const formatDayNumber = (dateString: string) => {
+  const formatDayLabel = (dateString: string) => {
     const date = new Date(dateString);
-    return date.getDate();
+    return (
+      <View style={styles.dayLabel}>
+        <Text style={styles.day}>{date.toLocaleString('en-US', { month: 'short' })}</Text>
+        <Text style={styles.day}>{date.toLocaleString('en-US', { day: 'numeric' })}</Text>
+      </View>
+    );
   };
 
   const formatTimeRange = (start: string, end: string) => {
@@ -152,13 +170,14 @@ export const CMIExpertSchedule = ({
     return `${startTime.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'UTC',
     })} - ${endTime.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'UTC',
     })}`;
   };
 
-  // Calculate totals
   const totals = message.content.schedule.ScheduleDay.reduce(
     (acc, day) => {
       day.ScheduleDetail?.forEach(detail => {
@@ -169,7 +188,7 @@ export const CMIExpertSchedule = ({
       });
       return acc;
     },
-    {steps: 0, distance: 0, calories: 0, time: 0},
+    { steps: 0, distance: 0, calories: 0, time: 0 },
   );
 
   if (isArchived || !message.content) {
@@ -197,7 +216,6 @@ export const CMIExpertSchedule = ({
     );
   }
 
-  // Determine bubble style based on status
   const bubbleStyle = [
     styles.container,
     isCancelled
@@ -209,7 +227,6 @@ export const CMIExpertSchedule = ({
       : styles.centeredBubble,
   ];
 
-  // Determine text color based on status
   const textStyle = [
     isCancelled
       ? styles.cancelledText
@@ -229,7 +246,7 @@ export const CMIExpertSchedule = ({
         <View style={bubbleStyle}>
           <View style={styles.avatarRow}>
             <CommonAvatar
-              style={{marginRight: 10}}
+              style={{ marginRight: 10 }}
               size={24}
               uri={message.sender.image?.url}
             />
@@ -255,7 +272,6 @@ export const CMIExpertSchedule = ({
             </Text>
           )}
 
-          {/* Totals Summary */}
           <View style={styles.totalsContainer}>
             {totals.steps > 0 && (
               <View style={styles.totalItem}>
@@ -339,7 +355,6 @@ export const CMIExpertSchedule = ({
             )}
           </View>
 
-          {/* Status Message */}
           {status === 'PENDING' && isExpired ? (
             <View style={styles.statusMessage}>
               <Icon name="alert-circle" size={16} color="#d32f2f" />
@@ -351,13 +366,16 @@ export const CMIExpertSchedule = ({
             <Text style={styles.expirationCountdown}>
               Expires in: {formatTime(timeLeft)}
             </Text>
-          ) : isActive ? (
+          ) : status === 'INCOMING' ||
+            status === 'UPCOMING' ||
+            status === 'ONGOING' ||
+            status === 'COMPLETED' ? (
             <View style={styles.statusMessage}>
               <Icon name="checkmark-circle" size={16} color="#388e3c" />
               <Text style={styles.activeStatusText}>
                 {isMe
-                  ? 'User has accepted this schedule'
-                  : 'You have accepted this schedule'}
+                  ? `User has accepted this schedule (${status})`
+                  : `You have accepted this schedule (${status})`}
               </Text>
             </View>
           ) : isCancelled ? (
@@ -371,13 +389,12 @@ export const CMIExpertSchedule = ({
             </View>
           ) : null}
 
-          {/* Day Selection */}
           <FlatList
             horizontal
             data={message.content.schedule.ScheduleDay}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.daysContainer}
-            renderItem={({item, index}) => (
+            renderItem={({ item, index }) => (
               <TouchableOpacity
                 style={[
                   styles.dayCircle,
@@ -386,18 +403,10 @@ export const CMIExpertSchedule = ({
                   (isExpired || isCancelled) && styles.expiredDayCircle,
                   isActive && styles.activeDayCircle,
                 ]}
-                onPress={() =>
-                  !isExpired &&
-                  !isCancelled &&
-                  !isActive &&
-                  toggleDaySelection(index)
-                }>
-                <Text style={[styles.dayName, textStyle]}>
-                  {formatDayName(item.day)}
-                </Text>
-                <Text style={[styles.dayNumber, textStyle]}>
-                  {formatDayNumber(item.day)}
-                </Text>
+                onPress={() => toggleDaySelection(index)}>
+                <View style={[styles.dayLabel, textStyle]}>
+                  {formatDayLabel(item.day)}
+                </View>
                 {item.is_rest_day && (
                   <Icon
                     name="bed"
@@ -418,7 +427,6 @@ export const CMIExpertSchedule = ({
             )}
           />
 
-          {/* Day Details */}
           {selectedDayIndex !== null && (
             <View style={styles.dayDetailsContainer}>
               {message.content.schedule.ScheduleDay[selectedDayIndex]
@@ -530,14 +538,11 @@ export const CMIExpertSchedule = ({
             </View>
           )}
 
-          {/* Action Buttons - Only show for PENDING status and not expired */}
           {status === 'PENDING' && !isExpired && !isMe && (
             <View style={styles.actionButtons}>
               <TouchableOpacity
                 style={styles.acceptButton}
-                onPress={() =>
-                  acceptExpertSchedule(message.content.schedule.id)
-                }>
+                onPress={() => setShowAcceptDialog(true)}>
                 <Text style={styles.buttonText}>Accept</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -626,6 +631,31 @@ export const CMIExpertSchedule = ({
                 style={[styles.dialogButton, styles.dialogConfirmButton]}
                 onPress={handleArchive}>
                 <Text style={styles.dialogConfirmButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        }
+      />
+
+      <CommonDialog
+        visible={showAcceptDialog}
+        onClose={() => setShowAcceptDialog(false)}
+        title="Confirm Schedule Acceptance"
+        content={
+          <View>
+            <Text style={styles.dialogContentText}>
+              Accepting this schedule will cancel any existing active schedules that you have. Do you want to proceed?
+            </Text>
+            <View style={styles.dialogButtonGroup}>
+              <TouchableOpacity
+                style={[styles.dialogButton, styles.dialogCancelButton]}
+                onPress={() => setShowAcceptDialog(false)}>
+                <Text style={styles.dialogCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dialogButton, styles.dialogConfirmButton]}
+                onPress={handleAccept}>
+                <Text style={styles.dialogConfirmButtonText}>Accept</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -764,13 +794,11 @@ const styles = StyleSheet.create({
   restDayCircle: {
     backgroundColor: '#e0e0e0',
   },
-  dayName: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
+  dayLabel: {
+    alignItems: 'center',
   },
-  dayNumber: {
-    fontSize: 16,
+  day: {
+    fontSize: 12,
     fontWeight: 'bold',
   },
   restIcon: {

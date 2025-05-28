@@ -1,8 +1,16 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, TextInput, Keyboard, ActivityIndicator} from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Keyboard,
+  ActivityIndicator,
+} from 'react-native';
 import CommonPanel from '../../../../commons/CommonPanel';
 import {theme} from '../../../../contants/theme';
-import { sendExpertRecommendation } from '../../../../utils/useChatsAPI';
+import {sendExpertRecommendation} from '../../../../utils/useChatsAPI';
 import Icon from '@react-native-vector-icons/ionicons';
 
 interface ChatsPanelExpertRecommendationProps {
@@ -12,19 +20,16 @@ interface ChatsPanelExpertRecommendationProps {
   onSendSuccess: () => void;
 }
 
-const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationProps> = ({
-  visible,
-  onClose,
-  sessionId,
-  onSendSuccess = () => {},
-}) => {
+const ChatsPanelExpertRecommendation: React.FC<
+  ChatsPanelExpertRecommendationProps
+> = ({visible, onClose, sessionId, onSendSuccess = () => {}}) => {
   const [content, setContent] = useState<string>('');
   const [affectsTraining, setAffectsTraining] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (isSubmitting || !affectsTraining || !content.trim()) return;
-    
+
     Keyboard.dismiss();
     setIsSubmitting(true);
 
@@ -56,7 +61,9 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
       title="Expert Recommendation"
       content={
         <View style={styles.content}>
-          <Text style={styles.label}>Your professional recommendation (max 2000 characters)</Text>
+          <Text style={styles.label}>
+            Your professional recommendation (max 2000 characters)
+          </Text>
           <TextInput
             style={[styles.input, styles.multilineInput]}
             value={content}
@@ -67,17 +74,24 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
             numberOfLines={8}
           />
           <Text style={styles.charCount}>{content.length}/2000</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.checkboxContainer}
             onPress={toggleCheckbox}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.checkbox, affectsTraining && styles.checkboxChecked]}>
-              {affectsTraining && <Icon name="checkmark" size={16} color="white" />}
+            activeOpacity={0.7}>
+            <View
+              style={[
+                styles.checkbox,
+                affectsTraining && styles.checkboxChecked,
+              ]}>
+              {affectsTraining && (
+                <Icon name="checkmark" size={16} color="white" />
+              )}
             </View>
             <Text style={styles.checkboxLabel}>
-              I agree this recommendation affects the user's running style and training schedule
+              I agree this recommendation will impact the user's running style
+              and training schedule, and that the user will be able to save this
+              note for later use.
             </Text>
           </TouchableOpacity>
         </View>
@@ -91,7 +105,10 @@ const ChatsPanelExpertRecommendation: React.FC<ChatsPanelExpertRecommendationPro
           ),
           variant: 'contained',
           handler: handleSubmit,
-          color: !affectsTraining || !content.trim() ? '#c9c9c9' : theme.colors.primaryDark,
+          color:
+            !affectsTraining || !content.trim()
+              ? '#c9c9c9'
+              : theme.colors.primaryDark,
           disabled: !affectsTraining || !content.trim() || isSubmitting,
         },
       ]}
