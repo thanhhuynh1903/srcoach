@@ -39,7 +39,7 @@ const AddScheduleScreen = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const { createSchedule, isLoading, message, error, fetchSelfSchedules } = useScheduleStore();
+  const { createSchedule, createExpertSchedule, isLoading, message, error, fetchSelfSchedules,fetchExpertSchedule } = useScheduleStore();
   const [hasGoalError, setHasGoalError] = useState(false);
   useEffect(() => {
     if (error) {
@@ -197,8 +197,15 @@ const AddScheduleScreen = () => {
         ...formData,
         user_id: runner?.id || null,
       };
-      const result = await createSchedule(scheduleData);
-      await fetchSelfSchedules();
+      let result;
+      if (runner?.id) {
+        result = await createExpertSchedule(scheduleData);
+        await fetchSelfSchedules();
+        await fetchExpertSchedule();
+      } else {
+        result = await createSchedule(scheduleData);
+        await fetchSelfSchedules();
+      } 
       if (result?.status === 'success') {
         setValidationError('');
         setShowErrorDialog(false);

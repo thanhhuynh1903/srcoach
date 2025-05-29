@@ -1,68 +1,37 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import { differenceInSeconds, addMinutes } from 'date-fns';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { addMinutes, format } from 'date-fns';
 
 interface PendingTimerProps {
     startDate: string;
     status: string;
 }
 
-const COUNTDOWN_KEY = 'pending_timer_start';
-
 const PendingTimer = ({ startDate, status }: PendingTimerProps) => {
-    const [timeLeft, setTimeLeft] = useState<number>(0);
+    const [endTime, setEndTime] = useState<string>('');
     const [isExpired, setIsExpired] = useState(false);
 
-    const formatTime = (seconds: number) => {
-        if (seconds <= 0) return '00:00';
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
     useEffect(() => {
-        let timer: NodeJS.Timeout;
-        let targetDate: Date;
-
-        const setupCountdown = async () => {
-            if (status === 'PENDING') {
-                // Lấy timestamp bắt đầu từ AsyncStorage
-                const stored = await AsyncStorage.getItem(COUNTDOWN_KEY);
-                let startTimestamp = stored ? parseInt(stored, 10) : null;
-
-                // Nếu chưa có, lưu thời điểm hiện tại
-                if (!startTimestamp) {
-                    startTimestamp = Date.now();
-                    await AsyncStorage.setItem(COUNTDOWN_KEY, startTimestamp.toString());
-                }
-
-                targetDate = addMinutes(new Date(startTimestamp), 30);
-
-                const calculateTimeLeft = () => {
-                    const now = new Date();
-                    const diff = differenceInSeconds(targetDate, now);
-                    setTimeLeft(diff > 0 ? diff : 0);
-                    setIsExpired(diff <= 0);
-                };
-
-                calculateTimeLeft();
-                timer = setInterval(calculateTimeLeft, 1000);
-            } else {
-                // Nếu không phải PENDING, xóa timestamp
-                await AsyncStorage.removeItem(COUNTDOWN_KEY);
+        if (status === 'PENDING' && startDate) {
+            const startTime = new Date(startDate);
+            if (isNaN(startTime.getTime())) {
+                console.error('Invalid startDate');
+                return;
             }
-        };
+            const endDate = addMinutes(startTime, 30);
+            const formattedEndTime = format(endDate, 'h:mm a');
+            setEndTime(formattedEndTime);
 
-        setupCountdown();
+            const now = new Date();
+            setIsExpired(now >= endDate);
+        } else {
+            setEndTime('');
+            setIsExpired(false);
+        }
+    }, [startDate, status]);
 
-        return () => {
-            if (timer) clearInterval(timer);
-        };
-    }, [status]);
-
-    if (status !== 'PENDING') return null;
+    if (status !== 'PENDING' || !endTime) return null;
 
     return (
         <View style={styles.container}>
@@ -71,16 +40,17 @@ const PendingTimer = ({ startDate, status }: PendingTimerProps) => {
                     <Icon
                         name="time-outline"
                         size={16}
-                        color={isExpired ? '#EF4444' : timeLeft < 300 ? '#F59E0B' : '#3B82F6'}
+                        color={isExpired ? '#EF4444' : '#3B82F6'}
                         style={styles.icon}
                     />
-                    <Text style={styles.label}>Expired in:</Text>
+                    <Text style={styles.label}>
+                        {isExpired ? 'Expired at:' : 'Expires at:'}
+                    </Text>
                     <Text style={[
                         styles.timerText,
-                        isExpired && styles.expired,
-                        timeLeft < 300 && !isExpired && styles.warning
+                        isExpired && styles.expired
                     ]}>
-                        {!isExpired && formatTime(timeLeft)}
+                        {endTime}
                     </Text>
                 </View>
             </View>
@@ -115,9 +85,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#3B82F6',
-    },
-    warning: {
-        color: '#F59E0B',
     },
     expired: {
         color: '#EF4444',

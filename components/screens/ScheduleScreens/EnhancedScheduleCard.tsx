@@ -241,7 +241,7 @@ const getStatusColor = (statusValue: string) => ({
 
   return (
     <View style={styles.card}>
-      <PendingTimer startDate={startDate} status={status} />
+      <PendingTimer startDate={created_at} status={status} />
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
           <Icon
@@ -256,7 +256,7 @@ const getStatusColor = (statusValue: string) => ({
         </View>
         <View style={styles.headerRight}>
           <View
-            style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
+            style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
             <Text style={styles.statusText}>{status}</Text>
           </View>
           {status === 'PENDING' && isOwner ? (
