@@ -26,6 +26,15 @@ const CHSHeader = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
+          
+          <TouchableOpacity
+            onPress={() => navigation.navigate('GeneralScheduleScreen' as never)}>
+            <Icon
+              name="calendar-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}>
             <Icon

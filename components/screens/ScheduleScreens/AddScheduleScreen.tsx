@@ -18,7 +18,7 @@ import useScheduleStore from '../../utils/useScheduleStore';
 import { ActivityIndicator } from 'react-native-paper';
 import Toast from 'react-native-toast-message';
 import CommonDialog from '../../commons/CommonDialog';
-
+import { useRoute } from '@react-navigation/native';
 const AddScheduleScreen = () => {
   const MAX_DAYS_SELECTION = 14;
   const MAX_TITLE_LENGTH = 255;
@@ -30,6 +30,9 @@ const AddScheduleScreen = () => {
     description: '',
     days: {},
   });
+  const route = useRoute();
+  const runner = route.params?.runner;
+
   const [selectedDates, setSelectedDates] = useState({});
   const [currentMonth, setCurrentMonth] = useState('');
   const [validDates, setValidDates] = useState<{ [key: string]: any }>({});
@@ -192,7 +195,7 @@ const AddScheduleScreen = () => {
       setIsCreating(true);
       const scheduleData = {
         ...formData,
-        user_id: null,
+        user_id: runner?.id || null,
       };
       const result = await createSchedule(scheduleData);
       await fetchSelfSchedules();
@@ -258,6 +261,14 @@ const AddScheduleScreen = () => {
         </View>
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
           {renderErrorBanner()}
+          {runner && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Icon name="person-outline" size={20} color="#059669" />
+              <Text style={{ marginLeft: 8, fontWeight: '600', color: '#059669', fontSize: 15 }}>
+                Creating schedule for: {runner.name}
+              </Text>
+            </View>
+          )}
           <View style={styles.titleInputContainer}>
             <Text style={styles.sectionTitle}>Schedule Title *</Text>
             <Text style={styles.charCounterText}>

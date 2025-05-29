@@ -11,7 +11,7 @@ import {
   StatusBar,
   RefreshControl,
 } from 'react-native'
-import ContentLoader, {Rect, Circle} from 'react-content-loader/native'
+import ContentLoader, { Rect, Circle } from 'react-content-loader/native'
 import Icon from '@react-native-vector-icons/ionicons'
 import EnhancedScheduleCard from './EnhancedScheduleCard'
 import { useNavigation } from '@react-navigation/native'
@@ -20,7 +20,7 @@ import useScheduleStore from '../../utils/useScheduleStore'
 import CommonDialog from '../../commons/CommonDialog'
 import { theme } from '../../contants/theme'
 import { useLoginStore } from '../../utils/useLoginStore'
-
+import ExpertSchedulePopup from '../../ExpertSchedulePopup'
 const GeneralScheduleScreen = () => {
   const [activeTab, setActiveTab] = useState('All')
   const [showInfoDialog, setShowInfoDialog] = useState(false)
@@ -29,6 +29,7 @@ const GeneralScheduleScreen = () => {
   const navigation = useNavigation()
   const { schedules, ExpertSchedule, isLoading, error, fetchSelfSchedules, fetchExpertSchedule } = useScheduleStore()
   const { profile } = useLoginStore()
+  const [showExpertPopup, setShowExpertPopup] = useState(false);
 
   const combinedSchedules = useMemo(() => {
     const safeSchedules = Array.isArray(schedules) ? schedules : schedules ? [schedules] : []
@@ -133,9 +134,12 @@ const GeneralScheduleScreen = () => {
   }, [])
 
   const handleBlockAddSchedule = () => {
-    hasActiveSchedule ? setShowActiveDialog(true) : navigation.navigate('AddScheduleScreen' as never)
+    if (profile?.roles?.includes('expert')) {
+      setShowExpertPopup(true);
+    } else {
+      hasActiveSchedule ? setShowActiveDialog(true) : navigation.navigate('AddScheduleScreen' as never)
+    }
   }
-
   const renderContent = () => {
     if (error) {
       return (
@@ -251,27 +255,39 @@ const GeneralScheduleScreen = () => {
 
       {renderContent()}
 
-    <CommonDialog
-  visible={showInfoDialog}
-  onClose={() => setShowInfoDialog(false)}
-  title="Schedule Info"
-  content={
-    <View>
-      <Text style={styles.dialogText}>Track all your running workout schedules.</Text>
-      <Text style={styles.dialogText}>- Runners: Monitor goals and dates for personalized training plans.</Text>
-      <Text style={styles.dialogText}>- Experts: Manage and customize schedules for runners.</Text>
-      <Text style={styles.dialogText}>Only one active schedule are allowed for tracking. Complete or modify it before starting a new one.</Text>
-    </View>
-  }
-  actionButtons={[
-    {
-      label: 'Got it',
-      variant: 'contained',
-      color: theme.colors.primaryDark,
-      handler: () => setShowInfoDialog(false),
-    },
-  ]}
-/>
+      <CommonDialog
+        visible={showInfoDialog}
+        onClose={() => setShowInfoDialog(false)}
+        title="Schedule Info"
+        content={
+          <View>
+            <Text style={styles.dialogText}>Track all your running workout schedules.</Text>
+            <Text style={styles.dialogText}>- Runners: Monitor goals and dates for personalized training plans.</Text>
+            <Text style={styles.dialogText}>- Experts: Manage and customize schedules for runners.</Text>
+            <Text style={styles.dialogText}>Only one active schedule are allowed for tracking. Complete or modify it before starting a new one.</Text>
+          </View>
+        }
+        actionButtons={[
+          {
+            label: 'Got it',
+            variant: 'contained',
+            color: theme.colors.primaryDark,
+            handler: () => setShowInfoDialog(false),
+          },
+        ]}
+      />
+      <ExpertSchedulePopup
+        visible={showExpertPopup}
+        onClose={() => setShowExpertPopup(false)}
+        onCreateForRunner={runner => {
+          setShowExpertPopup(false);
+          navigation.navigate('AddScheduleScreen', { runner });
+        }}
+        onCreateForSelf={() => {
+          setShowExpertPopup(false);
+          navigation.navigate('AddScheduleScreen' as never);
+        }}
+      />
       <CommonDialog
         visible={showActiveDialog}
         onClose={() => setShowActiveDialog(false)}
