@@ -15,6 +15,7 @@ import {
 } from './components/routes/routes';
 import useAuthStore from './components/utils/useAuthStore';
 import { getSocket } from './components/utils/socket';
+import {LogBox} from 'react-native';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -99,6 +100,7 @@ const HomeTabs = () => {
 
 const App = () => {
 
+  LogBox.ignoreAllLogs()
   const {loadToken} = useAuthStore();
 
   useEffect(() => {
