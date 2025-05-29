@@ -9,27 +9,27 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import ScreenWrapper from '../../ScreenWrapper';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
-import {useCallback, useState, useRef, useMemo} from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useState, useRef, useMemo } from 'react';
 import {
   ExerciseSession,
   fetchExerciseSessionRecords,
   handleSyncButtonPress,
 } from '../../utils/utils_healthconnect';
-import {format, parseISO} from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import {theme} from '../../contants/theme';
+import { theme } from '../../contants/theme';
 import ToastUtil from '../../utils/utils_toast';
-import {ERSContainer} from './ERSContainer';
-import {ERSContainerSkeleton} from './ERSContainerSkeleton';
-import {ERSInfoDialog} from './ERSInfoDialog';
+import { ERSContainer } from './ERSContainer';
+import { ERSContainerSkeleton } from './ERSContainerSkeleton';
+import { ERSInfoDialog } from './ERSInfoDialog';
 import CommonDialog from '../../commons/CommonDialog';
 import Slider from '@react-native-community/slider';
 import {
   getIconFromExerciseType,
   getNameFromExerciseType,
 } from '../../contants/exerciseType';
-
+import NotificationBell from '../../NotificationRealtime';
 export default function ExerciseRecordsScreen() {
   const navigation = useNavigation();
   const [exerciseSessions, setExerciseSessions] = useState<ExerciseSession[]>([]);
@@ -55,7 +55,7 @@ export default function ExerciseRecordsScreen() {
   const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
 
   // Calculate min/max values from data
-  const {allExerciseTypes, stepsRange, distanceRange} = useMemo(() => {
+  const { allExerciseTypes, stepsRange, distanceRange } = useMemo(() => {
     const types = new Set<string>();
     let minSteps = Infinity;
     let maxSteps = 0;
@@ -108,9 +108,9 @@ export default function ExerciseRecordsScreen() {
       setIsSyncing(true);
       setAccessDetailNavigation(false);
       showSyncStatus('Syncing data...');
-      
+
       const result = await handleSyncButtonPress();
-      
+
       if (result.type === 'SYNC_SUCCESS') {
         showSyncStatus('Sync completed successfully');
         await readSampleData();
@@ -289,7 +289,7 @@ export default function ExerciseRecordsScreen() {
               style={[
                 styles.exerciseTypeItem,
                 selectedExerciseTypes.includes(type) &&
-                  styles.exerciseTypeItemSelected,
+                styles.exerciseTypeItemSelected,
               ]}
               onPress={() => toggleExerciseType(type)}>
               <View style={styles.exerciseTypeTextContainer}>
@@ -315,7 +315,7 @@ export default function ExerciseRecordsScreen() {
               style={[
                 styles.exerciseTypeItem,
                 selectedExerciseTypes.includes(type) &&
-                  styles.exerciseTypeItemSelected,
+                styles.exerciseTypeItemSelected,
               ]}
               onPress={() => toggleExerciseType(type)}>
               <View style={styles.exerciseTypeTextContainer}>
@@ -355,7 +355,7 @@ export default function ExerciseRecordsScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleSyncPress}
             disabled={isSyncing}>
             <Icon
@@ -365,15 +365,8 @@ export default function ExerciseRecordsScreen() {
               style={styles.headerIcon}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ManageNotificationsScreen')}>
-            <Icon
-              name="notifications-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-              style={styles.headerIcon}
-            />
-          </TouchableOpacity>
+          <NotificationBell onPress={() => navigation.navigate('ManageNotificationsScreen' as never)} style={styles.headerIcon} />
+
           <TouchableOpacity
             onPress={() => navigation.navigate('LeaderBoardScreen')}>
             <Icon
@@ -398,7 +391,7 @@ export default function ExerciseRecordsScreen() {
             },
           ]}>
           <Text style={styles.syncStatusText}>{syncStatus}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeSyncStatusButton}
             onPress={hideSyncStatus}>
             <Icon name="close" size={20} color="white" />
@@ -417,15 +410,15 @@ export default function ExerciseRecordsScreen() {
           datePickerMode === 'start'
             ? new Date('2025-01-01')
             : startDate
-            ? new Date(startDate)
-            : new Date('2025-01-01')
+              ? new Date(startDate)
+              : new Date('2025-01-01')
         }
         maximumDate={
           datePickerMode === 'end'
             ? new Date()
             : endDate
-            ? new Date(endDate)
-            : new Date()
+              ? new Date(endDate)
+              : new Date()
         }
       />
 
@@ -537,7 +530,7 @@ export default function ExerciseRecordsScreen() {
 
       <ScrollView
         style={styles.container}
-       >
+      >
         {loading ? (
           <ERSContainerSkeleton />
         ) : error ? (

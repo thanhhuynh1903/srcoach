@@ -4,7 +4,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../../contants/theme';
 import CommonDialog from '../../../commons/CommonDialog';
-
+import NotificationBell from '../../../NotificationRealtime';
 const CHSHeader = () => {
   const navigation = useNavigation();
   const [showInfoDialog, setShowInfoDialog] = useState(false);
@@ -25,8 +25,7 @@ const CHSHeader = () => {
             />
           </TouchableOpacity>
         </View>
-        <View style={styles.headerRight}>
-          
+        <View style={styles.headerRight}>          
           <TouchableOpacity
             onPress={() => navigation.navigate('GeneralScheduleScreen' as never)}>
             <Icon
@@ -35,14 +34,8 @@ const CHSHeader = () => {
               color={theme.colors.primaryDark}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}>
-            <Icon
-              name="notifications-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-            />
-          </TouchableOpacity>
+         <NotificationBell onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}/>
+
           <TouchableOpacity
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
             <Icon

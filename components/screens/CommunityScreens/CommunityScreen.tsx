@@ -25,6 +25,7 @@ import {SaveDraftButton} from './SaveDraftButton';
 import SkeletonPostList from './SkeletonPostList';
 import {getAllNews} from '../../utils/useNewsAPI';
 import CommunityNewsList from './CommunityNewsList';
+import NotificationBell from '../../NotificationRealtime';
 // Interface cho User
 interface User {
   id: string;
@@ -488,17 +489,7 @@ const CommunityScreen = () => {
             onPress={() => navigation.navigate('SearchScreen' as never)}>
             <Icon name="search" size={24} color={theme.colors.primaryDark} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() =>
-              navigation.navigate('ManageNotificationsScreen' as never)
-            }>
-            <Icon
-              name="notifications-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-            />
-          </TouchableOpacity>
+          <NotificationBell onPress={() => navigation.navigate('ManageNotificationsScreen' as never)} style={styles.iconButton}/>
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>

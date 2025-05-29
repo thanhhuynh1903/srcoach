@@ -13,7 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useLoginStore } from './utils/useLoginStore';
 import { CommonAvatar } from './commons/CommonAvatar';
 import { startSyncData } from './utils/utils_healthconnect';
-
+import NotificationBell from './NotificationRealtime';
 const HomeHeader = ({ onSyncPress }: { onSyncPress?: () => void }) => {
   const { profile } = useLoginStore();
   const [time, setTime] = useState({ current: '', date: '' });
@@ -188,12 +188,10 @@ const HomeHeader = ({ onSyncPress }: { onSyncPress?: () => void }) => {
               />
             </Animated.View>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('ManageNotificationsScreen' as never)
-            }>
-            <Icon name="notifications-outline" size={24} color="#fff" />
-          </TouchableOpacity>
+          <NotificationBell
+            onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}
+            iconColor='#fff'
+          />
           <TouchableOpacity
             onPress={() => navigation.navigate('GeneralScheduleScreen' as never)}>
             <Icon name="calendar-outline" size={24} color="#fff" />

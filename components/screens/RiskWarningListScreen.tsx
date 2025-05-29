@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect, useRef} from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,15 @@ import {
   RefreshControl,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import useAiRiskStore from '../utils/useAiRiskStore';
-import {theme} from '../contants/theme';
+import { theme } from '../contants/theme';
 import CommonDialog from '../commons/CommonDialog';
-import ContentLoader, {Rect} from 'react-content-loader/native';
-import {formatDate} from '../utils/utils_format';
-
+import ContentLoader, { Rect } from 'react-content-loader/native';
+import { formatDate } from '../utils/utils_format';
+import NotificationBell from '../NotificationRealtime';
 const filters = ['All', 'High', 'Moderate', 'Normal'];
-const {width} = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const RiskWarningListScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
@@ -222,7 +222,7 @@ const RiskWarningListScreen = () => {
         onPress={() =>
           navigation.navigate(
             'RiskWarningScreen' as never,
-            {alertId: item.id} as never,
+            { alertId: item.id } as never,
           )
         }>
         <Text style={styles.riskTitle} numberOfLines={2}>
@@ -272,7 +272,7 @@ const RiskWarningListScreen = () => {
             <Text
               style={[
                 styles.riskLevel,
-                {color: getSeverityColor(item.severity)},
+                { color: getSeverityColor(item.severity) },
               ]}>
               {item.severity} Risk
             </Text>
@@ -285,8 +285,8 @@ const RiskWarningListScreen = () => {
                       Number(item.score) < 30
                         ? theme.colors.success
                         : Number(item.score) < 60
-                        ? theme.colors.warning
-                        : theme.colors.error,
+                          ? theme.colors.warning
+                          : theme.colors.error,
                   },
                 ]}>
                 {item.score}/100
@@ -315,16 +315,7 @@ const RiskWarningListScreen = () => {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('ManageNotificationsScreen' as never)
-            }>
-            <Icon
-              name="notifications-outline"
-              size={24}
-              color={theme.colors.primaryDark}
-            />
-          </TouchableOpacity>
+          <NotificationBell onPress={() => navigation.navigate('ManageNotificationsScreen' as never)} />
           <TouchableOpacity
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
             <Icon
@@ -347,7 +338,7 @@ const RiskWarningListScreen = () => {
               risks and performance insights.
             </Text>
             <Text
-              style={[styles.dialogText, {marginTop: 12, fontWeight: 'bold'}]}>
+              style={[styles.dialogText, { marginTop: 12, fontWeight: 'bold' }]}>
               Key factors analyzed:
             </Text>
             <View style={styles.dialogBullet}>
@@ -433,7 +424,7 @@ const RiskWarningListScreen = () => {
           },
         ]}
       />
-      <View style={{flexDirection: 'row', marginHorizontal: 16, gap: 10,  marginVertical: 8}}>
+      <View style={{ flexDirection: 'row', marginHorizontal: 16, gap: 10, marginVertical: 8 }}>
         <View style={styles.searchContainer}>
           <Icon name="search" size={20} color="#64748B" />
           <TextInput
@@ -471,14 +462,14 @@ const RiskWarningListScreen = () => {
                 filter === 'Moderate' && styles.moderateRiskFilter,
                 filter === 'Normal' && styles.normalRiskFilter,
                 activeFilter === filter &&
-                  filter === 'High' &&
-                  styles.highRiskFilterActive,
+                filter === 'High' &&
+                styles.highRiskFilterActive,
                 activeFilter === filter &&
-                  filter === 'Moderate' &&
-                  styles.moderateRiskFilterActive,
+                filter === 'Moderate' &&
+                styles.moderateRiskFilterActive,
                 activeFilter === filter &&
-                  filter === 'Normal' &&
-                  styles.normalRiskFilterActive,
+                filter === 'Normal' &&
+                styles.normalRiskFilterActive,
               ]}
               onPress={() => handleFilterChange(filter)}>
               {filter !== 'All' && (
@@ -638,7 +629,7 @@ const styles = StyleSheet.create({
   filterTabActive: {
     backgroundColor: '#2563EB',
     shadowColor: '#2563EB',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
@@ -690,7 +681,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
