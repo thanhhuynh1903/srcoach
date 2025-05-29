@@ -287,6 +287,8 @@ const GeneralScheduleScreen = () => {
           setShowExpertPopup(false);
           navigation.navigate('AddScheduleScreen' as never);
         }}
+        hasActiveSchedule={hasActiveSchedule}
+  setShowActiveDialog={setShowActiveDialog} 
       />
       <CommonDialog
         visible={showActiveDialog}

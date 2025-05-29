@@ -34,6 +34,8 @@ interface ExpertSchedulePopupProps {
     onClose: () => void
     onCreateForRunner: (runner: Runner) => void
     onCreateForSelf: () => void
+    hasActiveSchedule: boolean
+    setShowActiveDialog: (show: boolean) => void
 }
 
 const mockRunners: Runner[] = [
@@ -68,6 +70,8 @@ const ExpertSchedulePopup: React.FC<ExpertSchedulePopupProps> = ({
     onClose,
     onCreateForRunner,
     onCreateForSelf,
+    hasActiveSchedule,
+    setShowActiveDialog,
 }) => {
     const [showRunners, setShowRunners] = useState(false);
     const [selectedRunner, setSelectedRunner] = useState<Runner | null>(null);
@@ -124,9 +128,14 @@ const ExpertSchedulePopup: React.FC<ExpertSchedulePopupProps> = ({
     }
 
     const handleCreateForSelf = () => {
-        Vibration.vibrate(50) // Light haptic feedback
-        onCreateForSelf()
-        handleClose()
+         if (hasActiveSchedule) {
+        setShowActiveDialog(true);
+        handleClose();
+        return;
+    }
+    Vibration.vibrate(50)
+    onCreateForSelf()
+    handleClose()
     }
 
     const getStatusColor = (status?: string) => {
