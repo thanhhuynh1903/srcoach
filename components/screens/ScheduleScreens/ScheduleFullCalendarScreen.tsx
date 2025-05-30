@@ -23,6 +23,7 @@ interface Schedule {
   schedule_type: any;
   expert: any;
   daysList: any;
+  ScheduleDay: any;
 }
 export default function ScheduleFullCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState('');
@@ -32,7 +33,6 @@ export default function ScheduleFullCalendarScreen() {
   const [markedDates, setMarkedDates] = useState({});
   const [displayedSchedules, setDisplayedSchedules] = useState<Schedule[]>([]);;
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const navigation = useNavigation();
 
   // Fixed function to fetch schedules using the correct API
   const fetchSelfSchedules = async () => {
@@ -40,12 +40,12 @@ export default function ScheduleFullCalendarScreen() {
       const response = await fetchOverview();
       if (response !== undefined && Array.isArray(response)) {
         // Transform the API response to match expected structure
-        const transformedSchedules = response.map(item => ({
+        const transformedSchedules = response?.map(item => ({
           id: item.id,
           title: item.title,
           schedule_type: item.expert ? 'EXPERT' : 'USER', // Determine type based on expert presence
           expert: item.expert,
-          ScheduleDay: item.days.map(day => ({
+          ScheduleDay: item?.days?.map(day => ({
             id: day.id,
             day: day.day
           }))
@@ -73,7 +73,7 @@ export default function ScheduleFullCalendarScreen() {
 
     schedules.forEach((schedule, index) => {
       const color = colors[index % colors.length];
-      schedule.ScheduleDay.forEach(day => {
+      schedule?.ScheduleDay?.forEach(day => {
         const dateStr = dayjs(day.day).format('YYYY-MM-DD');
         if (!newMarkedDates[dateStr]) {
           newMarkedDates[dateStr] = {
