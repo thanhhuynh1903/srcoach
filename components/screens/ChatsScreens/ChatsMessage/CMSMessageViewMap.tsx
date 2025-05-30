@@ -66,7 +66,7 @@ export default function CMSMessageViewMap() {
   const mapRef = useRef<MapView>(null);
   const panY = useRef(new Animated.Value(0)).current;
   const { height } = Dimensions.get('window');
-  const infoContainerHeight = height * 0.25;
+  const infoContainerHeight = height * 0.3;
   const [isInfoVisible, setIsInfoVisible] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -151,13 +151,15 @@ export default function CMSMessageViewMap() {
     if (isCollapsed) {
       setIsCollapsed(false);
       setIsInfoVisible(true);
-      Animated.spring(panY, {
+      Animated.timing(panY, {
         toValue: 0,
+        duration: 300,
         useNativeDriver: true,
       }).start();
     } else {
-      Animated.spring(panY, {
+      Animated.timing(panY, {
         toValue: infoContainerHeight,
+        duration: 300,
         useNativeDriver: true,
       }).start(() => {
         setIsCollapsed(true);
@@ -170,6 +172,10 @@ export default function CMSMessageViewMap() {
     const hours = Math.floor(minutes / 60);
     const mins = Math.floor(minutes % 60);
     return `${hours > 0 ? `${hours}h ` : ''}${mins}m`;
+  };
+
+  const formatDecimal = (value: number) => {
+    return Number(value.toFixed(2));
   };
 
   const renderLoadingSkeleton = () => (
@@ -230,7 +236,7 @@ export default function CMSMessageViewMap() {
         <TouchableOpacity
           style={styles.currentLocationButton}
           onPress={handleCurrentLocation}>
-          <Icon name="locate" size={20} color="#1E3A8A" />
+          <Icon name="location" size={20} color="#1E3A8A" />
         </TouchableOpacity>
       </View>
 
@@ -281,7 +287,7 @@ export default function CMSMessageViewMap() {
           style={styles.expandButton} 
           onPress={toggleInfoVisibility}
         >
-          <Icon name="chevron-up" size={24} color="#1E3A8A" />
+          <Icon name="chevron-up" size={32} color="#1E3A8A" />
         </TouchableOpacity>
       )}
 
@@ -291,15 +297,16 @@ export default function CMSMessageViewMap() {
             styles.infoContainer, 
             { 
               height: infoContainerHeight,
-              transform: [{ translateY: panY }] 
+              transform: [{ translateY: panY }],
+              paddingBottom: 20,
             }
           ]}
         >
           <TouchableOpacity 
-            style={styles.dragHandle} 
+            style={styles.toggleButton} 
             onPress={toggleInfoVisibility}
           >
-            <View style={styles.dragHandleIndicator} />
+            <Icon name="chevron-down" size={32} color="#1E3A8A" />
           </TouchableOpacity>
           
           {loading ? (
@@ -312,17 +319,17 @@ export default function CMSMessageViewMap() {
             <>
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
-                  <Icon name="walk-outline" size={24} color="#1E3A8A" />
+                  <Icon name="walk" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Distance</Text>
                     <Text style={styles.infoValue}>
-                      {(exerciseSession.total_distance / 1000).toFixed(2)} km
+                      {formatDecimal(exerciseSession.total_distance / 1000)} km
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.infoItem}>
-                  <Icon name="time-outline" size={24} color="#1E3A8A" />
+                  <Icon name="time" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Duration</Text>
                     <Text style={styles.infoValue}>
@@ -332,7 +339,7 @@ export default function CMSMessageViewMap() {
                 </View>
 
                 <View style={styles.infoItem}>
-                  <Icon name="footsteps-outline" size={24} color="#1E3A8A" />
+                  <Icon name="footsteps" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Steps</Text>
                     <Text style={styles.infoValue}>{exerciseSession.total_steps}</Text>
@@ -342,15 +349,15 @@ export default function CMSMessageViewMap() {
 
               <View style={[styles.infoRow, {marginTop: 12}]}>
                 <View style={styles.infoItem}>
-                  <Icon name="flame-outline" size={24} color="#1E3A8A" />
+                  <Icon name="flame" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Calories</Text>
-                    <Text style={styles.infoValue}>{exerciseSession.total_calories}</Text>
+                    <Text style={styles.infoValue}>{formatDecimal(exerciseSession.total_calories)}</Text>
                   </View>
                 </View>
 
                 <View style={styles.infoItem}>
-                  <Icon name="speedometer-outline" size={24} color="#1E3A8A" />
+                  <Icon name="speedometer" size={24} color="#1E3A8A" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Pace</Text>
                     <Text style={styles.infoValue}>{exerciseSession.avg_pace || 'N/A'}</Text>
@@ -358,11 +365,11 @@ export default function CMSMessageViewMap() {
                 </View>
 
                 <View style={styles.infoItem}>
-                  <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                  <Icon name="heart" size={24} color="#EF4444" />
                   <View style={styles.infoTextContainer}>
                     <Text style={styles.infoLabel}>Heart Rate</Text>
-                    <Text style={styles.infoValue}>
-                      {exerciseSession.heart_rate?.avg || 'N/A'}
+                    <Text style={[styles.infoValue, {color: '#EF4444'}]}>
+                      {exerciseSession.heart_rate?.avg ? formatDecimal(exerciseSession.heart_rate.avg) : 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -371,26 +378,26 @@ export default function CMSMessageViewMap() {
               {exerciseSession.heart_rate && (
                 <View style={[styles.infoRow, {marginTop: 12}]}>
                   <View style={styles.infoItem}>
-                    <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                    <Icon name="heart" size={24} color="#EF4444" />
                     <View style={styles.infoTextContainer}>
                       <Text style={styles.infoLabel}>Min HR</Text>
-                      <Text style={styles.infoValue}>{exerciseSession.heart_rate.min}</Text>
+                      <Text style={[styles.infoValue, {color: '#EF4444'}]}>{formatDecimal(exerciseSession.heart_rate.min)}</Text>
                     </View>
                   </View>
 
                   <View style={styles.infoItem}>
-                    <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                    <Icon name="heart" size={24} color="#EF4444" />
                     <View style={styles.infoTextContainer}>
                       <Text style={styles.infoLabel}>Avg HR</Text>
-                      <Text style={styles.infoValue}>{exerciseSession.heart_rate.avg}</Text>
+                      <Text style={[styles.infoValue, {color: '#EF4444'}]}>{formatDecimal(exerciseSession.heart_rate.avg)}</Text>
                     </View>
                   </View>
 
                   <View style={styles.infoItem}>
-                    <Icon name="heart-outline" size={24} color="#1E3A8A" />
+                    <Icon name="heart" size={24} color="#EF4444" />
                     <View style={styles.infoTextContainer}>
                       <Text style={styles.infoLabel}>Max HR</Text>
-                      <Text style={styles.infoValue}>{exerciseSession.heart_rate.max}</Text>
+                      <Text style={[styles.infoValue, {color: '#EF4444'}]}>{formatDecimal(exerciseSession.heart_rate.max)}</Text>
                     </View>
                   </View>
                 </View>
@@ -460,6 +467,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
+    paddingBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -469,16 +477,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  dragHandle: {
+  toggleButton: {
     width: '100%',
     alignItems: 'center',
-    paddingVertical: 8,
-  },
-  dragHandleIndicator: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#CBD5E1',
+    paddingVertical: 4,
   },
   infoRow: {
     flexDirection: 'row',

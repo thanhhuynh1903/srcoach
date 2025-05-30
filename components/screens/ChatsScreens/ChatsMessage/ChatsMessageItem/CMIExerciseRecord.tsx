@@ -6,13 +6,14 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
+import Icon from '@react-native-vector-icons/material-design-icons';
 import {CommonAvatar} from '../../../../commons/CommonAvatar';
 import {theme} from '../../../../contants/theme';
 import {formatTimestampAgo} from '../../../../utils/utils_format';
 import {getNameFromExerciseType} from '../../../../contants/exerciseType';
 import CommonDialog from '../../../../commons/CommonDialog';
 import {archiveMessage} from '../../../../utils/useChatsAPI';
+import { Divider } from 'react-native-paper';
 
 const {width} = Dimensions.get('window');
 const BUBBLE_WIDTH = width * 0.8;
@@ -22,11 +23,13 @@ interface CMIExerciseRecordProps {
     id: string;
     content: {
       stats?: {
-        avg_heart_rate?: number;
+        min_heart_rate?: number;
         max_heart_rate?: number;
+        avg_heart_rate?: number;
         total_distance?: number;
         total_steps?: number;
         total_calories?: number;
+        avg_pace?: number;
       };
       exercise_type?: string;
     } | null;
@@ -113,7 +116,7 @@ export const CMIExerciseRecord = ({
             </Text>
             {isMe && (
               <Icon
-                name={message.read_at ? 'checkmark-done' : 'checkmark'}
+                name={message.read_at ? 'check-all' : 'check'}
                 size={14}
                 color={message.read_at ? '#d3d3d3' : 'rgba(255,255,255,0.5)'}
                 style={styles.icon}
@@ -124,6 +127,13 @@ export const CMIExerciseRecord = ({
       </View>
     );
   }
+
+  const formatPace = (pace: number | undefined) => {
+    if (!pace) return 'N/A';
+    const minutes = Math.floor(pace);
+    const seconds = Math.round((pace % 1) * 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds} min/km`;
+  };
 
   return (
     <>
@@ -157,7 +167,7 @@ export const CMIExerciseRecord = ({
             activeOpacity={0.9}>
             <View style={styles.header}>
               <Icon
-                name="pulse"
+                name="heart-pulse"
                 size={20}
                 color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
               />
@@ -167,75 +177,131 @@ export const CMIExerciseRecord = ({
             </View>
 
             <View style={styles.statsContainer}>
-              <View style={styles.statRow}>
+              {/* Heart Rate Row - All in one line */}
+              <View style={styles.heartRateRow}>
                 <View style={styles.statItem}>
                   <Icon
-                    name="heart"
+                    name="heart-multiple"
                     size={14}
                     color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
                   />
-                  <Text style={[styles.statText, isMe && styles.myText]}>
-                    {stats.avg_heart_rate || 'N/A'} bpm
-                  </Text>
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Avg</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {stats.avg_heart_rate || 'N/A'} bpm
+                    </Text>
+                  </View>
                 </View>
+                
                 <View style={styles.statItem}>
                   <Icon
-                    name="speedometer"
+                    name="heart-plus"
                     size={14}
                     color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
                   />
-                  <Text style={[styles.statText, isMe && styles.myText]}>
-                    {stats.max_heart_rate || 'N/A'} max
-                  </Text>
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Max</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {stats.max_heart_rate || 'N/A'} bpm
+                    </Text>
+                  </View>
                 </View>
               </View>
-
               <View style={styles.statRow}>
+                 <View style={styles.statItem}>
+                  <Icon
+                    name="heart-minus"
+                    size={14}
+                    color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
+                  />
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Min</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {stats.min_heart_rate || 'N/A'} bpm
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <Divider style={{marginBottom: 10}} />
+
+              {/* Distance and Steps Row */}
+              <View style={styles.statRow}>
+                <View style={styles.statItem}>
+                  <Icon
+                    name="map-marker-distance"
+                    size={14}
+                    color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
+                  />
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Distance</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {stats.total_distance
+                        ? (stats.total_distance / 1000).toFixed(2)
+                        : '0.00'} km
+                    </Text>
+                  </View>
+                </View>
+                
                 <View style={styles.statItem}>
                   <Icon
                     name="walk"
                     size={14}
                     color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
                   />
-                  <Text style={[styles.statText, isMe && styles.myText]}>
-                    {stats.total_distance
-                      ? (stats.total_distance / 1000).toFixed(2)
-                      : '0'}{' '}
-                    km
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Icon
-                    name="footsteps"
-                    size={14}
-                    color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
-                  />
-                  <Text style={[styles.statText, isMe && styles.myText]}>
-                    {stats.total_steps || '0'} steps
-                  </Text>
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Steps</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {stats.total_steps || '0'}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
+              {/* Calories and Pace Row */}
               <View style={styles.statRow}>
                 <View style={styles.statItem}>
                   <Icon
-                    name="flame"
+                    name="fire"
                     size={14}
                     color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
                   />
-                  <Text style={[styles.statText, isMe && styles.myText]}>
-                    {stats.total_calories?.toFixed(0) || '0'} kcal
-                  </Text>
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Calories</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {stats.total_calories?.toFixed(0) || '0'} kcal
+                    </Text>
+                  </View>
                 </View>
+                
                 <View style={styles.statItem}>
                   <Icon
-                    name="time"
+                    name="speedometer"
                     size={14}
                     color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
                   />
-                  <Text style={[styles.statText, isMe && styles.myText]}>
-                    {getNameFromExerciseType(message.content?.exercise_type)}
-                  </Text>
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Avg Pace</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {formatPace(stats.avg_pace)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Exercise Type */}
+              <View style={styles.statRow}>
+                <View style={styles.statItem}>
+                  <Icon
+                    name="run-fast"
+                    size={14}
+                    color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
+                  />
+                  <View style={styles.statTextContainer}>
+                    <Text style={[styles.statLabel, isMe && styles.myText]}>Activity</Text>
+                    <Text style={[styles.statValue, isMe && styles.myText]}>
+                      {getNameFromExerciseType(message.content?.exercise_type)}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -248,7 +314,7 @@ export const CMIExerciseRecord = ({
               onPress={onViewMap}
               activeOpacity={0.7}>
               <Icon
-                name="map"
+                name="map-outline"
                 size={16}
                 color={isMe ? '#d3d3d3' : theme.colors.primaryDark}
               />
@@ -264,7 +330,7 @@ export const CMIExerciseRecord = ({
               </Text>
               {isMe && (
                 <Icon
-                  name={message.read_at ? 'checkmark-done' : 'checkmark'}
+                  name={message.read_at ? 'check-all' : 'check'}
                   size={14}
                   color={message.read_at ? '#d3d3d3' : 'rgba(255,255,255,0.5)'}
                   style={styles.icon}
@@ -290,7 +356,7 @@ export const CMIExerciseRecord = ({
                 setShowArchiveDialog(false);
                 setShowConfirmDialog(true);
               }}>
-              <Icon name="archive" size={20} color={theme.colors.primaryDark} />
+              <Icon name="delete-outline" size={20} color={theme.colors.primaryDark} />
               <Text style={styles.dialogActionButtonText}>Delete</Text>
             </TouchableOpacity>
           </View>
@@ -394,25 +460,34 @@ const styles = StyleSheet.create({
   statsContainer: {
     marginBottom: 12,
   },
+  heartRateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  statText: {
+  statTextContainer: {
     marginLeft: 8,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#666',
+    textTransform: 'uppercase',
+  },
+  statValue: {
     fontSize: 13,
     fontWeight: '500',
     color: '#000',
+    marginTop: 2,
   },
   myText: {
     color: '#fff',
