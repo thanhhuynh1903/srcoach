@@ -365,7 +365,7 @@ const CommunityScreen = () => {
           </View>
         ))}
         <View style={styles.tag}>
-          <Text style={styles.tagText}>more +{tags.length - 3}</Text>
+          <Text style={styles.tagText}>+{tags.length - 3}</Text>
         </View>
       </View>
     );

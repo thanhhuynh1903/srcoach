@@ -519,32 +519,6 @@ const getStatusColor = (statusValue: string) => ({
           onPress={() => setModalVisible(false)}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHandle} />
-            {status !== 'PENDING' &&
-              status !== 'MISSED' &&
-              status !== 'COMPLETED' &&
-              !isOwner && (
-                <>
-                  <View style={styles.modalAlarmSection}>
-                    <View style={styles.modalAlarmHeader}>
-                      <Icon name="alarm-outline" size={24} color="#3B82F6" />
-                      <Text style={styles.modalAlarmTitle}>Alarm Settings</Text>
-                    </View>
-                    <View style={styles.modalAlarmControl}>
-                      <Text style={styles.modalAlarmText}>
-                        Enable workout reminders
-                      </Text>
-                      <Switch
-                        value={alarmEnabled}
-                        onValueChange={setAlarmEnabled}
-                        trackColor={{ false: '#E2E8F0', true: '#3B82F6' }}
-                        thumbColor="#fff"
-                        ios_backgroundColor="#E2E8F0"
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.modalDivider} />
-                </>
-              )}
             {isOwner || !isExpertChoice ? (
               <>
                 <TouchableOpacity
