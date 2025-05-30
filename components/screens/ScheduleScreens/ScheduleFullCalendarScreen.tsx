@@ -18,6 +18,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 interface Schedule {
   id: any;
   name: any;
+  title: any;
   days: any;
   color: string;
   schedule_type: any;
