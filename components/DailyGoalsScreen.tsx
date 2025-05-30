@@ -52,7 +52,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, Record<string, string>>
   >({});
-  
+
   const hasAnyValidationError = () => {
     for (const sessionKey in validationErrors) {
       if (!validationErrors.hasOwnProperty(sessionKey)) continue;
@@ -281,7 +281,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   };
   const canAddSession = (sessions: TrainingSession[]) => {
     if (!sessions || sessions.length === 0) return true;
-
+    if(sessions.length >= 5) return false;
     return true;
   };
   const getTimeError = (inputTime: string, day: string) => {

@@ -12,22 +12,56 @@ import BackButton from '../../BackButton';
 import useScheduleStore from '../../utils/useScheduleStore';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import dayjs from 'dayjs';
-import {CommonAvatar} from '../../commons/CommonAvatar';
 import ContentLoader from 'react-content-loader/native';
 import {Rect} from 'react-native-svg';
 import Ionicons from '@react-native-vector-icons/ionicons';
-
+interface Schedule {
+  id: any;
+  name: any;
+  days: any;
+  color: string;
+  schedule_type: any;
+  expert: any;
+  daysList: any;
+}
 export default function ScheduleFullCalendarScreen() {
   const [selectedDate, setSelectedDate] = useState('');
   const [currentMonth, setCurrentMonth] = useState(dayjs().format('YYYY-MM-01'));
-  const {fetchSelfSchedules, schedules, loading} = useScheduleStore();
+  const {fetchOverview} = useScheduleStore();
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [markedDates, setMarkedDates] = useState({});
-  const [displayedSchedules, setDisplayedSchedules] = useState([]);
+  const [displayedSchedules, setDisplayedSchedules] = useState<Schedule[]>([]);;
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const navigation = useNavigation();
 
+  // Fixed function to fetch schedules using the correct API
+  const fetchSelfSchedules = async () => {
+    try {
+      const response = await fetchOverview();
+      if (response !== undefined && Array.isArray(response)) {
+        // Transform the API response to match expected structure
+        const transformedSchedules = response.map(item => ({
+          id: item.id,
+          title: item.title,
+          schedule_type: item.expert ? 'EXPERT' : 'USER', // Determine type based on expert presence
+          expert: item.expert,
+          ScheduleDay: item.days.map(day => ({
+            id: day.id,
+            day: day.day
+          }))
+        }));
+        setSchedules(transformedSchedules);
+      } else {
+        setSchedules([]);
+      }
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      setSchedules([]);
+    }
+  };
+
   const generateMarkedDates = useCallback(() => {
-    const newMarkedDates = {};
+    const newMarkedDates : { [key: string]: any } = {};
     const colors = ['#1E3A8A', '#10B981', '#F97316', '#8B5CF6', '#EC4899'];
 
     const today = dayjs().format('YYYY-MM-DD');
@@ -222,21 +256,6 @@ export default function ScheduleFullCalendarScreen() {
               />
               <View style={styles.scheduleInfo}>
                 <Text style={styles.scheduleName}>{schedule.name}</Text>
-                {schedule.schedule_type === 'EXPERT' && schedule.expert && (
-                  <TouchableOpacity
-                    style={styles.expertInfo}
-                    onPress={() => {
-                      navigation.navigate('UserProfileScreen', {
-                        userId: schedule.expert?.id,
-                      });
-                    }}>
-                    <Text style={styles.expertLabel}>Created by</Text>
-                    <CommonAvatar uri={schedule.expert?.image?.url} size={18} />
-                    <Text style={styles.expertLabel}>
-                      {schedule.expert?.name} (@{schedule.expert?.username})
-                    </Text>
-                  </TouchableOpacity>
-                )}
               </View>
               <Text style={styles.scheduleDays}>{schedule.days} days</Text>
             </View>

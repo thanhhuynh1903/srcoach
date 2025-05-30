@@ -48,6 +48,7 @@ interface ScheduleState {
   currentSchedule: Schedule | null;
   message: string | null; // Thêm thuộc tính message để lưu thông báo từ API
   // Actions
+  fetchOverview: () => Promise<void>;
   fetchSelfSchedules: () => Promise<void>;
   fetchExpertSchedule: () => Promise<void>;
   fetchDetail: (scheduleId: string) => Promise<Schedule | null>;
@@ -87,7 +88,20 @@ const useScheduleStore = create<ScheduleState>()(
       error: null,
       currentSchedule: null,
       message: null,
+      fetchOverview: async () => {
+        try {
+          const response = await api.fetchData(
+            `/schedules/expert/overview-created`,
+          );
 
+          return response?.data || [];
+        } catch (error) {
+          console.error(
+            'Error getting personal training schedule list:',
+            error,
+          );
+        }
+      },
       fetchSelfSchedules: async () => {
         set({isLoading: true, error: null});
         try {
