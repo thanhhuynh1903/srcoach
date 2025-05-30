@@ -1,7 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View, Text, Image, Animated, Easing} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {startSyncData} from '../utils/utils_healthconnect';
 import {useLoginStore} from '../utils/useLoginStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@react-native-vector-icons/ionicons';
