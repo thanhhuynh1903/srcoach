@@ -182,69 +182,8 @@ const DeviceNotificationScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* Divider */}
             <View style={styles.divider} />
-
-            {/* Individual Notification Settings - Only show if overall is on */}
-            {notificationSettings.overall && hasNotificationPermission && (
-              <>
-                {/* Posts Notifications */}
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <Icon name="newspaper" size={20} color="#4DDAB8" />
-                    <Text style={styles.settingLabel}>Posts & Updates</Text>
-                  </View>
-                  <Switch
-                    value={notificationSettings.posts}
-                    onValueChange={() => toggleSwitch('posts')}
-                    trackColor={{ false: "#767577", true: "#4DDAB8" }}
-                    thumbColor={notificationSettings.posts ? "#4DDAB8" : "#f4f3f4"}
-                  />
-                </View>
-
-                {/* Chats Notifications */}
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <Icon name="chatbubbles" size={20} color="#FFA45B" />
-                    <Text style={styles.settingLabel}>Messages & Chats</Text>
-                  </View>
-                  <Switch
-                    value={notificationSettings.chats}
-                    onValueChange={() => toggleSwitch('chats')}
-                    trackColor={{ false: "#767577", true: "#FFA45B" }}
-                    thumbColor={notificationSettings.chats ? "#FFA45B" : "#f4f3f4"}
-                  />
-                </View>
-
-                {/* News Notifications */}
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <Icon name="megaphone" size={20} color="#9C5BFF" />
-                    <Text style={styles.settingLabel}>News & Announcements</Text>
-                  </View>
-                  <Switch
-                    value={notificationSettings.news}
-                    onValueChange={() => toggleSwitch('news')}
-                    trackColor={{ false: "#767577", true: "#9C5BFF" }}
-                    thumbColor={notificationSettings.news ? "#9C5BFF" : "#f4f3f4"}
-                  />
-                </View>
-
-                {/* Reminders Notifications */}
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <Icon name="alarm" size={20} color="#5C7CFA" />
-                    <Text style={styles.settingLabel}>Training Reminders</Text>
-                  </View>
-                  <Switch
-                    value={notificationSettings.reminders}
-                    onValueChange={() => toggleSwitch('reminders')}
-                    trackColor={{ false: "#767577", true: "#5C7CFA" }}
-                    thumbColor={notificationSettings.reminders ? "#5C7CFA" : "#f4f3f4"}
-                  />
-                </View>
-              </>
-            )}
+       
           </View>
 
           {/* App Settings Link */}

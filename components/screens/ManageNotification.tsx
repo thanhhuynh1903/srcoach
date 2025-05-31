@@ -165,7 +165,8 @@ const ManageNotification = () => {
           schedule: formattedNotifications.filter(
             n =>
               n.type.startsWith('schedule_') ||
-              n.type === 'schedule_updated'
+              n.type === 'schedule_updated' ||
+              n.type === 'schedule_deleted',
           ).length,
         };
         setNotificationStats(stats);
@@ -245,7 +246,8 @@ const ManageNotification = () => {
         return notifications.filter(
           notification =>
             notification.type.startsWith('schedule_') ||
-            notification.type === 'schedule_updated'
+            notification.type === 'schedule_updated' ||
+            notification.type === 'schedule_deleted'
         );
       default:
         return notifications;

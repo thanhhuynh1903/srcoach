@@ -49,6 +49,7 @@ const SettingsScreen = ({ navigation }: { navigation: any }) => {
     await clearExpertSchedule();
     await clearHistorySchedules();
     await AsyncStorage.removeItem('authToken');
+    await AsyncStorage.removeItem('authTokenTimestamp');
     await clear();
     await clearToken();
     await clearAll();
