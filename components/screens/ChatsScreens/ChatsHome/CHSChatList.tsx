@@ -80,6 +80,8 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
   onDeny,
 }) => {
   const navigation = useNavigation();
+  const {profile} = useLoginStore();
+  const isExpert = profile?.roles?.includes('expert');
   const getStatusColor = () => {
     switch (session.status) {
       case 'ACCEPTED':
@@ -122,6 +124,7 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
     session.other_user.roles.includes('expert') ? 'expert' : 'runner';
   const showActionButtons =
     session.status === 'PENDING' && !session.is_initiator;
+  const isDisabled = session.status === 'PENDING' && !isExpert;
 
   return (
     <View
@@ -129,7 +132,10 @@ const ChatListItem: React.FC<ChatListItemProps> = ({
         styles.chatItemContainer,
         {borderLeftWidth: 4, borderLeftColor: getStatusColor()},
       ]}>
-      <TouchableOpacity style={styles.chatItem} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.chatItem}
+        onPress={onPress}
+        disabled={isDisabled}>
         <View style={styles.avatarContainer}>
           <TouchableOpacity
             onPress={() =>

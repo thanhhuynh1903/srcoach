@@ -350,20 +350,23 @@ export const CMSSidePanelInfo = ({
         ) : info ? (
           <ScrollView style={styles.contentContainer}>
             <View style={styles.userHeader}>
-              <CommonAvatar uri={info.other_user.image?.url} size={80} />
+              <CommonAvatar
+                uri={info.other_user.image?.url}
+                size={80}
+                mode={
+                  info.other_user.roles?.includes('expert')
+                    ? 'expert'
+                    : 'runner'
+                }
+              />
               <Text style={styles.userName}>{info.other_user.name}</Text>
               <Text style={styles.username}>@{info.other_user.username}</Text>
 
               {info.other_user.roles && info.other_user.roles.length > 0 && (
                 <View style={styles.rolesContainer}>
-                  {info.other_user.roles.map((role, index) => (
-                    <React.Fragment key={role}>
-                      {renderRoleChip(role)}
-                      {index < info.other_user.roles!.length - 1 && (
-                        <View style={styles.roleSpacer} />
-                      )}
-                    </React.Fragment>
-                  ))}
+                  {info.other_user.roles.includes('expert')
+                    ? renderRoleChip('expert')
+                    : renderRoleChip('runner')}
                 </View>
               )}
             </View>

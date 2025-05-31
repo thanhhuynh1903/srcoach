@@ -184,8 +184,7 @@ const EnhancedScheduleCard = ({
 
   const handleContact = () => {
     setModalVisible(false);
-    // Placeholder for contact functionality
-    Toast.show({ type: 'info', text1: 'Contact feature under maintenance' });
+    navigation.navigate("ChatsMessageScreen", {userId: expert_id});
   };
 
   const selectedDaySchedule = daySchedules.find(

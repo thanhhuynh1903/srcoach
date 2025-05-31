@@ -38,6 +38,11 @@ export const CMIProfile = ({
   const [issues, setIssues] = useState('');
   const [type, setType] = useState('WALKING');
   const [showTypePicker, setShowTypePicker] = useState(false);
+  const [errors, setErrors] = useState({
+    height: '',
+    weight: '',
+    type: '',
+  });
 
   useEffect(() => {
     // Initialize with message data if available
@@ -47,22 +52,67 @@ export const CMIProfile = ({
     if (message.content?.type) setType(message.content.type);
   }, [message]);
 
-  const handleSubmit = () => {
-    if (!height || !weight || !type) return;
+  const validateField = (field: string, value: string) => {
+    if (field === 'height' || field === 'weight') {
+      if (!value) {
+        return 'This field is required';
+      }
+      if (isNaN(parseFloat(value)) || parseFloat(value) <= 0) {
+        return 'Please enter a valid number';
+      }
+      return '';
+    }
+    if (field === 'type') {
+      return value ? '' : 'Please select a running type';
+    }
+    return '';
+  };
 
-    onProfileSubmit?.(message.id, {
-      height: parseFloat(height),
-      weight: parseFloat(weight),
-      issues: issues || undefined,
-      type,
-    });
+  const validateAllFields = () => {
+    const newErrors = {
+      height: validateField('height', height),
+      weight: validateField('weight', weight),
+      type: validateField('type', type),
+    };
+    setErrors(newErrors);
+    return !newErrors.height && !newErrors.weight && !newErrors.type;
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    if (field === 'height') setHeight(value);
+    if (field === 'weight') setWeight(value);
+    if (field === 'issues') setIssues(value);
+    if (field === 'type') setType(value);
+
+    setErrors((prev) => ({
+      ...prev,
+      [field]: validateField(field, value),
+    }));
+  };
+
+  const handleSubmit = () => {
+    if (validateAllFields()) {
+      onProfileSubmit?.(message.id, {
+        height: parseFloat(height),
+        weight: parseFloat(weight),
+        issues: issues || undefined,
+        type,
+      });
+    }
   };
 
   const renderRequiredIndicator = () => (
     <Text style={styles.requiredIndicator}> *</Text>
   );
 
-  const renderFormField = (label: string, value: string, isRequired: boolean, isEditable: boolean, renderInput: () => React.ReactNode) => {
+  const renderFormField = (
+    label: string,
+    value: string,
+    isRequired: boolean,
+    isEditable: boolean,
+    error: string,
+    renderInput: () => React.ReactNode,
+  ) => {
     return (
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>
@@ -70,7 +120,10 @@ export const CMIProfile = ({
           {isRequired && renderRequiredIndicator()}
         </Text>
         {isEditable ? (
-          renderInput()
+          <>
+            {renderInput()}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          </>
         ) : (
           <View style={styles.filledInput}>
             <Text style={styles.filledInputText}>{value}</Text>
@@ -80,16 +133,19 @@ export const CMIProfile = ({
     );
   };
 
+  const isSubmitDisabled = !!errors.height || !!errors.weight || !!errors.type || !height || !weight || !type;
+
   return (
     <View style={styles.centeredContainer}>
-      <View style={[
-        styles.formContainer,
-        message.content.is_filled && styles.filledFormContainer
-      ]}>
+      <View
+        style={[
+          styles.formContainer,
+          message.content.is_filled && styles.filledFormContainer,
+        ]}>
         <Text style={styles.formTitle}>
           {isMe
-            ? message.content.is_filled 
-              ? "Runner's Profile" 
+            ? message.content.is_filled
+              ? "Runner's Profile"
               : 'Waiting for runner to fill profile'
             : message.content.is_filled
               ? 'Your Profile'
@@ -101,15 +157,16 @@ export const CMIProfile = ({
           message.content.height ? `${message.content.height} cm` : '',
           !message.content.is_filled && !isMe,
           !message.content.is_filled && !isMe,
+          errors.height,
           () => (
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.height && styles.inputError]}
               keyboardType="numeric"
               placeholder="Enter height in cm"
               value={height}
-              onChangeText={setHeight}
+              onChangeText={(text) => handleInputChange('height', text)}
             />
-          )
+          ),
         )}
 
         {renderFormField(
@@ -117,15 +174,16 @@ export const CMIProfile = ({
           message.content.weight ? `${message.content.weight} kg` : '',
           !message.content.is_filled && !isMe,
           !message.content.is_filled && !isMe,
+          errors.weight,
           () => (
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.weight && styles.inputError]}
               keyboardType="numeric"
               placeholder="Enter weight in kg"
               value={weight}
-              onChangeText={setWeight}
+              onChangeText={(text) => handleInputChange('weight', text)}
             />
-          )
+          ),
         )}
 
         {renderFormField(
@@ -133,9 +191,10 @@ export const CMIProfile = ({
           message.content.type ? message.content.type.replace(/_/g, ' ') : '',
           !message.content.is_filled && !isMe,
           !message.content.is_filled && !isMe,
+          errors.type,
           () => (
             <TouchableOpacity
-              style={styles.typePickerTrigger}
+              style={[styles.typePickerTrigger, errors.type && styles.inputError]}
               onPress={() => setShowTypePicker(true)}>
               <Text style={styles.typePickerText}>
                 {type.replace(/_/g, ' ')}
@@ -146,7 +205,7 @@ export const CMIProfile = ({
                 color={theme.colors.primaryDark}
               />
             </TouchableOpacity>
-          )
+          ),
         )}
 
         {renderFormField(
@@ -154,22 +213,23 @@ export const CMIProfile = ({
           message.content.issues || 'None',
           false,
           !message.content.is_filled && !isMe,
+          '',
           () => (
             <TextInput
               style={[styles.input, styles.multilineInput]}
               multiline
               placeholder="Any health concerns?"
               value={issues}
-              onChangeText={setIssues}
+              onChangeText={(text) => handleInputChange('issues', text)}
             />
-          )
+          ),
         )}
 
         {!message.content.is_filled && !isMe && (
           <TouchableOpacity
-            style={styles.submitButton}
+            style={[styles.submitButton, isSubmitDisabled && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={!height || !weight || !type}>
+            disabled={isSubmitDisabled}>
             <Text style={styles.submitButtonText}>Submit Profile</Text>
           </TouchableOpacity>
         )}
@@ -216,7 +276,10 @@ export const CMIProfile = ({
             </View>
             <Picker
               selectedValue={type}
-              onValueChange={itemValue => setType(itemValue)}
+              onValueChange={(itemValue) => {
+                handleInputChange('type', itemValue);
+                // setShowTypePicker(false); // Optional: Close picker on selection
+              }}
               style={styles.picker}>
               <Picker.Item label="Walking" value="WALKING" />
               <Picker.Item label="Light Run" value="LIGHT_RUN" />
@@ -285,6 +348,9 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 14,
   },
+  inputError: {
+    borderColor: 'red',
+  },
   filledInput: {
     borderWidth: 1,
     borderColor: '#eee',
@@ -319,6 +385,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  submitButtonDisabled: {
+    backgroundColor: '#cccccc',
+  },
   submitButtonText: {
     color: '#fff',
     fontSize: 14,
@@ -335,6 +404,11 @@ const styles = StyleSheet.create({
   },
   requiredIndicator: {
     color: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginTop: 4,
   },
   pickerModalContainer: {
     flex: 1,
