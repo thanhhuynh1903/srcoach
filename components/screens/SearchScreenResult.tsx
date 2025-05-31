@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -20,9 +20,9 @@ import {usePostStore} from '../utils/usePostStore';
 import {useNavigation} from '@react-navigation/native';
 import {useLoginStore} from '../utils/useLoginStore';
 import {useFocusEffect} from '@react-navigation/native';
-import React from 'react';
 import {theme} from '../contants/theme';
 import {CommonAvatar} from '../commons/CommonAvatar';
+import { listSessions } from '../utils/useChatsAPI';
 
 type SearchResult = {
   id: string;
@@ -45,19 +45,51 @@ type SearchResult = {
     avatar?: string;
   };
 };
+
 type User = {
   id: number;
   name: string;
   username: string;
   bio?: string;
   image?: {url: string};
+  roles?: string[];
 };
-const SearchResultsScreen = ({}) => {
-  // In a real app, you would get the query from route.params
+
+type ChatSession = {
+  id: string;
+  status: string;
+  created_at: string;
+  is_expert_session: boolean;
+  expert_rating_allowed: boolean;
+  user_archived: boolean;
+  is_initiator: boolean;
+  other_user: {
+    id: string;
+    name: string;
+    username: string;
+    email: string;
+    image: {url: string} | null;
+    points: number;
+    user_level: string;
+    roles: string[];
+  };
+  last_message: {
+    id: string;
+    message_type: string;
+    created_at: string;
+    archived: boolean;
+    content: any;
+  } | null;
+  unread_count: number;
+  initial_message?: string;
+};
+
+const SearchResultsScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const navigate = useNavigation();
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const navigation = useNavigation();
   const {
     searchAll,
     searchPost,
@@ -67,19 +99,29 @@ const SearchResultsScreen = ({}) => {
     searchError,
     likePost,
   } = usePostStore();
-
   const {profile} = useLoginStore();
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
     }, 500);
-
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const fetchSessions = async () => {
+    try {
+      const response = await listSessions(null);
+      if (response.status) {
+        setSessions(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    }
+  };
+
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
+      fetchSessions();
       if (debouncedQuery) {
         searchAll(debouncedQuery);
         searchPost({title: debouncedQuery});
@@ -95,6 +137,50 @@ const SearchResultsScreen = ({}) => {
     }
   };
 
+  const getExpertSessionStatus = (expertId: number) => {
+    const session = sessions.find(
+      session =>
+        session.other_user.id === expertId.toString() &&
+        session.is_expert_session,
+    );
+    return session ? session.status : null;
+  };
+
+  const hasPendingExpertSession = sessions.some(
+    session => session.is_expert_session && session.status === 'PENDING',
+  );
+
+  const getAcceptedExpertSession = () => {
+    return sessions.find(
+      session => session.is_expert_session && session.status === 'ACCEPTED',
+    );
+  };
+
+  const handleExpertChatPress = (expert: User) => {
+    const sessionStatus = getExpertSessionStatus(expert.id);
+    const acceptedSession = getAcceptedExpertSession();
+
+    // If there's a PENDING expert session, all chat buttons are disabled
+    if (hasPendingExpertSession) {
+      return;
+    }
+
+    // If there's an ACCEPTED session, only the corresponding expert's chat is enabled
+    if (acceptedSession) {
+      if (acceptedSession.other_user.id === expert.id.toString()) {
+        navigation.navigate('ChatsMessageScreen', {userId: expert.id});
+      }
+      return;
+    }
+
+    // If no expert session or no accepted session, follow the provided logic
+    if (sessionStatus === 'ACCEPTED') {
+      navigation.navigate('ChatsMessageScreen', {userId: expert.id});
+    } else {
+      navigation.navigate('ChatsExpertNotiScreen', {userId: expert.id});
+    }
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Icon name="search-outline" size={40} color="#94A3B8" />
@@ -106,13 +192,11 @@ const SearchResultsScreen = ({}) => {
     </View>
   );
 
-  const renderTags = (tags: Tag[]) => {
+  const renderTags = (tags: string[] = []) => {
     if (!tags || tags.length === 0) {
       return null;
     }
-    console.log('tags', tags);
 
-    // Nếu có 1-2 tags, hiển thị tất cả
     if (tags.length <= 4) {
       return (
         <View style={styles.tagsContainer}>
@@ -125,7 +209,6 @@ const SearchResultsScreen = ({}) => {
       );
     }
 
-    // Nếu có nhiều hơn 2 tags, hiển thị 2 đầu tiên + "+n"
     return (
       <View style={styles.tagsContainer}>
         <View style={styles.tag}>
@@ -149,16 +232,14 @@ const SearchResultsScreen = ({}) => {
       key={post.id}
       style={styles.postCard}
       onPress={() =>
-        navigate.navigate('CommunityPostDetailScreen', {
-          id: post.id,
-        })
+        navigation.navigate('CommunityPostDetailScreen', {id: post.id})
       }>
       <TouchableOpacity
         style={styles.postHeader}
         onPress={() =>
           post?.user?.id === profile.id
-            ? navigate.navigate('RunnerProfileScreen')
-            : navigate.navigate('OtherProfileScreen', {postId: post?.id})
+            ? navigation.navigate('RunnerProfileScreen')
+            : navigation.navigate('OtherProfileScreen', {postId: post?.id})
         }>
         <CommonAvatar mode={null} uri={post?.user?.image?.url} size={36} />
         <View style={{marginLeft: 8}}>
@@ -233,14 +314,19 @@ const SearchResultsScreen = ({}) => {
       </View>
     </TouchableOpacity>
   );
+
   const renderUserItem = (user: User) => (
     <TouchableOpacity
       key={user.id}
       style={styles.userCard}
       onPress={() =>
-        navigate.navigate('OtherProfileScreen', {postId: user.id})
+        navigation.navigate('OtherProfileScreen', {postId: user.id})
       }>
-      <CommonAvatar uri={user.image?.url} mode={user?.roles[0]} size={40} />
+      <CommonAvatar
+        uri={user.image?.url}
+        mode={user.roles?.includes('expert') ? 'expert' : 'runner'}
+        size={40}
+      />
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{user.name}</Text>
         <Text style={styles.userDetail}>@{user.username}</Text>
@@ -249,21 +335,51 @@ const SearchResultsScreen = ({}) => {
     </TouchableOpacity>
   );
 
-  const renderExpertItem = (expert: User) => (
-    <TouchableOpacity
-      key={expert.id}
-      style={styles.userCard}
-      onPress={() =>
-        navigate.navigate('OtherProfileScreen', {postId: expert.id})
-      }>
-      <CommonAvatar uri={expert.image?.url} mode={expert?.roles[0]} size={40} />
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{expert.name}</Text>
-        <Text style={styles.userDetail}>@{expert.username}</Text>
-        {expert.bio && <Text style={styles.userBio}>{expert.bio}</Text>}
+  const renderExpertItem = (expert: User) => {
+    const sessionStatus = getExpertSessionStatus(expert.id);
+    const acceptedSession = getAcceptedExpertSession();
+    const isChatDisabled =
+      hasPendingExpertSession ||
+      (acceptedSession &&
+        acceptedSession.other_user.id !== expert.id.toString());
+
+    return (
+      <View key={expert.id} style={styles.userCard}>
+        <TouchableOpacity
+          style={styles.userCardContent}
+          onPress={() =>
+            navigation.navigate('OtherProfileScreen', {postId: expert.id})
+          }>
+          <CommonAvatar
+            uri={expert.image?.url}
+            mode={expert?.roles?.includes('expert') ? 'expert' : 'runner'}
+            size={40}
+          />
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{expert.name}</Text>
+            <Text style={styles.userDetail}>@{expert.username}</Text>
+            {expert.bio && <Text style={styles.userBio}>{expert.bio}</Text>}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.chatButton,
+            isChatDisabled && styles.disabledChatButton,
+          ]}
+          onPress={() => handleExpertChatPress(expert)}
+          disabled={isChatDisabled}>
+          <View style={styles.chatButtonContainer}>
+            <Icon
+              name="chatbubble-outline"
+              size={24}
+              color={theme.colors.primaryDark}
+            />
+            {hasPendingExpertSession && <View style={styles.pendingBadge} />}
+          </View>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const handleLikePost = async (postId: string, isLike: boolean) => {
     if (!profile) {
@@ -272,11 +388,6 @@ const SearchResultsScreen = ({}) => {
       ]);
       return;
     }
-    console.log('postId', postId);
-    console.log('isLike', isLike);
-
-    // Không cần cập nhật localSearchResults nữa vì đã xử lý trong store
-    // Chỉ cần gọi likePost
     try {
       await likePost(postId, isLike);
     } catch (error) {
@@ -285,11 +396,14 @@ const SearchResultsScreen = ({}) => {
     }
   };
 
+  // Filter out experts from runners
+  const filteredRunners = allSearchResults.runners.filter(
+    user => !user.roles?.includes('expert'),
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-
-      {/* Header with Search Bar */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton}>
           <BackButton size={24} />
@@ -312,8 +426,6 @@ const SearchResultsScreen = ({}) => {
           />
         </View>
       </View>
-
-      {/* Tab Navigation */}
       <View style={styles.tabsContainer}>
         {['All', 'People', 'Posts', 'Experts', 'Runners'].map(tab => (
           <TouchableOpacity
@@ -330,7 +442,6 @@ const SearchResultsScreen = ({}) => {
           </TouchableOpacity>
         ))}
       </View>
-
       <ScrollView style={styles.content}>
         {searchLoading ? (
           <View style={styles.loadingContainer}>
@@ -362,18 +473,16 @@ const SearchResultsScreen = ({}) => {
                         {allSearchResults.experts.map(renderExpertItem)}
                       </>
                     )}
-
-                    {allSearchResults.runners.length > 0 && (
+                    {filteredRunners.length > 0 && (
                       <>
                         <Text style={styles.sectionTitle}>Runners</Text>
-                        {allSearchResults.runners.map(renderUserItem)}
+                        {filteredRunners.map(renderUserItem)}
                       </>
                     )}
                   </>
                 )}
               </>
             )}
-
             {activeTab === 'Posts' && (
               <>
                 {searchResults && searchResults.length > 0
@@ -381,7 +490,6 @@ const SearchResultsScreen = ({}) => {
                   : renderEmptyState()}
               </>
             )}
-
             {activeTab === 'People' && (
               <>
                 {allSearchResults.users.length > 0
@@ -389,7 +497,6 @@ const SearchResultsScreen = ({}) => {
                   : renderEmptyState()}
               </>
             )}
-
             {activeTab === 'Experts' && (
               <>
                 {allSearchResults.experts.length > 0
@@ -397,11 +504,10 @@ const SearchResultsScreen = ({}) => {
                   : renderEmptyState()}
               </>
             )}
-
             {activeTab === 'Runners' && (
               <>
-                {allSearchResults.runners.length > 0
-                  ? allSearchResults.runners.map(renderUserItem)
+                {filteredRunners.length > 0
+                  ? filteredRunners.map(renderUserItem)
                   : renderEmptyState()}
               </>
             )}
@@ -425,7 +531,6 @@ const styles = StyleSheet.create({
   },
   postImage: {width: '100%', height: 200, borderRadius: 10, marginBottom: 10},
   postImagePlaceholder: {backgroundColor: '#e0e0e0'},
-
   backButton: {
     marginRight: 12,
   },
@@ -494,12 +599,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  authorImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
   authorName: {
     fontSize: 16,
     fontWeight: '600',
@@ -556,7 +655,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-
   postStats: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
@@ -569,57 +667,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginLeft: 4,
-  },
-  expertCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  expertImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 16,
-  },
-  expertInfo: {
-    flex: 1,
-  },
-  expertNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  expertName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginRight: 4,
-  },
-  expertSpecialty: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 14,
-    color: '#64748B',
-    marginLeft: 4,
-  },
-  followButton: {
-    backgroundColor: '#0F2B5B',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  followButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
@@ -653,7 +700,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#64748B',
+    color: '#94A3B8',
     textAlign: 'center',
     paddingHorizontal: 20,
   },
@@ -699,6 +746,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
+  userCardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   userInfo: {
     flex: 1,
     marginLeft: 16,
@@ -717,6 +769,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginTop: 8,
+  },
+  chatButton: {
+    padding: 8,
+  },
+  chatButtonContainer: {
+    position: 'relative',
+  },
+  disabledChatButton: {
+    opacity: 0.5,
+  },
+  pendingBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFC107',
   },
 });
 
