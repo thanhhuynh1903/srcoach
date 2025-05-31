@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,13 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
 import BackButton from '../../BackButton';
-import {launchImageLibrary} from 'react-native-image-picker';
-import {usePostStore} from '../../utils/usePostStore';
-import {useNavigation} from '@react-navigation/native';
-import type {ExerciseRecord} from './RecordSelectionModal';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { usePostStore } from '../../utils/usePostStore';
+import { useNavigation } from '@react-navigation/native';
+import type { ExerciseRecord } from './RecordSelectionModal';
 import RecordSelectionButton from './RecordSelectionButton';
 import image_placeholder from '../../assets/Posts/image_placeholder.jpg';
-
+import Toast from 'react-native-toast-message';
 interface CommunityPostCreateScreenProps {
   onPost?: (postData: PostData) => void;
 }
@@ -51,20 +51,17 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   const [tagCount, setTagCount] = useState(0);
   const [tagError, setTagError] = useState('');
 
-  const {createPost, isLoading, status, message, getAll, getMyPosts} =
+  const { createPost, isLoading, status, message, getAll, getMyPosts } =
     usePostStore();
 
   // Theo dõi số lượng tags
   useEffect(() => {
-    const tagArray = tags.split(',').filter(tag => tag.trim() !== '');
-    setTagCount(tagArray.length);
-
-    if (tagArray.length > MAX_TAGS) {
-      setTagError(`Maximum ${MAX_TAGS} tags allowed`);
-    } else {
-      setTagError('');
-    }
-  }, [tags]);
+  const tagArray = tags
+    .split(',')
+    .map(tag => tag.trim().toLowerCase())
+    .filter(tag => tag !== '');
+  setTagCount(tagArray.length);
+}, [tags]);
 
   const handleAddImage = () => {
     if (selectedImages.length >= MAX_IMAGES) {
@@ -117,12 +114,25 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
     setTags(text);
 
     // Kiểm tra số lượng tags ngay khi người dùng nhập
-    const tagArray = text.split(',').filter(tag => tag.trim() !== '');
+    const tagArray = text
+      .split(',')
+      .map(tag => tag.trim().toLowerCase())
+      .filter(tag => tag !== '');
+
+    // Kiểm tra số lượng tags
     if (tagArray.length > MAX_TAGS) {
       setTagError(`Maximum ${MAX_TAGS} tags allowed`);
-    } else {
-      setTagError('');
+      return;
     }
+
+    // Kiểm tra tag trùng
+    const tagSet = new Set(tagArray);
+    if (tagSet.size < tagArray.length) {
+      setTagError('Duplicate tags are not allowed');
+      return;
+    }
+    setTagError('');
+
   };
 
   const handlePost = async () => {
@@ -130,11 +140,29 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
       Alert.alert('Missing information', 'Please enter both title and content');
       return;
     }
+    if (title.trim().length > 255) {
+      Alert.alert('Title too long', 'Title must be at most 255 characters');
+      return;
+    }
+    if (content.trim().length > 500) {
+      Alert.alert('Content too long', 'Content must be at most 500 characters');
+      return;
+    }
 
-    // Kiểm tra số lượng tags
-    const tagArray = tags.split(',').filter(tag => tag.trim() !== '');
+    const tagArray = tags
+      .split(',')
+      .map(tag => tag.trim().toLowerCase())
+      .filter(tag => tag !== '');
+
     if (tagArray.length > MAX_TAGS) {
       Alert.alert('Too many tags', `You can only add up to ${MAX_TAGS} tags`);
+      return;
+    }
+
+    // Kiểm tra tag trùng
+    const tagSet = new Set(tagArray);
+    if (tagSet.size < tagArray.length) {
+      Alert.alert('Duplicate tags', 'Duplicate tags are not allowed');
       return;
     }
 
@@ -164,9 +192,13 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
       console.log('status', usePostStore.getState().status);
       // Thành công, quay lại màn hình trước đó
-      Alert.alert('Success', 'Created post successfully', [
-        {text: 'OK', onPress: () => navigation.goBack()},
-      ]);
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Created post successfully',
+      });
+      navigation.goBack();
+
       await getAll();
       await getMyPosts();
     } catch (error: any) {
@@ -179,17 +211,20 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
   };
 
   const isPostButtonEnabled =
-    title.trim() !== '' && content.trim() !== '' && !tagError;
+  title.trim() !== '' &&
+  content.trim() !== '' &&
+  !tagError &&
+  tagCount <= MAX_TAGS;
 
   // Hiển thị ảnh mẫu nếu không có ảnh được chọn
   const displayImages =
     selectedImages.length > 0
-      ? selectedImages.map(img => ({uri: img.uri}))
+      ? selectedImages.map(img => ({ uri: img.uri }))
       : [
-          {uri: Image.resolveAssetSource(image_placeholder).uri},
-          {uri: Image.resolveAssetSource(image_placeholder).uri},
-          {uri: Image.resolveAssetSource(image_placeholder).uri},
-        ];
+        { uri: Image.resolveAssetSource(image_placeholder).uri },
+        { uri: Image.resolveAssetSource(image_placeholder).uri },
+        { uri: Image.resolveAssetSource(image_placeholder).uri },
+      ];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,7 +252,11 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
               placeholderTextColor="#999"
               value={title}
               onChangeText={setTitle}
+              maxLength={255}
             />
+            <Text style={styles.limitText}>
+              {title.length}/255
+            </Text>
           </View>
 
           {/* Content */}
@@ -232,7 +271,11 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
               textAlignVertical="top"
               value={content}
               onChangeText={setContent}
+              maxLength={500}
             />
+            <Text style={styles.limitText}>
+              {content.length}/500
+            </Text>
           </View>
 
           {/* Images */}
@@ -265,7 +308,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
                 <Text
                   style={[
                     styles.addImageText,
-                    selectedImages.length >= MAX_IMAGES && {color: '#ccc'},
+                    selectedImages.length >= MAX_IMAGES && { color: '#ccc' },
                   ]}>
                   Add
                 </Text>
@@ -273,20 +316,20 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 
               {selectedImages.length > 0
                 ? selectedImages.map((image, index) => (
-                    <View key={index} style={styles.imageContainer}>
-                      <Image source={{uri: image.uri}} style={styles.image} />
-                      <TouchableOpacity
-                        style={styles.removeImageButton}
-                        onPress={() => handleRemoveImage(index)}>
-                        <Icon name="close-circle" size={22} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
-                  ))
+                  <View key={index} style={styles.imageContainer}>
+                    <Image source={{ uri: image.uri }} style={styles.image} />
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => handleRemoveImage(index)}>
+                      <Icon name="close-circle" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))
                 : displayImages.map((image, index) => (
-                    <View key={index} style={styles.imageContainer}>
-                      <Image source={{uri: image.uri}} style={styles.image} />
-                    </View>
-                  ))}
+                  <View key={index} style={styles.imageContainer}>
+                    <Image source={{ uri: image.uri }} style={styles.image} />
+                  </View>
+                ))}
             </ScrollView>
           </View>
 
@@ -353,7 +396,7 @@ const CommunityPostCreateScreen: React.FC<CommunityPostCreateScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#fff'},
+  container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -371,12 +414,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {fontSize: 18, fontWeight: '600', color: '#000'},
-  headerRight: {width: 40},
-  keyboardAvoidView: {flex: 1},
-  scrollView: {flex: 1, paddingHorizontal: 16, paddingTop: 16},
-  formGroup: {marginBottom: 20},
-  label: {fontSize: 16, fontWeight: '500', color: '#000', marginBottom: 8},
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#000' },
+  headerRight: { width: 40 },
+  keyboardAvoidView: { flex: 1 },
+  scrollView: { flex: 1, paddingHorizontal: 16, paddingTop: 16 },
+  formGroup: { marginBottom: 20 },
+  limitText: {
+    fontSize: 12,
+    color: '#999',
+    alignSelf: 'flex-end',
+    marginTop: 4,
+  },
+  label: { fontSize: 16, fontWeight: '500', color: '#000', marginBottom: 8 },
   labelContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -422,9 +471,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  inputText: {fontSize: 16, color: '#333'},
-  placeholderText: {fontSize: 16, color: '#999'},
-  imagesContainer: {flexDirection: 'row', marginBottom: 8},
+  inputText: { fontSize: 16, color: '#333' },
+  placeholderText: { fontSize: 16, color: '#999' },
+  imagesContainer: { flexDirection: 'row', marginBottom: 8 },
   addImageButton: {
     width: 80,
     height: 80,
@@ -438,9 +487,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     opacity: 0.7,
   },
-  addImageText: {fontSize: 14, color: '#999', marginTop: 4},
-  imageContainer: {position: 'relative', marginRight: 12},
-  image: {width: 80, height: 80, borderRadius: 8},
+  addImageText: { fontSize: 14, color: '#999', marginTop: 4 },
+  imageContainer: { position: 'relative', marginRight: 12 },
+  image: { width: 80, height: 80, borderRadius: 8 },
   removeImageButton: {
     position: 'absolute',
     top: -8,
@@ -457,9 +506,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 20,
   },
-  runRecordText: {fontSize: 16, color: '#666', marginLeft: 12},
-  chevronIcon: {marginLeft: 'auto'},
-  bottomSpacer: {height: 40},
+  runRecordText: { fontSize: 16, color: '#666', marginLeft: 12 },
+  chevronIcon: { marginLeft: 'auto' },
+  bottomSpacer: { height: 40 },
   footer: {
     padding: 16,
     borderTopWidth: 1,
@@ -473,8 +522,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  postButtonDisabled: {backgroundColor: '#002366', opacity: 0.6},
-  postButtonText: {fontSize: 16, fontWeight: '600', color: '#fff'},
+  postButtonDisabled: { backgroundColor: '#002366', opacity: 0.6 },
+  postButtonText: { fontSize: 16, fontWeight: '600', color: '#fff' },
   errorContainer: {
     padding: 12,
     backgroundColor: '#ffebee',

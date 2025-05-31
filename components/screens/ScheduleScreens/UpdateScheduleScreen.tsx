@@ -76,11 +76,12 @@ const UpdateScheduleScreen = () => {
             session.status === 'INCOMING'),
       );
 
-      const cleanedDays = validDays?.map((day: DailySchedule) => ({
-        ...day,
-        details: day.details.map(({ status, ...rest }) => rest), // Bỏ trường status
-      }));
-
+      const cleanedDays = dailyGoals.map((day: DailySchedule) => ({
+  ...day,
+  details: day.details.map(({ status, ...rest }) => rest), // chỉ bỏ status, giữ nguyên các session
+}));
+      console.log('cleanedDays', cleanedDays);
+      
       const formData = {
         title,
         description,
@@ -97,7 +98,6 @@ const UpdateScheduleScreen = () => {
       } else {
         // Nếu là lịch cá nhân
         console.log('formData', formData);
-        
         result = await updateSchedule(scheduleId, formData);
       }
 

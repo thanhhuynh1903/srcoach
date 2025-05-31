@@ -14,6 +14,8 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import { format } from 'date-fns';
 import { US } from 'date-fns/locale';
+import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
+
 interface TrainingSession {
   description: string;
   start_time: string;
@@ -35,9 +37,8 @@ interface DailyGoalsSectionProps {
   selectedDates: Record<string, any>;
   onGoalsChange: (schedule: DailySchedule[]) => void;
   initialSchedules?: DailySchedule[];
-  view?: boolean
+  view?: boolean;
   onErrorStateChange?: (hasError: boolean) => void;
-
 }
 
 const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
@@ -45,13 +46,16 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   onGoalsChange,
   onErrorStateChange,
   initialSchedules = [],
-  view = false
+  view = false,
 }) => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [dailySchedule, setDailySchedule] = useState<DailySchedule[]>([]);
   const [validationErrors, setValidationErrors] = useState<
     Record<string, Record<string, string>>
   >({});
+  const [showStartPicker, setShowStartPicker] = useState<{ [key: string]: boolean }>({}); // State để hiển thị DateTimePicker cho start_time
+  const [showEndPicker, setShowEndPicker] = useState<{ [key: string]: boolean }>({}); // State để hiển thị DateTimePicker cho end_time
+  const [selectedTime, setSelectedTime] = useState<{ [key: string]: Date }>({}); // Lưu thời gian tạm thời khi chọn
 
   const hasAnyValidationError = () => {
     for (const sessionKey in validationErrors) {
@@ -69,6 +73,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       onErrorStateChange(hasAnyValidationError());
     }
   }, [validationErrors]);
+
   // Thời gian mặc định cho các buổi tập
   const defaultSessions = {
     morning: {
@@ -102,22 +107,97 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       goal_maxbpms: 120,
     },
   };
+
+  const getSessionIntervalErrorIndexes = (sessions: TrainingSession[]) => {
+    const errorIndexes: number[] = [];
+    for (let i = 0; i < sessions.length - 1; i++) {
+      const prevEnd = new Date(sessions[i].end_time).getTime();
+      const nextStart = new Date(sessions[i + 1].start_time).getTime();
+      if (nextStart - prevEnd < 30 * 60 * 1000) {
+        errorIndexes.push(i + 1); // session sau bị lỗi
+      }
+    }
+    return errorIndexes;
+  };
+
+  useEffect(() => {
+    // Xóa hết lỗi session_interval trước
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      Object.keys(newErrors).forEach(key => {
+        if (newErrors[key]?.session_interval) {
+          delete newErrors[key].session_interval;
+          if (Object.keys(newErrors[key]).length === 0) {
+            delete newErrors[key];
+          }
+        }
+      });
+      return newErrors;
+    });
+
+    // Sau đó set lại nếu có lỗi mới, cho tất cả session sau bị lỗi
+    dailySchedule.forEach((day, dayIndex) => {
+      const errorIndexes = getSessionIntervalErrorIndexes(day.details);
+      errorIndexes.forEach(idx => {
+        const sessionKey = `${dayIndex}-${idx}`;
+        setValidationErrors(prev => ({
+          ...prev,
+          [sessionKey]: {
+            ...prev[sessionKey],
+            session_interval: `Each session must be at least 30 minutes apart (between session ${idx} and ${idx + 1})`,
+          },
+        }));
+      });
+    });
+  }, [dailySchedule]);
+  const getSessionOverlapError = (newStart: string, newEnd: string, existingSessions: TrainingSession[], day: string) => {
+    try {
+      const newStartDate = new Date(newStart).getTime();
+      const newEndDate = new Date(newEnd).getTime();
+      const dayDate = new Date(day).setUTCHours(0, 0, 0, 0);
+
+      for (const session of existingSessions) {
+        const existingStart = new Date(session.start_time).getTime();
+        const existingEnd = new Date(session.end_time).getTime();
+        const existingDay = new Date(session.start_time).setUTCHours(0, 0, 0, 0);
+
+        // Chỉ kiểm tra nếu cùng ngày
+        if (existingDay === dayDate) {
+          const gapBeforeStart = newStartDate - existingEnd;
+          const gapAfterEnd = existingStart - newEndDate;
+
+          if (gapBeforeStart > 0 && gapBeforeStart < 30 * 60 * 1000) {
+            return `Start time must be at least 30 minutes after the end of the previous session (ends at ${extractTime(session.end_time)})`;
+          }
+          if (gapAfterEnd > 0 && gapAfterEnd < 30 * 60 * 1000) {
+            return `End time must be at least 30 minutes before the start of the next session (starts at ${extractTime(session.start_time)})`;
+          }
+          if (newStartDate < existingEnd && newEndDate > existingStart) {
+            return `Session overlaps with existing session from ${extractTime(session.start_time)} to ${extractTime(session.end_time)}.`;
+          }
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
   const getSessionTimeGapError = (start: string, end: string) => {
     try {
       const startDate = new Date(start);
       const endDate = new Date(end);
       const diffMs = endDate.getTime() - startDate.getTime();
       const diffMin = diffMs / (60 * 1000);
-      if (diffMin < 5) return 'The end time must be at least 5 minutes from the start time.';
-      if (diffMin > 240) return 'The end time must not be more than 4 hours from the start time.';
+      if (diffMin < 5) return 'The session must be at least 5 minutes long.';
+      if (diffMin > 240) return 'The session must not be more than 4 hours long.';
       return null;
     } catch {
       return null;
     }
   };
-  // Hàm kiểm tra và sửa lỗi dữ liệu trước khi gửi đi
+
   const getDistanceError = (value: number | null) => {
-    if (value == null) return null; // Không lỗi nếu không có mục tiêu
+    if (value == null) return null;
     if (value < 1.0) return 'Distance must be at least 1.0 km from 25km';
     if (value > 25) return 'Distance must be at least 1.0 km from 25km';
     return null;
@@ -140,45 +220,39 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   const validateAndFixScheduleData = (
     scheduleData: DailySchedule[],
   ): DailySchedule[] => {
-    return scheduleData.map(day => {
-      return {
-        day: day.day,
-        details: day.details.map(session => {
-          return {
-            description: session.description || 'Session',
-            status: session.status,
-            start_time: session.start_time,
-            end_time: session.end_time,
-            goal_steps:
-              typeof session.goal_steps === 'string'
-                ? Number.parseInt(session.goal_steps)
-                : session.goal_steps,
-            goal_distance:
-              typeof session.goal_distance === 'string'
-                ? Math.min(Number.parseFloat(session.goal_distance), 9999.99)
-                : session.goal_distance !== null
-                  ? Math.min(session.goal_distance, 9999.99)
-                  : null,
-
-            goal_calories:
-              typeof session.goal_calories === 'string'
-                ? Number.parseInt(session.goal_calories)
-                : session.goal_calories,
-            goal_minbpms:
-              typeof session.goal_minbpms === 'string'
-                ? Number.parseInt(session.goal_minbpms)
-                : session.goal_minbpms,
-            goal_maxbpms:
-              typeof session.goal_maxbpms === 'string'
-                ? Number.parseInt(session.goal_maxbpms)
-                : session.goal_maxbpms,
-          };
-        }),
-      };
-    });
+    return scheduleData.map(day => ({
+      day: day.day,
+      details: day.details.map(session => ({
+        description: session.description || 'Session',
+        status: session.status,
+        start_time: session.start_time,
+        end_time: session.end_time,
+        goal_steps:
+          typeof session.goal_steps === 'string'
+            ? Number.parseInt(session.goal_steps)
+            : session.goal_steps,
+        goal_distance:
+          typeof session.goal_distance === 'string'
+            ? Math.min(Number.parseFloat(session.goal_distance), 9999.99)
+            : session.goal_distance !== null
+              ? Math.min(session.goal_distance, 9999.99)
+              : null,
+        goal_calories:
+          typeof session.goal_calories === 'string'
+            ? Number.parseInt(session.goal_calories)
+            : session.goal_calories,
+        goal_minbpms:
+          typeof session.goal_minbpms === 'string'
+            ? Number.parseInt(session.goal_minbpms)
+            : session.goal_minbpms,
+        goal_maxbpms:
+          typeof session.goal_maxbpms === 'string'
+            ? Number.parseInt(session.goal_maxbpms)
+            : session.goal_maxbpms,
+      })),
+    }));
   };
 
-  // Khởi tạo lịch cho các ngày được chọn
   useEffect(() => {
     const newSchedule: DailySchedule[] = [];
     const initialData = initialSchedules || [];
@@ -186,11 +260,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     Object.keys(selectedDates)
       .sort()
       .forEach(date => {
-        // Kiểm tra xem ngày đã có trong lịch chưa
         const initialDay = initialData.find(item => item.day === date);
 
         if (initialDay) {
-          // Nếu có dữ liệu ban đầu, sử dụng nó
           newSchedule.push(initialDay);
         } else {
           const existingDay = dailySchedule.find(item => item.day === date);
@@ -198,7 +270,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
           if (existingDay) {
             newSchedule.push(existingDay);
           } else {
-            // Thêm ngày mới với buổi sáng mặc định
             const now = new Date();
             const currentHour = now.getHours();
 
@@ -223,21 +294,18 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
         }
       });
 
-    // Loại bỏ các ngày không còn được chọn
     const filteredSchedule = newSchedule.filter(day =>
       Object.keys(selectedDates).includes(day.day),
     );
 
-    // Kiểm tra và sửa lỗi dữ liệu
     const validatedSchedule = validateAndFixScheduleData(filteredSchedule);
 
     setDailySchedule(validatedSchedule);
     onGoalsChange(validatedSchedule);
-  }, [selectedDates, initialSchedules !== undefined]);
+  }, [selectedDates, initialSchedules]);
 
   useEffect(() => {
     if (initialSchedules.length > 0) {
-      // Validate dữ liệu ban đầu
       const validated = validateAndFixScheduleData(initialSchedules);
       setDailySchedule(validated);
       onGoalsChange(validated);
@@ -251,25 +319,14 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
 
   const canEditSession = (session: TrainingSession, view: boolean | null) => {
     if (view) return false;
-    if (
-      session.status === 'MISSED' ||
-      session.status === 'COMPLETED' ||
-      session.status === 'INCOMING' ||
-      session.status === 'ONGOING'
-    ) return false;
+    if (session.status === 'MISSED' || session.status === 'COMPLETED' || session.status === 'INCOMING' || session.status === 'ONGOING') return false;
 
     try {
-      // Lấy giờ Việt Nam hiện tại (UTC+7)
       const now = new Date();
       const vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-
-      // Parse thời gian bắt đầu từ ISO string
       const startDate = new Date(session.start_time);
-
-      // Tính khoảng cách thời gian (tính cả chênh lệch ngày)
       const timeDiff = startDate.getTime() - vnNow.getTime();
 
-      // Chặn chỉnh sửa nếu còn dưới 30 phút
       if (timeDiff < 30 * 60 * 1000) {
         return true;
       }
@@ -279,18 +336,17 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       return false;
     }
   };
+
   const canAddSession = (sessions: TrainingSession[]) => {
     if (!sessions || sessions.length === 0) return true;
-    if(sessions.length >= 5) return false;
+    if (sessions.length >= 5) return false;
     return true;
   };
+
   const getTimeError = (inputTime: string, day: string) => {
     try {
-      // Lấy giờ hiện tại ở Việt Nam
       const now = new Date();
       const vnNow = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-
-      // Parse ngày và giờ input thành giờ Việt Nam
       const [year, month, date] = day.split('-').map(Number);
       const [hours, minutes] = inputTime.split(':').map(Number);
       const inputVN = new Date(Date.UTC(year, month - 1, date, hours, minutes));
@@ -309,6 +365,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       return 'Invalid time';
     }
   };
+
   const toggleDay = (date: string) => {
     setExpandedDay(expandedDay === date ? null : date);
   };
@@ -318,13 +375,11 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const day = newSchedule[dayIndex];
     const date = day.day;
 
-    // Lấy giờ hiện tại
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const isToday = date === todayStr;
-    const currentHour = isToday ? now.getHours() : 6; // Nếu là hôm nay thì lấy giờ hiện tại, nếu không thì mặc định 6h
+    const currentHour = isToday ? now.getHours() : 6;
 
-    // Chọn template phù hợp
     let sessionTemplate = defaultSessions.morning;
     if (currentHour >= 17) {
       sessionTemplate = defaultSessions.evening;
@@ -332,13 +387,11 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       sessionTemplate = defaultSessions.afternoon;
     }
 
-    // Set start_time và end_time cho session mới (giờ hiện tại +1, +2)
     const startHour = (currentHour + 1) % 24;
     const endHour = (currentHour + 2) % 24;
     const start_time = `${date}T${startHour.toString().padStart(2, '0')}:00:00.000Z`;
     const end_time = `${date}T${endHour.toString().padStart(2, '0')}:00:00.000Z`;
 
-    // Không cho phép thêm nếu có session MISSED/COMPLETED
     if (day.details.some(s => s.status === 'MISSED' || s.status === 'COMPLETED')) {
       return;
     }
@@ -353,17 +406,16 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     setDailySchedule(newSchedule);
     onGoalsChange(validateAndFixScheduleData(newSchedule));
   };
+
   const removeSession = (dayIndex: number, sessionIndex: number) => {
     const newSchedule = [...dailySchedule];
 
-    // Không cho phép xóa nếu chỉ còn 1 buổi tập
     if (newSchedule[dayIndex].details.length <= 1) {
       return;
     }
 
     newSchedule[dayIndex].details.splice(sessionIndex, 1);
 
-    // Xóa thông báo lỗi cho buổi tập đã xóa
     const newValidationErrors = { ...validationErrors };
     const sessionKey = `${dayIndex}-${sessionIndex}`;
     if (newValidationErrors[sessionKey]) {
@@ -388,12 +440,10 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       newValidationErrors[sessionKey] = {};
     }
 
-    // Xóa lỗi cũ nếu có
     if (newValidationErrors[sessionKey][field]) {
       delete newValidationErrors[sessionKey][field];
     }
 
-    // Kiểm tra các điều kiện
     let error = null;
     if (field === 'goal_distance') {
       error = getDistanceError(value);
@@ -402,11 +452,14 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     } else if (field === 'goal_steps') {
       error = getStepsError(value);
     }
-
     if (error) {
       newValidationErrors[sessionKey][field] = error;
-    } else if (Object.keys(newValidationErrors[sessionKey]).length === 0) {
-      delete newValidationErrors[sessionKey];
+    } else {
+      delete newValidationErrors[sessionKey][field];
+      // Nếu không còn lỗi nào ở sessionKey thì xóa luôn key
+      if (Object.keys(newValidationErrors[sessionKey]).length === 0) {
+        delete newValidationErrors[sessionKey];
+      }
     }
 
     setValidationErrors(newValidationErrors);
@@ -416,100 +469,106 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     dayIndex: number,
     sessionIndex: number,
     field: keyof TrainingSession,
-    value: any,
+    value: Date | string,
   ) => {
     const newSchedule = [...dailySchedule];
     const session = newSchedule[dayIndex].details[sessionIndex];
+    const sessionKey = `${dayIndex}-${sessionIndex}`;
+    const existingSessions = [...newSchedule[dayIndex].details].filter((_, idx) => idx !== sessionIndex);
+    const day = newSchedule[dayIndex].day;
 
     if (field === 'start_time' || field === 'end_time') {
-      // Xử lý cập nhật thời gian
-      const [hours = '00', minutes = '00'] = value.split(':');
-      const cleanHours = Math.min(23, Math.max(0, parseInt(hours) || 0));
-      const cleanMinutes = Math.min(59, Math.max(0, parseInt(minutes) || 0));
-
-      const timeString = `${newSchedule[dayIndex].day}T${cleanHours
-        .toString()
-        .padStart(2, '0')}:${cleanMinutes.toString().padStart(2, '0')}:00.000Z`;
-
+      const timeString = value instanceof Date
+        ? value.toISOString()
+        : `${day}T${value}:00.000Z`;
       session[field] = timeString;
+
       const start = field === 'start_time' ? timeString : session.start_time;
       const end = field === 'end_time' ? timeString : session.end_time;
       const gapError = getSessionTimeGapError(start, end);
+      const overlapError = getSessionOverlapError(start, end, existingSessions, day);
 
-      const sessionKey = `${dayIndex}-${sessionIndex}`;
       setValidationErrors(prev => ({
         ...prev,
         [sessionKey]: {
           ...prev[sessionKey],
           time_gap: gapError ?? '',
+          ...(field === 'start_time' && { start_time: getTimeError(extractTime(start), day) ?? '' }),
+          overlap_error: overlapError ?? '',
         },
       }));
-
     } else if (
       field === 'goal_steps' ||
       field === 'goal_calories' ||
       field === 'goal_minbpms' ||
       field === 'goal_maxbpms'
     ) {
-      // Đảm bảo các giá trị số nguyên được lưu dưới dạng số, không phải chuỗi
-      const newValue = Number.parseInt(value) || 0;
+      const newValue = Number.parseInt(value as string) || 0;
       if (newValue === 0) {
         session[field] = null;
       } else {
         session[field] = newValue;
       }
 
-      // Validate immediately after updating
       if (field === 'goal_steps' || field === 'goal_calories') {
         validateField(dayIndex, sessionIndex, field, newValue);
       }
     } else if (field === 'goal_distance') {
       const newValue =
-        value === null ? null : Math.min(Number.parseFloat(value), 9999.99);
+        (value as string) === null ? null : Math.min(Number.parseFloat(value as string), 9999.99);
       session[field] = isNaN(newValue) ? null : newValue;
 
-      // Validate immediately after updating
       validateField(dayIndex, sessionIndex, field, newValue);
     } else {
-      // Xử lý các trường khác
-      session[field] = value;
+      session[field] = value as string;
     }
 
     setDailySchedule(newSchedule);
     onGoalsChange(validateAndFixScheduleData(newSchedule));
   };
 
-  // Hàm trích xuất giờ:phút từ chuỗi ISO
   const extractTime = (isoString: string) => {
     try {
       const date = new Date(isoString);
-      if (isNaN(date.getTime())) return '00:00'; // Xử lý trường hợp invalid date
-
+      if (isNaN(date.getTime())) return '';
       return `${date.getUTCHours().toString().padStart(2, '0')}:${date
         .getUTCMinutes()
         .toString()
         .padStart(2, '0')}`;
     } catch (error) {
-      return '00:00'; // Trả về giá trị mặc định nếu có lỗi
+      return '';
     }
   };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED':
-        return '#22C55E'; // Xanh lá
+        return '#22C55E';
       case 'INCOMING':
-        return '#3B82F6'; // Xanh dương
+        return '#3B82F6';
       case 'ONGOING':
         return '#64748B';
       case 'MISSED':
         return '#CB0404';
       default:
-        return '#64748B'; // Xám
+        return '#64748B';
     }
   };
+
   if (Object.keys(selectedDates).length === 0) {
     return null;
   }
+
+  const onTimeChange = (event: any, selectedDate: Date | undefined, dayIndex: number, sessionIndex: number, field: 'start_time' | 'end_time') => {
+    const sessionKey = `${dayIndex}-${sessionIndex}`;
+    if (selectedDate) {
+      const adjustedDate = new Date(selectedDate.getTime() + 7 * 60 * 60 * 1000); // Điều chỉnh về UTC
+      setSelectedTime(prev => ({ ...prev, [sessionKey]: selectedDate }));
+      updateSession(dayIndex, sessionIndex, field, adjustedDate);
+      setShowStartPicker(prev => ({ ...prev, [sessionKey]: false }));
+      setShowEndPicker(prev => ({ ...prev, [sessionKey]: false }));
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -528,19 +587,15 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
             <TouchableOpacity
               style={styles.dayHeader}
               onPress={() => toggleDay(day.day)}
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <View style={styles.dayHeaderLeft}>
                 <View style={styles.dateCircle}>
-                  <Text style={styles.dateNumber}>
-                    {new Date(day.day).getDate()}
-                  </Text>
+                  <Text style={styles.dateNumber}>{new Date(day.day).getDate()}</Text>
                 </View>
                 <View>
                   <Text style={styles.dateText}>{formatDate(day.day)}</Text>
                   <Text style={styles.sessionCount}>
-                    {day.details.length}{' '}
-                    {day.details.length === 1 ? 'Session' : 'Sessions'}
+                    {day.details.length} {day.details.length === 1 ? 'Session' : 'Sessions'}
                   </Text>
                 </View>
               </View>
@@ -563,136 +618,104 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                   return (
                     <View key={sessionIndex} style={styles.sessionContainer}>
                       <View style={styles.sessionHeader}>
-                        <Text style={styles.sessionTitle}>
-                          Session {sessionIndex + 1}
-                        </Text>
+                        <Text style={styles.sessionTitle}>Session {sessionIndex + 1}</Text>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
                           {session.status && (
                             <View
                               style={[
                                 styles.statusBadge,
-                                {
-                                  backgroundColor: getStatusColor(
-                                    session?.status,
-                                  ),
-                                },
+                                { backgroundColor: getStatusColor(session?.status) },
                               ]}>
-                              <Text style={styles.statusText}>
-                                {session.status}
-                              </Text>
+                              <Text style={styles.statusText}>{session.status}</Text>
                             </View>
                           )}
-                          {day.details.length > 1 &&
-                            canEditSession(session, view) && (
-                              <TouchableOpacity
-                                onPress={() =>
-                                  removeSession(dayIndex, sessionIndex)
-                                }
-                                style={styles.removeButton}>
-                                <Icon
-                                  name="trash-outline"
-                                  size={16}
-                                  color="#EF4444"
-                                />
-                                <Text style={styles.removeButtonText}>
-                                  Delete
-                                </Text>
-                              </TouchableOpacity>
-                            )}
+                          {day.details.length > 1 && canEditSession(session, view) && (
+                            <TouchableOpacity
+                              onPress={() => removeSession(dayIndex, sessionIndex)}
+                              style={styles.removeButton}>
+                              <Icon name="trash-outline" size={16} color="#EF4444" />
+                              <Text style={styles.removeButtonText}>Delete</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                       </View>
 
-                      {/* Mô tả buổi tập */}
                       <View style={styles.inputRow}>
                         <Text style={styles.inputLabel}>Describe:</Text>
                         <TextInput
                           style={styles.textInput}
                           value={session.description}
-                          onChangeText={value =>
-                            updateSession(
-                              dayIndex,
-                              sessionIndex,
-                              'description',
-                              value,
-                            )
-                          }
+                          onChangeText={value => updateSession(dayIndex, sessionIndex, 'description', value)}
                           editable={canEditSession(session, view)}
                           placeholder="Describe your session"
                         />
                       </View>
 
-                      {/* Thời gian bắt đầu và kết thúc */}
                       <View style={styles.timeRow}>
                         <View style={styles.timeInputContainer}>
                           <Text style={styles.timeLabel}>Start:</Text>
-                          <TextInput
+                          <TouchableOpacity
                             style={[
                               styles.timeInput,
-                              sessionErrors.start_time ? styles.inputError : null
+                              sessionErrors.start_time ? styles.inputError : null,
                             ]}
-                            value={extractTime(session.start_time)}
-                            onChangeText={value => {
-                              let cleanedValue = value
-                                .replace(/[^0-9]/g, '')
-                                .slice(0, 4);
-
-                              if (cleanedValue.length > 2) {
-                                cleanedValue = cleanedValue.slice(0, 2) + ':' + cleanedValue.slice(2);
-                              }
-
-                              updateSession(dayIndex, sessionIndex, 'start_time', cleanedValue);
-
-                              // Kiểm tra lỗi thời gian
-                              const error = getTimeError(cleanedValue, day.day);
-                              setValidationErrors(prev => ({
-                                ...prev,
-                                [`${dayIndex}-${sessionIndex}`]: {
-                                  ...prev[`${dayIndex}-${sessionIndex}`],
-                                  start_time: error?.toString() ?? '',
-                                }
-                              }));
+                            onPress={() => {
+                              const startDate = new Date(session.start_time);
+                              setSelectedTime(prev => ({ ...prev, [sessionKey]: startDate }));
+                              setShowStartPicker(prev => ({ ...prev, [sessionKey]: true }));
                             }}
-                            onBlur={() => {
-                              const error = getTimeError(extractTime(session.start_time), day.day);
-                              setValidationErrors(prev => ({
-                                ...prev,
-                                [`${dayIndex}-${sessionIndex}`]: {
-                                  ...prev[`${dayIndex}-${sessionIndex}`],
-                                  start_time: error ?? '',
-                                }
-                              }));
-                            }}
-                            placeholder="HH:MM"
-                            editable={canEditSession(session, view)}
-                            keyboardType="numbers-and-punctuation"
-                            maxLength={5}
-                          />
+                            disabled={!canEditSession(session, view) || hasMissedSession}
+                          >
+                            <Text>{extractTime(session.start_time) || 'HH:MM'}</Text>
+                          </TouchableOpacity>
+                          {showStartPicker[sessionKey] && (
+                            <DateTimePicker
+                              testID="dateTimePicker"
+                              value={selectedTime[sessionKey] || new Date(session.start_time)}
+                              mode="time"
+                              display="default"
+                              onChange={(event, selectedDate) => onTimeChange(event, selectedDate, dayIndex, sessionIndex, 'start_time')}
+                              minimumDate={new Date(new Date().getTime() + 7 * 60 * 60 * 1000 + 30 * 60 * 1000)} // Ít nhất 30 phút trong tương lai
+                            />
+                          )}
                           {sessionErrors.start_time && (
                             <Text style={styles.errorTime}>{sessionErrors.start_time}</Text>
                           )}
                         </View>
                         <View style={styles.timeInputContainer}>
                           <Text style={styles.timeLabel}>End:</Text>
-                          <TextInput
+                          <TouchableOpacity
                             style={styles.timeInput}
-                            value={extractTime(session.end_time)}
-                            onChangeText={value =>
-                              updateSession(
-                                dayIndex,
-                                sessionIndex,
-                                'end_time',
-                                value,
-                              )
-                            }
-                            editable={canEditSession(session, view)}
-                            placeholder="HH:MM"
-                          />
+                            onPress={() => {
+                              const endDate = new Date(session.end_time);
+                              setSelectedTime(prev => ({ ...prev, [sessionKey]: endDate }));
+                              setShowEndPicker(prev => ({ ...prev, [sessionKey]: true }));
+                            }}
+                            disabled={!canEditSession(session, view) || hasMissedSession}
+                          >
+                            <Text>{extractTime(session.end_time) || 'HH:MM'}</Text>
+                          </TouchableOpacity>
+                          {showEndPicker[sessionKey] && (
+                            <DateTimePicker
+                              testID="dateTimePicker"
+                              value={selectedTime[sessionKey] || new Date(session.end_time)}
+                              mode="time"
+                              display="default"
+                              onChange={(event, selectedDate) => onTimeChange(event, selectedDate, dayIndex, sessionIndex, 'end_time')}
+                              minimumDate={new Date(new Date(session.start_time).getTime() + 5 * 60 * 1000)} // Ít nhất 5 phút sau start_time
+                            />
+                          )}
                         </View>
                       </View>
                       {sessionErrors.time_gap && (
                         <Text style={styles.errorTime}>{sessionErrors.time_gap}</Text>
                       )}
-                      {/* Mục tiêu */}
+                      {sessionErrors.overlap_error && (
+                        <Text style={styles.errorTime}>{sessionErrors.overlap_error}</Text>
+                      )}
+                      {sessionErrors.session_interval && (
+                        <Text style={styles.errorTime}>{sessionErrors.session_interval}</Text>
+                      )}
                       <Text style={styles.goalsTitle}>Training objectives</Text>
 
                       <View style={styles.goalRow}>
@@ -703,9 +726,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         <View
                           style={[
                             styles.goalInputWrapper,
-                            sessionErrors.goal_distance
-                              ? styles.inputError
-                              : null,
+                            sessionErrors.goal_distance ? styles.inputError : null,
                           ]}>
                           <TextInput
                             style={styles.goalInput}
@@ -717,23 +738,12 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                                   : ''
                             }
                             onChangeText={value => {
-                              // Cho phép nhập dấu chấm và số
                               if (/^\d*\.?\d*$/.test(value)) {
-                                updateSession(
-                                  dayIndex,
-                                  sessionIndex,
-                                  'goal_distance',
-                                  value,
-                                );
+                                updateSession(dayIndex, sessionIndex, 'goal_distance', value);
                               }
                             }}
                             onBlur={() => {
-                              validateField(
-                                dayIndex,
-                                sessionIndex,
-                                'goal_distance',
-                                session.goal_distance,
-                              );
+                              validateField(dayIndex, sessionIndex, 'goal_distance', session.goal_distance);
                             }}
                             editable={canEditSession(session, view)}
                             keyboardType="decimal-pad"
@@ -743,19 +753,13 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                           <Text style={styles.goalUnit}>km</Text>
                           {sessionErrors.goal_distance && (
                             <View style={styles.errorIcon}>
-                              <Icon
-                                name="alert-circle"
-                                size={16}
-                                color="#EF4444"
-                              />
+                              <Icon name="alert-circle" size={16} color="#EF4444" />
                             </View>
                           )}
                         </View>
                       </View>
                       {sessionErrors.goal_distance && (
-                        <Text style={styles.errorText}>
-                          {sessionErrors.goal_distance}
-                        </Text>
+                        <Text style={styles.errorText}>{sessionErrors.goal_distance}</Text>
                       )}
 
                       <View style={styles.goalRow}>
@@ -766,9 +770,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         <View
                           style={[
                             styles.goalInputWrapper,
-                            sessionErrors.goal_calories
-                              ? styles.inputError
-                              : null,
+                            sessionErrors.goal_calories ? styles.inputError : null,
                           ]}>
                           <TextInput
                             style={styles.goalInput}
@@ -784,12 +786,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               }
                             }}
                             onBlur={() => {
-                              validateField(
-                                dayIndex,
-                                sessionIndex,
-                                'goal_calories',
-                                session.goal_calories,
-                              );
+                              validateField(dayIndex, sessionIndex, 'goal_calories', session.goal_calories);
                             }}
                             keyboardType="numeric"
                             editable={canEditSession(session, view)}
@@ -798,19 +795,13 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                           <Text style={styles.goalUnit}>kcal</Text>
                           {sessionErrors.goal_calories && (
                             <View style={styles.errorIcon}>
-                              <Icon
-                                name="alert-circle"
-                                size={16}
-                                color="#EF4444"
-                              />
+                              <Icon name="alert-circle" size={16} color="#EF4444" />
                             </View>
                           )}
                         </View>
                       </View>
                       {sessionErrors.goal_calories && (
-                        <Text style={styles.errorText}>
-                          {sessionErrors.goal_calories}
-                        </Text>
+                        <Text style={styles.errorText}>{sessionErrors.goal_calories}</Text>
                       )}
 
                       <View style={styles.goalRow}>
@@ -837,12 +828,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               }
                             }}
                             onBlur={() => {
-                              validateField(
-                                dayIndex,
-                                sessionIndex,
-                                'goal_steps',
-                                session.goal_steps,
-                              );
+                              validateField(dayIndex, sessionIndex, 'goal_steps', session.goal_steps);
                             }}
                             editable={canEditSession(session, view)}
                             keyboardType="numeric"
@@ -851,19 +837,13 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                           <Text style={styles.goalUnit}>Step</Text>
                           {sessionErrors.goal_steps && (
                             <View style={styles.errorIcon}>
-                              <Icon
-                                name="alert-circle"
-                                size={16}
-                                color="#EF4444"
-                              />
+                              <Icon name="alert-circle" size={16} color="#EF4444" />
                             </View>
                           )}
                         </View>
                       </View>
                       {sessionErrors.goal_steps && (
-                        <Text style={styles.errorText}>
-                          {sessionErrors.goal_steps}
-                        </Text>
+                        <Text style={styles.errorText}>{sessionErrors.goal_steps}</Text>
                       )}
 
                       {!hasMissedSession && !view && canAddSession(day.details) && (
@@ -984,7 +964,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
   },
-
   removeButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1037,6 +1016,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   goalsTitle: {
     fontSize: 14,
@@ -1150,7 +1131,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     color: '#64748B',
   },
-
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
