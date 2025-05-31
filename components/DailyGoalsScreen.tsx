@@ -14,7 +14,6 @@ import {
 import Icon from '@react-native-vector-icons/ionicons';
 import { format } from 'date-fns';
 import { US } from 'date-fns/locale';
-import DateTimePicker from '@react-native-community/datetimepicker'; // Import DateTimePicker
 
 interface TrainingSession {
   description: string;
@@ -53,10 +52,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, Record<string, string>>
   >({});
-  const [showStartPicker, setShowStartPicker] = useState<{ [key: string]: boolean }>({}); // State để hiển thị DateTimePicker cho start_time
-  const [showEndPicker, setShowEndPicker] = useState<{ [key: string]: boolean }>({}); // State để hiển thị DateTimePicker cho end_time
-  const [selectedTime, setSelectedTime] = useState<{ [key: string]: Date }>({}); // Lưu thời gian tạm thời khi chọn
-
   const hasAnyValidationError = () => {
     for (const sessionKey in validationErrors) {
       if (!validationErrors.hasOwnProperty(sessionKey)) continue;
@@ -478,25 +473,29 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const day = newSchedule[dayIndex].day;
 
     if (field === 'start_time' || field === 'end_time') {
-      const timeString = value instanceof Date
-        ? value.toISOString()
-        : `${day}T${value}:00.000Z`;
-      session[field] = timeString;
+      // Kiểm tra format thời gian hợp lệ
+      if (typeof value === 'string' && /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+        const [hours, minutes] = value.split(':').map(Number);
+        const timeString = `${day}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00.000Z`;
+        session[field] = timeString;
 
-      const start = field === 'start_time' ? timeString : session.start_time;
-      const end = field === 'end_time' ? timeString : session.end_time;
-      const gapError = getSessionTimeGapError(start, end);
-      const overlapError = getSessionOverlapError(start, end, existingSessions, day);
+        const start = field === 'start_time' ? timeString : session.start_time;
+        const end = field === 'end_time' ? timeString : session.end_time;
 
-      setValidationErrors(prev => ({
-        ...prev,
-        [sessionKey]: {
-          ...prev[sessionKey],
-          time_gap: gapError ?? '',
-          ...(field === 'start_time' && { start_time: getTimeError(extractTime(start), day) ?? '' }),
-          overlap_error: overlapError ?? '',
-        },
-      }));
+        const gapError = getSessionTimeGapError(start, end);
+        const timeError = field === 'start_time' ? getTimeError(value, day) : null;
+        const overlapError = getSessionOverlapError(start, end, existingSessions, day);
+
+        setValidationErrors(prev => ({
+          ...prev,
+          [sessionKey]: {
+            ...prev[sessionKey],
+            time_gap: gapError ?? '',
+            ...(field === 'start_time' && { start_time: timeError ?? '' }),
+            overlap_error: overlapError ?? '',
+          },
+        }));
+      }
     } else if (
       field === 'goal_steps' ||
       field === 'goal_calories' ||
@@ -526,7 +525,22 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     setDailySchedule(newSchedule);
     onGoalsChange(validateAndFixScheduleData(newSchedule));
   };
+  const formatTimeInput = (value: string): string => {
+    // Chỉ giữ lại số
+    const numbers = value.replace(/[^\d]/g, '');
 
+    if (numbers.length <= 2) {
+      return numbers;
+    }
+    const validateTimeFormat = (time: string): boolean => {
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      return timeRegex.test(time);
+    };
+    // Format XX:XX
+    const hours = numbers.substring(0, 2);
+    const minutes = numbers.substring(2, 4);
+    return `${hours}:${minutes}`;
+  };
   const extractTime = (isoString: string) => {
     try {
       const date = new Date(isoString);
@@ -558,18 +572,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   if (Object.keys(selectedDates).length === 0) {
     return null;
   }
-
-  const onTimeChange = (event: any, selectedDate: Date | undefined, dayIndex: number, sessionIndex: number, field: 'start_time' | 'end_time') => {
-    const sessionKey = `${dayIndex}-${sessionIndex}`;
-    if (selectedDate) {
-      const adjustedDate = new Date(selectedDate.getTime() + 7 * 60 * 60 * 1000); // Điều chỉnh về UTC
-      setSelectedTime(prev => ({ ...prev, [sessionKey]: selectedDate }));
-      updateSession(dayIndex, sessionIndex, field, adjustedDate);
-      setShowStartPicker(prev => ({ ...prev, [sessionKey]: false }));
-      setShowEndPicker(prev => ({ ...prev, [sessionKey]: false }));
-    }
-  };
-
+  
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Daily Goals</Text>
@@ -654,56 +657,46 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                       <View style={styles.timeRow}>
                         <View style={styles.timeInputContainer}>
                           <Text style={styles.timeLabel}>Start:</Text>
-                          <TouchableOpacity
+                          <TextInput
                             style={[
                               styles.timeInput,
                               sessionErrors.start_time ? styles.inputError : null,
                             ]}
-                            onPress={() => {
-                              const startDate = new Date(session.start_time);
-                              setSelectedTime(prev => ({ ...prev, [sessionKey]: startDate }));
-                              setShowStartPicker(prev => ({ ...prev, [sessionKey]: true }));
+                            value={extractTime(session.start_time)}
+                            onChangeText={(value) => {
+                              if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                                updateSession(dayIndex, sessionIndex, 'start_time', value);
+                              }
                             }}
-                            disabled={!canEditSession(session, view) || hasMissedSession}
-                          >
-                            <Text>{extractTime(session.start_time) || 'HH:MM'}</Text>
-                          </TouchableOpacity>
-                          {showStartPicker[sessionKey] && (
-                            <DateTimePicker
-                              testID="dateTimePicker"
-                              value={selectedTime[sessionKey] || new Date(session.start_time)}
-                              mode="time"
-                              display="default"
-                              onChange={(event, selectedDate) => onTimeChange(event, selectedDate, dayIndex, sessionIndex, 'start_time')}
-                              minimumDate={new Date(new Date().getTime() + 7 * 60 * 60 * 1000 + 30 * 60 * 1000)} // Ít nhất 30 phút trong tương lai
-                            />
-                          )}
+                            placeholder="HH:MM"
+                            keyboardType="numbers-and-punctuation"
+                            maxLength={5}
+                            editable={canEditSession(session, view)}
+                          />
                           {sessionErrors.start_time && (
                             <Text style={styles.errorTime}>{sessionErrors.start_time}</Text>
                           )}
                         </View>
                         <View style={styles.timeInputContainer}>
                           <Text style={styles.timeLabel}>End:</Text>
-                          <TouchableOpacity
-                            style={styles.timeInput}
-                            onPress={() => {
-                              const endDate = new Date(session.end_time);
-                              setSelectedTime(prev => ({ ...prev, [sessionKey]: endDate }));
-                              setShowEndPicker(prev => ({ ...prev, [sessionKey]: true }));
+                          <TextInput
+                            style={[
+                              styles.timeInput,
+                              sessionErrors.end_time ? styles.inputError : null,
+                            ]}
+                            value={extractTime(session.end_time)}
+                            onChangeText={(value) => {
+                              if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                                updateSession(dayIndex, sessionIndex, 'end_time', value);
+                              }
                             }}
-                            disabled={!canEditSession(session, view) || hasMissedSession}
-                          >
-                            <Text>{extractTime(session.end_time) || 'HH:MM'}</Text>
-                          </TouchableOpacity>
-                          {showEndPicker[sessionKey] && (
-                            <DateTimePicker
-                              testID="dateTimePicker"
-                              value={selectedTime[sessionKey] || new Date(session.end_time)}
-                              mode="time"
-                              display="default"
-                              onChange={(event, selectedDate) => onTimeChange(event, selectedDate, dayIndex, sessionIndex, 'end_time')}
-                              minimumDate={new Date(new Date(session.start_time).getTime() + 5 * 60 * 1000)} // Ít nhất 5 phút sau start_time
-                            />
+                            placeholder="HH:MM"
+                            keyboardType="numbers-and-punctuation"
+                            maxLength={5}
+                            editable={canEditSession(session, view)}
+                          />
+                          {sessionErrors.end_time && (
+                            <Text style={styles.errorTime}>{sessionErrors.end_time}</Text>
                           )}
                         </View>
                       </View>
@@ -897,6 +890,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginBottom: 16,
+  },
+  timeInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    textAlign: 'center',
   },
   daysContainer: {
     maxHeight: 500,

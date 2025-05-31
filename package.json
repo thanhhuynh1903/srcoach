@@ -43,6 +43,7 @@
     "react-native-calendars": "^1.1310.0",
     "react-native-chart-kit": "^6.12.0",
     "react-native-config": "^1.5.5",
+    "react-native-date-picker": "^5.0.12",
     "react-native-event-listeners": "^1.0.7",
     "react-native-feather": "^1.1.2",
     "react-native-geolocation-service": "^5.3.1",
