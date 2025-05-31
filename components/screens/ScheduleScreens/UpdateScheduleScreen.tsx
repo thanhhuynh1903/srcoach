@@ -64,7 +64,8 @@ const UpdateScheduleScreen = () => {
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
   const [hasGoalError, setHasGoalError] = useState(false);
- 
+ const MAX_TITLE_LENGTH = 255;
+
   const handleUpdateSchedule = async () => {
     try {
       setIsCreating(true);
@@ -400,15 +401,28 @@ const UpdateScheduleScreen = () => {
 
       <ScrollView style={styles.scrollView}>
         {/* Title Input */}
-        <Text style={styles.sectionTitle}>Schedule Title</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter schedule title"
-          value={title}
-          onChangeText={setTitle}
-          placeholderTextColor="#A1A1AA"
-          editable={!view}
-        />
+  <View style={styles.titleInputContainer}>
+    <Text style={styles.sectionTitle}>Schedule Title *</Text>
+    <Text style={styles.charCounterText}>
+      {title.length}/{MAX_TITLE_LENGTH}
+    </Text>
+  </View>
+        
+          <TextInput
+    style={styles.input}
+    placeholder="Enter schedule title"
+    value={title}
+    onChangeText={setTitle}
+    placeholderTextColor="#A1A1AA"
+    maxLength={MAX_TITLE_LENGTH}
+    numberOfLines={1}
+    multiline={false}
+    scrollEnabled={false}
+    textAlignVertical="center"
+    textAlign="left"
+    editable={!view}
+  />
+
 
         {/* Selection limit info */}
         <View style={styles.limitInfoContainer}>
@@ -545,6 +559,17 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  titleInputContainer: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 8,
+  marginTop: 16,
+},
+charCounterText: {
+  fontSize: 12,
+  color: '#64748B',
+},
   sectionTitle: {
     fontSize: 16,
     fontWeight: '500',

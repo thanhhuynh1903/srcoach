@@ -39,7 +39,7 @@ const AddScheduleScreen = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const { createSchedule, createExpertSchedule, isLoading, message, error, fetchSelfSchedules,fetchExpertSchedule } = useScheduleStore();
+  const { createSchedule, createExpertSchedule, isLoading, message, error, fetchSelfSchedules, fetchExpertSchedule } = useScheduleStore();
   const [hasGoalError, setHasGoalError] = useState(false);
   useEffect(() => {
     if (error) {
@@ -205,7 +205,7 @@ const AddScheduleScreen = () => {
       } else {
         result = await createSchedule(scheduleData);
         await fetchSelfSchedules();
-      } 
+      }
       if (result?.status === 'success') {
         setValidationError('');
         setShowErrorDialog(false);
@@ -289,8 +289,13 @@ const AddScheduleScreen = () => {
             onChangeText={text => setFormData(prev => ({ ...prev, title: text }))}
             placeholderTextColor="#A1A1AA"
             maxLength={MAX_TITLE_LENGTH}
-          />
-          {!formData.title && (
+            numberOfLines={1}
+            multiline={false}
+            scrollEnabled={false}
+            textAlignVertical="center"
+            textAlign="left"
+          />         
+           {!formData.title && (
             <Text style={styles.errorMessage}>Please enter a title</Text>
           )}
           <View style={styles.limitInfoContainer}>
