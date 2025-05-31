@@ -19,12 +19,14 @@ import { CommonAvatar } from '../commons/CommonAvatar';
 import NotificationService from '../services/NotificationService';
 import { capitalizeFirstLetter } from '../utils/utils_format';
 import useScheduleStore from '../utils/useScheduleStore';
+
 const SettingsScreen = ({ navigation }: { navigation: any }) => {
   const { clearToken } = useAuthStore();
   const { clearAll, clear, profile, fetchUserProfile } = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
   const { clearExpertSchedule, clearHistorySchedules } = useScheduleStore();
+
   // useFocusEffect(
   //   useCallback(() => {
   //     fetchUserProfile();
@@ -48,8 +50,12 @@ const SettingsScreen = ({ navigation }: { navigation: any }) => {
     }
     await clearExpertSchedule();
     await clearHistorySchedules();
+    // Remove all AsyncStorage items
     await AsyncStorage.removeItem('authToken');
     await AsyncStorage.removeItem('authTokenTimestamp');
+    await AsyncStorage.removeItem('syncMethod');
+    await AsyncStorage.removeItem('syncFrequency');
+    await AsyncStorage.removeItem('syncLastTimestamp');
     await clear();
     await clearToken();
     await clearAll();
@@ -180,10 +186,10 @@ const SettingsScreen = ({ navigation }: { navigation: any }) => {
                 onPress={() =>
                   item.screen === ''
                     ? navigation.navigate('ErrorScreen', {
-                      titleError: 'An error has occurred',
-                      contentError: 'Page not found. Please return back',
-                      errorStatus: 'ERROR_CODE: 500',
-                    })
+                        titleError: 'An error has occurred',
+                        contentError: 'Page not found. Please return back',
+                        errorStatus: 'ERROR_CODE: 500',
+                      })
                     : navigation.navigate(item.screen)
                 }>
                 <View style={styles.iconContainer}>

@@ -29,8 +29,6 @@ const HEALTH_CONNECT_STORE_URL =
 
 const syncFrequencyOptions = [
   {label: 'Never', value: 0},
-  {label: '1 minute', value: 1},
-  {label: '2 minutes', value: 2},
   {label: '5 minutes', value: 5},
   {label: '10 minutes', value: 10},
   {label: '30 minutes', value: 30},
@@ -84,6 +82,8 @@ const SettingsDevicesScreen = () => {
         const savedFrequency = await AsyncStorage.getItem('syncFrequency');
         if (savedFrequency) {
           setSyncFrequency(parseInt(savedFrequency, 10));
+        } else {
+          await AsyncStorage.setItem('syncFrequency', '1 hour');
         }
 
         // Load last sync time
@@ -234,7 +234,7 @@ const SettingsDevicesScreen = () => {
     const option = syncFrequencyOptions.find(
       opt => opt.value === syncFrequency,
     );
-    return option ? option.label : 'Every 3 hours';
+    return option ? option.label : '1 hour';
   };
 
   if (initializing) {
