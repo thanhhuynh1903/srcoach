@@ -52,6 +52,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   const [validationErrors, setValidationErrors] = useState<
     Record<string, Record<string, string>>
   >({});
+  const [timeInputs, setTimeInputs] = useState<Record<string, { start: string; end: string }>>({});
+
   const hasAnyValidationError = () => {
     for (const sessionKey in validationErrors) {
       if (!validationErrors.hasOwnProperty(sessionKey)) continue;
@@ -69,7 +71,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     }
   }, [validationErrors]);
 
-  // Thời gian mặc định cho các buổi tập
   const defaultSessions = {
     morning: {
       description: 'Morning',
@@ -108,15 +109,14 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     for (let i = 0; i < sessions.length - 1; i++) {
       const prevEnd = new Date(sessions[i].end_time).getTime();
       const nextStart = new Date(sessions[i + 1].start_time).getTime();
-      if (nextStart - prevEnd < 30 * 60 * 1000) {
-        errorIndexes.push(i + 1); // session sau bị lỗi
+      if (nextStart >= prevEnd && nextStart - prevEnd < 30 * 60 * 1000) {
+        errorIndexes.push(i + 1);
       }
     }
     return errorIndexes;
   };
 
   useEffect(() => {
-    // Xóa hết lỗi session_interval trước
     setValidationErrors(prev => {
       const newErrors = { ...prev };
       Object.keys(newErrors).forEach(key => {
@@ -130,7 +130,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       return newErrors;
     });
 
-    // Sau đó set lại nếu có lỗi mới, cho tất cả session sau bị lỗi
     dailySchedule.forEach((day, dayIndex) => {
       const errorIndexes = getSessionIntervalErrorIndexes(day.details);
       errorIndexes.forEach(idx => {
@@ -145,6 +144,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       });
     });
   }, [dailySchedule]);
+
   const getSessionOverlapError = (newStart: string, newEnd: string, existingSessions: TrainingSession[], day: string) => {
     try {
       const newStartDate = new Date(newStart).getTime();
@@ -156,7 +156,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
         const existingEnd = new Date(session.end_time).getTime();
         const existingDay = new Date(session.start_time).setUTCHours(0, 0, 0, 0);
 
-        // Chỉ kiểm tra nếu cùng ngày
         if (existingDay === dayDate) {
           const gapBeforeStart = newStartDate - existingEnd;
           const gapAfterEnd = existingStart - newEndDate;
@@ -177,6 +176,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       return null;
     }
   };
+
   const getSessionTimeGapError = (start: string, end: string) => {
     try {
       const startDate = new Date(start);
@@ -230,8 +230,8 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
           typeof session.goal_distance === 'string'
             ? Math.min(Number.parseFloat(session.goal_distance), 9999.99)
             : session.goal_distance !== null
-              ? Math.min(session.goal_distance, 9999.99)
-              : null,
+            ? Math.min(session.goal_distance, 9999.99)
+            : null,
         goal_calories:
           typeof session.goal_calories === 'string'
             ? Number.parseInt(session.goal_calories)
@@ -387,10 +387,6 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const start_time = `${date}T${startHour.toString().padStart(2, '0')}:00:00.000Z`;
     const end_time = `${date}T${endHour.toString().padStart(2, '0')}:00:00.000Z`;
 
-    if (day.details.some(s => s.status === 'MISSED' || s.status === 'COMPLETED')) {
-      return;
-    }
-
     day.details.push({
       ...sessionTemplate,
       start_time,
@@ -451,13 +447,21 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
       newValidationErrors[sessionKey][field] = error;
     } else {
       delete newValidationErrors[sessionKey][field];
-      // Nếu không còn lỗi nào ở sessionKey thì xóa luôn key
       if (Object.keys(newValidationErrors[sessionKey]).length === 0) {
         delete newValidationErrors[sessionKey];
       }
     }
 
     setValidationErrors(newValidationErrors);
+  };
+
+  const formatTimeInput = (value: string): string => {
+    const numbers = value.replace(/[^\d]/g, '');
+    if (!numbers) return '';
+    if (numbers.length <= 2) return numbers;
+    const hours = numbers.substring(0, 2);
+    const minutes = numbers.substring(2, 4);
+    return `${hours}:${minutes}`;
   };
 
   const updateSession = (
@@ -473,28 +477,30 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     const day = newSchedule[dayIndex].day;
 
     if (field === 'start_time' || field === 'end_time') {
-      // Kiểm tra format thời gian hợp lệ
-      if (typeof value === 'string' && /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
-        const [hours, minutes] = value.split(':').map(Number);
-        const timeString = `${day}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00.000Z`;
-        session[field] = timeString;
+      const formattedValue = formatTimeInput(value as string);
+      if (formattedValue === '' || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(formattedValue)) {
+        if (formattedValue !== '') {
+          const [hours, minutes] = formattedValue.split(':').map(Number);
+          const timeString = `${day}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00.000Z`;
+          session[field] = timeString;
 
-        const start = field === 'start_time' ? timeString : session.start_time;
-        const end = field === 'end_time' ? timeString : session.end_time;
+          const start = field === 'start_time' ? timeString : session.start_time;
+          const end = field === 'end_time' ? timeString : session.end_time;
 
-        const gapError = getSessionTimeGapError(start, end);
-        const timeError = field === 'start_time' ? getTimeError(value, day) : null;
-        const overlapError = getSessionOverlapError(start, end, existingSessions, day);
+          const gapError = getSessionTimeGapError(start, end);
+          const timeError = field === 'start_time' ? getTimeError(formattedValue, day) : null;
+          const overlapError = getSessionOverlapError(start, end, existingSessions, day);
 
-        setValidationErrors(prev => ({
-          ...prev,
-          [sessionKey]: {
-            ...prev[sessionKey],
-            time_gap: gapError ?? '',
-            ...(field === 'start_time' && { start_time: timeError ?? '' }),
-            overlap_error: overlapError ?? '',
-          },
-        }));
+          setValidationErrors(prev => ({
+            ...prev,
+            [sessionKey]: {
+              ...prev[sessionKey],
+              time_gap: gapError ?? '',
+              ...(field === 'start_time' && { start_time: timeError ?? '' }),
+              overlap_error: overlapError ?? '',
+            },
+          }));
+        }
       }
     } else if (
       field === 'goal_steps' ||
@@ -525,22 +531,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
     setDailySchedule(newSchedule);
     onGoalsChange(validateAndFixScheduleData(newSchedule));
   };
-  const formatTimeInput = (value: string): string => {
-    // Chỉ giữ lại số
-    const numbers = value.replace(/[^\d]/g, '');
 
-    if (numbers.length <= 2) {
-      return numbers;
-    }
-    const validateTimeFormat = (time: string): boolean => {
-      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      return timeRegex.test(time);
-    };
-    // Format XX:XX
-    const hours = numbers.substring(0, 2);
-    const minutes = numbers.substring(2, 4);
-    return `${hours}:${minutes}`;
-  };
   const extractTime = (isoString: string) => {
     try {
       const date = new Date(isoString);
@@ -572,7 +563,7 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
   if (Object.keys(selectedDates).length === 0) {
     return null;
   }
-  
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Daily Goals</Text>
@@ -618,6 +609,9 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                     s => s.status === 'MISSED' || s.status === 'COMPLETED',
                   );
 
+                  const startTimeInput = timeInputs[sessionKey]?.start ?? extractTime(session.start_time);
+                  const endTimeInput = timeInputs[sessionKey]?.end ?? extractTime(session.end_time);
+
                   return (
                     <View key={sessionIndex} style={styles.sessionContainer}>
                       <View style={styles.sessionHeader}>
@@ -662,10 +656,15 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               styles.timeInput,
                               sessionErrors.start_time ? styles.inputError : null,
                             ]}
-                            value={extractTime(session.start_time)}
-                            onChangeText={(value) => {
-                              if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
-                                updateSession(dayIndex, sessionIndex, 'start_time', value);
+                            value={startTimeInput}
+                            onChangeText={text => {
+                              const formatted = formatTimeInput(text);
+                              setTimeInputs(prev => ({
+                                ...prev,
+                                [sessionKey]: { ...prev[sessionKey], start: formatted },
+                              }));
+                              if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(formatted)) {
+                                updateSession(dayIndex, sessionIndex, 'start_time', formatted);
                               }
                             }}
                             placeholder="HH:MM"
@@ -684,10 +683,15 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                               styles.timeInput,
                               sessionErrors.end_time ? styles.inputError : null,
                             ]}
-                            value={extractTime(session.end_time)}
-                            onChangeText={(value) => {
-                              if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
-                                updateSession(dayIndex, sessionIndex, 'end_time', value);
+                            value={endTimeInput}
+                            onChangeText={text => {
+                              const formatted = formatTimeInput(text);
+                              setTimeInputs(prev => ({
+                                ...prev,
+                                [sessionKey]: { ...prev[sessionKey], end: formatted },
+                              }));
+                              if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(formatted)) {
+                                updateSession(dayIndex, sessionIndex, 'end_time', formatted);
                               }
                             }}
                             placeholder="HH:MM"
@@ -839,26 +843,28 @@ const DailyGoalsSection: React.FC<DailyGoalsSectionProps> = ({
                         <Text style={styles.errorText}>{sessionErrors.goal_steps}</Text>
                       )}
 
-                      {!hasMissedSession && !view && canAddSession(day.details) && (
+                      {!view && canAddSession(day.details) && (
                         <>
                           <View style={styles.divider} />
                           <TouchableOpacity
                             style={[
                               styles.addButton,
-                              hasMissedSession && styles.disabledButton,
+                              !canAddSession(day.details) && styles.disabledButton,
                             ]}
                             onPress={() => addSession(dayIndex)}
-                            disabled={hasMissedSession}>
+                            disabled={!canAddSession(day.details)}
+                          >
                             <Icon
                               name="add-circle-outline"
                               size={16}
-                              color={hasMissedSession ? '#94A3B8' : '#0F2B5B'}
+                              color={!canAddSession(day.details) ? '#94A3B8' : '#0F2B5B'}
                             />
                             <Text
                               style={[
                                 styles.addButtonText,
-                                hasMissedSession && styles.disabledButtonText,
-                              ]}>
+                                !canAddSession(day.details) && styles.disabledButtonText,
+                              ]}
+                            >
                               Add more session
                             </Text>
                           </TouchableOpacity>
@@ -890,16 +896,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
     marginBottom: 16,
-  },
-  timeInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    textAlign: 'center',
   },
   daysContainer: {
     maxHeight: 500,
