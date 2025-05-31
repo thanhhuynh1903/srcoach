@@ -85,7 +85,7 @@ type ChatSession = {
 };
 
 const SearchResultsScreen = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(' ');
   const [activeTab, setActiveTab] = useState('All');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
