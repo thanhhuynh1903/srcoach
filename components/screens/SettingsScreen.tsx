@@ -265,6 +265,12 @@ const menuItems = [
     screen: 'GeneralScheduleScreen',
   },
   {
+    title: 'History',
+    subtitle: 'View your history of schedules',
+    icon: 'time-outline',
+    screen: 'ScheduleHistoryScreen',
+  },
+  {
     title: 'Bookmarks',
     subtitle: 'View your saving posts',
     icon: 'bookmark-outline',

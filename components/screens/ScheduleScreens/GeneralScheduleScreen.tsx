@@ -226,11 +226,11 @@ const GeneralScheduleScreen = () => {
           <TouchableOpacity onPress={() => navigation.navigate('ScheduleFullCalendarScreen' as never)}>
             <Icon name="calendar" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
           </TouchableOpacity>
+           <TouchableOpacity onPress={() => navigation.navigate('ManageNotificationsScreen' as never)}>
+            <Icon name="notifications-outline" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleBlockAddSchedule}>
             <Icon name="add-circle-outline" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('ScheduleHistoryScreen' as never)}>
-            <Icon name="time-outline" size={24} color={theme.colors.primaryDark} style={styles.headerIcon} />
           </TouchableOpacity>
         </View>
       </View>
