@@ -23,7 +23,9 @@ import {usePostStore} from '../utils/usePostStore';
 import {useLoginStore} from '../utils/useLoginStore';
 import {theme} from '../contants/theme';
 import {SaveDraftButton} from './CommunityScreens/SaveDraftButton';
-import { formatTimeAgo } from '../utils/utils_format';
+import {formatTimeAgo} from '../utils/utils_format';
+import {listSessions} from '../utils/useChatsAPI';
+
 // Interface cho Post từ API
 interface Post {
   id: string;
@@ -93,6 +95,12 @@ interface UserData {
       user_id: string;
       created_at: string;
     };
+    roles?: string[];
+    user_level?: string;
+    points?: number;
+    points_percentage?: number;
+    points_to_next_level?: number;
+    user_next_level?: string;
   };
   counts: {
     Post: number;
@@ -101,6 +109,35 @@ interface UserData {
   };
   posts: Post[];
   points?: number;
+}
+
+interface ChatSession {
+  id: string;
+  status: string;
+  created_at: string;
+  is_expert_session: boolean;
+  expert_rating_allowed: boolean;
+  user_archived: boolean;
+  is_initiator: boolean;
+  other_user: {
+    id: string;
+    name: string;
+    username: string;
+    email: string;
+    image: {url: string} | null;
+    points: number;
+    user_level: string;
+    roles: string[];
+  };
+  last_message: {
+    id: string;
+    message_type: string;
+    created_at: string;
+    archived: boolean;
+    content: any;
+  } | null;
+  unread_count: number;
+  initial_message?: string;
 }
 
 const OtherProfileScreen = ({route}) => {
@@ -114,11 +151,13 @@ const OtherProfileScreen = ({route}) => {
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   // Lấy thông tin người dùng khi màn hình được tải
   useEffect(() => {
     if (postId) {
       loadUserData();
+      fetchSessions();
     }
   }, [postId]);
 
@@ -126,7 +165,6 @@ const OtherProfileScreen = ({route}) => {
     try {
       const data = await getUserByPostId(postId);
       if (data) {
-        // Cập nhật dữ liệu người dùng và bài viết
         setUserData(data);
         if (data.posts && Array.isArray(data.posts)) {
           setLocalPosts(data.posts);
@@ -134,6 +172,17 @@ const OtherProfileScreen = ({route}) => {
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    }
+  };
+
+  const fetchSessions = async () => {
+    try {
+      const response = await listSessions(null);
+      if (response.status) {
+        setSessions(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
     }
   };
 
@@ -148,6 +197,7 @@ const OtherProfileScreen = ({route}) => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadUserData();
+    await fetchSessions();
     setRefreshing(false);
   }, [postId]);
 
@@ -157,6 +207,49 @@ const OtherProfileScreen = ({route}) => {
       return () => {};
     }, [onRefresh]),
   );
+
+  const getExpertSessionStatus = (expertId: string) => {
+    const session = sessions.find(
+      session =>
+        session.other_user.id === expertId &&
+        session.is_expert_session,
+    );
+    return session ? session.status : null;
+  };
+
+  const hasPendingExpertSession = sessions.some(
+    session => session.is_expert_session && session.status === 'PENDING',
+  );
+
+  const getAcceptedExpertSession = () => {
+    return sessions.find(
+      session => session.is_expert_session && session.status === 'ACCEPTED',
+    );
+  };
+
+  const handleExpertChatPress = () => {
+    if (!userData?.user?.id) return;
+
+    const sessionStatus = getExpertSessionStatus(userData.user.id);
+    const acceptedSession = getAcceptedExpertSession();
+
+    if (hasPendingExpertSession) {
+      return;
+    }
+
+    if (acceptedSession) {
+      if (acceptedSession.other_user.id === userData.user.id) {
+        navigation.navigate('ChatsMessageScreen', {userId: userData.user.id});
+      }
+      return;
+    }
+
+    if (sessionStatus === 'ACCEPTED') {
+      navigation.navigate('ChatsMessageScreen', {userId: userData.user.id});
+    } else {
+      navigation.navigate('ChatsExpertNotiScreen', {userId: userData.user.id});
+    }
+  };
 
   const formatFirstLetter = (str: string) => {
     if (!str) return '';
@@ -170,9 +263,7 @@ const OtherProfileScreen = ({route}) => {
       ]);
       return;
     }
-    console.log('isLike', isLike);
 
-    // Cập nhật UI ngay lập tức (optimistic update)
     setLocalPosts(prevPosts =>
       prevPosts.map(post => {
         if (post.id === postId) {
@@ -193,11 +284,9 @@ const OtherProfileScreen = ({route}) => {
     );
 
     try {
-      // Gọi API để like/unlike bài viết
       await likePost(postId, isLike);
     } catch (error) {
       console.error('Lỗi khi thích bài viết:', error);
-      // Nếu có lỗi, khôi phục lại trạng thái
       onRefresh();
     }
   };
@@ -207,7 +296,6 @@ const OtherProfileScreen = ({route}) => {
       return null;
     }
 
-    // Nếu có 1-3 tags, hiển thị tất cả
     if (tags.length <= 3) {
       return (
         <View style={styles.tagsContainer}>
@@ -220,7 +308,6 @@ const OtherProfileScreen = ({route}) => {
       );
     }
 
-    // Nếu có nhiều hơn 3 tags, hiển thị 3 đầu tiên + "+n"
     return (
       <View style={styles.tagsContainer}>
         <View style={styles.tag}>
@@ -257,6 +344,11 @@ const OtherProfileScreen = ({route}) => {
       </SafeAreaView>
     );
   }
+
+  const isChatDisabled =
+    hasPendingExpertSession ||
+    (getAcceptedExpertSession() &&
+      getAcceptedExpertSession()?.other_user.id !== userData?.user.id);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -312,24 +404,37 @@ const OtherProfileScreen = ({route}) => {
                   @{userData?.user?.username || 'username'}
                 </Text>
                 <View style={{flexDirection: 'row', gap: 8}}>
-                {userData?.user?.roles?.includes(
-                  'runner',
-                ) && (
-                  <View style={styles.roleBadge}>
-                    <Icon name="walk" size={14} color="#fff" />
-                    <Text style={styles.roleBadgeText}>Runner</Text>
-                  </View>
-                )}
-                {userData?.user?.roles?.includes(
-                  'expert',
-                ) && (
-                  <View style={styles.roleBadgeEx}>
-                    <Icon name="ribbon" size={14} color="#fff" />
-                    <Text style={styles.roleBadgeText}>Expert</Text>
-                  </View>
-                )}
+                  {userData?.user?.roles?.includes('expert') ? (
+                    <View style={styles.roleBadgeEx}>
+                      <Icon name="ribbon" size={14} color="#fff" />
+                      <Text style={styles.roleBadgeText}>Expert</Text>
+                    </View>
+                  ) : userData?.user?.roles?.includes('runner') ? (
+                    <View style={styles.roleBadge}>
+                      <Icon name="walk" size={14} color="#fff" />
+                      <Text style={styles.roleBadgeText}>Runner</Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
+              {userData?.user?.roles?.includes('expert') && (
+                <TouchableOpacity
+                  style={[
+                    styles.contactButton,
+                    isChatDisabled && styles.disabledContactButton,
+                  ]}
+                  onPress={handleExpertChatPress}
+                  disabled={isChatDisabled}>
+                  <Icon
+                    name="chatbubble-outline"
+                    size={20}
+                    color={theme.colors.primaryDark}
+                  />
+                  <Text style={styles.contactButtonText}>
+                    Contact
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Address Section */}
@@ -364,7 +469,7 @@ const OtherProfileScreen = ({route}) => {
                       {
                         width: `${
                           userData?.user?.points
-                            ? userData.user?.points_percentage 
+                            ? userData.user?.points_percentage
                             : 0
                         }%`,
                       },
@@ -657,6 +762,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+    position: 'relative',
   },
   photoContainer: {
     marginRight: 16,
@@ -711,6 +817,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  contactButtonText: {
+    color: theme.colors.primaryDark,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  disabledContactButton: {
+    opacity: 0.5,
   },
   infoRow: {
     flexDirection: 'row',
@@ -931,7 +1057,6 @@ const styles = StyleSheet.create({
     top: 40,
     right: 20,
   },
-  // Thêm styles cho hiển thị ảnh và tags
   postImageContainer: {
     position: 'relative',
     width: '100%',
