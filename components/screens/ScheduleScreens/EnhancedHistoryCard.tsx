@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,10 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {useNavigation} from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import WorkoutComparison from './Comparison';
 import useScheduleStore from '../../utils/useScheduleStore';
-import {theme} from '../../contants/theme';
+import { theme } from '../../contants/theme';
 import Toast from 'react-native-toast-message';
 
 // API Workout
@@ -65,7 +65,7 @@ const EnhancedHistoryCard = ({
   const [selectedDayIdx, setSelectedDayIdx] = useState(0);
   const [alarmEnabled, setAlarmEnabled] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const {deleteSchedule, clear} = useScheduleStore();
+  const { deleteSchedule, clear } = useScheduleStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [expandAnimation] = useState(new Animated.Value(0));
   const calculateTotals = (schedules: DaySchedule[]) => {
@@ -81,7 +81,7 @@ const EnhancedHistoryCard = ({
       });
     });
 
-    return {totalSteps, totalDistance, totalCalories};
+    return { totalSteps, totalDistance, totalCalories };
   };
   // Sort days ascending
   const sortedDays = [...ScheduleDay].sort(
@@ -149,7 +149,7 @@ const EnhancedHistoryCard = ({
       'Delete Schedule',
       'Are you sure you want to delete this schedule?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
@@ -176,7 +176,7 @@ const EnhancedHistoryCard = ({
   };
 
   const handleEdit = async () => {
-    await navigation.navigate('UpdateScheduleScreen', {scheduleId: id});
+    await navigation.navigate('UpdateScheduleScreen', { scheduleId: id });
     setModalVisible(false);
   };
   const handleViewDetail = async () => {
@@ -216,25 +216,17 @@ const EnhancedHistoryCard = ({
   };
 
   const getMonthFromStartDate = () => {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    if (startDate && !isNaN(Date.parse(startDate))) {
-      const date = new Date(startDate);
-      return months[date.getMonth()];
+    // Lấy ngày của selectedDay, nếu không có thì lấy startDate
+    let date: Date | null = null;
+    if (selectedDay && selectedDay.day) {
+      date = new Date(selectedDay.day);
+    } else if (startDate && !isNaN(Date.parse(startDate))) {
+      date = new Date(startDate);
     }
-    return 'Current month';
+    if (date) {
+      return date.toLocaleString('en-US', { month: 'long' });
+    }
+    return 'Unknown month';
   };
 
   const getStatusColor = () => {
@@ -282,22 +274,10 @@ const EnhancedHistoryCard = ({
         </View>
         <View style={styles.headerRight}>
           <View
-            style={[styles.statusBadge, {backgroundColor: getStatusColor()}]}>
+            style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
             <Text style={styles.statusText}>{status}</Text>
           </View>
         </View>
-        {/* <View style={styles.headerRight}>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor() }]}>
-            <Text style={styles.statusText}>{status}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleMorePress}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Icon name="ellipsis-vertical" size={18} color="#64748B" />
-          </TouchableOpacity>
-        </View> */}
       </View>
 
       {/* Card Title and Description */}
@@ -378,7 +358,7 @@ const EnhancedHistoryCard = ({
       <Animated.View
         style={[
           styles.workoutDetailsWrapper,
-          {maxHeight, opacity: expandAnimation},
+          { maxHeight, opacity: expandAnimation },
         ]}>
         {workouts.length > 0 && (
           <View style={styles.workoutDetailsContainer}>
@@ -402,10 +382,10 @@ const EnhancedHistoryCard = ({
                           workout.status === 'COMPLETED'
                             ? '#22C55E'
                             : workout.status === 'UPCOMING'
-                            ? '#3B82F6'
-                            : workout.status === 'ONGOING'
-                            ? '#6366F1'
-                            : '#EF4444',
+                              ? '#3B82F6'
+                              : workout.status === 'ONGOING'
+                                ? '#6366F1'
+                                : '#EF4444',
                       },
                     ]}>
                     <Text style={styles.workoutStatusText}>
@@ -547,7 +527,6 @@ const EnhancedHistoryCard = ({
               </View>
             ))}
 
-            <WorkoutComparison workouts={workouts} />
           </View>
         )}
       </Animated.View>
@@ -622,7 +601,7 @@ const EnhancedHistoryCard = ({
                   style={styles.modalOption}
                   onPress={handleDelete}>
                   <Icon name="trash-outline" size={24} color="#EF4444" />
-                  <Text style={[styles.modalOptionText, {color: '#EF4444'}]}>
+                  <Text style={[styles.modalOptionText, { color: '#EF4444' }]}>
                     Delete
                   </Text>
                 </TouchableOpacity>
@@ -675,7 +654,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 5,
@@ -767,11 +746,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E40AF',
     borderColor: '#1E40AF',
     shadowColor: '#1E40AF',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
-    transform: [{scale: 1.05}],
+    transform: [{ scale: 1.05 }],
   },
   missedDayCircle: {
     backgroundColor: '#FEE2E2',
@@ -816,7 +795,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
@@ -870,7 +849,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
     shadowColor: '#3B82F6',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 1,
@@ -918,7 +897,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#3B82F6',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,

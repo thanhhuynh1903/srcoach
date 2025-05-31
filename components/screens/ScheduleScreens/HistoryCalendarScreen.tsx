@@ -32,7 +32,8 @@ const HistoryCalendarScreen = () => {
   const [showFilters, setShowFilters] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const navigation = useNavigation()
-  const { historySchedule, isLoading, error, fetchHistorySchedule, fetchHistoryScheduleExpert } = useScheduleStore()
+  const { historyScheduleSelf,
+    historyScheduleExpert, isLoading, error, fetchHistorySchedule, fetchHistoryScheduleExpert } = useScheduleStore()
 
   const loadData = useCallback(async () => {
     try {
@@ -45,6 +46,7 @@ const HistoryCalendarScreen = () => {
     }
   }, [fetchHistorySchedule, fetchHistoryScheduleExpert])
 
+
   useEffect(() => {
     loadData()
   }, [loadData])
@@ -56,14 +58,17 @@ const HistoryCalendarScreen = () => {
   }, [loadData])
 
   const filteredSchedules = useMemo(() => {
-    if (!historySchedule) return []
-
+    if (!historyScheduleSelf || !historyScheduleExpert) return []
+    let all = [
+      ...(historyScheduleSelf || []),
+      ...(historyScheduleExpert || [])
+    ];
     const now = new Date()
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
 
-    return historySchedule.filter((schedule) => {
-      const createdAt = new Date(schedule.created_at)
+    return all.filter((schedule) => {
+      const createdAt = new Date(schedule?.created_at)
 
       // Time filters
       if (activeFilter === "THIS_MONTH") {
@@ -89,7 +94,7 @@ const HistoryCalendarScreen = () => {
       // Default: ALL
       return true
     })
-  }, [historySchedule, activeFilter])
+  }, [historyScheduleSelf, historyScheduleExpert, activeFilter])
 
   return (
     <SafeAreaView style={styles.container}>
@@ -133,8 +138,12 @@ const HistoryCalendarScreen = () => {
               <View style={styles.statsContent}>
                 <Text style={styles.statsLabel}>Total Completed</Text>
                 <View style={styles.statsValueContainer}>
-                  <Text style={styles.statsValue}>{historySchedule?.length || 0}</Text>
-                  <Text style={styles.statsUnit}>Schedule{historySchedule?.length <= 1 ? "" : "s"}</Text>
+                  <Text style={styles.statsValue}>
+                    {filteredSchedules.length}
+                  </Text>
+                  <Text style={styles.statsUnit}>
+                    Schedule{filteredSchedules.length <= 1 ? "" : "s"}
+                  </Text>
                 </View>
               </View>
               <View style={styles.statsIconContainer}>

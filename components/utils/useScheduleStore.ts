@@ -42,7 +42,8 @@ export interface Schedule {
 interface ScheduleState {
   schedules: Schedule[];
   ExpertSchedule: Schedule[];
-  historySchedule: Schedule[];
+  historyScheduleSelf: Schedule[];
+  historyScheduleExpert: Schedule[];
   isLoading: boolean;
   error: string | null;
   currentSchedule: Schedule | null;
@@ -74,6 +75,7 @@ interface ScheduleState {
   resetCurrentSchedule: () => void;
   clearExpertSchedule: () => void;
   toggleAlarm: (scheduleId: string) => Promise<void>;
+  clearHistorySchedules: () => void;
   clear: () => void;
 }
 const api = useApiStore.getState();
@@ -83,7 +85,8 @@ const useScheduleStore = create<ScheduleState>()(
     (set, get) => ({
       schedules: [],
       ExpertSchedule: [],
-      historySchedule: [],
+      historyScheduleSelf: [],
+      historyScheduleExpert: [],
       isLoading: false,
       error: null,
       currentSchedule: null,
@@ -164,11 +167,15 @@ const useScheduleStore = create<ScheduleState>()(
       fetchHistorySchedule: async () => {
         set({isLoading: true, error: null});
         try {
-          const response = await api.fetchData(`/schedules/self/history-full`);
+          const response = await api.fetchData(`/schedules/self/history`);
+          console.log('response', response);
+
           set({
-            historySchedule: response?.data || [],
+            historyScheduleSelf: response?.data || [],
             isLoading: false,
           });
+
+          return response?.data || [];
         } catch (error) {
           set({
             error:
@@ -184,10 +191,13 @@ const useScheduleStore = create<ScheduleState>()(
           const response = await api.fetchData(
             `/schedules/expert/history-created`,
           );
+          console.log('response', response);
+
           set({
-            historySchedule: response?.data || [],
+            historyScheduleExpert: response?.data || [],
             isLoading: false,
           });
+          return response?.data || [];
         } catch (error) {
           set({
             error:
@@ -426,6 +436,12 @@ const useScheduleStore = create<ScheduleState>()(
         set({currentSchedule: null});
       },
       clearExpertSchedule: () => set({ExpertSchedule: [], schedules: []}),
+      clearHistorySchedules: () => {
+        set({
+          historyScheduleSelf: [],
+          historyScheduleExpert: [],
+        });
+      },
       // Bật/tắt báo thức cho lịch tập
       toggleAlarm: async scheduleId => {
         try {

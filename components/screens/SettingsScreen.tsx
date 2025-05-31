@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect} from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,23 +8,23 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import auth from '@react-native-firebase/auth';
 import useAuthStore from '../utils/useAuthStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useLoginStore} from '../utils/useLoginStore';
-import {CommonActions, useFocusEffect} from '@react-navigation/native';
+import { useLoginStore } from '../utils/useLoginStore';
+import { CommonActions, useFocusEffect } from '@react-navigation/native';
 import CommonDialog from '../commons/CommonDialog';
-import {CommonAvatar} from '../commons/CommonAvatar';
+import { CommonAvatar } from '../commons/CommonAvatar';
 import NotificationService from '../services/NotificationService';
-import {capitalizeFirstLetter} from '../utils/utils_format';
+import { capitalizeFirstLetter } from '../utils/utils_format';
 import useScheduleStore from '../utils/useScheduleStore';
-const SettingsScreen = ({navigation}: {navigation: any}) => {
-  const {clearToken} = useAuthStore();
-  const {clearAll, clear, profile, fetchUserProfile} = useLoginStore();
+const SettingsScreen = ({ navigation }: { navigation: any }) => {
+  const { clearToken } = useAuthStore();
+  const { clearAll, clear, profile, fetchUserProfile } = useLoginStore();
   const isExpert = profile?.roles?.includes('expert');
   const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
-  const {clearExpertSchedule} = useScheduleStore();
+  const { clearExpertSchedule, clearHistorySchedules } = useScheduleStore();
   // useFocusEffect(
   //   useCallback(() => {
   //     fetchUserProfile();
@@ -45,17 +45,18 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         await GoogleSignin.signOut();
       }
       await auth().signOut();
-    } 
+    }
     await clearExpertSchedule();
+    await clearHistorySchedules();
     await AsyncStorage.removeItem('authToken');
     await clear();
     await clearToken();
     await clearAll();
-   
+
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
-        routes: [{name: 'LoginScreen'}],
+        routes: [{ name: 'LoginScreen' }],
       }),
     );
   }
@@ -178,10 +179,10 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
                 onPress={() =>
                   item.screen === ''
                     ? navigation.navigate('ErrorScreen', {
-                        titleError: 'An error has occurred',
-                        contentError: 'Page not found. Please return back',
-                        errorStatus: 'ERROR_CODE: 500',
-                      })
+                      titleError: 'An error has occurred',
+                      contentError: 'Page not found. Please return back',
+                      errorStatus: 'ERROR_CODE: 500',
+                    })
                     : navigation.navigate(item.screen)
                 }>
                 <View style={styles.iconContainer}>
@@ -237,7 +238,7 @@ const SettingsScreen = ({navigation}: {navigation: any}) => {
         title="Confirm Logout"
         content={
           <View>
-            <Text style={{color: '#666', fontSize: 16}}>
+            <Text style={{ color: '#666', fontSize: 16 }}>
               Are you sure you want to log out?
             </Text>
           </View>
@@ -289,8 +290,8 @@ const menuItems = [
 ];
 
 const styles = StyleSheet.create({
-  safeArea: {flex: 1, backgroundColor: '#fff'},
-  scrollContainer: {paddingBottom: 80},
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+  scrollContainer: { paddingBottom: 80 },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 4,
   },
-  progressContainer: {width: '100%', marginBottom: 20},
+  progressContainer: { width: '100%', marginBottom: 20 },
   progressBar: {
     height: 8,
     width: '100%',
@@ -349,14 +350,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 5,
   },
-  progressFill: {height: '100%', backgroundColor: '#4A6FA5', borderRadius: 4},
+  progressFill: { height: '100%', backgroundColor: '#4A6FA5', borderRadius: 4 },
   progressTextContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
   },
-  progressText: {fontSize: 13, color: '#666', fontWeight: '500'},
-  nextLevelText: {fontSize: 13, color: '#4A6FA5', fontWeight: '500'},
+  progressText: { fontSize: 13, color: '#666', fontWeight: '500' },
+  nextLevelText: { fontSize: 13, color: '#4A6FA5', fontWeight: '500' },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
-  menuSection: {marginTop: 10},
+  menuSection: { marginTop: 10 },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -394,10 +395,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
-  iconContainer: {width: 40, alignItems: 'center'},
-  menuTextContainer: {flex: 1, marginLeft: 10},
-  menuTitle: {fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 3},
-  menuSubtitle: {fontSize: 13, color: '#888'},
+  iconContainer: { width: 40, alignItems: 'center' },
+  menuTextContainer: { flex: 1, marginLeft: 10 },
+  menuTitle: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 3 },
+  menuSubtitle: { fontSize: 13, color: '#888' },
   logoutItem: {
     flexDirection: 'row',
     alignItems: 'center',
