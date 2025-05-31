@@ -64,13 +64,7 @@ const UpdateScheduleScreen = () => {
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
   const [hasGoalError, setHasGoalError] = useState(false);
-  // useEffect(() => {
-  //   if (message) {
-  //     Alert.alert('Validation Error', message, [{text: 'OK'}]);
-  //     // Reset message sau khi hiển thị
-  //     useScheduleStore.getState().clear();
-  //   }
-  // }, [message]);
+ 
   const handleUpdateSchedule = async () => {
     try {
       setIsCreating(true);
@@ -102,6 +96,8 @@ const UpdateScheduleScreen = () => {
         result = await updateScheduleExpert(scheduleId, formData);
       } else {
         // Nếu là lịch cá nhân
+        console.log('formData', formData);
+        
         result = await updateSchedule(scheduleId, formData);
       }
 

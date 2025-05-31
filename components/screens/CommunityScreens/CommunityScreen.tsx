@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback, useRef} from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,18 +12,18 @@ import {
   Animated,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/ionicons';
-import {theme} from '../../contants/theme';
-import {useNavigation} from '@react-navigation/native';
-import {usePostStore} from '../../utils/usePostStore';
-import {useLoginStore} from '../../utils/useLoginStore';
-import {useFocusEffect} from '@react-navigation/native';
+import { theme } from '../../contants/theme';
+import { useNavigation } from '@react-navigation/native';
+import { usePostStore } from '../../utils/usePostStore';
+import { useLoginStore } from '../../utils/useLoginStore';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   formatTimeAgo,
 } from '../../utils/utils_format';
-import {CommonAvatar} from '../../commons/CommonAvatar';
-import {SaveDraftButton} from './SaveDraftButton';
+import { CommonAvatar } from '../../commons/CommonAvatar';
+import { SaveDraftButton } from './SaveDraftButton';
 import SkeletonPostList from './SkeletonPostList';
-import {getAllNews} from '../../utils/useNewsAPI';
+import { getAllNews } from '../../utils/useNewsAPI';
 import CommunityNewsList from './CommunityNewsList';
 import NotificationBell from '../../NotificationRealtime';
 // Interface cho User
@@ -71,9 +71,9 @@ const PLACEHOLDER_TEXTS = [
 
 const CommunityScreen = () => {
   const navigation = useNavigation();
-  const {isLoading, status, getAll, clearCurrent, deletePost, likePost} =
+  const { isLoading, status, getAll, clearCurrent, deletePost, likePost } =
     usePostStore();
-  const {profile} = useLoginStore();
+  const { profile } = useLoginStore();
   const currentUserId = profile?.id;
 
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
@@ -184,7 +184,7 @@ const CommunityScreen = () => {
   useFocusEffect(
     useCallback(() => {
       onRefresh();
-      return () => {};
+      return () => { };
     }, [onRefresh]),
   );
 
@@ -219,36 +219,35 @@ const CommunityScreen = () => {
         </View>
       );
     }
+    if (!hasMorePosts) return null;
 
     return (
       <View style={styles.debugFooter}>
-        {hasMorePosts && (
-          <TouchableOpacity style={styles.debugButton} onPress={loadMorePosts}>
-            <Text style={styles.debugButtonText}>...Loading more posts</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.debugButton} onPress={loadMorePosts}>
+          <Text style={styles.debugButtonText}>...Loading more posts</Text>
+        </TouchableOpacity>
       </View>
     );
   };
 
-  const renderPostItem = ({item}: {item: Post}) => (
+  const renderPostItem = ({ item }: { item: Post }) => (
     <TouchableOpacity
       style={styles.postItem}
       activeOpacity={0.8}
       onPress={() =>
-        navigation.navigate('CommunityPostDetailScreen', {id: item.id})
+        navigation.navigate('CommunityPostDetailScreen', { id: item.id })
       }>
-      <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <TouchableOpacity
           onPress={() =>
             profile.id === item.user.id
               ? navigation.navigate('RunnerProfileScreen' as never)
-              : navigation.navigate('OtherProfileScreen', {postId: item?.id})
+              : navigation.navigate('OtherProfileScreen', { postId: item?.id })
           }>
           <View style={styles.postHeader}>
             <CommonAvatar
               mode={item.user?.roles?.includes('expert') ? 'expert' : 'runner'}
-              style={{marginRight: 8}}
+              style={{ marginRight: 8 }}
               size={40}
               uri={item?.user?.image?.url}
             />
@@ -267,7 +266,7 @@ const CommunityScreen = () => {
             onSave={newSavedState => {
               setLocalPosts(prev =>
                 prev.map(p =>
-                  p.id === item.id ? {...p, is_saved: newSavedState} : p,
+                  p.id === item.id ? { ...p, is_saved: newSavedState } : p,
                 ),
               );
             }}
@@ -285,7 +284,7 @@ const CommunityScreen = () => {
       {item.images && item.images.length > 0 && (
         <View style={styles.postImageContainer}>
           <Image
-            source={{uri: item.images[0]}}
+            source={{ uri: item.images[0] }}
             style={styles.postImage}
             resizeMode="cover"
           />
@@ -314,7 +313,7 @@ const CommunityScreen = () => {
             name="chevron-forward"
             size={20}
             color="#FFFFFF"
-            style={{marginLeft: 4}}
+            style={{ marginLeft: 4 }}
           />
         </View>
       )}
@@ -333,7 +332,7 @@ const CommunityScreen = () => {
           <TouchableOpacity
             style={styles.postActionButton}
             onPress={() =>
-              navigation.navigate('CommunityPostDetailScreen', {id: item.id})
+              navigation.navigate('CommunityPostDetailScreen', { id: item.id })
             }>
             <Icon name="chatbubble-outline" size={20} color="#666" />
             <Text style={styles.postActionText}>{item?.comment_count}</Text>
@@ -379,7 +378,7 @@ const CommunityScreen = () => {
   const handleDelete = async () => {
     if (!selectedPost) return;
     Alert.alert('Delete Post', 'Are you sure you want to delete this post?', [
-      {text: 'Cancel', style: 'cancel'},
+      { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
@@ -417,7 +416,7 @@ const CommunityScreen = () => {
   const handleLikePost = async (id: string, isLike: boolean) => {
     if (!profile) {
       Alert.alert('Thông báo', 'Vui lòng đăng nhập để thích bài viết', [
-        {text: 'Đóng', style: 'cancel'},
+        { text: 'Đóng', style: 'cancel' },
       ]);
       return;
     }
@@ -427,16 +426,16 @@ const CommunityScreen = () => {
         prev.map(post =>
           post.id === id
             ? {
-                ...post,
-                is_upvoted: isLike,
-                upvote_count: isLike
-                  ? post.is_upvoted
-                    ? post.upvote_count
-                    : post.upvote_count + 1
-                  : post.is_upvoted
+              ...post,
+              is_upvoted: isLike,
+              upvote_count: isLike
+                ? post.is_upvoted
+                  ? post.upvote_count
+                  : post.upvote_count + 1
+                : post.is_upvoted
                   ? post.upvote_count - 1
                   : post.upvote_count,
-              }
+            }
             : post,
         ),
       );
@@ -457,18 +456,22 @@ const CommunityScreen = () => {
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         onEndReached={info => {
-          if (info.distanceFromEnd > 0) {
-            console.log(
-              'onEndReached triggered with distance:',
-              info.distanceFromEnd,
-            );
+          // Chỉ gọi khi còn bài viết để tải
+          if (
+            info.distanceFromEnd > 0 &&
+            hasMorePosts &&
+            !isLoadingMore &&
+            !refreshing &&
+            !isLoading &&
+            !loadingRef.current
+          ) {
             loadMorePosts();
           }
         }}
         onEndReachedThreshold={0.3}
         refreshing={refreshing}
         onRefresh={onRefresh}
-        contentContainerStyle={{paddingTop: 60, paddingBottom: 20}}
+        contentContainerStyle={{ paddingTop: 60, paddingBottom: 20 }}
         maxToRenderPerBatch={10}
         windowSize={21}
         removeClippedSubviews={false}
@@ -479,7 +482,7 @@ const CommunityScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={{flex: 1, flexDirection: 'row', alignItems: 'center'}}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
           <Icon name="fitness" size={24} color={theme.colors.primaryDark} />
           <Text style={styles.title}>Community</Text>
         </View>
@@ -489,7 +492,7 @@ const CommunityScreen = () => {
             onPress={() => navigation.navigate('SearchScreen' as never)}>
             <Icon name="search" size={24} color={theme.colors.primaryDark} />
           </TouchableOpacity>
-          <NotificationBell onPress={() => navigation.navigate('ManageNotificationsScreen' as never)} style={styles.iconButton}/>
+          <NotificationBell onPress={() => navigation.navigate('ManageNotificationsScreen' as never)} style={styles.iconButton} />
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate('LeaderBoardScreen' as never)}>
@@ -537,7 +540,7 @@ const CommunityScreen = () => {
                 style={styles.modalOption}
                 onPress={handleDelete}>
                 <Icon name="trash-outline" size={24} color="red" />
-                <Text style={[styles.modalOptionText, {color: 'red'}]}>
+                <Text style={[styles.modalOptionText, { color: 'red' }]}>
                   Delete
                 </Text>
               </TouchableOpacity>
@@ -613,7 +616,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 10,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
@@ -652,7 +655,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
