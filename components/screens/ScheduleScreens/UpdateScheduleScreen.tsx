@@ -64,7 +64,7 @@ const UpdateScheduleScreen = () => {
   // Maximum number of days that can be selected
   const MAX_DAYS_SELECTION = 14;
   const [hasGoalError, setHasGoalError] = useState(false);
- const MAX_TITLE_LENGTH = 255;
+  const MAX_TITLE_LENGTH = 255;
 
   const handleUpdateSchedule = async () => {
     try {
@@ -78,11 +78,11 @@ const UpdateScheduleScreen = () => {
       );
 
       const cleanedDays = dailyGoals.map((day: DailySchedule) => ({
-  ...day,
-  details: day.details.map(({ status, ...rest }) => rest), // chỉ bỏ status, giữ nguyên các session
-}));
+        ...day,
+        details: day.details.map(({ status, ...rest }) => rest), // chỉ bỏ status, giữ nguyên các session
+      }));
       console.log('cleanedDays', cleanedDays);
-      
+
       const formData = {
         title,
         description,
@@ -401,29 +401,27 @@ const UpdateScheduleScreen = () => {
 
       <ScrollView style={styles.scrollView}>
         {/* Title Input */}
-  <View style={styles.titleInputContainer}>
-    <Text style={styles.sectionTitle}>Schedule Title *</Text>
-    <Text style={styles.charCounterText}>
-      {title.length}/{MAX_TITLE_LENGTH}
-    </Text>
-  </View>
-        
-          <TextInput
-    style={styles.input}
-    placeholder="Enter schedule title"
-    value={title}
-    onChangeText={setTitle}
-    placeholderTextColor="#A1A1AA"
-    maxLength={MAX_TITLE_LENGTH}
-    numberOfLines={1}
-    multiline={false}
-    scrollEnabled={false}
-    textAlignVertical="center"
-    textAlign="left"
-    editable={!view}
-  />
+        <View style={styles.titleInputContainer}>
+          <Text style={styles.sectionTitle}>Schedule Title *</Text>
+          <Text style={styles.charCounterText}>
+            {title.length}/{MAX_TITLE_LENGTH}
+          </Text>
+        </View>
 
-
+        <TextInput
+          style={styles.input}
+          placeholder="Enter schedule title"
+          value={title}
+          onChangeText={setTitle}
+          placeholderTextColor="#A1A1AA"
+          maxLength={MAX_TITLE_LENGTH}
+          numberOfLines={1}
+          multiline={false}
+          scrollEnabled={false}
+          textAlignVertical="center"
+          textAlign="left"
+          editable={!view}
+        />
         {/* Selection limit info */}
         <View style={styles.limitInfoContainer}>
           <Icon name="information-circle-outline" size={18} color="#64748B" />
@@ -560,16 +558,16 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   titleInputContainer: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: 8,
-  marginTop: 16,
-},
-charCounterText: {
-  fontSize: 12,
-  color: '#64748B',
-},
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  charCounterText: {
+    fontSize: 12,
+    color: '#64748B',
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '500',
