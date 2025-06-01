@@ -221,7 +221,7 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
           healthAlerts: response.data || [],
           isLoadingAlerts: false
         });
-      } else if (response?.status === 'error' && response?.message === 'Không tìm thấy AIHealthAlert nào cho user này') {
+      } else if (response?.status === 'error' || response?.message === 'Không tìm thấy AIHealthAlert nào cho user này') {
         // Trường hợp không có cảnh báo nào
         set({
           healthAlerts: [],
