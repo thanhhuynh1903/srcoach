@@ -140,7 +140,18 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
 
         {message && (
           <View style={{ alignItems: 'center', marginBottom: 5 }}>
-            <Text style={{ color: 'red' }}>{message}</Text>
+            <Text
+              style={{
+                color:
+                  inputStatus === 'success'
+                    ? '#34C759'
+                    : inputStatus === 'error'
+                    ? 'red'
+                    : '#FFA500',
+              }}
+            >
+              {message}
+            </Text>
           </View>
         )}
 
