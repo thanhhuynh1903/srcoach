@@ -16,7 +16,7 @@ import BackButton from '../BackButton';
 import { useRegisterStore } from '../utils/useRegisterStore';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import CommonDialog from '../commons/CommonDialog';
-
+import Toast from 'react-native-toast-message';
 interface VerifyParam {
   emailLabel: string;
 }
@@ -103,7 +103,13 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
     }
     return styles.codeInput;
   };
-
+  const showToast = (type: string, text1: string, text2?: string) => {
+    Toast.show({
+      type,
+      text1,
+      text2,
+    });
+  };
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -139,10 +145,11 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         {message && (
-          <View style={{ alignItems: 'center', marginBottom: 5 }}>
-            <Text style={{ color: 'red' }}>{message}</Text>
-          </View>
-        )}
+          <Text style={{ color: inputStatus === 'error' ? '#F44336' : '#4CAF50', textAlign: 'center', marginBottom: 20 }}>
+            {message}
+          </Text>
+        )
+        }
 
         <TouchableOpacity
           style={styles.verifyButton}
