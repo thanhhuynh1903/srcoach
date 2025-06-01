@@ -275,17 +275,17 @@ const useAiRiskStore = create<AiRiskState>((set, get) => ({
 
           },
           isLoading: false,
-          message: 'Chi tiết cảnh báo đã được tải thành công'
+          message: 'Delete health alert detail successfully',
         });
       } else {
         set({
-          error: response?.message || 'Không thể tải chi tiết cảnh báo sức khỏe',
+          error: response?.message || 'Health alert detail not found',
           isLoading: false
         });
       }
     } catch (error: any) {
       set({
-        error: error.message || 'Không thể tải chi tiết cảnh báo sức khỏe',
+        error: error.message || 'Health alert detail not found',
         isLoading: false
       });
     }

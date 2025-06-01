@@ -87,14 +87,14 @@ const RiskWarningListScreen = () => {
     try {
       const success = await deleteHealthAlert(selectedAlertId);
       setShowDeleteDialog(false);
-
+      await fetchHealthAlerts();
       if (success) {
         setDialogMessage('Health alert deleted successfully');
-        setShowSuccessDialog(true);
-        await fetchHealthAlerts();
+
+
       } else {
         setDialogMessage(message || 'Failed to delete health alert');
-        setShowErrorDialog(true);
+
       }
     } catch (error) {
       console.error('Error deleting health alert:', error);
