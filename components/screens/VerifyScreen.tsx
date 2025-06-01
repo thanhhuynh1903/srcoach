@@ -139,11 +139,21 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         {message && (
-          <Text style={{ color: inputStatus === 'error' ? '#F44336' : '#4CAF50', textAlign: 'center', marginBottom: 20 }}>
-            {message}
-          </Text>
-        )
-        }
+          <View style={{ alignItems: 'center', marginBottom: 5 }}>
+            <Text
+              style={{
+                color:
+                  inputStatus === 'success'
+                    ? '#34C759'
+                    : inputStatus === 'error'
+                    ? 'red'
+                    : '#FFA500',
+              }}
+            >
+              {message}
+            </Text>
+          </View>
+        )}
 
         <TouchableOpacity
           style={styles.verifyButton}
