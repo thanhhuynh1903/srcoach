@@ -103,7 +103,7 @@ const VerifyScreen = ({ navigation }: { navigation: any }) => {
     }
     return styles.codeInput;
   };
-
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
