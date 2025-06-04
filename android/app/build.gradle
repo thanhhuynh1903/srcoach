@@ -85,6 +85,7 @@ android {
         versionCode 1
         versionName "1.0"
         multiDexEnabled true
+        manifestPlaceholders = [ MAPS_API_KEY: project.properties["MAPS_API_KEY"] ?: "" ]
 
     }
     signingConfigs {
