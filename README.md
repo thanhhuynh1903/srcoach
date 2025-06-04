@@ -1,21 +1,47 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Smart Running Coach - React Native App
 
-# Getting Started
+This is a new [React Native](https://reactnative.dev) project, bootstrapped using [@react-native-community/cli](https://github.com/react-native-community/cli).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> ⚠️ **Note:** Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
-## Step 1: Download node module and fix react native health connect lib
-# Using npm
-npm i --force 
-After download node module success then download this library:
-https://drive.google.com/file/d/1KSTnXIpiK_ktumLjDNTHhLZGb6wetRk6/view?usp=sharing
-After finishing download react native health connect lib , put this lib in node module and replace file react native health connect
-## Step 2: Build and run your app
-# Using npx to build
-npx react-native run-android 
+---
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## Getting Started
+
+1. Install dependencies using npm (with `--force` to resolve potential issues):
+
+```bash
+npm i --force
+````
+
+2. Fix the `react-native-health-connect` library:
+
+   * Download the patched version from Google Drive:
+     [📥 Download react-native-health-connect](https://drive.google.com/file/d/1KSTnXIpiK_ktumLjDNTHhLZGb6wetRk6/view?usp=sharing)
+
+   * Or find it in the `fixlib` folder in this repository (if provided).
+
+   * Replace the existing `react-native-health-connect` folder in `node_modules` with the downloaded one.
+
+3. Build and run the app:
+
+```bash
+npx react-native run-android
+```
+
+---
+
+## Useful Resources
+
+* [React Native Website](https://reactnative.dev)
+* [Environment Setup Guide](https://reactnative.dev/docs/environment-setup)
+* [React Native Getting Started](https://reactnative.dev/docs/getting-started)
+* [React Native Blog](https://reactnative.dev/blog)
+* [React Native GitHub Repository](https://github.com/facebook/react-native)
+
+---
+
+> 🛠️ This project uses a patched version of `react-native-health-connect`. Make sure to apply the patch before building the app.
+
+```
+
