@@ -35,7 +35,7 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
-
+fixlib
 # node.js
 #
 node_modules/
