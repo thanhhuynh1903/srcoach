@@ -45,3 +45,6 @@ npx react-native run-android
 
 ```
 
+## App Review :
+https://docs.google.com/document/d/1E0H34lIVKDd_S98eyk9AJd0WpC4Atc76vBReRhzKc6w/edit?usp=sharing
+
